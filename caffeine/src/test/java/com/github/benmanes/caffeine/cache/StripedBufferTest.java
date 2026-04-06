@@ -168,6 +168,29 @@ final class StripedBufferTest {
         findVarHandle(StripedBuffer.class, "absent", int.class));
   }
 
+  @Test
+  void findVarHandle_present() {
+    var handle = findVarHandle(StripedBuffer.class, "tableBusy", int.class);
+    assertThat(handle).isNotNull();
+  }
+
+  @Test
+  void mix64_knownValues() {
+    // Stafford variant 13: verify the specific output for well-known inputs. Any mutation
+    // to the shift amounts, multipliers, or XOR operations changes these outputs.
+    assertThat(StripedBuffer.mix64(0L)).isEqualTo(0L);
+    assertThat(StripedBuffer.mix64(1L)).isEqualTo(0x5692161d100b05e5L);
+    assertThat(StripedBuffer.mix64(-1L)).isEqualTo(0xb4d055fcf2cbbd7bL);
+    assertThat(StripedBuffer.mix64(Long.MAX_VALUE)).isEqualTo(0x5a682afe7965debdL);
+  }
+
+  @Test
+  void casTableBusy_failsWhenAlreadyHeld() {
+    var buffer = new FakeBuffer<Integer>(SUCCESS);
+    assertThat(buffer.casTableBusy()).isTrue();
+    assertThat(buffer.casTableBusy()).isFalse();
+  }
+
   private static Stream<Buffer<Integer>> buffers() {
     return Stream.of(new FakeBuffer<>(SUCCESS), new FakeBuffer<>(FAILED), new FakeBuffer<>(FULL));
   }

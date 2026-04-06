@@ -47,6 +47,7 @@ tasks.check.configure {
 tasks.withType<Test>().configureEach {
   inputs.property("javaDistribution", javaDistribution()).optional(true)
   inputs.property("javaVendor", java.toolchain.vendor.map { it.toString() })
+  systemProperty("junit.platform.execution.memory.cleanup.enabled", "true")
 
   // Use --debug-jvm to remotely attach to the test task
   val defaultJvmArguments = defaultJvmArgs()

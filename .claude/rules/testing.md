@@ -13,12 +13,13 @@
 
 ## PIT Mutation Testing
 
-- `./gradlew :caffeine:pitest` runs mutation testing. Segmented by scope:
-  - `-Ppit=dataStructures` → ~1h: TimerWheel, FrequencySketch, Pacer, BoundedBuffer, StripedBuffer, MpscGrowableArrayQueue, AbstractLinkedDeque, Interner, Async, Scheduler, Caffeine (builder), CaffeineSpec (parser)
-  - `-Ppit=cache` → overnight: BoundedLocalCache + UnboundedLocalCache, tested via the full `@CacheSpec` suite (AsMapTest, CacheTest, Eviction/Expire/Refresh tests, etc.)
-  - no flag → everything (slowest, overnight)
-- `jvmArgs` filter `@CacheSpec` combinations to `implementation=caffeine, keys=strong, values=strong, stats=enabled`. `compute` is intentionally unfiltered to keep async tests
-- `skipFailingTests = true` handles tests that explicitly require the opposite on a filtered axis (e.g. `@CacheSpec(stats = DISABLED)`)
-- Don't add the inverse of a filter value (e.g. `stats=disabled`) — most tests use the common defaults
-- Run overnight, not on CI. Segments produce separate reports in `build/reports/pitest/`; re-run with a different scope to overwrite
+- `./gradlew :caffeine:pitest` runs mutation testing on self-contained data structures:
+  TimerWheel, FrequencySketch, Pacer, BoundedBuffer, StripedBuffer, MpscGrowableArrayQueue,
+  AbstractLinkedDeque, Interner, Async, Scheduler, Caffeine (builder), CaffeineSpec (parser)
+- `BoundedLocalCache` and `UnboundedLocalCache` are NOT in scope — the `@CacheSpec`
+  parameterized test suite makes PIT's main process OOM during coverage collection,
+  regardless of heap size (`mainProcessJvmArgs` doesn't effectively bump the forked JVM).
+  Line coverage on those classes is already 100% via JaCoCo, and concurrency bugs aren't
+  caught by mutation testing anyway
+- Runtime: ~30-60 minutes. Use for ad-hoc runs, not CI
 - Concurrency bugs aren't caught by mutation testing — rely on Fray/LinCheck/JCStress for that

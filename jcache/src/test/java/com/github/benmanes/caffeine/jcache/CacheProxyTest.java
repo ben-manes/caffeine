@@ -571,6 +571,21 @@ final class CacheProxyTest {
         arguments(new UncheckedTimeoutException(), CacheException.class, true));
   }
 
+  @Test
+  void close_interrupted() throws IOException {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      var neverCompletes = new CompletableFuture<@Nullable Void>();
+      fixture.jcache().inFlight.add(neverCompletes);
+
+      // Interrupt before close() so get() throws InterruptedException immediately
+      Thread.currentThread().interrupt();
+      fixture.jcache().close();
+
+      // close() restores the interrupt flag via Thread.currentThread().interrupt()
+      assertThat(Thread.interrupted()).isTrue();
+    }
+  }
+
   interface CloseableExpiryPolicy extends ExpiryPolicy, Closeable {}
   interface CloseableCacheLoader extends CacheLoader<Integer, Integer>, Closeable {}
   interface CloseableCacheWriter extends CacheWriter<Integer, Integer>, Closeable {}

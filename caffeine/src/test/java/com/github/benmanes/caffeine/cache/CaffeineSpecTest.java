@@ -192,6 +192,58 @@ final class CaffeineSpecTest {
   }
 
   @Test
+  void parse_optionWithTooManyEquals_throws() {
+    var e = assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parse("maximumSize=1=2"));
+    assertThat(e).hasMessageThat().contains("more than one equals sign");
+  }
+
+  @Test
+  void parse_duplicateInitialCapacity_throws() {
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parse("initialCapacity=1,initialCapacity=2"));
+  }
+
+  @Test
+  void parse_weakKeysWithValue_throws() {
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("weakKeys=value"));
+  }
+
+  @Test
+  void parse_weakValuesWithValue_throws() {
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("weakValues=value"));
+  }
+
+  @Test
+  void parse_softValuesWithValue_throws() {
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("softValues=value"));
+  }
+
+  @Test
+  void parse_recordStatsWithValue_throws() {
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("recordStats=value"));
+  }
+
+  @Test
+  void parse_duplicateRecordStats_throws() {
+    assertThrows(IllegalArgumentException.class,
+        () -> CaffeineSpec.parse("recordStats,recordStats"));
+  }
+
+  @Test
+  void parse_recordStats_setsFlag() {
+    var spec = CaffeineSpec.parse("recordStats");
+    assertThat(spec.recordStats).isTrue();
+    assertThat(Caffeine.from(spec).isRecordingStats()).isTrue();
+  }
+
+  @Test
+  void toString_format() {
+    var spec = CaffeineSpec.parse("maximumSize=10");
+    assertThat(spec.toString()).isEqualTo("CaffeineSpec{maximumSize=10}");
+  }
+
+  @Test
   void toBuilder_invalidKeyStrength() {
     var spec = CaffeineSpec.parse("");
     spec.keyStrength = Strength.SOFT;

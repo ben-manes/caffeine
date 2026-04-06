@@ -48,6 +48,7 @@ jobs:
             p/r2c-ci
             p/r2c-security-audit
             p/secrets
+            p/security-audit
             p/semgrep-misconfigurations
             p/semgrep-rule-ci
             p/semgrep-rule-lints
@@ -77,7 +78,7 @@ jobs:
         with:
           files: results.sarif
       - name: Upload artifact
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           name: SARIF file

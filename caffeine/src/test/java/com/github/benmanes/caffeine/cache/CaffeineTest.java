@@ -937,4 +937,251 @@ final class CaffeineTest {
     assertThat(builder.evictionListener).isSameInstanceAs(removalListener);
     assertThat(builder.build()).isNotNull();
   }
+
+  /* --------------- Static helpers --------------- */
+
+  @Test
+  void ceilingPowerOfTwo_long() {
+    assertThat(Caffeine.ceilingPowerOfTwo(1L)).isEqualTo(1L);
+    assertThat(Caffeine.ceilingPowerOfTwo(2L)).isEqualTo(2L);
+    assertThat(Caffeine.ceilingPowerOfTwo(3L)).isEqualTo(4L);
+    assertThat(Caffeine.ceilingPowerOfTwo(1024L)).isEqualTo(1024L);
+    assertThat(Caffeine.ceilingPowerOfTwo(1025L)).isEqualTo(2048L);
+  }
+
+  @Test
+  void toNanosSaturated_positive() {
+    assertThat(Caffeine.toNanosSaturated(Duration.ofNanos(100L))).isEqualTo(100L);
+    assertThat(Caffeine.toNanosSaturated(Duration.ofNanos(Long.MAX_VALUE))).isEqualTo(Long.MAX_VALUE);
+    // Just below MAX_DURATION: not saturated — returns actual toNanos
+    assertThat(Caffeine.toNanosSaturated(Duration.ofSeconds(Long.MAX_VALUE / 1_000_000_000, 0)))
+        .isLessThan(Long.MAX_VALUE);
+    // Above MAX_DURATION: saturates to Long.MAX_VALUE
+    assertThat(Caffeine.toNanosSaturated(Duration.ofDays(365L * 500))).isEqualTo(Long.MAX_VALUE);
+  }
+
+  @Test
+  void toNanosSaturated_negative() {
+    assertThat(Caffeine.toNanosSaturated(Duration.ofNanos(-100L))).isEqualTo(-100L);
+    assertThat(Caffeine.toNanosSaturated(Duration.ofNanos(Long.MIN_VALUE))).isEqualTo(Long.MIN_VALUE);
+    // Below MIN_DURATION: saturates to Long.MIN_VALUE
+    assertThat(Caffeine.toNanosSaturated(Duration.ofDays(-365L * 500))).isEqualTo(Long.MIN_VALUE);
+  }
+
+  @Test
+  void getInitialCapacity_default() {
+    assertThat(Caffeine.newBuilder().getInitialCapacity())
+        .isEqualTo(Caffeine.DEFAULT_INITIAL_CAPACITY);
+  }
+
+  @Test
+  void getInitialCapacity_set() {
+    assertThat(Caffeine.newBuilder().initialCapacity(42).getInitialCapacity()).isEqualTo(42);
+  }
+
+  @Test
+  void isStrongValues_default() {
+    assertThat(Caffeine.newBuilder().isStrongValues()).isTrue();
+    assertThat(Caffeine.newBuilder().isWeakValues()).isFalse();
+  }
+
+  @Test
+  void isWeakValues_weak() {
+    var builder = Caffeine.newBuilder().weakValues();
+    assertThat(builder.isStrongValues()).isFalse();
+    assertThat(builder.isWeakValues()).isTrue();
+  }
+
+  @Test
+  void isWeakValues_soft() {
+    var builder = Caffeine.newBuilder().softValues();
+    assertThat(builder.isStrongValues()).isFalse();
+    assertThat(builder.isWeakValues()).isFalse();
+  }
+
+  @Test
+  void toString_unconfigured() {
+    assertThat(Caffeine.newBuilder().toString()).isEqualTo("Caffeine{}");
+  }
+
+  @Test
+  void toString_configured() {
+    assertThat(Caffeine.newBuilder().maximumSize(10).toString())
+        .isEqualTo("Caffeine{maximumSize=10}");
+  }
+
+  @Test
+  void isBounded_default() {
+    assertThat(Caffeine.newBuilder().isBounded()).isFalse();
+  }
+
+  @Test
+  void isBounded_maximumSize() {
+    assertThat(Caffeine.newBuilder().maximumSize(10).isBounded()).isTrue();
+  }
+
+  @Test
+  void isBounded_maximumWeight() {
+    assertThat(Caffeine.newBuilder().maximumWeight(10).weigher((k, v) -> 1).isBounded()).isTrue();
+  }
+
+  @Test
+  void isBounded_expireAfterAccess() {
+    assertThat(Caffeine.newBuilder().expireAfterAccess(Duration.ofMinutes(1)).isBounded()).isTrue();
+  }
+
+  @Test
+  void isBounded_expireAfterWrite() {
+    assertThat(Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(1)).isBounded()).isTrue();
+  }
+
+  @Test
+  void isBounded_weakKeys() {
+    assertThat(Caffeine.newBuilder().weakKeys().isBounded()).isTrue();
+  }
+
+  @Test
+  void isBounded_weakValues() {
+    assertThat(Caffeine.newBuilder().weakValues().isBounded()).isTrue();
+  }
+
+  @Test
+  void getWeigher_default_isSingleton() {
+    Weigher<Object, Object> weigher = Caffeine.newBuilder().getWeigher(false);
+    assertThat(weigher).isSameInstanceAs(Weigher.singletonWeigher());
+  }
+
+  @Test
+  void getWeigher_custom_wrappedAsBounded() {
+    Weigher<Object, Object> custom = (k, v) -> 1;
+    Weigher<Object, Object> result = Caffeine.newBuilder()
+        .maximumWeight(10).weigher(custom).getWeigher(false);
+    assertThat(result).isNotSameInstanceAs(custom);
+    assertThat(result).isNotSameInstanceAs(Weigher.singletonWeigher());
+  }
+
+  @Test
+  void getExpiry_nullForNoExpiry() {
+    assertThat(Caffeine.newBuilder().getExpiry(false)).isNull();
+    assertThat(Caffeine.newBuilder().getExpiry(true)).isNull();
+  }
+
+  @Test
+  void getExpiry_syncReturnsRaw() {
+    Expiry<Object, Object> expiry = Expiry.creating((k, v) -> Duration.ofMinutes(1));
+    var result = Caffeine.newBuilder().expireAfter(expiry).getExpiry(false);
+    assertThat(result).isSameInstanceAs(expiry);
+  }
+
+  @Test
+  void getExpiry_asyncWrapsRaw() {
+    Expiry<Object, Object> expiry = Expiry.creating((k, v) -> Duration.ofMinutes(1));
+    var result = Caffeine.newBuilder().expireAfter(expiry).getExpiry(true);
+    assertThat(result).isNotNull();
+    assertThat(result).isNotSameInstanceAs(expiry);
+  }
+
+  @Test
+  void getTicker_disabledWhenNoExpiration() {
+    assertThat(Caffeine.newBuilder().getTicker()).isSameInstanceAs(Ticker.disabledTicker());
+  }
+
+  @Test
+  void getTicker_systemWhenExpiring() {
+    assertThat(Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(1)).getTicker())
+        .isSameInstanceAs(Ticker.systemTicker());
+  }
+
+  @Test
+  void getTicker_customWhenExpiring() {
+    Ticker custom = () -> 0L;
+    assertThat(Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(1))
+        .ticker(custom).getTicker()).isSameInstanceAs(custom);
+  }
+
+  @Test
+  void getEvictionListener_nullByDefault() {
+    assertThat(Caffeine.newBuilder().getEvictionListener(false)).isNull();
+    assertThat(Caffeine.newBuilder().getEvictionListener(true)).isNull();
+  }
+
+  @Test
+  void getEvictionListener_syncReturnsRaw() {
+    RemovalListener<Object, Object> listener = (k, v, c) -> {};
+    var result = Caffeine.newBuilder().evictionListener(listener).getEvictionListener(false);
+    assertThat(result).isSameInstanceAs(listener);
+  }
+
+  @Test
+  void getEvictionListener_asyncWrapsRaw() {
+    RemovalListener<Object, Object> listener = (k, v, c) -> {};
+    var result = Caffeine.newBuilder().evictionListener(listener).getEvictionListener(true);
+    assertThat(result).isNotNull();
+    assertThat(result).isNotSameInstanceAs(listener);
+  }
+
+  @Test
+  void build_withMaximumWeight_requiresWeigher() {
+    assertThrows(IllegalStateException.class,
+        () -> Caffeine.newBuilder().maximumWeight(10).build());
+  }
+
+  @Test
+  void buildAsync_withMaximumWeight_requiresWeigher() {
+    assertThrows(IllegalStateException.class,
+        () -> Caffeine.newBuilder().maximumWeight(10).buildAsync());
+  }
+
+  @Test
+  void buildAsync_refreshAfterWrite_requiresLoadingCache() {
+    assertThrows(IllegalStateException.class,
+        () -> Caffeine.newBuilder().refreshAfterWrite(Duration.ofMinutes(1)).buildAsync());
+  }
+
+  @Test
+  void build_unbounded_returnsUnboundedLoadingCache() {
+    CacheLoader<Object, Object> loader = key -> key;
+    var cache = Caffeine.newBuilder().build(loader);
+    assertThat(cache).isInstanceOf(UnboundedLocalCache.UnboundedLocalLoadingCache.class);
+  }
+
+  @Test
+  void build_bounded_returnsBoundedLoadingCache() {
+    CacheLoader<Object, Object> loader = key -> key;
+    var cache = Caffeine.newBuilder().maximumSize(10).build(loader);
+    assertThat(cache).isInstanceOf(BoundedLocalCache.BoundedLocalLoadingCache.class);
+  }
+
+  @Test
+  void buildAsync_unbounded_returnsUnboundedAsyncCache() {
+    var cache = Caffeine.newBuilder().buildAsync();
+    assertThat(cache).isInstanceOf(UnboundedLocalCache.UnboundedLocalAsyncCache.class);
+  }
+
+  @Test
+  void buildAsync_bounded_returnsBoundedAsyncCache() {
+    var cache = Caffeine.newBuilder().maximumSize(10).buildAsync();
+    assertThat(cache).isInstanceOf(BoundedLocalCache.BoundedLocalAsyncCache.class);
+  }
+
+  @Test
+  void buildAsync_loader_unbounded_returnsUnboundedAsyncLoadingCache() {
+    CacheLoader<Object, Object> loader = key -> key;
+    var cache = Caffeine.newBuilder().buildAsync(loader);
+    assertThat(cache).isInstanceOf(UnboundedLocalCache.UnboundedLocalAsyncLoadingCache.class);
+  }
+
+  @Test
+  void buildAsync_loader_bounded_returnsBoundedAsyncLoadingCache() {
+    CacheLoader<Object, Object> loader = key -> key;
+    var cache = Caffeine.newBuilder().maximumSize(10).buildAsync(loader);
+    assertThat(cache).isInstanceOf(BoundedLocalCache.BoundedLocalAsyncLoadingCache.class);
+  }
+
+  @Test
+  void buildAsync_loader_refreshAfterWrite_returnsBoundedAsyncLoadingCache() {
+    CacheLoader<Object, Object> loader = key -> key;
+    var cache = Caffeine.newBuilder().refreshAfterWrite(Duration.ofMinutes(1)).buildAsync(loader);
+    assertThat(cache).isInstanceOf(BoundedLocalCache.BoundedLocalAsyncLoadingCache.class);
+  }
 }

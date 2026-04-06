@@ -18,7 +18,7 @@ sourceSets.configureEach {
     properties = rootProject.layout.projectDirectory.file(
       "gradle/config/eclipse/org.eclipse.jdt.core.prefs")
     compileClasspath = compileTask.map { it.classpath }
-    inputs.files(compileTask.map { it.outputs.files })
+    inputs.files(compileTask.map { it.outputs.files }).withPathSensitivity(RELATIVE)
     javaSources = allJava.asFileTree
     classpath(ecj)
   }

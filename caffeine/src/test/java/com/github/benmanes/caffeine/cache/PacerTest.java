@@ -288,6 +288,28 @@ final class PacerTest {
   }
 
   @Test
+  void schedule_nextFireTimeEqualsNow_reschedules() {
+    Scheduler scheduler = Mockito.mock();
+    Executor executor = Mockito.mock();
+    Runnable command = Mockito.mock();
+    Future<?> future = Mockito.mock();
+    Future<?> newFuture = Mockito.mock();
+    var pacer = new Pacer(scheduler);
+
+    // nextFireTime - now == 0, so the `> 0` check falls through and reschedules
+    pacer.nextFireTime = NOW;
+    pacer.future = future;
+
+    when(scheduler.schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS))
+        .then(invocation -> newFuture);
+    pacer.schedule(executor, command, NOW, /* delay= */ 0L);
+
+    verify(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
+    assertThat(pacer.future).isSameInstanceAs(newFuture);
+    assertThat(pacer.nextFireTime).isEqualTo(NOW + Pacer.TOLERANCE);
+  }
+
+  @Test
   void maySkip_later() {
     var pacer = new Pacer(Mockito.mock());
     pacer.nextFireTime = NOW;

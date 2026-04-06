@@ -14,7 +14,7 @@ jobs:
       checks: write # Needed to annotate commit
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
+        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
         with:
           disable-sudo: true
           egress-policy: block
@@ -40,7 +40,7 @@ jobs:
       security-events: write # Needed for uploading security scan results
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
+        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
         with:
           disable-sudo-and-containers: false
           egress-policy: block
@@ -54,7 +54,7 @@ jobs:
         with:
           persist-credentials: false
       - name: check-spelling
-        uses: check-spelling/check-spelling@c635c2f3f714eec2fcf27b643a1919b9a811ef2e # v0.0.25
+        uses: check-spelling/check-spelling@cfb6f7e75bbfc89c71eaa30366d0c166f1bd9c8c # v0.0.26
         with:
           use_sarif: ${{ (!github.event.pull_request || (github.event.pull_request.head.repo.full_name == github.repository)) && 1 }}
           suppress_push_for_open_pull_request: ${{ github.actor != 'dependabot[bot]' && 1 }}
@@ -100,7 +100,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
+        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block

@@ -32,6 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -876,6 +877,80 @@ final class LinkedDequeTest {
 
   private static Comparator<LinkedValue> comparator() {
     return Comparator.comparingInt((LinkedValue v) -> v.value);
+  }
+
+  /* --------------- modCount + structural link/unlink --------------- */
+
+  @Test
+  @SuppressWarnings("CheckReturnValue")
+  void modCount_incrementedOnMutation() {
+    var deque = new AccessOrderDeque<LinkedValue>();
+    int initial = deque.modCount;
+
+    deque.linkFirst(new LinkedValue(1));
+    assertThat(deque.modCount).isEqualTo(initial + 1);
+
+    deque.linkLast(new LinkedValue(2));
+    assertThat(deque.modCount).isEqualTo(initial + 2);
+
+    deque.unlinkFirst();
+    assertThat(deque.modCount).isEqualTo(initial + 3);
+
+    deque.unlinkLast();
+    assertThat(deque.modCount).isEqualTo(initial + 4);
+
+    deque.linkFirst(new LinkedValue(3));
+    var peeked = deque.peekFirst();
+    assertThat(peeked).isNotNull();
+    deque.unlink(peeked);
+    assertThat(deque.modCount).isEqualTo(initial + 6);
+
+    deque.linkFirst(new LinkedValue(4));
+    deque.clear();
+    assertThat(deque.modCount).isEqualTo(initial + 8);
+  }
+
+  @Test
+  void linkFirst_setsPreviousLink() {
+    var deque = new AccessOrderDeque<LinkedValue>();
+    var first = new LinkedValue(1);
+    deque.linkFirst(first);
+    var newFirst = new LinkedValue(2);
+    deque.linkFirst(newFirst);
+    assertThat(first.getPreviousInAccessOrder()).isEqualTo(newFirst);
+    assertThat(newFirst.getNextInAccessOrder()).isEqualTo(first);
+  }
+
+  @Test
+  void unlink_clearsPointers() {
+    var deque = new AccessOrderDeque<LinkedValue>();
+    var a = new LinkedValue(1);
+    var b = new LinkedValue(2);
+    var c = new LinkedValue(3);
+    deque.addLast(a);
+    deque.addLast(b);
+    deque.addLast(c);
+
+    deque.unlink(b);
+    assertThat(b.getPreviousInAccessOrder()).isNull();
+    assertThat(b.getNextInAccessOrder()).isNull();
+    assertThat(a.getNextInAccessOrder()).isEqualTo(c);
+    assertThat(c.getPreviousInAccessOrder()).isEqualTo(a);
+  }
+
+  @Test
+  void clear_clearsAllLinks() {
+    var deque = new AccessOrderDeque<LinkedValue>();
+    var a = new LinkedValue(1);
+    var b = new LinkedValue(2);
+    deque.addLast(a);
+    deque.addLast(b);
+
+    deque.clear();
+    assertThat(a.getPreviousInAccessOrder()).isNull();
+    assertThat(a.getNextInAccessOrder()).isNull();
+    assertThat(b.getPreviousInAccessOrder()).isNull();
+    assertThat(b.getNextInAccessOrder()).isNull();
   }
 
   /* --------------- Deque providers --------------- */

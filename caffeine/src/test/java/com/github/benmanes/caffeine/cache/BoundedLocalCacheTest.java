@@ -786,7 +786,7 @@ final class BoundedLocalCacheTest {
       } else {
         node.die();
       }
-      assertThat(cache.nodeToCacheEntry(node, v -> v)).isNull();
+      assertThat(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight())).isNull();
     }
     // reset due to intentionally corrupting the internal state
     requireNonNull(context.build(key -> key));
@@ -798,7 +798,7 @@ final class BoundedLocalCacheTest {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var weakKey = (Reference<?>) node.getKeyReference();
     weakKey.clear();
-    assertThat(cache.nodeToCacheEntry(node, v -> v)).isNull();
+    assertThat(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight())).isNull();
   }
 
   @ParameterizedTest
@@ -807,7 +807,7 @@ final class BoundedLocalCacheTest {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var weakValue = (Reference<?>) node.getValueReference();
     weakValue.clear();
-    assertThat(cache.nodeToCacheEntry(node, v -> v)).isNull();
+    assertThat(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight())).isNull();
   }
 
   @ParameterizedTest
@@ -818,19 +818,19 @@ final class BoundedLocalCacheTest {
       expiryTime = Expire.ONE_MINUTE, population = Population.FULL)
   void nodeToCacheEntry_expiration(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (var node : cache.data.values()) {
-      var entry = requireNonNull(cache.nodeToCacheEntry(node, v -> v));
+      var entry = requireNonNull(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight()));
       assertThat(entry.expiresAfter()).isEqualTo(Duration.ofMinutes(1));
     }
 
     context.ticker().advance(Duration.ofSeconds(30));
     for (var node : cache.data.values()) {
-      var entry = requireNonNull(cache.nodeToCacheEntry(node, v -> v));
+      var entry = requireNonNull(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight()));
       assertThat(entry.expiresAfter()).isEqualTo(Duration.ofSeconds(30));
     }
 
     context.ticker().advance(Duration.ofMinutes(1));
     for (var node : cache.data.values()) {
-      assertThat(cache.nodeToCacheEntry(node, v -> v)).isNull();
+      assertThat(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight())).isNull();
     }
   }
 
@@ -2573,6 +2573,59 @@ final class BoundedLocalCacheTest {
         .filter(n -> n.getCause() == EXPIRED)
         .collect(toImmutableList());
     assertThat(expiredNotifications).hasSize(1);
+  }
+
+  @Test
+  void computeIfAbsent_expiredEntry_expiryThrows_evictionCommitted() {
+    var ticker = new FakeTicker();
+    var throwOnCreate = new AtomicBoolean();
+    var listener = new ConsumingRemovalListener<Int, Int>();
+    var cache = Caffeine.newBuilder()
+        .expireAfter(Expiry.creating((Int key, Int value) -> {
+          checkState(!throwOnCreate.get(), "expiry failure");
+          return Duration.ofMinutes(1);
+        }))
+        .removalListener(listener)
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(100)
+        .recordStats()
+        .build();
+
+    cache.put(Int.valueOf(1), Int.valueOf(5));
+    ticker.advance(Duration.ofMinutes(2));
+
+    throwOnCreate.set(true);
+    assertThrows(IllegalStateException.class, () ->
+        cache.asMap().computeIfAbsent(Int.valueOf(1), k -> Int.valueOf(10)));
+
+    assertThat(cache.asMap()).doesNotContainKey(Int.valueOf(1));
+    assertThat(listener.removed().stream()
+        .filter(n -> n.getCause() == EXPIRED)).hasSize(1);
+  }
+
+  @Test
+  void compute_expiredEntry_mappingThrowsError_evictionCommitted() {
+    var ticker = new FakeTicker();
+    var listener = new ConsumingRemovalListener<Int, Int>();
+    var cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .removalListener(listener)
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(100)
+        .recordStats()
+        .build();
+
+    cache.put(Int.valueOf(1), Int.valueOf(5));
+    ticker.advance(Duration.ofMinutes(2));
+
+    assertThrows(AssertionError.class, () ->
+        cache.asMap().compute(Int.valueOf(1), (k, v) -> { throw new AssertionError("test"); }));
+
+    assertThat(cache.asMap()).doesNotContainKey(Int.valueOf(1));
+    assertThat(listener.removed().stream()
+        .filter(n -> n.getCause() == EXPIRED)).hasSize(1);
   }
 
   @Test

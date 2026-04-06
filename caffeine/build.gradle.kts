@@ -182,38 +182,19 @@ fray.testTask = "frayTest"
 
 pitest {
   fun fqcn(name: String) = "com.github.benmanes.caffeine.cache.$name"
-  val dataStructures = setOf(fqcn("AbstractLinkedDeque"), fqcn("Async"), fqcn("BoundedBuffer"),
+
+  // Scoped to self-contained data structure classes with focused standalone tests.
+  // BoundedLocalCache / UnboundedLocalCache are intentionally excluded because the
+  // @CacheSpec parameterized test suite makes PIT's main process OOM during coverage
+  // collection regardless of heap size.
+  targetClasses = setOf(fqcn("AbstractLinkedDeque"), fqcn("Async"), fqcn("BoundedBuffer"),
     fqcn("Caffeine"), fqcn("CaffeineSpec"), fqcn("FrequencySketch"), fqcn("Interner"),
     fqcn("MpscGrowableArrayQueue"), fqcn("Pacer"), fqcn("Scheduler"),
     fqcn("StripedBuffer"), fqcn("TimerWheel"))
-  val dataStructureTests = setOf(fqcn("AsyncTest"), fqcn("BoundedBufferTest"),
+  targetTests = setOf(fqcn("AsyncTest"), fqcn("BoundedBufferTest"),
     fqcn("CaffeineSpecTest"), fqcn("CaffeineTest"), fqcn("FrequencySketchTest"),
     fqcn("InternerTest"), fqcn("LinkedDequeTest"), fqcn("MpscGrowableArrayQueueTest"),
     fqcn("PacerTest"), fqcn("SchedulerTest"), fqcn("StripedBufferTest"), fqcn("TimerWheelTest"))
-  val cache = setOf(fqcn("BoundedLocalCache"), fqcn("UnboundedLocalCache"))
-  val cacheTests = setOf(fqcn("AsMapTest"), fqcn("AsyncAsMapTest"), fqcn("AsyncCacheTest"),
-    fqcn("AsyncLoadingCacheTest"), fqcn("BoundedLocalCacheTest"), fqcn("CacheTest"),
-    fqcn("EvictionTest"), fqcn("ExpirationTest"), fqcn("ExpireAfterAccessTest"),
-    fqcn("ExpireAfterVarTest"), fqcn("ExpireAfterWriteTest"), fqcn("LoadingCacheTest"),
-    fqcn("RefreshAfterWriteTest"), fqcn("UnboundedLocalCacheTest"))
-
-  // Scope: `-Ppit=dataStructures`, `-Ppit=cache`, or default (everything).
-  val scope = providers.gradleProperty("pit").getOrElse("all")
-  targetClasses = when (scope) {
-    "cache" -> cache
-    "dataStructures" -> dataStructures
-    else -> dataStructures + cache
-  }
-  targetTests = when (scope) {
-    "cache" -> cacheTests
-    "dataStructures" -> dataStructureTests
-    else -> dataStructureTests + cacheTests
-  }
-  if (scope == "cache") {
-    jvmArgs = listOf("-Dimplementation=caffeine", "-Dstats=enabled",
-      "-Dkeys=strong", "-Dvalues=strong")
-    skipFailingTests = true
-  }
   threads = Runtime.getRuntime().availableProcessors()
   junit5PluginVersion = libs.versions.pitest.junit5
   pitestVersion = libs.versions.pitest.asProvider()

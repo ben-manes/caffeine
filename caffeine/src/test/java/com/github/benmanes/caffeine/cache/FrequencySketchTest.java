@@ -84,6 +84,32 @@ final class FrequencySketchTest {
   }
 
   @Test
+  void ensureCapacity_exactMatch() {
+    var sketch = makeSketch(512);
+    int size = sketch.table.length;
+    long[] table = sketch.table;
+    sketch.ensureCapacity(size);
+    assertThat(sketch.table).isSameInstanceAs(table);
+  }
+
+  @Test
+  void spread_knownValues() {
+    assertThat(FrequencySketch.spread(0)).isEqualTo(0);
+    assertThat(FrequencySketch.spread(1)).isNotEqualTo(1);
+    assertThat(FrequencySketch.spread(Integer.MAX_VALUE))
+        .isNotEqualTo(FrequencySketch.spread(Integer.MAX_VALUE - 1));
+  }
+
+  @Test
+  void incrementAt_saturated_returnsFalse() {
+    var sketch = makeSketch(512);
+    for (int i = 0; i < 15; i++) {
+      assertThat(sketch.incrementAt(0, 0)).isTrue();
+    }
+    assertThat(sketch.incrementAt(0, 0)).isFalse();
+  }
+
+  @Test
   void increment_once() {
     var sketch = makeSketch(512);
     sketch.increment(item);

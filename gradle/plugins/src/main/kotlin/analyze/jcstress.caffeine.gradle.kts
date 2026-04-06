@@ -1,4 +1,5 @@
 @file:Suppress("PackageDirectoryMismatch", "UnstableApiUsage")
+import org.gradle.api.tasks.PathSensitivity.RELATIVE
 import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
@@ -40,7 +41,8 @@ tasks.register<JCStress>("jcstress") {
   description = "JCStress tests"
   classpath(jcstressRuntimeClasspath, jcstressJar.map { it.archiveFile })
   inputs.files(compileJcstressJava.map { it.outputs.files },
-    jcstressJar.map { it.archiveFile }, tasks.jar.map { it.archiveFile })
+      jcstressJar.map { it.archiveFile }, tasks.jar.map { it.archiveFile })
+    .withPathSensitivity(RELATIVE)
   val javaVersion = java.toolchain.languageVersion.map { it.asInt() }
   jvmArgumentProviders.add {
     if (javaVersion.get() >= 25) listOf("-XX:+UseCompactObjectHeaders") else emptyList()

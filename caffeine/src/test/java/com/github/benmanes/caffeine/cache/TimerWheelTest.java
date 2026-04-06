@@ -132,6 +132,27 @@ final class TimerWheelTest {
     assertThat(bucket).isSameInstanceAs(expected);
   }
 
+  @Test
+  void findBucket_largeDuration_returnsLastWheel() {
+    var timerWheel = new TimerWheel<Int, Int>();
+    timerWheel.nanos = 0L;
+    // Duration exceeds all SPANS → must fall through the loop to the last wheel
+    var bucket = timerWheel.findBucket(Long.MAX_VALUE / 2);
+    assertThat(bucket).isSameInstanceAs(timerWheel.wheel[timerWheel.wheel.length - 1][0]);
+  }
+
+  @Test
+  void advance_doesNotEvictFutureTimers() {
+    BoundedLocalCache<Int, Int> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Int, Int>();
+    timerWheel.nanos = 0L;
+    timerWheel.schedule(new Timer(10 * SPANS[0]));
+
+    // Advance by less than the timer's duration — nothing should be evicted
+    timerWheel.advance(cache, SPANS[0]);
+    verifyNoInteractions(cache);
+  }
+
   @ParameterizedTest @MethodSource("clock")
   void advance(long clock) {
     BoundedLocalCache<Int, Int> cache = Mockito.mock();
@@ -288,7 +309,9 @@ final class TimerWheelTest {
     timerWheel.nanos = clock;
     long delay = Duration.ofSeconds(1).toNanos();
     timerWheel.schedule(new Timer(clock + delay));
-    assertThat(timerWheel.getExpirationDelay()).isAtMost(SPANS[0]);
+    long result = timerWheel.getExpirationDelay();
+    assertThat(result).isGreaterThan(0L);
+    assertThat(result).isAtMost(SPANS[0]);
   }
 
   @ParameterizedTest @MethodSource("clock")
@@ -298,7 +321,29 @@ final class TimerWheelTest {
     timerWheel.nanos = clock;
     long delay = Duration.ofDays(14).toNanos();
     timerWheel.schedule(new Timer(clock + delay));
-    assertThat(timerWheel.getExpirationDelay()).isAtMost(delay);
+    long result = timerWheel.getExpirationDelay();
+    assertThat(result).isGreaterThan(0L);
+    assertThat(result).isAtMost(delay);
+  }
+
+  @Test
+  void getExpirationDelay_singleTimerInFirstWheel_positiveDelay() {
+    var timerWheel = new TimerWheel<Int, Int>();
+    timerWheel.nanos = 0L;
+    timerWheel.schedule(new Timer(SPANS[0] * 2));
+
+    long result = timerWheel.getExpirationDelay();
+    assertThat(result).isGreaterThan(0L);
+    assertThat(result).isLessThan(Long.MAX_VALUE);
+  }
+
+  @Test
+  void getExpirationDelay_notInLastWheel_lessThanMax() {
+    var timerWheel = new TimerWheel<Int, Int>();
+    timerWheel.nanos = 0L;
+    timerWheel.schedule(new Timer(SPANS[0]));
+
+    assertThat(timerWheel.getExpirationDelay()).isLessThan(SPANS[1]);
   }
 
   @ParameterizedTest @MethodSource("clock")

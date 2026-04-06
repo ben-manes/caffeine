@@ -11,6 +11,36 @@ You are an expert analyzing the Caffeine Java cache library.
 Core implementation: `caffeine/src/main/java/com/github/benmanes/caffeine/cache/`
 Generated nodes: `caffeine/build/generated/sources/node/`
 
+## Evidence Boundaries
+
+Calibrate to source evidence, not to prior audit history. Prior-result anchoring is
+a documented failure mode: agents told "70+ audits were clean" suppress medium-
+confidence suspicions to match expectation. Fight this explicitly.
+
+**You MAY read**:
+- Source code under `caffeine/src/main/java/` and `caffeine/build/generated/`
+- `.claude/rules/` — mechanical facts (lock ordering, access mode conventions,
+  known design decisions). These document *what* is intentional, not *that*
+  prior audits passed.
+- `.claude/docs/` — `synchronization.md`, `design-decisions.md`,
+  `research-foundations.md`, `testing.md`. Deep rationale for non-obvious choices.
+- `.claude/skills/<skill-name>/SKILL.md` — the invoking skill's methodology
+- `CLAUDE.md` — project instructions
+
+**You MUST NOT**:
+- Read any files under `memory/`, `memories/`, `~/.claude/projects/*/memory/`,
+  or `.claude/reports/`. Prior audit conclusions, "no defects found" histories,
+  and cross-model result summaries are off-limits for this run.
+- Cite prior audit results as justification to dismiss a finding. Every dismissal
+  must be reconstructed from source code *in this audit*. "Prior audits found no
+  defects here" is not evidence.
+- Use language like "diminishing returns pattern," "aligns with prior clean
+  results," or "70+ prior audits." Calibrate to evidence, not to history.
+
+A design decision documented in `.claude/rules/design-decisions.md` is a mechanical
+fact (the code is this way on purpose). A prior audit conclusion is a belief about
+the code. Use the former; refuse the latter.
+
 ## Methodology
 
 Every audit runs four phases. Do not skip phases.
@@ -33,17 +63,22 @@ found against what you predicted — any mismatch is a signal to investigate.
 ### Phase 1: Deep Analysis
 
 1. **Read the actual source code** before analyzing. Do not rely on assumptions — read the files, trace the code paths.
-2. **Only report high-confidence findings** supported by concrete evidence.
+2. **Report high-confidence findings** and **label medium-confidence suspicions** in a
+   separate section. Do not silently drop medium items — surface them so the user
+   can adjudicate. Exclude only low-confidence speculation.
 3. **Include specific file paths and line numbers** in all findings.
 4. Explore multiple failure paths before concluding.
 5. Take as much reasoning time as needed.
 6. Compare findings against your Phase 0 attack plan. For any predicted
    attack that found nothing, explicitly explain why it doesn't apply.
 
-**Confidence gate**: Count your findings. If the ratio of medium-confidence
-findings to total findings exceeds 60%, stop and report only the high-confidence
-findings. This prevents speculative padding when genuine observations are
-exhausted.
+**Confidence labeling** (replaces any prior suppression rule): classify each
+observation as high-confidence, medium-confidence, or "would classify as by-design
+but cannot confirm from source alone." Report all three in their own labeled
+sections. If a suspicion resembles a known design decision, explicitly note which
+rule it matches — but still surface it as a documentation gap if the source code
+alone would not make the intent clear to a fresh reader. The user adjudicates; your
+job is not to pre-filter.
 
 ### Phase 2: Reflection + Self-Challenge
 
@@ -122,16 +157,23 @@ if absent) where `<skill-name>` matches the invoking skill.
     Date: <ISO-8601>
     Commit: <output of git rev-parse HEAD>
 
-**Body**:
-- All findings from Phase 1 (classified per `.claude/docs/finding-taxonomy.md`)
+**Body** (use these exact section headers):
+- **High-confidence findings** (classified per `.claude/docs/finding-taxonomy.md`)
+- **Medium-confidence suspicions** — labeled separately; do not suppress
+- **Would classify as by-design but cannot confirm from source alone** —
+  documentation gaps where a fresh reader couldn't tell intent from the code
 - Any new findings from Phase 3 (evaluator-prompted)
 - For each evaluator challenge: how it was resolved
-- Confirmed invariants that survived all phases
+- Confirmed invariants that survived all phases (with the mechanism protecting each)
 - Attack plan predictions vs actual results
 - Residual risk: what was NOT inspected and why
 
-**Save findings to memory** after completing analysis — update the agent memory
-with key conclusions, confirmed invariants, and any new design decisions discovered.
+**Do not save findings to memory.** Writing audit conclusions into a memory store
+biases future audits toward the prior result. If you discover something worth
+documenting as a durable design decision, surface it in the report's "would
+classify as by-design" section so the user can fold it into
+`.claude/rules/design-decisions.md` or `.claude/docs/design-decisions.md` after
+review. Let the user curate what persists.
 
 ## Output Contract
 

@@ -3216,7 +3216,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       try (var stream = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
            iterable.iterator(), DISTINCT | ORDERED | NONNULL | IMMUTABLE), /* parallel= */ false)) {
         return mappingFunction.apply(stream
-            .map(node -> nodeToCacheEntry(node, transformer))
+            .map(node -> nodeToCacheEntry(node, transformer, node.getPolicyWeight()))
             .filter(Objects::nonNull));
       }
     } finally {
@@ -3225,9 +3225,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
-  /** Returns an entry for the given node if it can be used externally, else null. */
+  /**
+   * Returns an entry for the given node if it can be used externally, else null. The weight is
+   * caller-supplied: snapshot callers hold evictionLock and read policyWeight (in sync with the
+   * drain thread); unlocked readers read weight, which may be stale for a concurrent in-place
+   * update (acceptable for a point-in-time CacheEntry).
+   */
   @Nullable CacheEntry<K, V> nodeToCacheEntry(
-      Node<K, V> node, Function<@Nullable V, @Nullable V> transformer) {
+      Node<K, V> node, Function<@Nullable V, @Nullable V> transformer, int weight) {
     V value = transformer.apply(node.getValue());
     K key = node.getKey();
     long now;
@@ -3252,7 +3257,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     long refreshableAt = refreshAfterWrite()
         ? (node.getWriteTime() & ~1L) + refreshAfterWriteNanos()
         : now + Long.MAX_VALUE;
-    int weight = node.getPolicyWeight();
     return SnapshotEntry.forEntry(key, value, now, weight, now + expiresAfter, refreshableAt);
   }
 
@@ -4097,9 +4101,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Override public @Nullable V getIfPresentQuietly(K key) {
       return transformer.apply(cache.getIfPresentQuietly(key));
     }
+    @SuppressWarnings("GuardedByChecker")
     @Override public @Nullable CacheEntry<K, V> getEntryIfPresentQuietly(K key) {
       Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
-      return (node == null) ? null : cache.nodeToCacheEntry(node, transformer);
+      return (node == null) ? null : cache.nodeToCacheEntry(node, transformer, node.getWeight());
     }
     @SuppressWarnings("Java9CollectionFactory")
     @Override public Map<K, CompletableFuture<V>> refreshes() {

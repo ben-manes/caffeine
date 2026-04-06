@@ -72,13 +72,13 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
   boolean isPendingEviction(K key);
 
   /**
-   * See {@link Cache#getIfPresent(K)}. This method differs by accepting a parameter of whether
+   * See {@link Cache#getIfPresent(Object)}. This method differs by accepting a parameter of whether
    * to record the hit-and-miss statistics based on the success of this operation.
    */
   @Nullable V getIfPresent(K key, boolean recordStats);
 
   /**
-   * See {@link Cache#getIfPresent(K)}. This method differs by not recording the access with
+   * See {@link Cache#getIfPresent(KObject)}. This method differs by not recording the access with
    * the statistics nor the eviction policy.
    */
   @Nullable V getIfPresentQuietly(Object key);
@@ -87,8 +87,8 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
   Map<K, V> getAllPresent(Iterable<? extends K> keys);
 
   /**
-   * See {@link ConcurrentMap#replace(K, K, V)}. This method differs by optionally not discarding an
-   * in-flight refresh for the entry if replaced.
+   * See {@link ConcurrentMap#replace(Object, Object, Object)}. This method differs by optionally
+   * not discarding an in-flight refresh for the entry if replaced.
    */
   boolean replace(K key, V oldValue, V newValue, boolean shouldDiscardRefresh);
 
