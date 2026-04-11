@@ -245,6 +245,62 @@ final class RefreshAfterWriteTest {
         .exclusively();
   }
 
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
+      loader = Loader.ASYNC_INCOMPLETE)
+  void refreshIfNeeded_replaced_compute(LoadingCache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(2));
+    var value = cache.get(context.firstKey());
+    assertThat(value).isNotNull();
+
+    assertThat(cache.policy().refreshes()).isNotEmpty();
+    var future = requireNonNull(cache.policy().refreshes().get(context.firstKey()));
+
+    cache.asMap().compute(context.firstKey(), (k, v) -> context.absentValue());
+    future.complete(context.absentKey().negate());
+
+    assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
+    assertThat(cache.policy().refreshes()).doesNotContainKey(context.firstKey());
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(
+            Map.entry(context.firstKey(), context.original().get(context.firstKey())),
+            Map.entry(context.firstKey(), context.absentKey().negate()))
+        .exclusively();
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
+      loader = Loader.ASYNC_INCOMPLETE)
+  void refreshIfNeeded_writeTimeABA(LoadingCache<Int, Int> cache, CacheContext context) {
+    // When a refresh is in-flight and a put replaces the value with the SAME instance,
+    // currentValue == oldValue is true but writeTime changed. The ABA check at
+    // node.getWriteTime() != writeTime should detect this and discard the refresh.
+    var originalValue = requireNonNull(context.original().get(context.firstKey()));
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    var value = cache.get(context.firstKey());
+    assertThat(value).isNotNull();
+
+    assertThat(cache.policy().refreshes()).isNotEmpty();
+    var future = requireNonNull(cache.policy().refreshes().get(context.firstKey()));
+
+    // Re-put the same value instance — changes writeTime but not the value reference.
+    // notifyOnReplace is a no-op for same-instance replacement.
+    cache.put(context.firstKey(), originalValue);
+    future.complete(context.absentKey().negate());
+
+    // The put's value should be preserved; the refresh should be discarded
+    assertThat(cache).containsEntry(context.firstKey(), originalValue);
+    // Only the discarded refresh produces a REPLACED notification
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.firstKey(), context.absentKey().negate())
+        .exclusively();
+  }
+
   @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MILLISECOND, removalListener = Listener.CONSUMING,

@@ -29,8 +29,9 @@ confidence suspicions to match expectation. Fight this explicitly.
 
 **You MUST NOT**:
 - Read any files under `memory/`, `memories/`, `~/.claude/projects/*/memory/`,
-  or `.claude/reports/`. Prior audit conclusions, "no defects found" histories,
-  and cross-model result summaries are off-limits for this run.
+  `.claude/agent-memory-local/` or `.claude/reports/`. Prior audit conclusions,
+  "no defects found" histories, and cross-model result summaries are off-limits
+  for this run.
 - Cite prior audit results as justification to dismiss a finding. Every dismissal
   must be reconstructed from source code *in this audit*. "Prior audits found no
   defects here" is not evidence.

@@ -103,7 +103,7 @@
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
-    <Method name="throwException"/>
+    <Method name="toUncheckedException"/>
     <Bug pattern="ITC_INHERITANCE_TYPE_CHECKING"/>
   </Match>
   <Match>

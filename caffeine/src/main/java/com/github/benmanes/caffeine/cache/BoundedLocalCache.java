@@ -308,14 +308,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         node.getClass().getSimpleName(), getClass().getSimpleName());
   }
 
-  /** Throws the exception, wrapping checked exceptions in a {@link CompletionException}. */
-  static void throwException(Throwable t) {
-    if (t instanceof RuntimeException) {
-      throw (RuntimeException) t;
-    } else if (t instanceof Error) {
+  /** Returns the exception as unchecked, wrapping checked exceptions in a CompletionException. */
+  static RuntimeException toUncheckedException(Throwable t) {
+    if (t instanceof Error) {
       throw (Error) t;
     }
-    throw new CompletionException(t);
+    return (t instanceof RuntimeException) ? (RuntimeException) t : new CompletionException(t);
   }
 
   /* --------------- Shared --------------- */
@@ -2171,8 +2169,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     long now = expirationTicker().read();
     for (Node<K, V> node : data.values()) {
       V nodeValue = node.getValue();
-      if ((nodeValue != null) && node.containsValue(value)
-          && !hasExpired(node, now, nodeValue) && (node.getKey() != null)) {
+      if (node.isAlive() && (node.getKey() != null) && (nodeValue != null)
+          && node.containsValue(value) && !hasExpired(node, now, nodeValue)) {
         return true;
       }
     }
@@ -2764,7 +2762,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         afterWrite(new RemovalTask(ctx.removed));
       }
       if (ctx.exception != null) {
-        throwException(ctx.exception);
+        throw toUncheckedException(ctx.exception);
       }
       return null;
     }
@@ -2998,7 +2996,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     if (ctx.exception != null) {
-      throwException(ctx.exception);
+      throw toUncheckedException(ctx.exception);
     }
     return ctx.newValue;
   }

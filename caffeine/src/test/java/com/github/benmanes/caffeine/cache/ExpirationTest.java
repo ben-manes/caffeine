@@ -1431,6 +1431,26 @@ final class ExpirationTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.FULL, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      evictionListener = Listener.CONSUMING)
+  void merge_weigherFails_expired(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofHours(1));
+    when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+    assertThrows(IllegalStateException.class, () ->
+        cache.asMap().merge(context.firstKey(), context.absentValue(),
+            (oldValue, v) -> { throw new AssertionError("Should never be called"); }));
+
+    assertThat(cache.asMap()).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()));
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.MOCKITO },

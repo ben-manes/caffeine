@@ -150,6 +150,20 @@ final class JavaSerializationCopierTest {
   }
 
   @Test
+  void defaultConstructor() {
+    var copier = new AbstractCopier<Object>() {
+      @Override protected Object serialize(Object object) {
+        throw new UnsupportedOperationException();
+      }
+      @Override protected Object deserialize(Object data, ClassLoader classLoader) {
+        throw new UnsupportedOperationException();
+      }
+    };
+    String text = "test";
+    assertThat(copy(copier, text)).isSameInstanceAs(text);
+  }
+
+  @Test
   void canDeeplyCopy() {
     var copier = new JavaSerializationCopier();
     assertThat(copier.canDeeplyCopy(Object.class)).isFalse();

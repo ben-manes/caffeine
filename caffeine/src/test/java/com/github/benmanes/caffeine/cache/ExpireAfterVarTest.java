@@ -1171,6 +1171,45 @@ final class ExpireAfterVarTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  void merge_absent_expiryFails(Map<Int, Int> map, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        map.merge(context.absentKey(), context.absentValue(),
+            (oldValue, v) -> { throw new AssertionError("Should never be called"); }));
+    assertThat(map).containsExactlyEntriesIn(context.original());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  void merge_present_expiryFails(Map<Int, Int> map, CacheContext context) {
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        map.merge(context.firstKey(), context.absentValue(),
+            (oldValue, v) -> context.absentValue()));
+    assertThat(map).containsExactlyEntriesIn(context.original());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      evictionListener = Listener.CONSUMING)
+  void merge_replaceExpired_expiryFails(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofHours(1));
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        cache.asMap().merge(context.firstKey(), context.absentValue(),
+            (oldValue, v) -> { throw new AssertionError("Should never be called"); }));
+
+    assertThat(cache.asMap()).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()));
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
   void refresh_absent(LoadingCache<Int, Int> cache, CacheContext context) {
     cache.refresh(context.absentKey()).join();

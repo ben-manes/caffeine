@@ -94,6 +94,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -667,6 +668,23 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.FULL)
+  void containsValue_notAlive(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (var node : cache.data.values()) {
+      if (ThreadLocalRandom.current().nextBoolean()) {
+        node.retire();
+      } else {
+        node.die();
+      }
+    }
+    for (Int value : context.original().values()) {
+      assertThat(cache.containsValue(value)).isFalse();
+    }
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL)
   void equals_notAlive(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (var node : cache.data.values()) {
       if (ThreadLocalRandom.current().nextBoolean()) {
@@ -808,6 +826,30 @@ final class BoundedLocalCacheTest {
     var weakValue = (Reference<?>) node.getValueReference();
     weakValue.clear();
     assertThat(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight())).isNull();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT})
+  void entrySet_contains_collectedValue(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var entry = Map.entry(context.firstKey(), context.original().get(context.firstKey()));
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    var valueRef = (Reference<?>) node.getValueReference();
+    valueRef.clear();
+    assertThat(cache.entrySet().contains(entry)).isFalse();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
+      expiry = CacheExpiry.CREATE, values = {ReferenceType.WEAK, ReferenceType.SOFT})
+  void setExpiresAfter_collectedValue(BoundedLocalCache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireVariably) {
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    long variableTimeBefore = node.getVariableTime();
+    var valueRef = (Reference<?>) node.getValueReference();
+    valueRef.clear();
+    expireVariably.setExpiresAfter(context.firstKey(), Duration.ofMinutes(2));
+    assertThat(node.getVariableTime()).isEqualTo(variableTimeBefore);
   }
 
   @ParameterizedTest
@@ -1237,6 +1279,28 @@ final class BoundedLocalCacheTest {
 
       assertThat(expected.isDead()).isTrue();
       await().untilAsserted(() -> assertThat(cache).hasSize(cache.maximum()));
+    } finally {
+      cache.evictionLock.unlock();
+    }
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
+  void reorderProbation_staleAccess(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A node that is not in the probation deque (e.g., in the window deque) should be ignored
+    // by reorderProbation, leaving the probation deque unchanged.
+    cache.evictionLock.lock();
+    try {
+      var windowNode = cache.accessOrderWindowDeque().getFirst();
+      var probationBefore = cache.accessOrderProbationDeque().stream()
+          .map(Node::getKey).collect(toImmutableList());
+
+      cache.reorderProbation(windowNode);
+
+      var probationAfter = cache.accessOrderProbationDeque().stream()
+          .map(Node::getKey).collect(toImmutableList());
+      assertThat(probationAfter).containsExactlyElementsIn(probationBefore).inOrder();
     } finally {
       cache.evictionLock.unlock();
     }
@@ -2604,6 +2668,96 @@ final class BoundedLocalCacheTest {
         .filter(n -> n.getCause() == EXPIRED)).hasSize(1);
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, expireAfterWrite = Expire.ONE_MINUTE)
+  void computeIfAbsent_exceptionAfterExpiredEviction(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThrows(IllegalStateException.class, () ->
+        cache.computeIfAbsent(context.firstKey(), key -> {
+          throw new IllegalStateException();
+        }, /* recordStats= */ false, /* recordLoad= */ true));
+    assertThat(cache).doesNotContainKey(context.firstKey());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, expireAfterWrite = Expire.ONE_MINUTE)
+  void compute_exceptionAfterExpiredEviction(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThrows(IllegalStateException.class, () ->
+        cache.compute(context.firstKey(), (key, value) -> {
+          throw new IllegalStateException();
+        }, cache.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true));
+    assertThat(cache).doesNotContainKey(context.firstKey());
+  }
+
+  @ParameterizedTest
+  @CacheSpec
+  void doComputeIfAbsent_throwsException(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Pre-set ctx.exception to bypass a JaCoCo instrumentation limitation where probes inside
+    // ConcurrentHashMap.compute lambdas with synchronized + try-catch can't track ctx.exception
+    // being set. The mapping function returns null for the absent key so data.compute is a no-op,
+    // and the post-lambda code sees the pre-set checked exception, wraps it in CompletionException.
+    var ctx = new ComputeContext<Int, Int>(cache.expirationTicker().read());
+    ctx.exception = new IOException("test");
+    Object keyRef = cache.nodeFactory.newReferenceKey(
+        context.absentKey(), cache.keyReferenceQueue());
+
+    var exception = assertThrows(CompletionException.class, () ->
+        cache.doComputeIfAbsent(context.absentKey(), keyRef,
+            k -> null, ctx, /* recordStats= */ false));
+    assertThat(exception).hasCauseThat().isInstanceOf(IOException.class);
+  }
+
+  @ParameterizedTest
+  @CacheSpec
+  void remap_throwsException(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var ctx = new ComputeContext<Int, Int>(cache.expirationTicker().read());
+    ctx.exception = new IOException("test");
+    Object keyRef = cache.nodeFactory.newLookupKey(context.absentKey());
+
+    var exception = assertThrows(CompletionException.class, () ->
+        cache.remap(context.absentKey(), keyRef,
+            (k, v) -> { throw new AssertionError(); }, cache.expiry(),
+            ctx, /* computeIfAbsent= */ false));
+    assertThat(exception).hasCauseThat().isInstanceOf(IOException.class);
+  }
+
+  @Test
+  void computeIfAbsent_expiredEntry_mappingThrows_evictionCommitted() {
+    // When computeIfAbsent() encounters an expired entry in doComputeIfAbsent and the mapping
+    // function throws, the catch-commit-rethrow pattern should: commit the eviction (retire
+    // the node), record eviction stats, send the EXPIRED notification, and rethrow the exception.
+    var ticker = new FakeTicker();
+    var listener = new ConsumingRemovalListener<Int, Int>();
+    var cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .weigher((Int k, Int v) -> v.intValue())
+        .removalListener(listener)
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumWeight(100)
+        .recordStats()
+        .build();
+
+    cache.put(Int.valueOf(1), Int.valueOf(7));
+    ticker.advance(Duration.ofMinutes(2));
+
+    assertThrows(IllegalStateException.class, () ->
+        cache.asMap().computeIfAbsent(Int.valueOf(1), k -> {
+          throw new IllegalStateException("mapping failure");
+        }));
+
+    assertThat(cache.asMap()).doesNotContainKey(Int.valueOf(1));
+    assertThat(cache.stats().evictionWeight()).isEqualTo(7);
+    var expiredNotifications = listener.removed().stream()
+        .filter(n -> n.getCause() == EXPIRED)
+        .collect(toImmutableList());
+    assertThat(expiredNotifications).hasSize(1);
+  }
+
   @Test
   void compute_expiredEntry_mappingThrowsError_evictionCommitted() {
     var ticker = new FakeTicker();
@@ -3882,6 +4036,56 @@ final class BoundedLocalCacheTest {
   @SuppressWarnings("resource")
   @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE,
       loader = Loader.IDENTITY, executor = CacheExecutor.THREADED)
+  void refreshIfNeeded_valueDiffersFromOldValue(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    context.executor().pause();
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.refreshIfNeeded(node, context.ticker().read())).isNull();
+    var future = requireNonNull(cache.refreshes().get(node.getKeyReference()));
+
+    // Replace the value while the refresh is in-flight
+    assertThat(cache.put(context.firstKey(), context.absentValue()))
+        .isEqualTo(context.original().get(context.firstKey()));
+
+    context.executor().resume();
+    assertThat(future).succeedsWith(context.firstKey());
+
+    // The cache retains the explicitly put value, not the refreshed value
+    await().untilAsserted(() -> assertThat(context.cache())
+        .containsEntry(context.firstKey(), context.absentValue()));
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.firstKey(), context.firstKey());
+  }
+
+  @ParameterizedTest
+  @SuppressWarnings("resource")
+  @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE,
+      loader = Loader.IDENTITY, executor = CacheExecutor.THREADED)
+  void refreshIfNeeded_successful(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    context.executor().pause();
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.refreshIfNeeded(node, context.ticker().read())).isNull();
+    var future = requireNonNull(cache.refreshes().get(node.getKeyReference()));
+
+    context.executor().resume();
+    assertThat(future).succeedsWith(context.firstKey());
+
+    // The cache is updated with the refreshed value
+    await().untilAsserted(() -> assertThat(context.cache())
+        .containsEntry(context.firstKey(), context.firstKey()));
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()))
+        .exclusively();
+  }
+
+  @ParameterizedTest
+  @SuppressWarnings("resource")
+  @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE,
+      loader = Loader.IDENTITY, executor = CacheExecutor.THREADED)
   void refreshIfNeeded_replaced(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     context.executor().pause();
@@ -3894,6 +4098,46 @@ final class BoundedLocalCacheTest {
     var future = requireNonNull(cache.refreshes().get(node.getKeyReference()));
     context.executor().resume();
     assertThat(future).succeedsWith(context.firstKey());
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.firstKey(), context.firstKey())
+        .exclusively();
+  }
+
+  @ParameterizedTest
+  @SuppressWarnings("resource")
+  @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MILLISECOND,
+      removalListener = Listener.CONSUMING, loader = Loader.IDENTITY,
+      executor = CacheExecutor.THREADED)
+  void refreshIfNeeded_writeTimeABA_sameValueDifferentWriteTime(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // When a refresh is in-flight and the entry's write time changes (via replace without
+    // discarding the refresh), the ABA check at node.getWriteTime() != writeTime should detect
+    // this and discard the refreshed value, even though currentValue == oldValue.
+    var node = requireNonNull(cache.data.get(
+        cache.nodeFactory.newLookupKey(context.firstKey())));
+    var originalValue = requireNonNull(context.original().get(context.firstKey()));
+    context.executor().pause();
+
+    // Advance past refresh threshold and trigger the refresh
+    context.ticker().advance(Duration.ofMillis(2));
+    assertThat(cache.refreshIfNeeded(node, context.ticker().read())).isNull();
+    assertThat(cache.refreshes()).isNotEmpty();
+
+    // Replace the value with the same instance without discarding the refresh.
+    // This changes the writeTime but keeps the value reference identical.
+    context.ticker().advance(Duration.ofMillis(1));
+    assertThat(cache.replace(context.firstKey(), originalValue, originalValue,
+        /* shouldDiscardRefresh= */ false)).isTrue();
+
+    // Resume the loader. The ABA check should detect the write time change
+    // and discard the refreshed value.
+    var future = requireNonNull(cache.refreshes().get(node.getKeyReference()));
+    context.executor().resume();
+    assertThat(future).succeedsWith(context.firstKey());
+
+    // The original value should be preserved (refresh discarded due to ABA)
+    assertThat(cache.getIfPresent(context.firstKey(), /* recordStats= */ false))
+        .isEqualTo(originalValue);
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(context.firstKey(), context.firstKey())
         .exclusively();
@@ -4191,6 +4435,31 @@ final class BoundedLocalCacheTest {
     var constructor = BLCHeader.class.getDeclaredConstructor();
     constructor.setAccessible(true);
     constructor.newInstance();
+  }
+
+  @Test
+  void removalCause_size_wasEvicted() {
+    assertThat(RemovalCause.SIZE.wasEvicted()).isTrue();
+  }
+
+  @Test
+  void toUncheckedException_checkedException() {
+    var exception = BoundedLocalCache.toUncheckedException(new IOException("test"));
+    assertThat(exception).isInstanceOf(CompletionException.class);
+    assertThat(exception).hasCauseThat().isInstanceOf(IOException.class);
+    assertThat(exception).hasCauseThat().hasMessageThat().isEqualTo("test");
+  }
+
+  @Test
+  void toUncheckedException_runtimeException() {
+    var original = new IllegalStateException("test");
+    assertThat(BoundedLocalCache.toUncheckedException(original)).isSameInstanceAs(original);
+  }
+
+  @Test
+  void toUncheckedException_error() {
+    assertThrows(AssertionError.class, () ->
+        BoundedLocalCache.toUncheckedException(new AssertionError("test")));
   }
 
   @Test
