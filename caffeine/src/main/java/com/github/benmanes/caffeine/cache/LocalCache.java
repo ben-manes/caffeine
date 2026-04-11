@@ -138,17 +138,17 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
     } else if (isAsync()) {
       var oldFuture = (CompletableFuture<?>) oldValue;
       var newFuture = (CompletableFuture<?>) newValue;
-      newFuture.whenCompleteAsync((nv, e) -> {
+      newFuture.whenComplete((nv, e) -> {
         if (e == null) {
-          oldFuture.thenAcceptAsync(ov -> {
+          oldFuture.thenAccept(ov -> {
             if (nv != ov) {
               notifyRemoval(key, oldValue, RemovalCause.REPLACED);
             }
-          }, executor());
+          });
         } else {
           notifyRemoval(key, oldValue, RemovalCause.REPLACED);
         }
-      }, executor());
+      });
     } else {
       notifyRemoval(key, oldValue, RemovalCause.REPLACED);
     }
