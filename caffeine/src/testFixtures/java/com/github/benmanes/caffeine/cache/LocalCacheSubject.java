@@ -366,7 +366,7 @@ public final class LocalCacheSubject extends Subject {
     if (bounded.collectKeys()) {
       if ((key != null) && (value != null)) {
         check("bounded").that(bounded.data).containsKey(node.getKeyReference());
-        if (!bounded.hasExpired(node, bounded.expirationTicker().read())) {
+        if (!bounded.hasExpired(node, bounded.expirationTicker().read(), value)) {
           check("bounded").that(bounded).containsKey(key);
         }
       }
@@ -389,8 +389,8 @@ public final class LocalCacheSubject extends Subject {
       Node<K, V> node, @Nullable K key, @Nullable V value) {
     if (!bounded.collectValues()) {
       check("value").that(value).isNotNull();
-      if ((key != null) && !bounded.hasExpired(node, bounded.expirationTicker().read())) {
-        requireNonNull(value);
+      requireNonNull(value);
+      if ((key != null) && !bounded.hasExpired(node, bounded.expirationTicker().read(), value)) {
         check("containsValue(value) for key %s", key)
             .about(map()).that(bounded).containsValue(value);
       }
