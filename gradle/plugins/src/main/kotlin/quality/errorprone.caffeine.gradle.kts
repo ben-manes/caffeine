@@ -119,5 +119,7 @@ private fun disabledRules() = listOf(
   "MapRules",
   "NullRules\\\$RequireNonNullElse",
   "PreconditionsRules",
+  "PrimitiveRules\\\$MathClampInt",
+  "PrimitiveRules\\\$MathClampLong",
   "TestNGToAssertJRules"
 )

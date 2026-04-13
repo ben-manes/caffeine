@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -159,6 +160,18 @@ final class AsyncTest {
     var listener = new AsyncRemovalListener<>(delegate, Runnable::run);
     listener.onRemoval(Int.MAX_VALUE, null, RemovalCause.EXPLICIT);
     verifyNoInteractions(delegate);
+  }
+
+  @Test
+  void asyncRemoval_executorRejection() {
+    var invoked = new AtomicReference<RemovalCause>();
+    RemovalListener<Int, Int> delegate = (key, value, cause) -> invoked.set(cause);
+    var listener = new AsyncRemovalListener<>(delegate, task -> {
+      throw new RejectedExecutionException();
+    });
+    listener.onRemoval(Int.valueOf(1),
+        CompletableFuture.completedFuture(Int.valueOf(2)), RemovalCause.EXPLICIT);
+    assertThat(invoked.get()).isEqualTo(RemovalCause.EXPLICIT);
   }
 
   @Test

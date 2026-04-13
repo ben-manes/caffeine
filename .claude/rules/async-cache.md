@@ -19,7 +19,7 @@ paths:
 - Refresh failures preserve the old value (not removed)
 
 ## Removal Listener Timing
-- AsyncRemovalListener chains `thenAcceptAsync()` — fires asynchronously on the executor, not inline
+- AsyncRemovalListener chains `thenAccept()` then dispatches to the executor with inline fallback on rejection
 - Only fires if the future succeeded and value is non-null
 - Exceptions in the listener are logged at WARNING and swallowed
 

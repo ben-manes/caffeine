@@ -923,14 +923,14 @@ final class CacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
       executor = CacheExecutor.REJECTING, executorFailure = ExecutorFailure.EXPECTED,
       removalListener = Listener.CONSUMING)
-  void removalListener_submit_error_log(Cache<Int, Int> cache) {
+  void removalListener_submit_error_log(Cache<Int, Int> cache, CacheContext context) {
     cache.invalidateAll();
     assertThat(logEvents()
         .withMessage("Exception thrown when submitting removal listener")
         .withThrowable(RejectedExecutionException.class)
         .withLevel(ERROR)
         .exclusively())
-        .hasSize(1);
+        .hasSize(context.isAsync() ? 2 : 1);
   }
 
   @CheckNoStats

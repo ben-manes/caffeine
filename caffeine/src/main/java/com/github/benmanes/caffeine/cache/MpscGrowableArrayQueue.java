@@ -172,7 +172,7 @@ abstract class BaseMpscLinkedArrayQueueConsumerFields<E> extends BaseMpscLinkedA
   }
 
   @SuppressWarnings("unchecked")
-  public static <E> @Nullable E[] allocate(int capacity) {
+  @Nullable E[] allocate(int capacity) {
     return (E[]) new Object[capacity];
   }
 }

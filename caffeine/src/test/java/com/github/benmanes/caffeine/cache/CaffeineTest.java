@@ -22,6 +22,7 @@ import static com.github.benmanes.caffeine.testing.Nullness.nullSupplier;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.verify;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
@@ -34,10 +35,13 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
@@ -940,13 +944,28 @@ final class CaffeineTest {
 
   /* --------------- Static helpers --------------- */
 
-  @Test
-  void ceilingPowerOfTwo_long() {
-    assertThat(Caffeine.ceilingPowerOfTwo(1L)).isEqualTo(1L);
-    assertThat(Caffeine.ceilingPowerOfTwo(2L)).isEqualTo(2L);
-    assertThat(Caffeine.ceilingPowerOfTwo(3L)).isEqualTo(4L);
-    assertThat(Caffeine.ceilingPowerOfTwo(1024L)).isEqualTo(1024L);
-    assertThat(Caffeine.ceilingPowerOfTwo(1025L)).isEqualTo(2048L);
+  @ParameterizedTest
+  @MethodSource("powerOfTwoInt")
+  void ceilingPowerOfTwo_int(int x, int expected) {
+    assertThat(Caffeine.ceilingPowerOfTwo(x)).isEqualTo(expected);
+  }
+
+  static Stream<Arguments> powerOfTwoInt() {
+    return Stream.of(arguments(1, 1), arguments(2, 2), arguments(3, 4), arguments(1024, 1024),
+        arguments(1025, 2048), arguments(1 << 30, 1 << 30), arguments((1 << 30) + 1, 1 << 30),
+        arguments(Integer.MAX_VALUE, 1 << 30));
+  }
+
+  @ParameterizedTest
+  @MethodSource("powerOfTwoLong")
+  void ceilingPowerOfTwo_long(long x, long expected) {
+    assertThat(Caffeine.ceilingPowerOfTwo(x)).isEqualTo(expected);
+  }
+
+  static Stream<Arguments> powerOfTwoLong() {
+    return Stream.of(arguments(1L, 1L), arguments(2L, 2L), arguments(3L, 4L),
+        arguments(1024L, 1024L), arguments(1025L, 2048L), arguments(1L << 30, 1L << 30),
+        arguments((1L << 30) + 1, 1L << 31), arguments((long) Integer.MAX_VALUE, 1L << 31));
   }
 
   @Test

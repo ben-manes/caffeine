@@ -23,8 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
@@ -343,6 +345,37 @@ final class MpscGrowableArrayQueueTest {
     };
     queue.producerLimit = 0;
     assertThrows(IllegalStateException.class, () -> queue.offer(1));
+  }
+
+  @Test
+  void offer_resizeOutOfMemory() {
+    var failOnAllocate = new AtomicBoolean();
+    var queue = new MpscGrowableArrayQueue<Object>(4, 16) {
+      @Override @Nullable Object[] allocate(int capacity) {
+        if (failOnAllocate.get()) {
+          throw new OutOfMemoryError();
+        }
+        return super.allocate(capacity);
+      }
+    };
+
+    // Fill until the next offer triggers a resize
+    while (queue.size() < 3) {
+      assertThat(queue.offer(queue.size())).isTrue();
+    }
+
+    // Fail the resize allocation and verify OOME is thrown
+    failOnAllocate.set(true);
+    assertThrows(OutOfMemoryError.class, () -> queue.offer(99));
+
+    // Verify the queue is still usable after the OOME
+    failOnAllocate.set(false);
+    assertThat(queue.offer(99)).isTrue();
+    assertThat(queue).hasSize(4);
+    for (int i = 0; i < 4; i++) {
+      assertThat(queue.poll()).isNotNull();
+    }
+    assertThat(queue).isEmpty();
   }
 
   private static MpscGrowableArrayQueue<Integer> makePopulated(int items) {

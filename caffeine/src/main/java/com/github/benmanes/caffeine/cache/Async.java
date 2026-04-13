@@ -82,15 +82,23 @@ final class Async {
     public void onRemoval(@Nullable K key,
         @Nullable CompletableFuture<@Nullable V> future, RemovalCause cause) {
       if (future != null) {
-        future.thenAcceptAsync(value -> {
+        future.thenAccept(value -> {
           if (value != null) {
+            Runnable task = () -> {
+              try {
+                delegate.onRemoval(key, value, cause);
+              } catch (Throwable t) {
+                logger.log(Level.WARNING, "Exception thrown by removal listener", t);
+              }
+            };
             try {
-              delegate.onRemoval(key, value, cause);
+              executor.execute(task);
             } catch (Throwable t) {
-              logger.log(Level.WARNING, "Exception thrown by removal listener", t);
+              logger.log(Level.ERROR, "Exception thrown when submitting removal listener", t);
+              task.run();
             }
           }
-        }, executor);
+        });
       }
     }
 
