@@ -22,8 +22,10 @@ confidence suspicions to match expectation. Fight this explicitly.
 - `.claude/rules/` — mechanical facts (lock ordering, access mode conventions,
   known design decisions). These document *what* is intentional, not *that*
   prior audits passed.
-- `.claude/docs/` — `synchronization.md`, `design-decisions.md`,
-  `research-foundations.md`, `testing.md`. Deep rationale for non-obvious choices.
+- `.claude/docs/synchronization.md`, `testing.md` — read during Phase 1
+- `.claude/docs/design-decisions.md`, `research-foundations.md` — read during
+  Phase 1.5 (AFTER initial analysis). Rationale docs cause premature dismissal
+  if read before findings are recorded.
 - `.claude/skills/<skill-name>/SKILL.md` — the invoking skill's methodology
 - `CLAUDE.md` — project instructions
 
@@ -72,6 +74,11 @@ found against what you predicted — any mismatch is a signal to investigate.
 5. Take as much reasoning time as needed.
 6. Compare findings against your Phase 0 attack plan. For any predicted
    attack that found nothing, explicitly explain why it doesn't apply.
+7. **Design context timing**: During Phase 1, read `.claude/rules/` (mechanical
+   facts: lock ordering, access modes, concurrency conventions) and
+   `.claude/docs/synchronization.md`. Do NOT read `design-decisions.md` yet —
+   analyze the code on its technical merits first. Findings that look like bugs
+   should be recorded before design context can explain them away.
 
 **Confidence labeling** (replaces any prior suppression rule): classify each
 observation as high-confidence, medium-confidence, or "would classify as by-design
@@ -80,6 +87,19 @@ sections. If a suspicion resembles a known design decision, explicitly note whic
 rule it matches — but still surface it as a documentation gap if the source code
 alone would not make the intent clear to a fresh reader. The user adjudicates; your
 job is not to pre-filter.
+
+### Phase 1.5: Design Context Adjudication
+
+Now read `.claude/docs/design-decisions.md` and `.claude/rules/design-decisions.md`.
+For each Phase 1 finding, check if it matches a documented design decision:
+
+- If it matches: label it "matches design decision: [item]" but **keep it in the
+  report**. The user adjudicates whether the design decision still applies.
+- If it partially matches: note the partial match and explain what differs.
+- If no match: this is a novel finding — flag it for priority attention.
+
+This ordering exists because design context causes premature dismissal.
+Analyzing first, then checking context, catches bugs that domain familiarity masks.
 
 ### Phase 2: Reflection + Self-Challenge
 
@@ -145,7 +165,20 @@ Stop analysis and report partial results if ANY of these occur:
    than speculating.
 
 Mark these as ESCALATED in the report with the specific information needed
-to resolve them.
+to resolve them. For each ESCALATED finding involving a concurrency
+interleaving, generate a Fray test skeleton targeting the specific scenario:
+
+```java
+@FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+void escalated_findingDescription() {
+  // Thread 1: <specific operation>
+  // Thread 2: <specific operation>
+  // Assert: <invariant that should hold>
+}
+```
+
+This bridges static analysis to dynamic testing — the highest-leverage
+path for finding bugs that can't be resolved statically.
 
 ### Phase 4: Final Report
 
@@ -201,6 +234,9 @@ protecting each), a coverage summary (files inspected, methods traced,
 interleavings attempted), and residual risk.
 
 ## Project-Specific Context
+
+**Timing: consult this section AFTER completing Phase 1 analysis.** Reading
+these before analysis causes premature dismissal of findings.
 
 Several patterns that look suspicious are intentional design decisions:
 - Weight=0 entries are a user-facing pinning feature, not a bug

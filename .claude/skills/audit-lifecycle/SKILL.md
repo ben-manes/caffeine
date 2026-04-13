@@ -9,6 +9,10 @@ disable-model-invocation: true
 Analyze the cache for defects during shutdown, close, and garbage collection
 of the cache instance itself.
 
+Assume at least one shutdown or lifecycle race exists. If your analysis yields
+zero findings, re-examine scheduler/executor lifecycle and in-flight operations
+during close — explain specifically why no race is possible.
+
 1. **Operations racing with close/cleanup**: get/put/compute during cleanUp()
    or GC? close() state transition? Operations after close()?
 

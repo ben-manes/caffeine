@@ -1287,7 +1287,7 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
-  void reorderProbation_staleAccess(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void reorderProbation_staleAccess(BoundedLocalCache<Int, Int> cache) {
     // A node that is not in the probation deque (e.g., in the window deque) should be ignored
     // by reorderProbation, leaving the probation deque unchanged.
     cache.evictionLock.lock();

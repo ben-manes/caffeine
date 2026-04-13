@@ -9,6 +9,16 @@ disable-model-invocation: true
 Analyze the cache for defects arising from multiple features operating
 simultaneously on the same entry.
 
+Assume at least one feature interaction bug exists. If your analysis yields
+zero findings, re-examine the top-priority pairs below — explain specifically
+why no interleaving produces a bug.
+
+Priority ranking (from confirmed historical bugs):
+1. **Refresh + expiration** (D+B) — most-bugged interaction historically
+2. **Reference collection + any feature** (C+*) — value reference visibility
+3. **Async completion + any feature** (F+*) — future lifecycle edge cases
+4. **Eviction + weight change** (A+H) — counter drift during transitions
+
 Features:
 A. Eviction (size/weight limit exceeded)
 B. Expiration (afterAccess, afterWrite, variable)

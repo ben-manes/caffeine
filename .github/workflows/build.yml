@@ -19,6 +19,7 @@ env:
     caffeine.develocity.cloud:443
     cdn.azul.com:443
     cloudflare.com:443
+    corretto.aws:443
     docker.io:443
     download.java.net:443
     download.oracle.com:443

@@ -514,7 +514,13 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
   private void resize(long oldMask, @Nullable E[] oldBuffer, long pIndex, E e) {
     int newBufferLength = getNextBufferSize(oldBuffer);
-    @Nullable E[] newBuffer = allocate(newBufferLength);
+    @Nullable E[] newBuffer;
+    try {
+      newBuffer = allocate(newBufferLength);
+    } catch (OutOfMemoryError error) {
+      soProducerIndex(this, pIndex);
+      throw error;
+    }
 
     producerBuffer = newBuffer;
     int newMask = (newBufferLength - 2) << 1;

@@ -8,6 +8,11 @@ disable-model-invocation: true
 
 Analyze the concurrent iteration and view behavior of the cache.
 
+Assume at least one view operation can observe inconsistent state under
+concurrent modification. If your analysis yields zero findings, re-examine
+expired-but-present entries and dead/retired node visibility — explain
+specifically why no user-observable inconsistency is possible.
+
 View operations to analyze:
 - asMap().entrySet/keySet/values() iteration
 - asMap().forEach()

@@ -34,3 +34,10 @@ For each issue:
 
 Do not report issues that only affect performance.
 Do not report deliberately racy patterns with documented stale-read tolerance.
+
+**Platform focus**: Pay specific attention to aarch64 (ARM) memory ordering.
+ARM's weaker-than-TSO model exposes reordering bugs invisible on x86.
+Historical bug: WeakValueReference.keyReference required setRelease +
+storeStoreFence (not just setRelease alone) because the field is non-final
+and aarch64 reorders the field write after reference publication. Check for
+similar patterns — non-final fields published via release without a fence.

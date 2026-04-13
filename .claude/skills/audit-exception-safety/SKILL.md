@@ -9,6 +9,15 @@ disable-model-invocation: true
 Audit the cache for exception safety defects. For every code path where
 exceptions can be thrown, determine whether the cache is left consistent.
 
+Assume at least one exception safety bug exists. If your analysis yields
+zero findings, re-examine catch-commit-rethrow paths — explain specifically
+why no exception scenario leaves inconsistent state.
+
+**Priority #1: catch-commit-rethrow in doComputeIfAbsent and remap.** This is
+the most commonly misunderstood pattern and historically the most fragile.
+Trace the EXACT sequence of committed mutations, notification delivery, and
+exception propagation for every exception type.
+
 User-provided code that can throw:
 1. CacheLoader.load / loadAll / reload
 2. Weigher.weigh

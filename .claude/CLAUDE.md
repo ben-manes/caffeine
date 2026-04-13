@@ -117,6 +117,12 @@ For deep dives, read these on demand (not auto-loaded to save context):
 - `.claude/docs/testing.md` — CacheSpec parameterization, Truth subjects, test utilities
 - `.claude/docs/research-foundations.md` — papers mapped to implementation (TinyLFU, BP-Wrapper, etc.)
 
+When to read which doc:
+- Concurrency or thread-safety work → `synchronization.md`
+- Auditing or reviewing code → `design-decisions.md` first (prevents false positives)
+- Writing or modifying tests → `testing.md`
+- Understanding algorithm choices → `research-foundations.md`
+
 ## Claude Code Extensions
 
 - **Rules** (`.claude/rules/`): project conventions, loaded automatically when relevant
@@ -125,3 +131,29 @@ For deep dives, read these on demand (not auto-loaded to save context):
 - **Skills** (`/audit-adversarial`): hostile full-codebase review with NO design context — finds bugs domain familiarity masks
 - **Skills** (`/sim-*`): simulator workflow automation — `/sim-compare` for policy comparison charts, `/sim-analyze` for trace characterization
 - **Auditor agent** (`.claude/agents/`): multi-pass — analysis → reflection → evaluator challenge → targeted re-audit
+
+### Audit Selection Guide
+
+| If concerned about... | Run |
+|---|---|
+| Thread-safety of a specific change | `/audit-jmm` |
+| API contract ordering under concurrency | `/audit-linearizability` |
+| Feature interactions (eviction+expiry+refresh) | `/audit-feature-interaction` |
+| Exception paths leaving inconsistent state | `/audit-exception-safety` |
+| Memory leaks after removal/eviction | `/audit-memory-retention` |
+| Arithmetic edge cases (overflow, off-by-one) | `/audit-arithmetic` |
+| Shutdown/close/GC races | `/audit-lifecycle` |
+| Fresh-eyes adversarial sweep (no domain context) | `/audit-adversarial` |
+| Full correctness proof of public methods | `/audit-correctness-proof` |
+| Map/ConcurrentMap contract compliance | `/audit-map-contract` |
+| Re-entrancy from user callbacks | `/audit-reentrancy` |
+| Concurrent iteration and view consistency | `/audit-iteration` |
+| Performance inefficiencies on hot paths | `/audit-performance` |
+| Serialization proxy completeness and safety | `/audit-serialization` |
+| Behavior under extreme/adversarial API inputs | `/audit-adversarial-input` |
+| Progress and termination guarantees | `/audit-liveness` |
+| Test coverage gaps and missing edge cases | `/audit-coverage-gaps` |
+| Per-subsystem concurrency correctness | `/audit-subsystem-safety` |
+| Build/CI configuration correctness | `/audit-build-ci` |
+
+**Review vs Audit**: `/review-change` is for pre-commit code review — reads design docs and filters known-intentional patterns. `/audit-*` skills are for correctness doubts — independent, no design context filtering. Use review for routine changes, audit when you need fresh-eyes analysis.
