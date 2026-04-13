@@ -210,7 +210,10 @@
     <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_THROWABLE"/>
   </Match>
   <Match>
-    <Class name="com.github.benmanes.caffeine.cache.Node"/>
+    <Or>
+      <Class name="com.github.benmanes.caffeine.cache.Node"/>
+      <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AbstractCacheView"/>
+    </Or>
     <Bug pattern="ACEM_ABSTRACT_CLASS_EMPTY_METHODS"/>
   </Match>
   <Match>

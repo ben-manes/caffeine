@@ -20,6 +20,8 @@ import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
+import java.io.InvalidObjectException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
@@ -685,6 +687,14 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override
     public ConcurrentMap<K, V> asMap() {
       return (asMapView == null) ? (asMapView = new AsMapView<>(asyncCache().cache())) : asMapView;
+    }
+
+    private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+      throw new InvalidObjectException("Proxy required");
+    }
+
+    Object writeReplace() {
+      return new SyncViewProxy<>(asyncCache());
     }
   }
 
@@ -1583,6 +1593,21 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       public int characteristics() {
         return DISTINCT | CONCURRENT | NONNULL;
       }
+    }
+  }
+
+  @SuppressWarnings("serial")
+  final class SyncViewProxy<K, V> implements Serializable {
+    private static final long serialVersionUID = 1;
+
+    final AsyncCache<K, V> asyncCache;
+
+    SyncViewProxy(AsyncCache<K, V> asyncCache) {
+      this.asyncCache = requireNonNull(asyncCache);
+    }
+
+    Object readResolve() {
+      return asyncCache.synchronous();
     }
   }
 }

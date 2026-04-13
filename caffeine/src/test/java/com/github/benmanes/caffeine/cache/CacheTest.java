@@ -996,11 +996,19 @@ final class CacheTest {
 
   @CheckNoStats
   @ParameterizedTest
-  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY)
   void readObject(CacheContext context) throws NoSuchMethodException {
-    var cache = context.isAsync() ? context.asyncCache() : context.cache();
-    var readObject = cache.getClass().getDeclaredMethod("readObject", ObjectInputStream.class);
+    if (context.isSync()) {
+      checkReadObject(context.cache(), context.cache().getClass());
+    } else {
+      checkReadObject(context.cache(), context.cache().getClass().getSuperclass());
+      checkReadObject(context.asyncCache(), context.asyncCache().getClass());
+    }
+  }
+
+  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
+  private static void checkReadObject(Object cache, Class<?> clazz) throws NoSuchMethodException {
+    var readObject = clazz.getDeclaredMethod("readObject", ObjectInputStream.class);
     readObject.setAccessible(true);
 
     var exception = assertThrows(InvocationTargetException.class,
