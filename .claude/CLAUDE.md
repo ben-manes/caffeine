@@ -116,12 +116,14 @@ For deep dives, read these on demand (not auto-loaded to save context):
 - `.claude/docs/synchronization.md` — lock hierarchy, access modes, callback invocation points
 - `.claude/docs/testing.md` — CacheSpec parameterization, Truth subjects, test utilities
 - `.claude/docs/research-foundations.md` — papers mapped to implementation (TinyLFU, BP-Wrapper, etc.)
+- `.claude/docs/finding-taxonomy.md` — standard severity/category schema for audit and review findings
 
 When to read which doc:
 - Concurrency or thread-safety work → `synchronization.md`
 - Auditing or reviewing code → `design-decisions.md` first (prevents false positives)
 - Writing or modifying tests → `testing.md`
 - Understanding algorithm choices → `research-foundations.md`
+- Interpreting or writing audit findings → `finding-taxonomy.md`
 
 ## Claude Code Extensions
 

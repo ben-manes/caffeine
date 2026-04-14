@@ -1,10 +1,14 @@
 /** Java microbenchmark harness: https://github.com/melix/jmh-gradle-plugin */
 @file:Suppress("PackageDirectoryMismatch", "UnstableApiUsage")
+import javax.inject.Inject
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
-import org.gradle.plugins.ide.eclipse.model.Classpath
+import org.gradle.internal.os.OperatingSystem
+import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.plugins.ide.eclipse.model.Library
+import org.gradle.process.ExecOperations
 import me.champeau.jmh.JMHTask as JmhTask
+import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
 plugins {
   idea
@@ -13,6 +17,11 @@ plugins {
   id("io.morethan.jmhreport")
   id("java-library.caffeine")
 }
+
+val asyncProfiler by configurations.registering
+val asyncProfilerDir = layout.buildDirectory.dir("reports/jmh/async")
+val asyncProfilerExtractionDir = layout.buildDirectory.dir("async-profiler")
+val asyncProfilerLibFile = layout.buildDirectory.file("async-profiler-libPath.txt")
 
 configurations.jmh {
   extendsFrom(configurations["testImplementation"])
@@ -29,6 +38,22 @@ configurations.jmh {
 
 dependencies {
   jmh(libs.bundles.slf4j.nop)
+  asyncProfiler(libs.ap.loader)
+}
+
+val extractAsyncProfilerLib = tasks.register<ExtractAsyncProfilerLib>("extractAsyncProfilerLib") {
+  group = "Benchmarks"
+  description = "Extracts the async-profiler native library via ap-loader"
+  libPathFile = asyncProfilerLibFile
+  loaderClasspath.from(asyncProfiler)
+  extractionDir = asyncProfilerExtractionDir
+  javaLauncher = javaToolchains.launcherFor {
+    vendor = java.toolchain.vendor
+    implementation = java.toolchain.implementation
+    languageVersion = java.toolchain.languageVersion
+    nativeImageCapable = java.toolchain.nativeImageCapable
+  }
+  onlyIf { !OperatingSystem.current().isWindows }
 }
 
 jmh {
@@ -69,6 +94,22 @@ jmh {
     languageVersion = java.toolchain.languageVersion
     nativeImageCapable = java.toolchain.nativeImageCapable
   }
+
+  val asyncProperty = providers.gradleProperty("async")
+  if (asyncProperty.isPresent) {
+    require(!OperatingSystem.current().isWindows) {
+      "async-profiler is not supported on Windows"
+    }
+    val format = asyncProperty.get().ifBlank { "flamegraph" }
+    require(format in setOf("tree", "jfr", "collapsed", "text", "flamegraph")) {
+      "async-profiler output must be one of: tree, jfr, collapsed, text, flamegraph (got '$format')"
+    }
+    profilers.add(asyncProfilerLibFile.map { file ->
+      val libPath = file.asFile.readText().trim()
+      val dir = asyncProfilerDir.get().asFile.absolutePath
+      "async:libPath=$libPath;output=$format;dir=$dir"
+    })
+  }
 }
 
 jmhReport {
@@ -81,6 +122,11 @@ tasks.withType<JmhTask>().configureEach {
   group = "Benchmarks"
   description = "Executes a Java microbenchmark"
   incompatibleWithConfigurationCache()
+
+  if (providers.gradleProperty("async").isPresent) {
+    dependsOn(extractAsyncProfilerLib)
+    outputs.dir(asyncProfilerDir)
+  }
 
   inputs.property("javaDistribution", javaDistribution()).optional(true)
   inputs.property("benchmarkParameters", jmh.benchmarkParameters)
@@ -118,7 +164,37 @@ idea.module {
 }
 
 eclipse.classpath.file.whenMerged {
-  if (this is Classpath) {
+  if (this is EclipseClasspath) {
     entries.removeIf { (it is Library) && (it.moduleVersion?.name == "slf4j-nop") }
+  }
+}
+
+@CacheableTask
+abstract class ExtractAsyncProfilerLib : DefaultTask() {
+  @get:Classpath
+  abstract val loaderClasspath: ConfigurableFileCollection
+  @get:Nested
+  abstract val javaLauncher: Property<JavaLauncher>
+  @get:OutputDirectory
+  abstract val extractionDir: DirectoryProperty
+  @get:OutputFile
+  abstract val libPathFile: RegularFileProperty
+  @get:Inject
+  abstract val execOperations: ExecOperations
+
+  @TaskAction
+  fun extract() {
+    val out = libPathFile.get().asFile
+    out.parentFile.mkdirs()
+    out.outputStream().buffered().use { outputStream ->
+      execOperations.javaexec {
+        systemProperty("ap_loader_extraction_dir", extractionDir.get().asFile.absolutePath)
+        executable = javaLauncher.get().executablePath.asFile.absolutePath
+        mainClass = "one.profiler.AsyncProfilerLoader"
+        standardOutput = outputStream
+        classpath(loaderClasspath)
+        args("agentpath")
+      }
+    }
   }
 }

@@ -126,7 +126,7 @@ public final class CacheContext {
         context.startTime, context.expiryTime);
   }
 
-  @SuppressWarnings({"NullAway.Init", "PMD.ExcessiveParameterList", "TooManyParameters"})
+  @SuppressWarnings({"PMD.ExcessiveParameterList", "TooManyParameters"})
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher cacheWeigher,
       Maximum maximumSize, CacheExpiry expiryType, Expire afterAccess, Expire afterWrite,
       Expire refresh, ReferenceType keyStrength, ReferenceType valueStrength,

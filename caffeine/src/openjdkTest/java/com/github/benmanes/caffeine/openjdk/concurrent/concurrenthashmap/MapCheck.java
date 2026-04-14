@@ -51,9 +51,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
-import org.testng.ITestResult;
 import org.testng.annotations.Test;
-import org.testng.util.RetryAnalyzerCount;
 
 import com.facebook.infer.annotation.SuppressLint;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -85,22 +83,19 @@ public class MapCheck {
 
     static TestTimer timer = new TestTimer();
 
+    static {
+      for (int i = 0; i < absentSize; ++i) {
+        absent[i] = new Object();
+      }
+    }
+
     static void reallyAssert(boolean b) {
         if (!b) {
           throw new Error("Failed Assertion");
         }
     }
 
-    public static final class Retries extends RetryAnalyzerCount {
-      public Retries() {
-        setCount(3);
-      }
-      @Override public boolean retryMethod(ITestResult result) {
-        return !result.isSuccess();
-      }
-    }
-
-    @Test(retryAnalyzer = Retries.class)
+    @Test
     public void bounded() {
       test(() -> Caffeine.newBuilder()
           .expireAfterWrite(Duration.ofNanos(Long.MAX_VALUE))
@@ -109,7 +104,7 @@ public class MapCheck {
           .build().asMap());
     }
 
-    @Test(retryAnalyzer = Retries.class)
+    @Test
     public void unbounded() {
       test(() -> Caffeine.newBuilder().build().asMap());
     }
@@ -138,11 +133,11 @@ public class MapCheck {
 //        boolean doSerializeTest = args.length > 3;
 //
 //        System.out.println("Testing " + mapClass.getName() + " trials: " + numTests + " size: " + size);
-
-        boolean doSerializeTest = false;
-        for (int i = 0; i < absentSize; ++i) {
-          absent[i] = new Object();
-        }
+//
+//        boolean doSerializeTest = false;
+//        for (int i = 0; i < absentSize; ++i) {
+//          absent[i] = new Object();
+//        }
 
         Object[] key = new Object[size];
         for (int i = 0; i < size; ++i) {

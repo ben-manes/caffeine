@@ -26,26 +26,18 @@ import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.CheckMaxLogLevel;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
-import com.github.valfirst.slf4jtest.TestLoggerFactory;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @CheckMaxLogLevel(TRACE)
 final class StatsCounterTest {
-
-  @BeforeEach @AfterEach
-  void reset() {
-    TestLoggerFactory.clear();
-  }
 
   @Test
   void disabled() {

@@ -42,15 +42,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.jspecify.annotations.Nullable;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.util.concurrent.Futures;
 
@@ -60,11 +57,6 @@ import com.google.common.util.concurrent.Futures;
 @CheckMaxLogLevel(TRACE)
 final class SchedulerTest {
   private final NullPointerTester npeTester = new NullPointerTester();
-
-  @BeforeEach @AfterEach
-  void reset() {
-    TestLoggerFactory.clear();
-  }
 
   @ParameterizedTest @MethodSource("schedulers")
   void scheduler_null(Scheduler scheduler) {

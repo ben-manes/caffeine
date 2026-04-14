@@ -1,0 +1,81 @@
+name: Run JMH Benchmark
+description: >
+  Runs a JMH benchmark with async-profiler, uploads results to Gist, and
+  publishes async-profiler's interactive HTML flame graphs as an artifact.
+inputs:
+  name:
+    required: true
+    description: Display name for the benchmark
+  pattern:
+    required: true
+    description: JMH includePattern (a benchmark class name)
+  params:
+    required: false
+    default: ''
+    description: Value for -PbenchmarkParameters (empty = not passed)
+  java:
+    required: true
+    description: The JDK version
+  distribution:
+    required: true
+    description: The Java distribution
+  cache-encryption-key:
+    required: false
+    description: A Gradle cache encryption key
+  gist-auth:
+    required: false
+    description: GitHub token with gist write permission
+  gist-title-prefix:
+    required: true
+    description: Prefix for the gist filename (combined with distribution/java)
+  gist-description:
+    required: true
+    description: Description applied to the gist update
+  gist-url:
+    required: true
+    description: Target gist URL for uploading JMH results
+runs:
+  using: composite
+  steps:
+    - name: Detect async-profiler support
+      id: profiler
+      shell: bash
+      env:
+        DISTRIBUTION: ${{ inputs.distribution }}
+      run: |
+        # async-profiler requires HotSpot-based JVMs; OpenJ9 (Semeru) is not supported
+        if [[ "$DISTRIBUTION" == "semeru" ]]; then
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::Skipping async-profiler on OpenJ9 ($DISTRIBUTION)"
+        else
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+        fi
+    - name: ${{ inputs.name }} JMH Benchmark
+      uses: ./.github/actions/run-gradle
+      with:
+        java: ${{ inputs.java }}
+        distribution: ${{ inputs.distribution }}
+        cache-encryption-key: ${{ inputs.cache-encryption-key }}
+        arguments: >
+          caffeine:jmh
+          --no-configuration-cache
+          -PincludePattern=${{ inputs.pattern }}
+          ${{ inputs.params != '' && format('-PbenchmarkParameters={0}', inputs.params) || '' }}
+          ${{ steps.profiler.outputs.enabled == 'true' && '-Pasync=flamegraph' || '' }}
+    - name: Upload ${{ inputs.name }} JMH Results to Gist
+      if: github.event.repository.fork == false
+      continue-on-error: true
+      uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
+      with:
+        auth: ${{ inputs.gist-auth }}
+        gist_description: ${{ inputs.gist-description }}
+        github_file: ./caffeine/build/reports/jmh/results.json
+        gist_title: ${{ inputs.gist-title-prefix }}_${{ inputs.distribution }}_${{ inputs.java }}.json
+        gist_url: ${{ inputs.gist-url }}
+    - name: Upload flame graphs
+      if: steps.profiler.outputs.enabled == 'true'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: flamegraphs-${{ inputs.pattern }}-${{ inputs.distribution }}-${{ inputs.java }}
+        path: caffeine/build/reports/jmh/async/**
+        if-no-files-found: warn

@@ -1,7 +1,7 @@
 ---
 name: auditor
 description: Deep analysis agent for the Caffeine cache. Use for correctness audits, concurrency analysis, performance review, or any /audit-* skill.
-tools: Read, Grep, Glob, Bash, Write, Edit, Agent, WebSearch, WebFetch, AskUserQuestion
+tools: Read, Grep, Glob, Bash, Write, Edit, Agent, WebSearch, WebFetch, AskUserQuestion, LSP
 effort: max
 memory: local
 ---
@@ -79,6 +79,19 @@ found against what you predicted — any mismatch is a signal to investigate.
    `.claude/docs/synchronization.md`. Do NOT read `design-decisions.md` yet —
    analyze the code on its technical merits first. Findings that look like bugs
    should be recorded before design context can explain them away.
+8. **LSP vs Grep/Read**: For cross-file, type-aware queries — callers of a
+   method (`findReferences`), which concrete Node subclass implements an
+   interface method (`goToImplementation`), transitive call paths
+   (`prepareCallHierarchy` + `incomingCalls` / `outgoingCalls`), or a TOC for
+   large files like `BoundedLocalCache.java` (`documentSymbol`) — prefer the
+   LSP tool. It skips matches in comments, javadoc, and unrelated same-named
+   symbols that Grep cannot filter. For sequential file reading, string-pattern
+   searches (e.g., `@GuardedBy` annotations, lock-name audits), or when the
+   file is already in context, Read + Grep is faster — LSP's per-call overhead
+   isn't worth it. `goToImplementation` on a Node interface method only
+   resolves the generated subclasses if `caffeine/build/generated/sources/` is
+   populated; run `./gradlew :caffeine:generateNodes :caffeine:generateLocalCaches`
+   first if it returns nothing.
 
 **Confidence labeling** (replaces any prior suppression rule): classify each
 observation as high-confidence, medium-confidence, or "would classify as by-design

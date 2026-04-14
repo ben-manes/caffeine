@@ -37,7 +37,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -52,7 +51,6 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.testing.FakeTicker;
 import com.google.common.testing.NullPointerTester;
 
@@ -67,11 +65,6 @@ final class CaffeineTest {
       (key, value) -> { throw new AssertionError(); });
   private static final CacheLoader<Object, Object> loader =
       key -> { throw new AssertionError(); };
-
-  @AfterEach
-  void reset() {
-    TestLoggerFactory.clear();
-  }
 
   @Test
   void nullParameters() {

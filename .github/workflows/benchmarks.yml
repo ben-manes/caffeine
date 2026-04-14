@@ -27,19 +27,62 @@ env:
     repo1.maven.org:443
     raw.githubusercontent.com:443
     services.gradle.org:443
+    uploads.github.com:443
     www.graalvm.org:443
 
 jobs:
-  compute:
-    name: Compute
+  benchmark:
+    name: ${{ matrix.benchmark.name }} (${{ matrix.jdk.distribution }} ${{ matrix.jdk.java }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
+      fail-fast: false
       matrix:
-        java: [ 11, 25, 27-ea ]
-        distribution: [ temurin ]
-        include:
+        benchmark:
+          - name: Compute
+            pattern: ComputeBenchmark
+            params: computeType=Caffeine,Guava,ConcurrentHashMap
+            gist-title-prefix: compute_results
+            gist-description: Compute JMH Results
+            gist-url: https://gist.githubusercontent.com/ben-manes/511298014cc5629cbc5e57f09fd4c430
+          - name: Get/Put
+            pattern: GetPutBenchmark
+            params: cacheType=Caffeine,Guava,ConcurrentHashMap
+            gist-title-prefix: getput_results
+            gist-description: Get/Put JMH Results
+            gist-url: https://gist.githubusercontent.com/ben-manes/b231cf57cf8e144e2247716e777edcf3
+          - name: Put/Remove
+            pattern: PutRemoveBenchmark
+            params: cacheType=Caffeine,Guava,ConcurrentHashMap
+            gist-title-prefix: putremove_results
+            gist-description: Put/Remove JMH Results
+            gist-url: https://gist.githubusercontent.com/ben-manes/1359c399cb717e81976ee635c513340b
+          - name: Eviction
+            pattern: EvictionBenchmark
+            params: cacheType=Caffeine,Guava
+            gist-title-prefix: eviction_results
+            gist-description: Eviction JMH Results
+            gist-url: https://gist.githubusercontent.com/ben-manes/2f5b54540c2e67edc0d1a7f28a1139f5
+          - name: FrequencySketch
+            pattern: FrequencySketchBenchmark
+            params: ''
+            gist-title-prefix: freq_results
+            gist-description: FrequencySketch JMH Results
+            gist-url: https://gist.githubusercontent.com/ben-manes/f93df1b66aa210bc23a1e672ef9bee16
+          - name: TimerWheel
+            pattern: TimerWheelBenchmark
+            params: ''
+            gist-title-prefix: timerwheel_results
+            gist-description: TimerWheel JMH Results
+            gist-url: https://gist.githubusercontent.com/ben-manes/9abafdbc76fe34c0e63cef386b0b9ac0
+        jdk:
+          - java: 11
+            distribution: temurin
+          - java: 25
+            distribution: temurin
+          - java: 27-ea
+            distribution: temurin
           - java: 25
             distribution: graalvm
           - java: 25
@@ -47,7 +90,7 @@ jobs:
           - java: 21
             distribution: dragonwell
     env:
-      JAVA_VERSION: ${{ matrix.java }}
+      JAVA_VERSION: ${{ matrix.jdk.java }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
@@ -59,284 +102,23 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - name: Compute JMH Benchmark
-        uses: ./.github/actions/run-gradle
+      - name: Run ${{ matrix.benchmark.name }} benchmark
+        uses: ./.github/actions/run-benchmark
         with:
-          java: ${{ matrix.java }}
-          distribution: ${{ matrix.distribution }}
+          name: ${{ matrix.benchmark.name }}
+          pattern: ${{ matrix.benchmark.pattern }}
+          params: ${{ matrix.benchmark.params }}
+          java: ${{ matrix.jdk.java }}
+          distribution: ${{ matrix.jdk.distribution }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: >
-            caffeine:jmh
-            --no-configuration-cache
-            -PincludePattern=ComputeBenchmark
-            -PbenchmarkParameters=computeType=Caffeine,Guava,ConcurrentHashMap
-      - name: Upload Compute JMH Results to Gist
-        uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
-        if: github.event.repository.fork == false
-        continue-on-error: true
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gist_description: Compute JMH Results
-          github_file: ./caffeine/build/reports/jmh/results.json
-          gist_title: compute_results_${{ matrix.distribution }}_${{ matrix.java }}.json
-          gist_url: https://gist.githubusercontent.com/ben-manes/511298014cc5629cbc5e57f09fd4c430
-
-  get-put:
-    name: Get/Put
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        java: [ 11, 25, 27-ea ]
-        distribution: [ temurin ]
-        include:
-          - java: 25
-            distribution: graalvm
-          - java: 25
-            distribution: semeru
-          - java: 21
-            distribution: dragonwell
-    env:
-      JAVA_VERSION: ${{ matrix.java }}
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
-        with:
-          disable-sudo-and-containers: true
-          egress-policy: block
-          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - name: Get/Put JMH Benchmark
-        uses: ./.github/actions/run-gradle
-        with:
-          java: ${{ matrix.java }}
-          distribution: ${{ matrix.distribution }}
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: >
-            caffeine:jmh
-            --no-configuration-cache
-            -PincludePattern=GetPutBenchmark
-            -PbenchmarkParameters=cacheType=Caffeine,Guava,ConcurrentHashMap
-      - name: Upload Get/Put JMH Results to Gist
-        uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
-        if: github.event.repository.fork == false
-        continue-on-error: true
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gist_description: Get/Put JMH Results
-          github_file: ./caffeine/build/reports/jmh/results.json
-          gist_title: getput_results_${{ matrix.distribution }}_${{ matrix.java }}.json
-          gist_url: https://gist.githubusercontent.com/ben-manes/b231cf57cf8e144e2247716e777edcf3
-
-  put-remove:
-    name: Put/Remove
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        java: [ 11, 25, 27-ea ]
-        distribution: [ temurin ]
-        include:
-          - java: 25
-            distribution: graalvm
-          - java: 25
-            distribution: semeru
-          - java: 21
-            distribution: dragonwell
-    env:
-      JAVA_VERSION: ${{ matrix.java }}
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
-        with:
-          disable-sudo-and-containers: true
-          egress-policy: block
-          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - name: Put/Remove JMH Benchmark
-        uses: ./.github/actions/run-gradle
-        with:
-          java: ${{ matrix.java }}
-          distribution: ${{ matrix.distribution }}
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: >
-            caffeine:jmh
-            --no-configuration-cache
-            -PincludePattern=PutRemoveBenchmark
-            -PbenchmarkParameters=cacheType=Caffeine,Guava,ConcurrentHashMap
-      - name: Upload Put/Remove JMH Results to Gist
-        uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
-        if: github.event.repository.fork == false
-        continue-on-error: true
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gist_description: Put/Remove JMH Results
-          github_file: ./caffeine/build/reports/jmh/results.json
-          gist_title: putremove_results_${{ matrix.distribution }}_${{ matrix.java }}.json
-          gist_url: https://gist.githubusercontent.com/ben-manes/1359c399cb717e81976ee635c513340b
-
-  eviction:
-    name: Eviction
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        java: [ 11, 25, 27-ea ]
-        distribution: [ temurin ]
-        include:
-          - java: 25
-            distribution: graalvm
-          - java: 25
-            distribution: semeru
-          - java: 21
-            distribution: dragonwell
-    env:
-      JAVA_VERSION: ${{ matrix.java }}
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
-        with:
-          disable-sudo-and-containers: true
-          egress-policy: block
-          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - name: EvictionBenchmark JMH Benchmark
-        uses: ./.github/actions/run-gradle
-        with:
-          java: ${{ matrix.java }}
-          distribution: ${{ matrix.distribution }}
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: >
-            caffeine:jmh
-            --no-configuration-cache
-            -PincludePattern=EvictionBenchmark
-            -PbenchmarkParameters=cacheType=Caffeine,Guava
-      - name: Upload EvictionBenchmark JMH Results to Gist
-        uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
-        if: github.event.repository.fork == false
-        continue-on-error: true
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gist_description: Eviction JMH Results
-          github_file: ./caffeine/build/reports/jmh/results.json
-          gist_title: eviction_results_${{ matrix.distribution }}_${{ matrix.java }}.json
-          gist_url: https://gist.githubusercontent.com/ben-manes/2f5b54540c2e67edc0d1a7f28a1139f5
-
-  frequency-sketch:
-    name: Frequency Sketch
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        java: [ 11, 25, 27-ea ]
-        distribution: [ temurin ]
-        include:
-          - java: 25
-            distribution: graalvm
-          - java: 25
-            distribution: semeru
-          - java: 21
-            distribution: dragonwell
-    env:
-      JAVA_VERSION: ${{ matrix.java }}
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
-        with:
-          disable-sudo-and-containers: true
-          egress-policy: block
-          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - name: FrequencySketch JMH Benchmark
-        uses: ./.github/actions/run-gradle
-        with:
-          java: ${{ matrix.java }}
-          distribution: ${{ matrix.distribution }}
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: >
-            caffeine:jmh
-            --no-configuration-cache
-            -PincludePattern=FrequencySketchBenchmark
-      - name: Upload FrequencySketch JMH Results to Gist
-        uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
-        if: github.event.repository.fork == false
-        continue-on-error: true
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gist_description: FrequencySketch JMH Results
-          github_file: ./caffeine/build/reports/jmh/results.json
-          gist_title: freq_results_${{ matrix.distribution }}_${{ matrix.java }}.json
-          gist_url: https://gist.githubusercontent.com/ben-manes/f93df1b66aa210bc23a1e672ef9bee16
-
-  timer-wheel:
-    name: Timer Wheel
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        java: [ 11, 25, 27-ea ]
-        distribution: [ temurin ]
-        include:
-          - java: 25
-            distribution: graalvm
-          - java: 25
-            distribution: semeru
-          - java: 21
-            distribution: dragonwell
-    env:
-      JAVA_VERSION: ${{ matrix.java }}
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
-        with:
-          disable-sudo-and-containers: true
-          egress-policy: block
-          allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - name: TimerWheelBenchmark JMH Benchmark
-        uses: ./.github/actions/run-gradle
-        with:
-          java: ${{ matrix.java }}
-          distribution: ${{ matrix.distribution }}
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: >
-            caffeine:jmh
-            --no-configuration-cache
-            -PincludePattern=TimerWheelBenchmark
-      - name: Upload TimerWheelBenchmark JMH Results to Gist
-        uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
-        if: github.event.repository.fork == false
-        continue-on-error: true
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gist_description: TimerWheel JMH Results
-          github_file: ./caffeine/build/reports/jmh/results.json
-          gist_title: timerwheel_results_${{ matrix.distribution }}_${{ matrix.java }}.json
-          gist_url: https://gist.githubusercontent.com/ben-manes/9abafdbc76fe34c0e63cef386b0b9ac0
+          gist-auth: ${{ secrets.GIST_TOKEN }}
+          gist-title-prefix: ${{ matrix.benchmark.gist-title-prefix }}
+          gist-description: ${{ matrix.benchmark.gist-description }}
+          gist-url: ${{ matrix.benchmark.gist-url }}
 
   publish:
     name: Publish
-    needs: [compute, get-put, put-remove, eviction, frequency-sketch, timer-wheel]
+    needs: benchmark
     runs-on: ubuntu-latest
     if: github.event.repository.fork == false
     steps:
@@ -375,4 +157,7 @@ jobs:
             echo '#### [TimerWheel](https://jmh.morethan.io/?gists=9abafdbc76fe34c0e63cef386b0b9ac0)'
             echo -n 'A benchmark that evaluates the performance of the timer wheel for use by '
             echo -n 'variable expiration.'
+            echo -e '\n'
+            echo -e '---'
+            echo -e "See the attached flame graphs for profiler's visualizations of the hot methods."
           } >> $GITHUB_STEP_SUMMARY

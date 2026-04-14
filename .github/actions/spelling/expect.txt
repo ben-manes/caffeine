@@ -53,6 +53,7 @@ Eytan
 faible
 Failable
 fastpath
+flamegraph
 flt
 fpaux
 fpp
@@ -105,6 +106,7 @@ jmh
 jni
 jre
 jspecify
+JVMs
 kaggle
 klazz
 kotlin
