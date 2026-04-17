@@ -43,36 +43,42 @@ jobs:
           - name: Compute
             pattern: ComputeBenchmark
             params: computeType=Caffeine,Guava,ConcurrentHashMap
+            events: cpu,alloc,lock
             gist-title-prefix: compute_results
             gist-description: Compute JMH Results
             gist-url: https://gist.githubusercontent.com/ben-manes/511298014cc5629cbc5e57f09fd4c430
           - name: Get/Put
             pattern: GetPutBenchmark
             params: cacheType=Caffeine,Guava,ConcurrentHashMap
+            events: cpu,alloc,lock
             gist-title-prefix: getput_results
             gist-description: Get/Put JMH Results
             gist-url: https://gist.githubusercontent.com/ben-manes/b231cf57cf8e144e2247716e777edcf3
           - name: Put/Remove
             pattern: PutRemoveBenchmark
             params: cacheType=Caffeine,Guava,ConcurrentHashMap
+            events: cpu,alloc,lock
             gist-title-prefix: putremove_results
             gist-description: Put/Remove JMH Results
             gist-url: https://gist.githubusercontent.com/ben-manes/1359c399cb717e81976ee635c513340b
           - name: Eviction
             pattern: EvictionBenchmark
             params: cacheType=Caffeine,Guava
+            events: cpu,alloc,lock
             gist-title-prefix: eviction_results
             gist-description: Eviction JMH Results
             gist-url: https://gist.githubusercontent.com/ben-manes/2f5b54540c2e67edc0d1a7f28a1139f5
           - name: FrequencySketch
             pattern: FrequencySketchBenchmark
             params: ''
+            events: cpu
             gist-title-prefix: freq_results
             gist-description: FrequencySketch JMH Results
             gist-url: https://gist.githubusercontent.com/ben-manes/f93df1b66aa210bc23a1e672ef9bee16
           - name: TimerWheel
             pattern: TimerWheelBenchmark
             params: ''
+            events: cpu
             gist-title-prefix: timerwheel_results
             gist-description: TimerWheel JMH Results
             gist-url: https://gist.githubusercontent.com/ben-manes/9abafdbc76fe34c0e63cef386b0b9ac0
@@ -93,7 +99,7 @@ jobs:
       JAVA_VERSION: ${{ matrix.jdk.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -108,6 +114,7 @@ jobs:
           name: ${{ matrix.benchmark.name }}
           pattern: ${{ matrix.benchmark.pattern }}
           params: ${{ matrix.benchmark.params }}
+          events: ${{ matrix.benchmark.events }}
           java: ${{ matrix.jdk.java }}
           distribution: ${{ matrix.jdk.distribution }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
@@ -123,7 +130,7 @@ jobs:
     if: github.event.repository.fork == false
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block

@@ -31,7 +31,7 @@ jobs:
       JAVA_VERSION: 25
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -56,7 +56,7 @@ jobs:
       JAVA_VERSION: 25
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -83,7 +83,7 @@ jobs:
       JAVA_VERSION: 25
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -122,7 +122,7 @@ jobs:
       - name: Upload result to GitHub Code Scanning
         if: always() && hashFiles('pmd-combined.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
         with:
           sarif_file: pmd-combined.sarif
           category: pmd
@@ -136,7 +136,7 @@ jobs:
       JAVA_VERSION: 25
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -163,7 +163,7 @@ jobs:
       JAVA_VERSION: 25
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -202,7 +202,7 @@ jobs:
       - name: Upload result to GitHub Code Scanning
         if: always() && hashFiles('spotbugs-combined.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
         with:
           sarif_file: spotbugs-combined.sarif
           category: spotbugs

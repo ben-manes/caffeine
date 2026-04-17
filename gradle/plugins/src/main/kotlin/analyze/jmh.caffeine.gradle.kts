@@ -38,6 +38,8 @@ configurations.jmh {
 
 dependencies {
   jmh(libs.bundles.slf4j.nop)
+  jmh(platform(libs.jackson.bom))
+
   asyncProfiler(libs.ap.loader)
 }
 
@@ -104,10 +106,16 @@ jmh {
     require(format in setOf("tree", "jfr", "collapsed", "text", "flamegraph")) {
       "async-profiler output must be one of: tree, jfr, collapsed, text, flamegraph (got '$format')"
     }
+    val crossPlatformEvents = setOf("cpu", "alloc", "wall", "lock")
+    val event = providers.gradleProperty("asyncEvent").orElse("cpu").get().trim()
+    require(event.isNotEmpty()) { "asyncEvent must not be blank" }
+    if (!OperatingSystem.current().isLinux && event !in crossPlatformEvents) {
+      error("async-profiler event '$event' is Linux-only (cross-platform: $crossPlatformEvents)")
+    }
     profilers.add(asyncProfilerLibFile.map { file ->
       val libPath = file.asFile.readText().trim()
       val dir = asyncProfilerDir.get().asFile.absolutePath
-      "async:libPath=$libPath;output=$format;dir=$dir"
+      "async:libPath=$libPath;event=$event;output=$format;dir=$dir/$event"
     })
   }
 }
@@ -125,7 +133,6 @@ tasks.withType<JmhTask>().configureEach {
 
   if (providers.gradleProperty("async").isPresent) {
     dependsOn(extractAsyncProfilerLib)
-    outputs.dir(asyncProfilerDir)
   }
 
   inputs.property("javaDistribution", javaDistribution()).optional(true)

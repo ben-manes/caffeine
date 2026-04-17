@@ -34,6 +34,13 @@ inputs:
   gist-url:
     required: true
     description: Target gist URL for uploading JMH results
+  events:
+    required: false
+    default: cpu
+    description: >
+      Comma-separated async-profiler events. Cross-platform: cpu, alloc, wall, lock.
+      Linux-only: cache-misses, branch-misses, cycles, instructions, nativemem, etc.
+      Each event runs as a separate profiler pass, multiplying benchmark time.
 runs:
   using: composite
   steps:
@@ -56,12 +63,34 @@ runs:
         java: ${{ inputs.java }}
         distribution: ${{ inputs.distribution }}
         cache-encryption-key: ${{ inputs.cache-encryption-key }}
-        arguments: >
-          caffeine:jmh
-          --no-configuration-cache
-          -PincludePattern=${{ inputs.pattern }}
-          ${{ inputs.params != '' && format('-PbenchmarkParameters={0}', inputs.params) || '' }}
-          ${{ steps.profiler.outputs.enabled == 'true' && '-Pasync=flamegraph' || '' }}
+        run: |
+          set -euo pipefail
+          PATTERN='${{ inputs.pattern }}'
+          PARAMS='${{ inputs.params }}'
+          EVENTS='${{ inputs.events }}'
+          PROFILER_ENABLED='${{ steps.profiler.outputs.enabled }}'
+          AUTO_DOWNLOAD=$([[ "$ORG_GRADLE_PROJECT_graalvm" == "true" ]] && echo true || echo false)
+          if [[ "$PROFILER_ENABLED" == "true" ]]; then
+            IFS=',' read -ra EVENT_LIST <<< "$EVENTS"
+          else
+            EVENT_LIST=("")
+          fi
+          for event in "${EVENT_LIST[@]}"; do
+            header=$([[ -n "$event" ]] && echo "JMH profile: $event" || echo "JMH benchmark")
+            echo "::group::$header"
+            args=(caffeine:jmh --no-configuration-cache --rerun "-PincludePattern=$PATTERN")
+            if [[ -n "$PARAMS" ]]; then
+              args+=("-PbenchmarkParameters=$PARAMS")
+            fi
+            if [[ -n "$event" ]]; then
+              args+=(-Pasync=flamegraph "-PasyncEvent=$event")
+            fi
+            ./gradlew -Dorg.gradle.java.installations.auto-download=$AUTO_DOWNLOAD \
+              --warning-mode all --no-problems-report \
+              "-Dscan.tag.${GITHUB_WORKFLOW// /_}" \
+              "${args[@]}"
+            echo "::endgroup::"
+          done
     - name: Upload ${{ inputs.name }} JMH Results to Gist
       if: github.event.repository.fork == false
       continue-on-error: true

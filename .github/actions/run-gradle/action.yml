@@ -4,6 +4,13 @@ inputs:
   arguments:
     required: false
     description: Gradle arguments
+  run:
+    required: false
+    description: >
+      Bash script to execute after toolchain setup, with run-gradle's env
+      variables (JAVA_HOME, JDK_CI, ORG_GRADLE_PROJECT_*) already exported.
+      Mutually exclusive with 'arguments' — when set, replaces the default
+      gradle invocation and retry loop.
   java:
     required: true
     description: The JDK version
@@ -96,7 +103,7 @@ runs:
         path: ~/.gradle/caches/build-cache-*
         key: gradle-build-cache-${{ runner.os }}-jdk${{ inputs.java }}-${{ inputs.arguments }}
     - name: Run ${{ inputs.arguments }}
-      if: ${{ inputs.arguments != '' }}
+      if: ${{ inputs.arguments != '' && inputs.run == '' }}
       env:
         INPUTS_ARGUMENTS: ${{ inputs.arguments }}
         INPUTS_ATTEMPT_DELAY: ${{ inputs.attempt-delay }}
@@ -126,6 +133,22 @@ runs:
             exit 1
           fi
         done
+    - name: Run custom script
+      if: ${{ inputs.run != '' }}
+      env:
+        INPUTS_RUN: ${{ inputs.run }}
+        JDK_CI: ${{ steps.java_toolchain.outputs.java_home }}
+        LOCAL_BUILD_CACHE_CI: ${{ inputs.local-build-cache }}
+        GRAALVM_HOME: ${{ steps.java_toolchain.outputs.graalvm_home }}
+        ORG_GRADLE_PROJECT_graalvm: ${{ steps.java_toolchain.outputs.graalvm }}
+        ORG_GRADLE_PROJECT_javaVendor: ${{ steps.java_toolchain.outputs.vendor }}
+        ORG_GRADLE_PROJECT_javaVersion: ${{ steps.java_toolchain.outputs.version }}
+        ORG_GRADLE_PROJECT_earlyAccess: ${{ steps.java_toolchain.outputs.early_access }}
+        ORG_GRADLE_PROJECT_javaDistribution: ${{ steps.java_toolchain.outputs.distribution }}
+      shell: bash
+      run: |
+        echo "::add-matcher::.github/problem-matcher.json"
+        eval "$INPUTS_RUN"
     - name: Restore to toolchain JDK (${{ steps.gradle_toolchain.outputs.version }})
       uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
       if: always()
