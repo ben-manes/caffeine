@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -371,6 +372,48 @@ final class MpscGrowableArrayQueueTest {
     // Verify the queue is still usable after the OOME
     failOnAllocate.set(false);
     assertThat(queue.offer(99)).isTrue();
+    assertThat(queue).hasSize(4);
+    for (int i = 0; i < 4; i++) {
+      assertThat(queue.poll()).isNotNull();
+    }
+    assertThat(queue).isEmpty();
+  }
+
+  @Test
+  void offer_resizeOutOfMemory_concurrent() throws Exception {
+    var failOnAllocate = new AtomicBoolean();
+    var resizing = new CountDownLatch(1);
+    var releaseOome = new CountDownLatch(1);
+    var queue = new MpscGrowableArrayQueue<Object>(4, 16) {
+      @Override @Nullable Object[] allocate(int capacity) {
+        if (failOnAllocate.compareAndSet(true, false)) {
+          resizing.countDown();
+          awaitUninterruptibly(releaseOome);
+          throw new OutOfMemoryError();
+        }
+        return super.allocate(capacity);
+      }
+    };
+
+    while (queue.size() < 3) {
+      assertThat(queue.offer(queue.size())).isTrue();
+    }
+    failOnAllocate.set(true);
+
+    // Producer A: triggers resize, blocks in allocate while producerIndex is odd
+    var producerA = executor.submit(() ->
+        assertThrows(OutOfMemoryError.class, () -> queue.offer(99)));
+    awaitUninterruptibly(resizing);
+
+    // Producer B: offers while A holds producerIndex odd and must make progress after A throws
+    var producerB = executor.submit(() -> assertThat(queue.offer(100)).isTrue());
+
+    // Release A's OOME. The catch in resize() restores producerIndex, unblocking B.
+    releaseOome.countDown();
+
+    producerA.get(10, TimeUnit.SECONDS);
+    producerB.get(10, TimeUnit.SECONDS);
+
     assertThat(queue).hasSize(4);
     for (int i = 0; i < 4; i++) {
       assertThat(queue.poll()).isNotNull();

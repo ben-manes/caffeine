@@ -46,9 +46,9 @@ or standalone (put fast path, Policy API methods).
 | accessTime | getOpaque | setOpaque | benign races acceptable |
 | writeTime | getOpaque | plain set | synchronized(node) |
 | variableTime | getOpaque | setOpaque, CAS | synchronized(node) for CAS |
-| weight | plain (volatile) | plain (volatile) | synchronized(node) |
-| policyWeight | plain (volatile) | plain (volatile) | evictionLock |
-| queueType | plain (volatile) | plain (volatile) | evictionLock |
+| weight | plain | plain | synchronized(node); unlocked reads accept staleness |
+| policyWeight | plain | plain | evictionLock; unlocked reads accept staleness |
+| queueType | plain | plain | evictionLock |
 
 ## Drain Status State Machine
 

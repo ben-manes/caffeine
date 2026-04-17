@@ -79,3 +79,4 @@ runs:
         name: flamegraphs-${{ inputs.pattern }}-${{ inputs.distribution }}-${{ inputs.java }}
         path: caffeine/build/reports/jmh/async/**
         if-no-files-found: warn
+        retention-days: 7

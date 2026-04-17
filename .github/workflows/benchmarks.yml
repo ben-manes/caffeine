@@ -93,7 +93,7 @@ jobs:
       JAVA_VERSION: ${{ matrix.jdk.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -106,15 +106,15 @@ jobs:
         uses: ./.github/actions/run-benchmark
         with:
           name: ${{ matrix.benchmark.name }}
-          pattern: ${{ matrix.benchmark.pattern }}
           params: ${{ matrix.benchmark.params }}
+          pattern: ${{ matrix.benchmark.pattern }}
           java: ${{ matrix.jdk.java }}
           distribution: ${{ matrix.jdk.distribution }}
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           gist-auth: ${{ secrets.GIST_TOKEN }}
+          gist-url: ${{ matrix.benchmark.gist-url }}
           gist-title-prefix: ${{ matrix.benchmark.gist-title-prefix }}
           gist-description: ${{ matrix.benchmark.gist-description }}
-          gist-url: ${{ matrix.benchmark.gist-url }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
   publish:
     name: Publish
@@ -123,7 +123,7 @@ jobs:
     if: github.event.repository.fork == false
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block

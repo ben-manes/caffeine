@@ -59,7 +59,7 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -126,7 +126,7 @@ jobs:
         suite: ${{ fromJson(needs.setup.outputs.suites) }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -186,7 +186,7 @@ jobs:
         suite: ${{ fromJson(needs.setup.outputs.suites) }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -213,7 +213,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -321,7 +321,7 @@ jobs:
       checks: write # Needed to annotate commit
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo: true
           egress-policy: block
@@ -386,7 +386,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -420,7 +420,7 @@ jobs:
       id-token: write # Needed for signing
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block

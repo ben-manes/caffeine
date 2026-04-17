@@ -1360,6 +1360,26 @@ final class AsyncCacheTest {
         .contains(replaced).exclusively();
   }
 
+  @ParameterizedTest
+  @CheckMaxLogLevel(ERROR)
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      executor = CacheExecutor.REJECTING, executorFailure = ExecutorFailure.EXPECTED,
+      removalListener = Listener.CONSUMING)
+  void put_replace_differentValue_rejectingExecutor(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var replaced = new HashMap<Int, Int>();
+    for (Int key : context.firstMiddleLastKeys()) {
+      var newValue = context.absentValue().toFuture();
+      cache.put(key, newValue);
+      assertThat(cache).containsEntry(key, newValue);
+      replaced.put(key, context.original().get(key));
+    }
+
+    assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(replaced).exclusively();
+  }
+
   /* --------------- misc --------------- */
 
   @ParameterizedTest
