@@ -958,7 +958,9 @@ final class CaffeineTest {
   static Stream<Arguments> powerOfTwoLong() {
     return Stream.of(arguments(1L, 1L), arguments(2L, 2L), arguments(3L, 4L),
         arguments(1024L, 1024L), arguments(1025L, 2048L), arguments(1L << 30, 1L << 30),
-        arguments((1L << 30) + 1, 1L << 31), arguments((long) Integer.MAX_VALUE, 1L << 31));
+        arguments((1L << 30) + 1, 1L << 31), arguments((long) Integer.MAX_VALUE, 1L << 31),
+        arguments(1L << 62, 1L << 62), arguments((1L << 62) + 1, 1L << 62),
+        arguments(Long.MAX_VALUE, 1L << 62));
   }
 
   @Test

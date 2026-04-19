@@ -216,9 +216,12 @@ public final class Caffeine<K, V> {
     return 1 << -Integer.numberOfLeadingZeros(x - 1);
   }
 
-  /** Returns the smallest power of two greater than or equal to {@code x}. */
+  /** Returns the smallest power of two greater than or equal to {@code x}, else the maximum. */
   static long ceilingPowerOfTwo(long x) {
     // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
+    if (x > (1L << 62)) {
+      return 1L << 62;
+    }
     return 1L << -Long.numberOfLeadingZeros(x - 1);
   }
 
