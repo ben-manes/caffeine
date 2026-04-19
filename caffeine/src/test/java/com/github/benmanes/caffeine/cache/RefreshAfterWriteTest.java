@@ -54,8 +54,6 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 
-import com.google.common.testing.FakeTicker;
-
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
@@ -69,6 +67,7 @@ import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
+import com.google.common.testing.FakeTicker;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.Var;
 
@@ -488,9 +487,9 @@ final class RefreshAfterWriteTest {
     assertThat(logEvents()).isEmpty();
   }
 
+  @Test
   @CheckNoEvictions
   @CheckMaxLogLevel(WARN)
-  @Test
   void refreshIfNeeded_expiryThrows_logsAndRecordsFailure() {
     // If the user's Expiry throws during the refresh handler's compute (after the loader
     // succeeded), the exception must be logged and the load recorded as a failure; otherwise
@@ -504,9 +503,9 @@ final class RefreshAfterWriteTest {
     };
     LoadingCache<Int, Int> cache = Caffeine.newBuilder()
         .refreshAfterWrite(Duration.ofMinutes(1))
-        .expireAfter(expiry)
         .executor(Runnable::run)
         .ticker(ticker::read)
+        .expireAfter(expiry)
         .recordStats()
         .build(key -> Int.valueOf(key.intValue() + 1));
 

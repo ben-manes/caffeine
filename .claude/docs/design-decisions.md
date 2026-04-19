@@ -67,16 +67,25 @@ exceptions (commit+defer) from non-eviction exceptions (immediate rethrow).
 
 ## References
 
-**Non-volatile keyReference in WeakValueReference** is a plain field set once during
-construction and never mutated. In `setValue`, visibility is guaranteed by
-`setRelease` followed by `VarHandle.storeStoreFence()` — the fence ensures the
-non-final keyReference field of the newly constructed reference is published before
-subsequent operations. `setRelease` alone was insufficient because release semantics
-only apply to the field itself, not to non-final fields of the newly constructed
-object (#1820, confirmed on aarch64 M3 Max via JCStress IntermittentNull test).
+**Non-volatile keyReference in WeakValueReference** is a plain field. It is set
+during construction and, under `synchronized(node)`, mutated to a sentinel value
+(`RETIRED_*_KEY` / `DEAD_*_KEY`) when the node is retired or dies. Lock-free
+readers tolerate the resulting staleness window as weakly-consistent observation.
+
+In `setValue`, a new `WeakValueReference` is installed via
+`setRelease` followed by `VarHandle.storeStoreFence()`, then the old reference is
+cleared via `ref.clear()`. The fence prevents the old reference's `clear()` from
+being reordered before the publication of the new reference. Without the fence, a
+reader that re-reads the same reference and observes a cleared referent cannot
+distinguish "the clear was already committed" from "the clear's store buffer is
+ahead of the new reference's publication" — breaking the `getValue` re-check loop
+invariant. `setRelease` alone orders the new reference's constructor writes before
+the publication, but does not constrain the subsequent `ref.clear()` against any
+racing reader (#1820, confirmed on aarch64 M3 Max via JCStress IntermittentNull test).
+
 In the constructor, a plain `VALUE.set` is used since the object itself is not yet
 published. Strong value caches use `setRelease` without the fence since there is
-no inner object with non-final fields to publish.
+no inner object to publish and no `ref.clear()` to order against.
 
 **Weigher.boundedWeigher** wraps all user weighers and enforces `weight >= 0` at
 runtime via `requireArgument`.

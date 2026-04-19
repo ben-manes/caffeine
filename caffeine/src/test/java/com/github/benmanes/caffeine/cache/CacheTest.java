@@ -1038,8 +1038,8 @@ final class CacheTest {
   }
 
   private static void assertHierarchySkipRejected(byte[] stream) throws IOException {
-    try (var ois = new ObjectInputStream(new ByteArrayInputStream(stream))) {
-      var exception = assertThrows(InvalidObjectException.class, ois::readObject);
+    try (var input = new ObjectInputStream(new ByteArrayInputStream(stream))) {
+      var exception = assertThrows(InvalidObjectException.class, input::readObject);
       assertThat(exception).hasMessageThat().isEqualTo("Proxy required");
     }
   }

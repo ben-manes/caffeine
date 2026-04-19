@@ -1402,7 +1402,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
               // If the entry was not modified while in-flight (no ABA) then replace
               return value;
             }
-            // Otherwise, a write invalidated the refresh so discard it and maybe notify the listener
+            // Otherwise, a write invalidated the refresh so discard it and maybe notify
+            // the listener
             if (value != null) {
               cause[0] = RemovalCause.REPLACED;
             }
