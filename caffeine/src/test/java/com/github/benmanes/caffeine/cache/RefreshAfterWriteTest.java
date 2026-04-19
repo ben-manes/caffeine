@@ -306,6 +306,91 @@ final class RefreshAfterWriteTest {
   @CheckNoEvictions
   @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      refreshAfterWrite = Expire.ONE_MINUTE, expireAfterWrite = Expire.FOREVER,
+      removalListener = Listener.CONSUMING, loader = Loader.ASYNC_INCOMPLETE)
+  void refreshIfNeeded_rejected_preservesWriteTime(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // A refresh that is rejected by a concurrent write must not bump writeTime/accessTime when
+    // its compute falls through — otherwise the entry's expiration shifts by the refresh
+    // duration even though the refresh produced no state change.
+    context.ticker().advance(Duration.ofMinutes(2));
+    var value = cache.get(context.firstKey());
+    assertThat(value).isNotNull();
+
+    assertThat(cache.policy().refreshes()).isNotEmpty();
+    var future = requireNonNull(cache.policy().refreshes().get(context.firstKey()));
+
+    // Put discards the refresh; writeTime is now "just written"
+    cache.put(context.firstKey(), context.absentValue());
+    var expireAfterWrite = cache.policy().expireAfterWrite().orElseThrow();
+    var ageAfterPut = expireAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS);
+    assertThat(ageAfterPut).hasValue(0L);
+
+    // Let time elapse, then complete the rejected refresh; the writeTime must NOT shift forward
+    context.ticker().advance(Duration.ofSeconds(30));
+    future.complete(context.absentKey().negate());
+
+    var ageAfterRefresh = expireAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS);
+    assertThat(ageAfterRefresh).hasValue(Duration.ofSeconds(30).toNanos());
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      refreshAfterWrite = Expire.ONE_MINUTE, expireAfterWrite = Expire.FOREVER,
+      removalListener = Listener.CONSUMING, loader = Loader.ASYNC_INCOMPLETE)
+  void refreshIfNeeded_rejectedSameInstance_preservesWriteTime(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // ABA case: a concurrent put re-inserts the same value instance, bumping writeTime without
+    // changing the value reference. The refresh rejection must preserve the put's writeTime
+    // rather than shift it forward to the refresh completion time.
+    var originalValue = requireNonNull(context.original().get(context.firstKey()));
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    var value = cache.get(context.firstKey());
+    assertThat(value).isNotNull();
+
+    assertThat(cache.policy().refreshes()).isNotEmpty();
+    var future = requireNonNull(cache.policy().refreshes().get(context.firstKey()));
+
+    cache.put(context.firstKey(), originalValue);
+    var expireAfterWrite = cache.policy().expireAfterWrite().orElseThrow();
+    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS)).hasValue(0L);
+
+    context.ticker().advance(Duration.ofSeconds(30));
+    future.complete(context.absentKey().negate());
+
+    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS))
+        .hasValue(Duration.ofSeconds(30).toNanos());
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      refreshAfterWrite = Expire.ONE_MINUTE, expireAfterWrite = Expire.FOREVER,
+      removalListener = Listener.CONSUMING, loader = Loader.ASYNC_INCOMPLETE)
+  void refresh_rejected_preservesWriteTime(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // Same invariant as above, but triggered by the explicit refresh(key) API — exercises the
+    // compute paths in LocalLoadingCache.refresh (sync) and LocalAsyncLoadingCache
+    // .tryComputeRefresh (async) depending on the parameterized compute mode.
+    var refreshFuture = cache.refresh(context.firstKey());
+    assertThat(refreshFuture).isNotDone();
+
+    cache.put(context.firstKey(), context.absentValue());
+    var expireAfterWrite = cache.policy().expireAfterWrite().orElseThrow();
+    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS)).hasValue(0L);
+
+    context.ticker().advance(Duration.ofSeconds(30));
+    refreshFuture.complete(context.absentKey().negate());
+
+    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS))
+        .hasValue(Duration.ofSeconds(30).toNanos());
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE)
   void refreshIfNeeded_writeTimeABA(LoadingCache<Int, Int> cache, CacheContext context) {

@@ -86,7 +86,7 @@ abstract class LocalAsyncLoadingCache<K, V>
    * Returns a mapping function that adapts to {@link AsyncCacheLoader#asyncLoadAll}, if
    * implemented.
    */
-  @Nullable BiFunction<Set<? extends K>, Executor, CompletableFuture<Map<K, V>>> 
+  @Nullable BiFunction<Set<? extends K>, Executor, CompletableFuture<Map<K, V>>>
       newBulkMappingFunction(AsyncCacheLoader<? super K, V> cacheLoader) {
     if (!canBulkLoad(cacheLoader)) {
       return null;
@@ -241,8 +241,8 @@ abstract class LocalAsyncLoadingCache<K, V>
     /** Begins a refresh if the entry has materialized and no reload is in-flight. */
     @SuppressWarnings("FutureReturnValueIgnored")
     private @Nullable CompletableFuture<V> tryComputeRefresh(K key, Object keyReference) {
-      long[] startTime = new long[1];
-      boolean[] refreshed = new boolean[1];
+      var startTime = new long[1];
+      var refreshed = new boolean[1];
       @SuppressWarnings({"rawtypes", "unchecked"})
       @Nullable CompletableFuture<V>[] oldValueFuture = new CompletableFuture[1];
       var future = asyncCache.cache().refreshes().computeIfAbsent(keyReference, k -> {
@@ -288,7 +288,8 @@ abstract class LocalAsyncLoadingCache<K, V>
           }
 
           try {
-            boolean[] discard = new boolean[1];
+            var discard = new boolean[1];
+            var preserveTimestamps = new boolean[1];
             var value = asyncCache.cache().compute(key, (ignored, currentValue) -> {
               var successful = asyncCache.cache().refreshes().remove(keyReference, castedFuture);
               if (successful && (currentValue == oldValueFuture[0])) {
@@ -302,9 +303,11 @@ abstract class LocalAsyncLoadingCache<K, V>
                 return (newValue == null) ? null : castedFuture;
               }
               // Otherwise, a write invalidated the refresh so discard it and notify the listener
+              preserveTimestamps[0] = true;
               discard[0] = true;
               return currentValue;
-            }, asyncCache.cache().expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true);
+            }, asyncCache.cache().expiry(), /* recordLoad= */ false,
+                /* recordLoadFailure= */ true, preserveTimestamps);
 
             if (discard[0] && (newValue != null)) {
               var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;

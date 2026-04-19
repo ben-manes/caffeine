@@ -103,7 +103,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   default CompletableFuture<V> refresh(K key) {
     requireNonNull(key);
 
-    long[] startTime = new long[1];
+    var startTime = new long[1];
     @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable V[] oldValue = (V[]) new Object[1];
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -145,15 +145,18 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
           return;
         }
 
-        boolean[] discard = new boolean[1];
+        var discard = new boolean[1];
+        var preserveTimestamps = new boolean[1];
         @Nullable V value = cache().compute(key, (K k, @Nullable V currentValue) -> {
           boolean removed = cache().refreshes().remove(keyReference, reloading[0]);
           if (removed && (currentValue == oldValue[0])) {
             return (currentValue == null) && (newValue == null) ? null : newValue;
           }
           discard[0] = (currentValue != newValue);
+          preserveTimestamps[0] = true;
           return currentValue;
-        }, cache().expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true);
+        }, cache().expiry(), /* recordLoad= */ false,
+            /* recordLoadFailure= */ true, preserveTimestamps);
 
         if (discard[0] && (newValue != null)) {
           var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;

@@ -103,9 +103,25 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
    * See {@link ConcurrentMap#compute}. This method differs by accepting parameters indicating
    * whether to record load statistics based on the success of this operation.
    */
+  default @Nullable V compute(K key,
+      BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
+      @Nullable Expiry<? super K, ? super V> expiry,
+      boolean recordLoad, boolean recordLoadFailure) {
+    return compute(key, remappingFunction, expiry, recordLoad, recordLoadFailure,
+        /* preserveTimestamps= */ null);
+  }
+
+  /**
+   * See {@link ConcurrentMap#compute}. This method differs by accepting parameters indicating
+   * whether to record load statistics and whether to skip updating the entry's timestamps when
+   * the remapping function returns the same value instance (e.g., because a refresh is being
+   * discarded and should not touch the entry). The {@code preserveTimestamps} parameter is a
+   * shared reference that the remapping function sets to {@code true} to signal the no-op.
+   */
   @Nullable V compute(K key,
       BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
-      @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad, boolean recordLoadFailure);
+      @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
+      boolean recordLoadFailure, boolean @Nullable[] preserveTimestamps);
 
   @Override
   default @Nullable V computeIfAbsent(K key,

@@ -1380,6 +1380,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         V value = (isAsync && (newValue != null)) ? (V) refreshFuture[0] : newValue;
 
         @Nullable RemovalCause[] cause = new RemovalCause[1];
+        var preserveTimestamps = new boolean[1];
         @Nullable V result;
         try {
           result = compute(key, (K k, @Nullable V currentValue) -> {
@@ -1402,13 +1403,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
               // If the entry was not modified while in-flight (no ABA) then replace
               return value;
             }
-            // Otherwise, a write invalidated the refresh so discard it and maybe notify
-            // the listener
+            // Otherwise the refresh is discarded. If a concurrent write changed the value or
+            // writeTime, preserve those timestamps so the refresh rejection does not stomp on
+            // the user's write. An external discard with no concurrent write falls through to the
+            // normal update, which debounces the next refresh attempt.
             if (value != null) {
               cause[0] = RemovalCause.REPLACED;
             }
+            if ((currentValue != oldValue) || (node.getWriteTime() != writeTime)) {
+              preserveTimestamps[0] = true;
+            }
             return currentValue;
-          }, expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true);
+          }, expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true, preserveTimestamps);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
           statsCounter().recordLoadFailure(loadTime);
@@ -2838,16 +2844,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @Override
   public @Nullable V compute(K key,
       BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
-      @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
-      boolean recordLoadFailure) {
+      @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad, boolean recordLoadFailure,
+      boolean @Nullable[] preserveTimestamps) {
     requireNonNull(key);
     requireNonNull(remappingFunction);
 
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
         statsAware(remappingFunction, recordLoad, recordLoadFailure);
+    var ctx = new ComputeContext<K, V>(expirationTicker().read());
+    ctx.preserveTimestamps = preserveTimestamps;
     return remap(key, keyRef, statsAwareRemappingFunction,
-        expiry, new ComputeContext<>(expirationTicker().read()), /* computeIfAbsent= */ true);
+        expiry, ctx, /* computeIfAbsent= */ true);
   }
 
   @Override
@@ -2948,6 +2956,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             return null;
           }
 
+          // If the caller flagged a same-instance return as a no-op (e.g., a refresh was rejected
+          // and should not touch the entry), skip the metadata updates below.
+          if ((ctx.preserveTimestamps != null) && ctx.preserveTimestamps[0]
+              && (ctx.newValue == ctx.oldValue) && (ctx.cause == null)) {
+            discardRefresh(kr);
+            return n;
+          }
+
           long varTime;
           ctx.newWeight = weigher.weigh(key, ctx.newValue);
           ctx.now = expirationTicker().read();
@@ -3006,6 +3022,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       afterWrite(new RemovalTask(ctx.removed));
     } else if (node == null) {
       // absent and not computable
+    } else if ((ctx.preserveTimestamps != null) && ctx.preserveTimestamps[0]) {
+      // The remapping was a signaled no-op; the node was not modified
     } else if ((ctx.oldValue == null) && (ctx.cause == null)) {
       afterWrite(new AddTask(node, ctx.newWeight));
     } else {
@@ -3302,9 +3320,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final class EvictContext<V> {
     @Nullable RemovalCause cause;
     @Nullable V value;
-    int oldWeight;
     boolean resurrect;
     boolean removed;
+    int oldWeight;
   }
 
   /** Mutable context for passing state between a lambda and the caller. */
@@ -3334,6 +3352,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Nullable Node<K, V> removed;
     @Nullable RemovalCause cause;
     @Nullable Throwable exception;
+    boolean @Nullable[] preserveTimestamps;
 
     long now;
     int oldWeight;

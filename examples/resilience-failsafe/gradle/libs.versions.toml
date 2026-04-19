@@ -3,7 +3,7 @@ caffeine = "3.2.3"
 failsafe = "3.3.2"
 junit-jupiter = "6.1.0-M1"
 truth = "1.4.5"
-versions = "0.53.0"
+versions = "0.54.0"
 
 [libraries]
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }

@@ -59,6 +59,38 @@ final class RefreshAfterWriteFrayTest {
     assertThat(value).isNotNull();
     assertWithMessage("Key 1 should be 10 or 999, but was %s", value)
         .that(value).isAnyOf(10, 999);
+    assertThat(cache.policy().refreshes()).isEmpty();
+    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+  }
+
+  /** Explicit refresh(k) racing a put — exercises the LoadingCache.refresh compute path. */
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void explicitRefresh_concurrentPut() throws InterruptedException {
+    var ticker = new FakeTicker();
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(10)
+        .build(key -> key * 10);
+    cache.get(1);
+    ticker.advance(Duration.ofMinutes(2));
+
+    var threadA = new Thread(() -> cache.refresh(1));
+    var threadB = new Thread(() -> cache.put(1, 999));
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+    cache.cleanUp();
+
+    var value = cache.getIfPresent(1);
+    assertThat(value).isNotNull();
+    assertWithMessage("Key 1 should be 10 or 999, but was %s", value)
+        .that(value).isAnyOf(10, 999);
+    assertThat(cache.policy().refreshes()).isEmpty();
+    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)

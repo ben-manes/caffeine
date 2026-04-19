@@ -6,7 +6,7 @@ junit-jupiter = "6.1.0-M1"
 log4j2-core = "3.0.0-beta3"
 log4j2-slf4j2 = "3.0.0-beta2"
 truth = "1.4.5"
-versions = "0.53.0"
+versions = "0.54.0"
 
 [libraries]
 caffeine = { module = "com.github.ben-manes.caffeine:jcache", version.ref = "caffeine" }
