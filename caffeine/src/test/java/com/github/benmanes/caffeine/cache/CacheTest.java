@@ -46,9 +46,13 @@ import static org.slf4j.event.Level.ERROR;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
+import java.io.ObjectStreamConstants;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -1015,6 +1019,59 @@ final class CacheTest {
         () -> readObject.invoke(cache, new ObjectInputStream() {}));
     assertThat(exception).hasCauseThat().isInstanceOf(InvalidObjectException.class);
     assertThat(exception).hasCauseThat().hasMessageThat().isEqualTo("Proxy required");
+  }
+
+  @Test
+  void readObject_hierarchySkip_cacheView() throws IOException {
+    var stream = craftHierarchySkipStream(
+        "com.github.benmanes.caffeine.cache.LocalAsyncCache$CacheView",
+        "Lcom/github/benmanes/caffeine/cache/LocalAsyncCache;");
+    assertHierarchySkipRejected(stream);
+  }
+
+  @Test
+  void readObject_hierarchySkip_loadingCacheView() throws IOException {
+    var stream = craftHierarchySkipStream(
+        "com.github.benmanes.caffeine.cache.LocalAsyncLoadingCache$LoadingCacheView",
+        "Lcom/github/benmanes/caffeine/cache/LocalAsyncLoadingCache;");
+    assertHierarchySkipRejected(stream);
+  }
+
+  private static void assertHierarchySkipRejected(byte[] stream) throws IOException {
+    try (var ois = new ObjectInputStream(new ByteArrayInputStream(stream))) {
+      var exception = assertThrows(InvalidObjectException.class, ois::readObject);
+      assertThat(exception).hasMessageThat().isEqualTo("Proxy required");
+    }
+  }
+
+  /**
+   * Crafts a serialized object stream whose class-descriptor chain declares the named concrete
+   * {@code AbstractCacheView} subclass but skips {@code AbstractCacheView} itself (superClassDesc =
+   * {@code TC_NULL}). An attacker using this byte stream would bypass the
+   * {@code readObject} defense if it were declared only on the concrete subclass; hence the
+   * {@code readObjectNoData} hook must live on {@code AbstractCacheView} to reject this path.
+   */
+  private static byte[] craftHierarchySkipStream(
+      String className, String asyncCacheFieldSignature) throws IOException {
+    var baos = new ByteArrayOutputStream();
+    try (var dos = new DataOutputStream(baos)) {
+      dos.writeShort(ObjectStreamConstants.STREAM_MAGIC);
+      dos.writeShort(ObjectStreamConstants.STREAM_VERSION);
+      dos.writeByte(ObjectStreamConstants.TC_OBJECT);
+      dos.writeByte(ObjectStreamConstants.TC_CLASSDESC);
+      dos.writeUTF(className);
+      dos.writeLong(1L);
+      dos.writeByte(ObjectStreamConstants.SC_SERIALIZABLE);
+      dos.writeShort(1);
+      dos.writeByte('L');
+      dos.writeUTF("asyncCache");
+      dos.writeByte(ObjectStreamConstants.TC_STRING);
+      dos.writeUTF(asyncCacheFieldSignature);
+      dos.writeByte(ObjectStreamConstants.TC_ENDBLOCKDATA);
+      dos.writeByte(ObjectStreamConstants.TC_NULL);
+      dos.writeByte(ObjectStreamConstants.TC_NULL);
+    }
+    return baos.toByteArray();
   }
 
   /* --------------- null parameter --------------- */

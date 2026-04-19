@@ -693,6 +693,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       throw new InvalidObjectException("Proxy required");
     }
 
+    @SuppressWarnings("unused")
+    private void readObjectNoData() throws InvalidObjectException {
+      throw new InvalidObjectException("Proxy required");
+    }
+
     Object writeReplace() {
       return new SyncViewProxy<>(asyncCache());
     }
