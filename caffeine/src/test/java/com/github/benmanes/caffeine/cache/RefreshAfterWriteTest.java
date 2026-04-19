@@ -51,7 +51,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+
+import com.google.common.testing.FakeTicker;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
@@ -483,6 +486,47 @@ final class RefreshAfterWriteTest {
 
     assertThat(value).isEqualTo(context.absentValue());
     assertThat(logEvents()).isEmpty();
+  }
+
+  @CheckNoEvictions
+  @CheckMaxLogLevel(WARN)
+  @Test
+  void refreshIfNeeded_expiryThrows_logsAndRecordsFailure() {
+    // If the user's Expiry throws during the refresh handler's compute (after the loader
+    // succeeded), the exception must be logged and the load recorded as a failure; otherwise
+    // the stats/log contract documented on LoadingCache.refresh is silently violated.
+    var expected = new RuntimeException("expiry");
+    var ticker = new FakeTicker();
+    Expiry<Int, Int> expiry = new Expiry<>() {
+      @Override public long expireAfterCreate(Int k, Int v, long t) { return Long.MAX_VALUE; }
+      @Override public long expireAfterUpdate(Int k, Int v, long t, long d) { throw expected; }
+      @Override public long expireAfterRead(Int k, Int v, long t, long d) { return d; }
+    };
+    LoadingCache<Int, Int> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .expireAfter(expiry)
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .recordStats()
+        .build(key -> Int.valueOf(key.intValue() + 1));
+
+    var key = Int.valueOf(1);
+    var value = Int.valueOf(100);
+    cache.put(key, value);
+
+    ticker.advance(Duration.ofMinutes(2));
+    assertThat(cache.getIfPresent(key)).isNotNull();
+
+    // Use getIfPresentQuietly to avoid triggering a second refresh attempt.
+    assertThat(cache.policy().getIfPresentQuietly(key)).isSameInstanceAs(value);
+    assertThat(cache.stats().loadFailureCount()).isEqualTo(1);
+    assertThat(cache.stats().loadSuccessCount()).isEqualTo(0);
+    assertThat(logEvents()
+        .withMessage("Exception thrown during refresh")
+        .withThrowable(expected)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   @CheckNoEvictions

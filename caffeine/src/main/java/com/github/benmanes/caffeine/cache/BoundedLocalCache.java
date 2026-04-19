@@ -1380,31 +1380,39 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         V value = (isAsync && (newValue != null)) ? (V) refreshFuture[0] : newValue;
 
         @Nullable RemovalCause[] cause = new RemovalCause[1];
-        V result = compute(key, (K k, @Nullable V currentValue) -> {
-          boolean removed = refreshes.remove(keyReference, refreshFuture[0]);
-          if (currentValue == null) {
-            // If the entry is absent then discard the refresh and maybe notifying the listener
-            if (value != null) {
-              cause[0] = RemovalCause.EXPLICIT;
+        @Nullable V result;
+        try {
+          result = compute(key, (K k, @Nullable V currentValue) -> {
+            boolean removed = refreshes.remove(keyReference, refreshFuture[0]);
+            if (currentValue == null) {
+              // If the entry is absent then discard the refresh and maybe notify the listener
+              if (value != null) {
+                cause[0] = RemovalCause.EXPLICIT;
+              }
+              return null;
+            } else if (currentValue == value) {
+              // If the reloaded value is the same instance then no-op
+              return currentValue;
+            } else if (isAsync &&
+                (newValue == Async.getIfReady((CompletableFuture<?>) currentValue))) {
+              // If the completed futures hold the same value instance then no-op
+              return currentValue;
+            } else if (removed && (currentValue == oldValue)
+                && (node.getWriteTime() == writeTime)) {
+              // If the entry was not modified while in-flight (no ABA) then replace
+              return value;
             }
-            return null;
-          } else if (currentValue == value) {
-            // If the reloaded value is the same instance then no-op
+            // Otherwise, a write invalidated the refresh so discard it and maybe notify the listener
+            if (value != null) {
+              cause[0] = RemovalCause.REPLACED;
+            }
             return currentValue;
-          } else if (isAsync &&
-              (newValue == Async.getIfReady((CompletableFuture<?>) currentValue))) {
-            // If the completed futures hold the same value instance then no-op
-            return currentValue;
-          } else if (removed && (currentValue == oldValue) && (node.getWriteTime() == writeTime)) {
-            // If the entry was not modified while in-flight (no ABA) then replace
-            return value;
-          }
-          // Otherwise, a write invalidated the refresh so discard it and maybe notify the listener
-          if (value != null) {
-            cause[0] = RemovalCause.REPLACED;
-          }
-          return currentValue;
-        }, expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true);
+          }, expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true);
+        } catch (Throwable t) {
+          logger.log(Level.WARNING, "Exception thrown during refresh", t);
+          statsCounter().recordLoadFailure(loadTime);
+          return null;
+        }
 
         if (cause[0] != null) {
           notifyRemoval(key, value, cause[0]);
