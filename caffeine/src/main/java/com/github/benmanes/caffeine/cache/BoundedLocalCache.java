@@ -2108,6 +2108,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
       synchronized (node) {
         ctx.value = node.getValue();
+        ctx.oldWeight = node.getWeight();
 
         if ((key == null) || (ctx.value == null)) {
           ctx.cause = RemovalCause.COLLECTED;
@@ -2149,6 +2150,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     if (ctx.cause != null) {
       notifyRemoval(key, ctx.value, ctx.cause);
+      if (ctx.cause.wasEvicted()) {
+        statsCounter().recordEviction(ctx.oldWeight, ctx.cause);
+      }
     }
   }
 
@@ -2421,8 +2425,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
       if (expired) {
         notifyRemoval(key, oldValue, RemovalCause.EXPIRED);
+        statsCounter().recordEviction(oldWeight, RemovalCause.EXPIRED);
       } else if (oldValue == null) {
         notifyRemoval(key, /* value= */ null, RemovalCause.COLLECTED);
+        statsCounter().recordEviction(oldWeight, RemovalCause.COLLECTED);
       } else if (mayUpdate) {
         notifyOnReplace(key, oldValue, value);
       }
@@ -2450,6 +2456,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         requireIsAlive(key, n);
         ctx.oldKey = n.getKey();
         ctx.oldValue = n.getValue();
+        ctx.oldWeight = n.getWeight();
         RemovalCause actualCause;
         if ((ctx.oldKey == null) || (ctx.oldValue == null)) {
           actualCause = RemovalCause.COLLECTED;
@@ -2472,6 +2479,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (ctx.cause != null) {
       afterWrite(new RemovalTask(requireNonNull(ctx.node)));
       notifyRemoval(ctx.oldKey, ctx.oldValue, ctx.cause);
+      if (ctx.cause.wasEvicted()) {
+        statsCounter().recordEviction(ctx.oldWeight, ctx.cause);
+      }
     }
     return (ctx.cause == RemovalCause.EXPLICIT) ? ctx.oldValue : null;
   }
@@ -2491,6 +2501,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         requireIsAlive(key, node);
         ctx.oldKey = node.getKey();
         ctx.oldValue = node.getValue();
+        ctx.oldWeight = node.getWeight();
         if ((ctx.oldKey == null) || (ctx.oldValue == null)) {
           ctx.cause = RemovalCause.COLLECTED;
         } else if (hasExpired(node, expirationTicker().read(), ctx.oldValue)) {
@@ -2516,6 +2527,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     var removeCause = requireNonNull(ctx.cause);
     afterWrite(new RemovalTask(ctx.node));
     notifyRemoval(ctx.oldKey, ctx.oldValue, removeCause);
+    if (removeCause.wasEvicted()) {
+      statsCounter().recordEviction(ctx.oldWeight, removeCause);
+    }
 
     return (removeCause == RemovalCause.EXPLICIT);
   }
@@ -3277,6 +3291,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final class EvictContext<V> {
     @Nullable RemovalCause cause;
     @Nullable V value;
+    int oldWeight;
     boolean resurrect;
     boolean removed;
   }
@@ -3287,6 +3302,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Nullable V oldValue;
     @Nullable Node<K, V> node;
     @Nullable RemovalCause cause;
+    int oldWeight;
   }
 
   /** Mutable context for passing state between a lambda and the caller. */

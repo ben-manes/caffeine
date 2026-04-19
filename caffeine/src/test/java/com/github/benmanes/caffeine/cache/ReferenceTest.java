@@ -253,6 +253,7 @@ final class ReferenceTest {
       assertThat(context).notifications().withCause(COLLECTED)
           .contains(collected).exclusively();
     }
+    assertThat(context).stats().evictions(collected.size());
   }
 
   @ParameterizedTest
@@ -299,6 +300,7 @@ final class ReferenceTest {
     assertThat(context).removalNotifications().hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(COLLECTED).contains(collected);
     assertThat(context).removalNotifications().withCause(EXPLICIT).contains(key, value);
+    assertThat(context).stats().evictions(collected.size());
   }
 
   @ParameterizedTest
@@ -706,6 +708,7 @@ final class ReferenceTest {
     assertThat(context).removalNotifications().withCause(COLLECTED).contains(collected);
     assertThat(context).removalNotifications().withCause(EXPLICIT).contains(retained);
     assertThat(context).removalNotifications().hasSize(context.initialSize());
+    assertThat(context).stats().evictions(collected.size());
   }
 
   @ParameterizedTest
@@ -899,6 +902,7 @@ final class ReferenceTest {
       assertThat(context).notifications().withCause(COLLECTED)
           .contains(collected).exclusively();
     }
+    assertThat(context).stats().evictions(collected.size());
   }
 
   @ParameterizedTest
@@ -922,6 +926,7 @@ final class ReferenceTest {
     assertThat(context).removalNotifications().hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(COLLECTED).contains(collected);
     assertThat(context).removalNotifications().withCause(EXPLICIT).contains(key, value);
+    assertThat(context).stats().evictions(collected.size());
   }
 
   @ParameterizedTest

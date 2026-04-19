@@ -2783,6 +2783,87 @@ final class BoundedLocalCacheTest {
   }
 
   @Test
+  void put_expiredEntry_recordsEviction() {
+    // When put() encounters an expired entry and replaces it, the cache's eviction strategy
+    // caused the old value's removal (detected by the put). Stats should record this eviction
+    // consistently with compute() (which does record it).
+    var ticker = new FakeTicker();
+    var listener = new ConsumingRemovalListener<Int, Int>();
+    var cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .weigher((Int k, Int v) -> v.intValue())
+        .removalListener(listener)
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumWeight(1000)
+        .recordStats()
+        .build();
+
+    cache.put(Int.valueOf(1), Int.valueOf(5));
+    ticker.advance(Duration.ofMinutes(2));
+    cache.put(Int.valueOf(1), Int.valueOf(7));
+
+    assertThat(listener.removed().stream()
+        .filter(n -> n.getCause() == EXPIRED)).hasSize(1);
+    assertThat(cache.stats().evictionCount()).isEqualTo(1);
+    assertThat(cache.stats().evictionWeight()).isEqualTo(5);
+  }
+
+  @Test
+  void remove_expiredEntry_recordsEviction() {
+    // When remove() discovers the entry is already expired, the cache's expiration caused the
+    // removal; the user's remove only detected it. Eviction stats should be recorded.
+    var ticker = new FakeTicker();
+    var listener = new ConsumingRemovalListener<Int, Int>();
+    var cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .weigher((Int k, Int v) -> v.intValue())
+        .removalListener(listener)
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumWeight(1000)
+        .recordStats()
+        .build();
+
+    cache.put(Int.valueOf(1), Int.valueOf(5));
+    ticker.advance(Duration.ofMinutes(2));
+    var prior = cache.asMap().remove(Int.valueOf(1));
+    assertThat(prior).isNull();
+
+    assertThat(listener.removed().stream()
+        .filter(n -> n.getCause() == EXPIRED)).hasSize(1);
+    assertThat(cache.stats().evictionCount()).isEqualTo(1);
+    assertThat(cache.stats().evictionWeight()).isEqualTo(5);
+  }
+
+  @Test
+  void removeConditionally_expiredEntry_recordsEviction() {
+    // Two-argument remove(key, value) on an expired entry likewise reflects the cache's
+    // eviction strategy detecting the expiration.
+    var ticker = new FakeTicker();
+    var listener = new ConsumingRemovalListener<Int, Int>();
+    var cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .weigher((Int k, Int v) -> v.intValue())
+        .removalListener(listener)
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumWeight(1000)
+        .recordStats()
+        .build();
+
+    cache.put(Int.valueOf(1), Int.valueOf(5));
+    ticker.advance(Duration.ofMinutes(2));
+    var removed = cache.asMap().remove(Int.valueOf(1), Int.valueOf(5));
+    assertThat(removed).isFalse();
+
+    assertThat(listener.removed().stream()
+        .filter(n -> n.getCause() == EXPIRED)).hasSize(1);
+    assertThat(cache.stats().evictionCount()).isEqualTo(1);
+    assertThat(cache.stats().evictionWeight()).isEqualTo(5);
+  }
+
+  @Test
   void compute_expiredEntry_remappingReturnsOldInstance() {
     // When compute() finds an expired entry and the remapping function returns a value that is
     // the same instance as the expired value, the entry should be treated as a fresh creation.
