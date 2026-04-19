@@ -80,8 +80,10 @@ abstract class JCStress : JavaExec() {
     jvmArgs("-XX:+UnlockDiagnosticVMOptions", "-XX:+WhiteBoxAPI", "-XX:-RestrictContended")
     workingDir(outputDir.map { it.asFile })
     mainClass = "org.openjdk.jcstress.Main"
-    argumentProviders.add {
-      buildList {
+    argumentProviders.add(object : CommandLineArgumentProvider {
+      @get:Internal
+      val resultsDir: Provider<Directory> = outputDir
+      override fun asArguments(): Iterable<String> = buildList {
         if (iterations.isPresent) {
           addAll(listOf("-iters", iterations.get().replace("[_,]".toRegex(), "")))
         }
@@ -94,9 +96,9 @@ abstract class JCStress : JavaExec() {
         if (mode.isPresent) {
           addAll(listOf("-m", mode.get()))
         }
-        addAll(listOf("-r", outputDir.get().asFile.resolve("results").path))
+        addAll(listOf("-r", resultsDir.get().asFile.resolve("results").path))
       }
-    }
+    })
     doFirst {
       outputDir.get().asFile.mkdirs()
     }
