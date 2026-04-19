@@ -184,8 +184,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
   default void put(K key, CompletableFuture<? extends @Nullable V> valueFuture) {
-    if (valueFuture.isCompletedExceptionally()
-        || (valueFuture.isDone() && (valueFuture.join() == null))) {
+    if (valueFuture.isDone() && (Async.getWhenSuccessful(valueFuture) == null)) {
       cache().statsCounter().recordLoadFailure(0L);
       cache().remove(key);
       return;

@@ -1265,6 +1265,26 @@ final class AsyncCacheTest {
 
   @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void put_cancelledDuringCheck(AsyncCache<Int, Int> cache, CacheContext context) {
+    // Reproduces the race where the future is cancelled between the
+    // isCompletedExceptionally() and isDone() checks. The helper future lies: it claims to be
+    // in-flight the first time isCompletedExceptionally() is called, then cancels itself before
+    // isDone() returns. Without a guard, join() would throw CancellationException out of put().
+    var future = new CompletableFuture<Int>() {
+      @Override public boolean isDone() {
+        if (!super.isDone()) {
+          cancel(false);
+        }
+        return super.isDone();
+      }
+    };
+
+    cache.put(context.absentKey(), future);
+    assertThat(cache).doesNotContainKey(context.absentKey());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void put_insert(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);
