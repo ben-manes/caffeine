@@ -85,14 +85,17 @@ final class Pacer {
     return (delta >= 0L) || (-delta <= TOLERANCE);
   }
 
-  /** Returns the delay and sets the next fire time. */
+  /** Returns the delay and sets the next fire time, avoiding the 0L unscheduled sentinel. */
   long calculateSchedule(long now, long delay, long scheduleAt) {
     if (delay <= TOLERANCE) {
       // Use a minimum delay if close to now
       nextFireTime = (now + TOLERANCE);
+      if (nextFireTime == 0L) {
+        nextFireTime = 1L;
+      }
       return TOLERANCE;
     }
-    nextFireTime = scheduleAt;
+    nextFireTime = (scheduleAt == 0L) ? 1L : scheduleAt;
     return delay;
   }
 }

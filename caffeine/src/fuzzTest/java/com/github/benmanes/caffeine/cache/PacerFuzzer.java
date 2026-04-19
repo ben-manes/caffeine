@@ -86,13 +86,15 @@ final class PacerFuzzer {
             .that(state.lastDelay).isAtLeast(Pacer.TOLERANCE);
 
         if (delay <= Pacer.TOLERANCE) {
+          long expected = (now + Pacer.TOLERANCE);
           assertWithMessage("nextFireTime for small delay")
-              .that(pacer.nextFireTime).isEqualTo(now + Pacer.TOLERANCE);
+              .that(pacer.nextFireTime).isEqualTo((expected == 0L) ? 1L : expected);
           assertWithMessage("actual delay for small delay")
               .that(state.lastDelay).isEqualTo(Pacer.TOLERANCE);
         } else {
+          long expected = (now + delay);
           assertWithMessage("nextFireTime for large delay")
-              .that(pacer.nextFireTime).isEqualTo(now + delay);
+              .that(pacer.nextFireTime).isEqualTo((expected == 0L) ? 1L : expected);
           assertWithMessage("actual delay for large delay")
               .that(state.lastDelay).isEqualTo(delay);
         }

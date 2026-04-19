@@ -366,4 +366,22 @@ final class PacerTest {
     assertThat(actualDelay).isEqualTo(delay);
     assertThat(pacer.nextFireTime).isEqualTo(scheduleAt);
   }
+
+  @Test
+  void calculateSchedule_belowTolerance_avoidsZeroSentinel() {
+    var pacer = new Pacer(Mockito.mock());
+    long actualDelay = pacer.calculateSchedule(
+        /* now= */ -Pacer.TOLERANCE, /* delay= */ 0L, /* scheduleAt= */ -Pacer.TOLERANCE);
+    assertThat(actualDelay).isEqualTo(Pacer.TOLERANCE);
+    assertThat(pacer.nextFireTime).isEqualTo(1L);
+  }
+
+  @Test
+  void calculateSchedule_aboveTolerance_avoidsZeroSentinel() {
+    var pacer = new Pacer(Mockito.mock());
+    long delay = Pacer.TOLERANCE + 1;
+    long actualDelay = pacer.calculateSchedule(/* now= */ -delay, delay, /* scheduleAt= */ 0L);
+    assertThat(actualDelay).isEqualTo(delay);
+    assertThat(pacer.nextFireTime).isEqualTo(1L);
+  }
 }
