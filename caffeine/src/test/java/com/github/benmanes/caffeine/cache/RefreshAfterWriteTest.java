@@ -275,6 +275,37 @@ final class RefreshAfterWriteTest {
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE)
+  void refreshIfNeeded_replacedNull(
+      LoadingCache<Int, @Nullable Int> cache, CacheContext context) {
+    // A refresh that resolves to null and is preempted by a concurrent put must not fire a
+    // REPLACED notification with a null value — the RemovalListener contract promises a
+    // non-null value for REPLACED.
+    var originalValue = requireNonNull(context.original().get(context.firstKey()));
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    var value = cache.get(context.firstKey());
+    assertThat(value).isNotNull();
+
+    assertThat(cache.policy().refreshes()).isNotEmpty();
+    CompletableFuture<@Nullable Int> future = requireNonNull(
+        cache.policy().refreshes().get(context.firstKey()));
+
+    cache.put(context.firstKey(), context.absentValue());
+    future.complete(null);
+
+    assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
+    // Only the put-over-original REPLACED should be observed; the null refresh must be silently
+    // discarded.
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.firstKey(), originalValue)
+        .exclusively();
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
+      loader = Loader.ASYNC_INCOMPLETE)
   void refreshIfNeeded_writeTimeABA(LoadingCache<Int, Int> cache, CacheContext context) {
     // When a refresh is in-flight and a put replaces the value with the SAME instance,
     // currentValue == oldValue is true but writeTime changed. The ABA check at
