@@ -15,5 +15,11 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
 - **Catch-commit-rethrow** in doComputeIfAbsent/remap makes phantom evictions real on exception. Instead verify the committed state is consistent. This is the most commonly misunderstood pattern — read the doc before flagging exception handling in compute paths.
 - **Two weight fields** (weight + policyWeight) is intentional for the telescoping sum. Instead verify both fields converge. The convergence proof depends on task ordering — read the doc before flagging negative transient sizes.
 - **Non-volatile keyReference in WeakValueReference** is safe (published via setRelease + storeStoreFence). Instead verify the fence is present in setValue.
+- **`refreshIfNeeded` is lock-free and `discardRefresh` is over-aggressive** — both intentional. The completion-path ABA guards discard spurious reloads, and any refresh racing a mutation must be killed for linearizability. Don't add `synchronized(node)` to refresh or try to narrow the discard.
+- **Async sync-view mutations are physical while queries are logical** — `AsyncCache.synchronous().asMap()` treats in-flight entries as absent for queries but `KeySet.remove`/`removeAll`/`removeIf`/`retainAll` and iterator removal operate on the raw delegate. Blocking everywhere invites deadlock; the split is the inherent sync-over-async tradeoff.
+- **`TimerWheel.advance` delta=0 on sub-tick advances** is correct, including `nanos = -1 → 0`. Entries in the "last bucket" are visited on the next full wheel cycle; read-path `hasExpired` evicts on access sooner.
+- **`Pacer.calculateSchedule` bumps a would-be 0L result to 1L** — `nextFireTime = 0L` is the unscheduled sentinel. Don't remove the guard.
+- **`LoadingCache.getAll` partial-commits valid entries when `loadAll` returns nulls** — the Javadoc's "the mapping is left unestablished" is singular; only invalid (null) mappings are dropped, valid ones are retained.
+- **`Caffeine.from(CaffeineSpec)` disables strict parsing** — mirrors Guava's `CacheBuilderSpec`; permits programmatic overrides like adding a weigher after `maximumSize`. The footgun of disabled eviction is accepted.
 
 For full rationale, see `.claude/docs/design-decisions.md`

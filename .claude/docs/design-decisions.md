@@ -176,3 +176,53 @@ submission (which showed up as a memory hotspot in profiling).
 The Pacer rate-limits expiration maintenance scheduling. It uses
 `TOLERANCE = ceilingPowerOfTwo(1 second)` (~1.07s) as a minimum delay threshold,
 preventing scheduling storms from rapid expirations.
+
+`nextFireTime = 0L` is the unscheduled/cancelled sentinel. `calculateSchedule`
+bumps any computed fire time that would equal `0L` up to `1L` to prevent a
+collision with the sentinel — needed only in edge cases where `now + TOLERANCE`
+or `scheduleAt` lands exactly on zero, but the guard removes the ambiguity for
+readers of `schedule()`'s recursion check.
+
+## Refresh
+
+**`refreshIfNeeded` is intentionally lock-free.** Reads of `writeTime`, `getKey`,
+`getValue`, `getKeyReference`, `isAlive`, and the CAS of `writeTime` happen
+without `synchronized(node)`. A stale observation could let `asyncReload` fire
+on a just-retired node, but the completion-path ABA guards (`currentValue ==
+oldValue` + `node.getWriteTime() == writeTime`) discard the result. Cost of the
+rare spurious loader call is accepted to keep the refresh fast path lock-free.
+
+**`discardRefresh` is deliberately over-aggressive.** A mutation that races a
+refresh discards whatever token is in `refreshes` without trying to prove it's
+the same generation. Any refresh in flight was launched against a pre-mutation
+snapshot, so killing it is correct for linearizability even if it happens to be
+a "newer" generation from a later reader.
+
+## Async Synchronous View
+
+**`AsyncCache.synchronous().asMap()` queries are logical, mutations are
+physical.** `containsKey`, `get`, iteration, and `containsValue` treat in-flight
+entries as absent (`Async.isReady` / `Async.getIfReady`). But `KeySet.remove`,
+`removeAll`, `removeIf`, `retainAll`, and `EntryIterator.remove` operate on the
+raw delegate map without blocking on in-flight futures. Blocking everywhere
+would invite deadlock and non-linearizable observations; the split is the
+inherent sync-over-async tradeoff. `keySet().contains(k) != keySet().remove(k)`
+on a loading entry is accepted.
+
+## TimerWheel
+
+**Sub-tick advances correctly produce `delta = 0`.** Advancing `nanos` by less
+than `2^SHIFT[i]` nanoseconds (e.g., `-1 → 0`) shifts to the same unsigned tick
+index, so no buckets are processed. This is correct: no tick boundary was
+crossed. Entries whose `variableTime` maps to the "last" bucket of a wheel are
+visited on the next full wheel cycle (~68s for `wheel[0]`), which is within
+expiration's documented best-effort amortization. Read-path `hasExpired` also
+evicts on access.
+
+**Interner `drainKeyReferences` does not need a value-identity check.** Unlike
+`drainValueReferences`, which guards against the value being replaced on the
+same node, keys on Interned nodes never rebind. If two hash-colliding weak keys
+are both cleared and aliased via `WeakKeyEqualsReference.equals` (which becomes
+`null.equals(null) == true` post-clear), both queue polls still complete and
+both nodes still evict — only the attribution is swapped, which is unobservable
+(uniform `Boolean.TRUE` values, no listener on the interner).

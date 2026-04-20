@@ -112,7 +112,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p pmd-sarif
-          find . -path '*/build/reports/pmd/*.json' -exec cp {} pmd-sarif/ \;
+          find . -path '*/build/reports/pmd/*.json' | while read -r f; do
+            module=$(awk -F/ '{print $2}' <<<"$f")
+            cp "$f" "pmd-sarif/${module}-$(basename "$f")"
+          done
           if ls pmd-sarif/*.json 1>/dev/null 2>&1; then
             jq -s '{"$schema": .[0]."$schema", version: .[0].version,
               runs: [{tool: .[0].runs[0].tool,
@@ -192,7 +195,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p spotbugs-sarif
-          find . -path '*/build/reports/spotbugs/*.sarif' -exec cp {} spotbugs-sarif/ \;
+          find . -path '*/build/reports/spotbugs/*.sarif' | while read -r f; do
+            module=$(awk -F/ '{print $2}' <<<"$f")
+            cp "$f" "spotbugs-sarif/${module}-$(basename "$f")"
+          done
           if ls spotbugs-sarif/*.sarif 1>/dev/null 2>&1; then
             jq -s '{"$schema": .[0]."$schema", version: .[0].version,
               runs: [{tool: .[0].runs[0].tool,
