@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_WRITE_TOLERANCE;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_TOLERANCE;
 
 import java.time.Duration;
 import java.util.Map;
@@ -37,7 +37,7 @@ import site.ycsb.generator.NumberGenerator;
 import site.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
- * A benchmark for the {@link BoundedLocalCache#EXPIRE_WRITE_TOLERANCE} optimization.
+ * A benchmark for the {@link BoundedLocalCache#EXPIRE_TOLERANCE} optimization.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -82,7 +82,7 @@ public class ExpireWriteToleranceBenchmark {
       map = cache.asMap();
     } else if (mapType.equals("Caffeine w/o tolerance")) {
       Cache<Integer, Integer> cache = Caffeine.newBuilder()
-          .expireAfterWrite(Duration.ofNanos(EXPIRE_WRITE_TOLERANCE / 2))
+          .expireAfterWrite(Duration.ofNanos(EXPIRE_TOLERANCE / 2))
           .initialCapacity(INITIAL_CAPACITY)
           .ticker(new FakeTicker()::read)
           .build();

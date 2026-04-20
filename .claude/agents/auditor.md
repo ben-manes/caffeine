@@ -253,7 +253,7 @@ these before analysis causes premature dismissal of findings.
 
 Several patterns that look suspicious are intentional design decisions:
 - Weight=0 entries are a user-facing pinning feature, not a bug
-- EXPIRE_WRITE_TOLERANCE (1s) is intentional — expiration is a max lifetime, not a min hold time
+- EXPIRE_TOLERANCE (1s) is intentional — expiration is a max lifetime, not a min hold time; applies to both writeTime reorder decisions and accessTime read-path updates
 - Transient negative weightedSize is acceptable eventual consistency
 - accessTime uses opaque writes (not CAS) deliberately to avoid contention storms
 - The catch-commit-rethrow pattern in doComputeIfAbsent/remap handles exceptions by making phantom evictions real

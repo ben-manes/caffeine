@@ -25,10 +25,15 @@ HashDoS protection by making frequency estimation attacks non-deterministic.
 
 ## Expiration
 
-**EXPIRE_WRITE_TOLERANCE = 1 second.** Expiration is a maximum lifetime,
+**EXPIRE_TOLERANCE = 1 second.** Expiration is a maximum lifetime,
 not a minimum hold time. Like ScheduledExecutorService, the timing is never exact.
-This tolerance provides a 4x throughput improvement (23M/s vs 5.9M/s) on write-heavy
-workloads by avoiding write buffer saturation from rapid timer wheel rescheduling.
+The tolerance applies to multiple per-entry timestamps:
+- `writeTime` reorder decisions in remap (`exceedsWriteTimeTolerance`) — avoids
+  write buffer saturation from rapid timer wheel rescheduling, ~4x throughput on
+  write-heavy workloads.
+- `accessTime` updates on the read path — avoids cache-line true-sharing on a hot
+  entry under `expireAfterAccess`. When the configured duration is `<= tolerance`
+  the skip is bypassed so tiny expiration windows still behave exactly.
 
 **ASYNC_EXPIRY = ~220 years** (`Async.java`). Computing futures get this sentinel
 duration to prevent expiration during async computation. The `isComputingAsync()`

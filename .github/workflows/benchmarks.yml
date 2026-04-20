@@ -76,6 +76,12 @@ jobs:
             gist-title-prefix: timerwheel_results
             gist-description: TimerWheel JMH Results
             gist-url: https://gist.githubusercontent.com/ben-manes/9abafdbc76fe34c0e63cef386b0b9ac0
+          - name: HotEntry
+            pattern: HotEntryBenchmark
+            params: ''
+            gist-title-prefix: 'hotentry_results'
+            gist-description: 'HotEntry JMH Results'
+            gist-url: 'https://gist.githubusercontent.com/ben-manes/ce914bff9f87030ba395b0c1c8e927f6'
         jdk:
           - java: 11
             distribution: temurin
@@ -93,7 +99,7 @@ jobs:
       JAVA_VERSION: ${{ matrix.jdk.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -123,7 +129,7 @@ jobs:
     if: github.event.repository.fork == false
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
+        uses: step-security/harden-runner@8d3c67de8e2fe68ef647c8db1e6a09f647780f40 # v2.19.0
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -157,6 +163,9 @@ jobs:
             echo '#### [TimerWheel](https://jmh.morethan.io/?gists=9abafdbc76fe34c0e63cef386b0b9ac0)'
             echo -n 'A benchmark that evaluates the performance of the timer wheel for use by '
             echo -n 'variable expiration.'
+            echo -e '\n'
+            echo '#### [HotEntry](https://jmh.morethan.io/?gists=ce914bff9f87030ba395b0c1c8e927f6)'
+            echo -n 'A benchmark that evaluates the performance of a hot entry.'
             echo -e '\n'
             echo -e '---'
             echo -e "See the attached flame graphs for profiler's visualizations of the hot methods."

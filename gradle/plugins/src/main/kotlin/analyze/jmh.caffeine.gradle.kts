@@ -51,6 +51,8 @@ val extractAsyncProfilerLib = tasks.register<ExtractAsyncProfilerLib>("extractAs
   libPathFile = asyncProfilerLibFile
   loaderClasspath.from(asyncProfiler)
   extractionDir = asyncProfilerExtractionDir
+  platform = providers.systemProperty("os.name")
+    .zip(providers.systemProperty("os.arch")) { name, arch -> "$name-$arch" }
   javaLauncher = javaToolchains.launcherFor {
     vendor = java.toolchain.vendor
     implementation = java.toolchain.implementation
@@ -182,6 +184,8 @@ eclipse.classpath.file.whenMerged {
 abstract class ExtractAsyncProfilerLib : DefaultTask() {
   @get:Classpath
   abstract val loaderClasspath: ConfigurableFileCollection
+  @get:Input
+  abstract val platform: Property<String>
   @get:Nested
   abstract val javaLauncher: Property<JavaLauncher>
   @get:OutputDirectory

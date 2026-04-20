@@ -185,8 +185,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    *
    * The expiration updates are applied in a best effort fashion. The reordering of variable or
    * access-order expiration may be discarded by the read buffer if it is full or contended.
-   * Similarly, the reordering of write expiration may be ignored for an entry if the last update
-   * was within a short time window. This is done to avoid overwhelming the write buffer.
+   * Similarly, recording the touch for expiration to extend its lifetime may be ignored for an
+   * entry if the last update was within a short time window. This is done to avoid overwhelming the
+   * write buffer and to avoid false sharing on reads due to modifying the access time.
    *
    * [1] BP-Wrapper: A Framework Making Any Replacement Algorithms (Almost) Lock Contention Free
    * https://web.njit.edu/~dingxn/papers/BP-Wrapper.pdf
@@ -226,8 +227,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final int ADMIT_HASHDOS_THRESHOLD = 6;
   /** The maximum number of entries that can be transferred between queues. */
   static final int QUEUE_TRANSFER_THRESHOLD = 1_000;
-  /** The maximum time window between entry updates before the expiration must be reordered. */
-  static final long EXPIRE_WRITE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
+  /** The maximum time window between touches for expiration updates. */
+  static final long EXPIRE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
   /** The maximum duration before an entry expires. */
   static final long MAXIMUM_EXPIRY = (Long.MAX_VALUE >> 1); // 150 years
   /** The duration to wait on the eviction lock before warning of a possible misuse. */
@@ -1516,9 +1517,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return;
     }
 
+    long tolerance = EXPIRE_TOLERANCE;
     long duration = Math.max(0L, expiry.expireAfterRead(key, value, now, currentDuration));
-    if (duration != currentDuration) {
-      long expirationTime = isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
+    long expirationTime = isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
+    if ((duration <= tolerance) || (Math.abs(expirationTime - variableTime) > tolerance)) {
       node.casVariableTime(variableTime, expirationTime);
     }
   }
@@ -1536,7 +1538,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   void setAccessTime(Node<K, V> node, long now) {
-    if (expiresAfterAccess()) {
+    if (!expiresAfterAccess()) {
+      return;
+    }
+    long tolerance = EXPIRE_TOLERANCE;
+    long accessTime = node.getAccessTime();
+    if ((expiresAfterAccessNanos() <= tolerance) || (Math.abs(now - accessTime) > tolerance)) {
       node.setAccessTime(now);
     }
   }
@@ -1544,8 +1551,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   /** Returns if the entry's write time would exceed the minimum expiration reorder threshold. */
   boolean exceedsWriteTimeTolerance(Node<K, V> node, long varTime, long now) {
     long variableTime = node.getVariableTime();
-    long tolerance = EXPIRE_WRITE_TOLERANCE;
     long writeTime = node.getWriteTime();
+    long tolerance = EXPIRE_TOLERANCE;
     return
         (expiresAfterWrite()
             && ((expiresAfterWriteNanos() <= tolerance) || (Math.abs(now - writeTime) > tolerance)))

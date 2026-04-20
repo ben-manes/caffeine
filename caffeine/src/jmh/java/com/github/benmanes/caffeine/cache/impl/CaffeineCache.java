@@ -34,6 +34,10 @@ public final class CaffeineCache<K, V> implements BasicCache<K, V> {
         .build();
   }
 
+  public CaffeineCache(Caffeine<Object, Object> builder) {
+    cache = builder.build();
+  }
+
   @Override
   public @Nullable V get(K key) {
     return cache.getIfPresent(key);

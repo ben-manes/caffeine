@@ -26,14 +26,17 @@ inputs:
     required: false
     description: GitHub token with gist write permission
   gist-title-prefix:
-    required: true
+    required: false
+    default: ''
     description: Prefix for the gist filename (combined with distribution/java)
   gist-description:
-    required: true
+    required: false
+    default: ''
     description: Description applied to the gist update
   gist-url:
-    required: true
-    description: Target gist URL for uploading JMH results
+    required: false
+    default: ''
+    description: Target gist URL for uploading JMH results (skip upload when empty)
 runs:
   using: composite
   steps:
@@ -63,7 +66,7 @@ runs:
           ${{ inputs.params != '' && format('-PbenchmarkParameters={0}', inputs.params) || '' }}
           ${{ steps.profiler.outputs.enabled == 'true' && '-Pasync=flamegraph' || '' }}
     - name: Upload ${{ inputs.name }} JMH Results to Gist
-      if: github.event.repository.fork == false
+      if: github.event.repository.fork == false && inputs.gist-url != ''
       continue-on-error: true
       uses: popsiclestick/gist-sync-action@88f8633178625914f2a01abf1a765f7272a580fa # v1.2.0
       with:

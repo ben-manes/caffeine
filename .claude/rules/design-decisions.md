@@ -8,7 +8,7 @@ paths:
 Before reporting a bug or suggesting a "fix," check this list. These are intentional.
 
 - **Weight=0** is a pinning feature (skipped during eviction), not a bug. Instead verify weight convergence via the telescoping sum.
-- **EXPIRE_WRITE_TOLERANCE (1s)** is intentional inexactness. Instead verify entries expire within the tolerance window.
+- **EXPIRE_TOLERANCE (1s)** is intentional inexactness — entries may expire up to 1s earlier than the configured duration (never later). Applies to both `writeTime` reorder decisions in remap and `accessTime` updates on the read path (skipped if the last update is within tolerance, to avoid hot-entry cache-line contention). Tolerance is bypassed when the configured duration is `<= tolerance`.
 - **Transient negative weightedSize** is acceptable eventual consistency. Instead verify convergence after maintenance completes.
 - **accessTime uses opaque write (not CAS)** to avoid contention storms. Instead verify that stale reads cause only benign early expiration.
 - **notifyEviction before user code** preserves linearizability. Instead verify catch-commit-rethrow handles exceptions after irrevocable notification.

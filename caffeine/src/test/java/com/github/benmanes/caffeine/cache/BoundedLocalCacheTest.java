@@ -22,7 +22,7 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCES
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.findVarHandle;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.ADMIT_HASHDOS_THRESHOLD;
-import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_WRITE_TOLERANCE;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_TOLERANCE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.MAXIMUM_EXPIRY;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.QUEUE_TRANSFER_THRESHOLD;
@@ -3481,7 +3481,7 @@ final class BoundedLocalCacheTest {
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
 
     // If exceeds the tolerance, treat the update as a write
-    context.ticker().advance(Duration.ofNanos(EXPIRE_WRITE_TOLERANCE + 1));
+    context.ticker().advance(Duration.ofNanos(EXPIRE_TOLERANCE + 1));
     var lastValue = write.apply(Int.valueOf(1), Int.valueOf(3));
     assertThat(lastValue).isEqualTo(2);
     if (mayCheckReads) {
@@ -3568,7 +3568,7 @@ final class BoundedLocalCacheTest {
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
 
     // If exceeds the tolerance, treat the update as a write
-    context.ticker().advance(Duration.ofNanos(EXPIRE_WRITE_TOLERANCE + 1));
+    context.ticker().advance(Duration.ofNanos(EXPIRE_TOLERANCE + 1));
     oldValue = write.apply(Int.valueOf(1), Int.valueOf(3));
     assertThat(oldValue).isEqualTo(2);
     assertThat(cache.readBuffer.reads()).isEqualTo(1);
@@ -3593,6 +3593,96 @@ final class BoundedLocalCacheTest {
     assertThat(cache.readBuffer.reads()).isEqualTo(1);
     assertThat(cache.readBuffer.writes()).isEqualTo(1);
     assertThat(cache.writeBuffer.producerIndex).isEqualTo(8);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expireAfterAccess = Expire.ONE_MINUTE)
+  void expireTolerance_accessTime_skipsWithinTolerance(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.put(Int.valueOf(1), Int.valueOf(1))).isNull();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(Int.valueOf(1))));
+    long initialAccessTime = node.getAccessTime();
+
+    // Within tolerance: accessTime is left alone
+    assertThat(cache.get(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
+    assertThat(node.getAccessTime()).isEqualTo(initialAccessTime);
+
+    // Beyond tolerance: accessTime is updated
+    context.ticker().advance(Duration.ofNanos(EXPIRE_TOLERANCE + 1));
+    assertThat(cache.get(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
+    assertThat(node.getAccessTime()).isGreaterThan(initialAccessTime);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expireAfterAccess = Expire.ONE_MILLISECOND)
+  void expireTolerance_accessTime_bypassedForShortDuration(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.put(Int.valueOf(1), Int.valueOf(1))).isNull();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(Int.valueOf(1))));
+    long initialAccessTime = node.getAccessTime();
+
+    // expireAfterAccess (1ms) <= EXPIRE_TOLERANCE (1s), so the tolerance is bypassed:
+    // a sub-millisecond read still updates accessTime to track the short window faithfully.
+    context.ticker().advance(Duration.ofNanos(1));
+    assertThat(cache.get(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
+    assertThat(node.getAccessTime()).isGreaterThan(initialAccessTime);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expiry = {CacheExpiry.CREATE, CacheExpiry.WRITE}, expiryTime = Expire.ONE_MINUTE)
+  void expireTolerance_variableTime_skipsForUnchangedDuration(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.put(Int.valueOf(1), Int.valueOf(1))).isNull();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(Int.valueOf(1))));
+    long initialVariableTime = node.getVariableTime();
+
+    // Expiry.creating(...) and Expiry.writing(...) both return the existing currentDuration on
+    // read, so the recomputed expirationTime equals the stored variableTime — no CAS, even after
+    // time advances.
+    context.ticker().advance(Duration.ofSeconds(10));
+    assertThat(cache.get(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
+    assertThat(node.getVariableTime()).isEqualTo(initialVariableTime);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expiry = CacheExpiry.ACCESS, expiryTime = Expire.ONE_MINUTE)
+  void expireTolerance_variableTime_skipsWithinTolerance(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.put(Int.valueOf(1), Int.valueOf(1))).isNull();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(Int.valueOf(1))));
+    long initialVariableTime = node.getVariableTime();
+
+    // Expiry.accessing(...) returns the configured 1-minute duration fresh on every read.
+    // Within tolerance the recomputed expirationTime is close enough to skip the CAS.
+    assertThat(cache.get(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
+    assertThat(node.getVariableTime()).isEqualTo(initialVariableTime);
+
+    // Beyond tolerance the recomputed expirationTime moves enough to fire the CAS.
+    context.ticker().advance(Duration.ofNanos(EXPIRE_TOLERANCE + 1));
+    assertThat(cache.get(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
+    assertThat(node.getVariableTime()).isGreaterThan(initialVariableTime);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  void expireTolerance_variableTime_bypassedForShortDuration(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.put(Int.valueOf(1), Int.valueOf(1))).isNull();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(Int.valueOf(1))));
+    long initialVariableTime = node.getVariableTime();
+
+    // Expiry returns a sub-second duration, which bypasses the tolerance — every read fires
+    // the CAS to faithfully track short expirations.
+    requireNonNull(context.expiry());
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
+    assertThat(cache.get(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
+    assertThat(node.getVariableTime()).isNotEqualTo(initialVariableTime);
   }
 
   @ParameterizedTest
