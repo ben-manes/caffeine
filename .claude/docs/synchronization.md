@@ -82,9 +82,17 @@ Called before mapping functions, weighers, and expiry callbacks. Irrevocable.
 
 ### notifyRemoval — OUTSIDE synchronized(node) and CHM bin lock, AFTER mutations
 Wraps the listener call in a task submitted to the executor. The actual
-`onRemoval` runs in the executor thread outside all locks. Note: in `evictEntry`
-and `removeNode`, notifyRemoval is called while evictionLock is still held (but
-outside synchronized(node) and CHM bin lock).
+`onRemoval` normally runs in the executor thread outside all locks. Note: in
+`evictEntry` and `removeNode`, notifyRemoval is called while evictionLock is
+still held (but outside synchronized(node) and CHM bin lock).
+
+**Executor-rejection fallback**: if `executor.execute(task)` throws
+`RejectedExecutionException`, the task is invoked inline (`task.run()`) on the
+caller thread. From `evictEntry`/`removeNode` that caller thread is holding
+`evictionLock`, so a user `RemovalListener` under a rejecting executor runs
+synchronously under the eviction lock. A listener that re-enters the cache via
+a write can deadlock in that path. (The default `ForkJoinPool.commonPool`
+rejects when shutting down.)
 
 ### Mapping functions (compute, merge, etc.)
 Lock context depends on path:
@@ -111,8 +119,11 @@ Lock context depends on path:
 - **Initial load (new node)**: INSIDE CHM bin lock, NOT inside synchronized(node)
 - **Expired/collected existing node**: INSIDE CHM bin lock + synchronized(node)
 
-### RemovalListener.onRemoval — OUTSIDE all locks
-Delivered asynchronously via executor. Safe for re-entrant cache operations.
+### RemovalListener.onRemoval — OUTSIDE all locks (normal path)
+Delivered asynchronously via executor. Safe for re-entrant cache operations on
+the normal path. Exception: see the executor-rejection fallback under
+`notifyRemoval` — a rejecting executor collapses delivery to inline, which can
+run under `evictionLock` for eviction-triggered removals.
 
 ### EvictionListener — INSIDE synchronized(node), varies for other locks
 - In `evictEntry`/`removeNode`: evictionLock + CHM bin lock + synchronized(node)

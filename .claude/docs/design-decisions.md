@@ -65,6 +65,17 @@ BEFORE the try block because `ctx.cause` can change from null to REPLACED
 inside the try. The catch block uses `!wasEvicted` to distinguish eviction-path
 exceptions (commit+defer) from non-eviction exceptions (immediate rethrow).
 
+**`remap` same-instance return is a setter no-op, NOT a metadata no-op**. When a
+user `compute`/`merge` remapping function returns the same value instance as the
+current value, `setValue` is skipped, but `weight`, `accessTime`, `variableTime`,
+and `writeTime` still update. This is intentional: `compute` is a mutation API,
+so a same-value return is still treated as a write for eviction-policy purposes
+(the entry's age/weight/access are refreshed). The only documented full no-op is
+the explicit `preserveTimestamps` path. A reader expecting
+`compute(k, (k, v) -> v)` to leave eviction ordering undisturbed would be
+surprised, and the source does not call this out — a short comment near the
+`setValue` skip in `remap` would make the intent visible.
+
 ## References
 
 **Non-volatile keyReference in WeakValueReference** is a plain field. It is set

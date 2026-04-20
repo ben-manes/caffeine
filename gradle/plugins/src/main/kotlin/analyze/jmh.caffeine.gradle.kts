@@ -1,5 +1,7 @@
 /** Java microbenchmark harness: https://github.com/melix/jmh-gradle-plugin */
 @file:Suppress("PackageDirectoryMismatch", "UnstableApiUsage")
+import java.io.ByteArrayOutputStream
+import java.io.File
 import javax.inject.Inject
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
@@ -112,8 +114,8 @@ jmh {
     if (!OperatingSystem.current().isLinux && event !in crossPlatformEvents) {
       error("async-profiler event '$event' is Linux-only (cross-platform: $crossPlatformEvents)")
     }
-    profilers.add(asyncProfilerLibFile.map { file ->
-      val libPath = file.asFile.readText().trim()
+    profilers.add(asyncProfilerLibFile.zip(asyncProfilerExtractionDir) { file, baseDir ->
+      val libPath = baseDir.file(file.asFile.readText().trim()).asFile.absolutePath
       val dir = asyncProfilerDir.get().asFile.absolutePath
       "async:libPath=$libPath;event=$event;output=$format;dir=$dir"
     })
@@ -193,15 +195,19 @@ abstract class ExtractAsyncProfilerLib : DefaultTask() {
   fun extract() {
     val out = libPathFile.get().asFile
     out.parentFile.mkdirs()
-    out.outputStream().buffered().use { outputStream ->
-      execOperations.javaexec {
-        systemProperty("ap_loader_extraction_dir", extractionDir.get().asFile.absolutePath)
-        executable = javaLauncher.get().executablePath.asFile.absolutePath
-        mainClass = "one.profiler.AsyncProfilerLoader"
-        standardOutput = outputStream
-        classpath(loaderClasspath)
-        args("agentpath")
-      }
+    val baseDir = extractionDir.get().asFile
+    val capture = ByteArrayOutputStream()
+    execOperations.javaexec {
+      systemProperty("ap_loader_extraction_dir", baseDir.absolutePath)
+      executable = javaLauncher.get().executablePath.asFile.absolutePath
+      mainClass = "one.profiler.AsyncProfilerLoader"
+      standardOutput = capture
+      classpath(loaderClasspath)
+      args("agentpath")
     }
+    val absolutePath = capture.toString(Charsets.UTF_8).trim()
+    // Store the path relative to extractionDir so the cached output is relocatable across machines.
+    val relative = baseDir.toPath().relativize(File(absolutePath).toPath()).toString()
+    out.writeText(relative)
   }
 }

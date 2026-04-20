@@ -1234,6 +1234,16 @@ final class RefreshAfterWriteTest {
   }
 
   @ParameterizedTest
+  @SuppressWarnings("PreferJavaTimeOverload")
+  @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
+  void setRefreshAfter_zero(FixedRefresh<Int, Int> refreshAfterWrite) {
+    assertThrows(IllegalArgumentException.class, () ->
+        refreshAfterWrite.setRefreshesAfter(Duration.ZERO));
+    assertThrows(IllegalArgumentException.class, () ->
+        refreshAfterWrite.setRefreshesAfter(0, TimeUnit.MINUTES));
+  }
+
+  @ParameterizedTest
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE)
   void setRefreshAfter_excessive(FixedRefresh<Int, Int> refreshAfterWrite) {
     refreshAfterWrite.setRefreshesAfter(ChronoUnit.FOREVER.getDuration());

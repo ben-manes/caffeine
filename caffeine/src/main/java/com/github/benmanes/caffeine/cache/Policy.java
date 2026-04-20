@@ -846,7 +846,7 @@ public interface Policy<K, V> {
      *
      * @param duration the length of time after which an entry is eligible to be reloaded
      * @param unit the unit that {@code duration} is expressed in
-     * @throws IllegalArgumentException if {@code duration} is negative
+     * @throws IllegalArgumentException if {@code duration} is zero or negative
      * @throws NullPointerException if the unit is null
      */
     void setRefreshesAfter(long duration, TimeUnit unit);
@@ -856,7 +856,7 @@ public interface Policy<K, V> {
      * The refresh policy determines when the entry's age is reset.
      *
      * @param duration the length of time after which an entry is eligible to be reloaded
-     * @throws IllegalArgumentException if {@code duration} is negative
+     * @throws IllegalArgumentException if {@code duration} is zero or negative
      * @throws NullPointerException if the duration is null
      */
     default void setRefreshesAfter(Duration duration) {

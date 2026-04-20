@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.checkIndex;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.math.NumberUtils.toInt;
 
@@ -54,8 +55,8 @@ final class Options {
     compute = option(Compute.class, "compute", properties);
     keys = option(ReferenceType.class, "keys", properties);
     stats = option(Stats.class, "stats", properties);
-    shardIndex = toInt(System.getProperty("shardIndex"), 0);
     shardCount = Math.max(toInt(System.getProperty("shardCount"), 1), 1);
+    shardIndex = checkIndex(toInt(System.getProperty("shardIndex"), 0), shardCount);
     isFiltered = Stream.of(implementation, compute, keys, values, stats)
         .anyMatch(Optional::isPresent);
   }

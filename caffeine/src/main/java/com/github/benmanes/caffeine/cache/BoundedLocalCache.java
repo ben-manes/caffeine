@@ -4614,7 +4614,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return unit.convert(cache.refreshAfterWriteNanos(), TimeUnit.NANOSECONDS);
       }
       @Override public void setRefreshesAfter(long duration, TimeUnit unit) {
-        requireArgument(duration >= 0);
+        requireNonNull(unit);
+        requireArgument(duration > 0, "duration must be positive: %s %s", duration, unit);
         cache.setRefreshAfterWriteNanos(unit.toNanos(duration));
         cache.scheduleAfterWrite();
       }
