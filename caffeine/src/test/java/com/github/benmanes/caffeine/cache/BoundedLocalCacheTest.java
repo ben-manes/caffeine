@@ -4224,6 +4224,81 @@ final class BoundedLocalCacheTest {
         .exclusively();
   }
 
+  @ParameterizedTest
+  @SuppressWarnings("resource")
+  @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MILLISECOND,
+      removalListener = Listener.CONSUMING, loader = Loader.IDENTITY,
+      executor = CacheExecutor.THREADED)
+  void refreshIfNeeded_valueABA_differentValueWithoutDiscard(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // When the value is replaced with a different instance while a refresh is in-flight and
+    // the refresh token is kept alive, the refresh's compute sees removed==true but
+    // currentValue != oldValue. The ABA guard at the second AND operand must discard the
+    // refreshed value and preserve the replacement.
+    var node = requireNonNull(cache.data.get(
+        cache.nodeFactory.newLookupKey(context.firstKey())));
+    var originalValue = requireNonNull(context.original().get(context.firstKey()));
+    context.executor().pause();
+
+    context.ticker().advance(Duration.ofMillis(2));
+    assertThat(cache.refreshIfNeeded(node, context.ticker().read())).isNull();
+    assertThat(cache.refreshes()).isNotEmpty();
+
+    // Replace with a DIFFERENT value instance without discarding the refresh token.
+    context.ticker().advance(Duration.ofMillis(1));
+    assertThat(cache.replace(context.firstKey(), originalValue, context.absentValue(),
+        /* shouldDiscardRefresh= */ false)).isTrue();
+
+    var future = requireNonNull(cache.refreshes().get(node.getKeyReference()));
+    context.executor().resume();
+    assertThat(future).succeedsWith(context.firstKey());
+
+    // The replacement value is preserved (refresh discarded due to value ABA).
+    assertThat(cache.getIfPresent(context.firstKey(), /* recordStats= */ false))
+        .isEqualTo(context.absentValue());
+    // Two REPLACED notifications: replace(original → absent) and the discarded refresh.
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(Map.entry(context.firstKey(), originalValue),
+                  Map.entry(context.firstKey(), context.firstKey()))
+        .exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      implementation = Implementation.Caffeine, compute = Compute.SYNC)
+  void remap_preserveTimestamps_newValueDiffers(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // White-box: the L2961 no-op guard checks that newValue matches oldValue. A caller
+    // that pre-sets the preserveTimestamps flag but returns a different value must NOT
+    // take the short-circuit — covers the defensive mismatch branch.
+    var key = context.firstKey();
+    var preserveTimestamps = new boolean[]{true};
+    assertThat(cache.compute(key, (k, old) -> context.absentValue(), cache.expiry(),
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, preserveTimestamps))
+        .isEqualTo(context.absentValue());
+    assertThat(cache).containsEntry(key, context.absentValue());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, implementation = Implementation.Caffeine,
+      compute = Compute.SYNC, expireAfterWrite = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = AFTER_WRITE)
+  void remap_preserveTimestamps_causeSet(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // White-box: pre-set preserveTimestamps[0]=true with a lambda that returns the
+    // captured old value. Expire the entry so remap sets ctx.cause=EXPIRED. The
+    // L2961 guard's cause==null check must prevent the no-op short-circuit.
+    var key = context.firstKey();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));
+    var originalValue = requireNonNull(node.getValue());
+    context.ticker().advance(Duration.ofMinutes(2));
+
+    var preserveTimestamps = new boolean[]{true};
+    assertThat(cache.compute(key, (k, old) -> originalValue, cache.expiry(),
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, preserveTimestamps))
+        .isEqualTo(originalValue);
+  }
+
   @Nested @Isolated
   final class IsolatedRefreshTest {
 
