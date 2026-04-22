@@ -1323,7 +1323,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (((now - writeTime) > refreshAfterWriteNanos())
         && ((key = node.getKey()) != null) && ((oldValue = node.getValue()) != null)
         && !isComputingAsync(oldValue) && ((writeTime & 1L) == 0L)
-        && !(refreshes = refreshes()).containsKey(keyReference  = node.getKeyReference())
+        && !(refreshes = refreshes()).containsKey(keyReference = node.getKeyReference())
         && node.isAlive() && node.casWriteTime(writeTime, refreshWriteTime)) {
       long[] startTime = new long[1];
       @SuppressWarnings({"rawtypes", "unchecked"})
@@ -2173,10 +2173,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     if (ctx.cause != null) {
-      notifyRemoval(key, ctx.value, ctx.cause);
       if (ctx.cause.wasEvicted()) {
         statsCounter().recordEviction(ctx.oldWeight, ctx.cause);
       }
+      notifyRemoval(key, ctx.value, ctx.cause);
     }
   }
 
@@ -2448,11 +2448,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
 
       if (expired) {
-        notifyRemoval(key, oldValue, RemovalCause.EXPIRED);
         statsCounter().recordEviction(oldWeight, RemovalCause.EXPIRED);
+        notifyRemoval(key, oldValue, RemovalCause.EXPIRED);
       } else if (oldValue == null) {
-        notifyRemoval(key, /* value= */ null, RemovalCause.COLLECTED);
         statsCounter().recordEviction(oldWeight, RemovalCause.COLLECTED);
+        notifyRemoval(key, /* value= */ null, RemovalCause.COLLECTED);
       } else if (mayUpdate) {
         notifyOnReplace(key, oldValue, value);
       }
@@ -2502,10 +2502,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     if (ctx.cause != null) {
       afterWrite(new RemovalTask(requireNonNull(ctx.node)));
-      notifyRemoval(ctx.oldKey, ctx.oldValue, ctx.cause);
       if (ctx.cause.wasEvicted()) {
         statsCounter().recordEviction(ctx.oldWeight, ctx.cause);
       }
+      notifyRemoval(ctx.oldKey, ctx.oldValue, ctx.cause);
     }
     return (ctx.cause == RemovalCause.EXPLICIT) ? ctx.oldValue : null;
   }
@@ -2550,10 +2550,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
     var removeCause = requireNonNull(ctx.cause);
     afterWrite(new RemovalTask(ctx.node));
-    notifyRemoval(ctx.oldKey, ctx.oldValue, removeCause);
     if (removeCause.wasEvicted()) {
       statsCounter().recordEviction(ctx.oldWeight, removeCause);
     }
+    notifyRemoval(ctx.oldKey, ctx.oldValue, removeCause);
 
     return (removeCause == RemovalCause.EXPLICIT);
   }
