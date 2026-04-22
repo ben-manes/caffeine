@@ -277,11 +277,13 @@ public final class CacheContextSubject extends Subject {
         factoryOf(RemovalListenerType.values());
 
     private final ImmutableMap<RemovalListenerType, RemovalListener<Int, Int>> actual;
+    private final CacheContext context;
     private final boolean isDirect;
 
     private ListenerSubject(FailureMetadata metadata, CacheContext context,
         ImmutableMap<RemovalListenerType, RemovalListener<Int, Int>> subject) {
       super(metadata, subject);
+      this.context = context;
       this.actual = subject;
       this.isDirect = (context.executorType() == CacheExecutor.DIRECT);
     }
@@ -302,9 +304,13 @@ public final class CacheContextSubject extends Subject {
       return new WithCause(cause);
     }
 
-    /** Fails if there were notifications. */
+    /**
+     * Fails if there were notifications. Also asserts that the eviction stats counters are zero,
+     * since no removals at all implies no eviction-cause removals.
+     */
     public void isEmpty() {
       awaitUntil((type, listener) -> check(type).that(listener.removed()).isEmpty());
+      assertNoEvictionStats();
     }
 
     /** Fails if the number of notifications does not have the given size. */
@@ -322,11 +328,25 @@ public final class CacheContextSubject extends Subject {
       });
     }
 
+    /**
+     * Fails if any notification carries an eviction cause. Also asserts that the eviction stats
+     * counters are zero — the listener notifications and the stats counters are two views of the
+     * same logical event and must agree.
+     */
     public void hasNoEvictions() {
       awaitUntil((type, listener) -> {
         var stream = listener.removed().stream().filter(entry -> entry.getCause().wasEvicted());
         check(type).that(stream).isEmpty();
       });
+      assertNoEvictionStats();
+    }
+
+    private void assertNoEvictionStats() {
+      statsSubject().evictions(0).evictionWeight(0);
+    }
+
+    private StatsSubject statsSubject() {
+      return check("stats").about(STATS_FACTORY).that(context);
     }
 
     private void awaitUntil(
@@ -379,25 +399,40 @@ public final class CacheContextSubject extends Subject {
           var removed = Multimaps.index(listener.removed(), RemovalNotification::getCause);
           check(type).that(removed).containsAtLeastEntriesIn(notifications);
         });
-        return new Exclusive(entries.length);
+        return new Exclusive(entries);
       }
 
       public final class Exclusive {
-        private final long expectedSize;
+        private final Entry<?, ?>[] entries;
 
-        private Exclusive(long expectedSize) {
-          this.expectedSize = expectedSize;
+        private Exclusive(Entry<?, ?>[] entries) {
+          this.entries = entries;
         }
 
-        /** Fails if there are notifications with a different cause. */
+        /**
+         * Fails if there are notifications with a different cause. When the cause is an eviction
+         * cause (SIZE, EXPIRED, COLLECTED), also asserts that the eviction stats counters
+         * (evictionCount and evictionWeight) match the notification set. Historically these have
+         * been asserted independently and the pairing is easy to miss when a new test is added.
+         */
         public void exclusively() {
           awaitUntil((type, listener) -> {
             var causes = listener.removed().stream()
                 .map(RemovalNotification::getCause)
                 .collect(toImmutableMultiset());
             check(type).that(causes).isEqualTo(ImmutableMultiset.builder()
-                .addCopies(cause, Math.toIntExact(expectedSize)).build());
+                .addCopies(cause, entries.length).build());
           });
+          if (cause.wasEvicted()) {
+            var canComputeWeight = context.isCaffeine() && Arrays.stream(entries)
+                .allMatch(entry -> (entry.getKey() != null) && (entry.getValue() != null));
+            if (canComputeWeight) {
+              var expectedWeight = Arrays.stream(entries)
+                  .mapToLong(entry -> context.weigher().weigh(entry.getKey(), entry.getValue()))
+                  .sum();
+              statsSubject().evictions(entries.length).evictionWeight(expectedWeight);
+            }
+          }
         }
       }
     }
