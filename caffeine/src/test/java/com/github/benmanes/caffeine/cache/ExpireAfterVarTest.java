@@ -50,6 +50,7 @@ import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -77,7 +78,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
@@ -1410,12 +1410,12 @@ final class ExpireAfterVarTest {
     assertThat(expireAfterVar.getExpiresAfter(context.lastKey())).hasValue(Duration.ofMinutes(1));
   }
 
-  @SuppressWarnings("unchecked")
   @ParameterizedTest
+  @SuppressWarnings("unchecked")
   @CacheSpec(population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   void getExpiresAfter_absent(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    Mockito.reset(context.expiry());
+    clearInvocations(context.expiry());
     assertThat(expireAfterVar.getExpiresAfter(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
     verifyNoInteractions(context.expiry());
   }
@@ -1465,6 +1465,16 @@ final class ExpireAfterVarTest {
     expireAfterVar.setExpiresAfter(context.firstKey(), ChronoUnit.FOREVER.getDuration());
     assertThat(expireAfterVar.getExpiresAfter(context.firstKey(), TimeUnit.NANOSECONDS))
         .hasValue(MAXIMUM_EXPIRY);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  void setExpiresAfter_zero(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    expireAfterVar.setExpiresAfter(context.firstKey(), Duration.ZERO);
+    cache.cleanUp();
+    assertThat(cache).doesNotContainKey(context.firstKey());
   }
 
   @ParameterizedTest
@@ -1608,6 +1618,18 @@ final class ExpireAfterVarTest {
     assertThat(oldValue).isNull();
     assertThat(expireAfterVar.getExpiresAfter(context.absentKey(), TimeUnit.NANOSECONDS))
         .hasValue(MAXIMUM_EXPIRY);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  void putIfAbsent_zeroDuration(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var oldValue = expireAfterVar.putIfAbsent(
+        context.absentKey(), context.absentValue(), Duration.ZERO);
+    assertThat(oldValue).isNull();
+    cache.cleanUp();
+    assertThat(cache).doesNotContainKey(context.absentKey());
   }
 
   @ParameterizedTest
@@ -1813,6 +1835,18 @@ final class ExpireAfterVarTest {
         .hasValue(MAXIMUM_EXPIRY);
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  void put_zeroDuration(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var oldValue = expireAfterVar.put(
+        context.absentKey(), context.absentValue(), Duration.ZERO);
+    assertThat(oldValue).isNull();
+    cache.cleanUp();
+    assertThat(cache).doesNotContainKey(context.absentKey());
+  }
+
   @CheckNoStats
   @ParameterizedTest
   @CacheSpec(population = Population.FULL,
@@ -1896,6 +1930,18 @@ final class ExpireAfterVarTest {
     assertThat(value).isNotNull();
     assertThat(expireAfterVar.getExpiresAfter(context.absentKey(), TimeUnit.NANOSECONDS))
         .hasValue(MAXIMUM_EXPIRY);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  void compute_zeroDuration(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var value = expireAfterVar.compute(context.absentKey(),
+        (k, v) -> context.absentValue(), Duration.ZERO);
+    assertThat(value).isEqualTo(context.absentValue());
+    cache.cleanUp();
+    assertThat(cache).doesNotContainKey(context.absentKey());
   }
 
   @CheckNoEvictions

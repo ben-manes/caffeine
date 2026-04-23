@@ -82,7 +82,7 @@ final class Pacer {
    */
   boolean maySkip(long scheduleAt) {
     long delta = (scheduleAt - nextFireTime);
-    return (delta >= 0L) || (-delta <= TOLERANCE);
+    return (delta >= -TOLERANCE);
   }
 
   /** Returns the delay and sets the next fire time, avoiding the 0L unscheduled sentinel. */

@@ -1,4 +1,6 @@
 @file:Suppress("PackageDirectoryMismatch")
+import org.gradle.api.tasks.PathSensitivity.RELATIVE
+
 plugins {
   id("org.sonarqube")
   id("coverage.caffeine")
@@ -17,5 +19,5 @@ sonarqube {
 
 val jacocoFullReport by tasks.existing
 tasks.named("sonarqube").configure {
-  inputs.files(jacocoFullReport.map { it.outputs.files })
+  inputs.files(jacocoFullReport.map { it.outputs.files }).withPathSensitivity(RELATIVE)
 }

@@ -2334,14 +2334,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     requireNonNull(key);
     requireNonNull(value);
 
+    @Var int newWeight = -1;
     @Var Node<K, V> node = null;
     long now = expirationTicker().read();
-    int newWeight = weigher.weigh(key, value);
     Object lookupKey = nodeFactory.newLookupKey(key);
     for (int attempts = 1; ; attempts++) {
       @Var Node<K, V> prior = data.get(lookupKey);
       if (prior == null) {
         if (node == null) {
+          if (newWeight < 0) {
+            newWeight = weigher.weigh(key, value);
+          }
           node = nodeFactory.newNode(key, keyReferenceQueue(),
               value, valueReferenceQueue(), newWeight, now);
           long expirationTime = isComputingAsync(value) ? (now + ASYNC_EXPIRY) : now;
@@ -2408,6 +2411,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @Var boolean expired = false;
       @Var boolean mayUpdate = true;
       @Var boolean exceedsTolerance = false;
+      if (newWeight < 0) {
+        newWeight = weigher.weigh(key, value);
+      }
       synchronized (prior) {
         if (!prior.isAlive()) {
           continue;

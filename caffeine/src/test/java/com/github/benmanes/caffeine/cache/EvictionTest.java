@@ -36,6 +36,8 @@ import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
@@ -436,6 +438,18 @@ final class EvictionTest {
         .withLevel(WARN)
         .exclusively())
         .hasSize(1);
+  }
+
+  @ParameterizedTest
+  @SuppressWarnings("unchecked")
+  @CacheSpec(population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  void putIfAbsent_hit_skipsWeigher(Cache<Int, Int> cache, CacheContext context) {
+    clearInvocations(context.weigher());
+    var previous = cache.asMap().putIfAbsent(context.firstKey(), context.absentValue());
+    assertThat(previous).isEqualTo(context.original().get(context.firstKey()));
+    assertThat(cache).containsEntry(context.firstKey(), context.original().get(context.firstKey()));
+    verifyNoInteractions(context.weigher());
   }
 
   @ParameterizedTest

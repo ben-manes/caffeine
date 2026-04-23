@@ -338,6 +338,13 @@ final class PacerTest {
   }
 
   @Test
+  void maySkip_deltaSaturates() {
+    var pacer = new Pacer(Mockito.mock());
+    pacer.nextFireTime = Long.MAX_VALUE;
+    assertThat(pacer.maySkip(/* scheduleAt= */ -1)).isFalse();
+  }
+
+  @Test
   void calculateSchedule_belowTolerance() {
     var pacer = new Pacer(Mockito.mock());
     long delay = Pacer.TOLERANCE - 1;

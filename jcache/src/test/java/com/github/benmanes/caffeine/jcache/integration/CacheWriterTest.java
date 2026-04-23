@@ -54,7 +54,6 @@ import com.google.common.collect.ImmutableList;
 final class CacheWriterTest {
 
   private static JCacheFixture jcacheFixture(CloseableCacheWriter writer) {
-    Mockito.reset(writer);
     return JCacheFixture.builder()
         .configure(config -> {
           config.setCacheWriterFactory(() -> writer);

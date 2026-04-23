@@ -1,5 +1,6 @@
 @file:Suppress("PackageDirectoryMismatch")
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.tasks.PathSensitivity.RELATIVE
 
 plugins {
   jacoco
@@ -22,6 +23,7 @@ val jacocoFullReport by tasks.registering(JacocoReport::class) {
 
   subprojects {
     inputs.files(tasks.withType<JavaCompile>().map { it.outputs.files })
+      .withPathSensitivity(RELATIVE)
   }
   reports {
     html.required = true // human-readable
@@ -34,7 +36,7 @@ tasks.named("coverallsJacoco").configure {
   val isEnabled = isCI()
   onlyIf { isEnabled.get() }
   incompatibleWithConfigurationCache()
-  inputs.files(jacocoFullReport.map { it.outputs.files })
+  inputs.files(jacocoFullReport.map { it.outputs.files }).withPathSensitivity(RELATIVE)
 }
 
 listOf(project(":caffeine"), project(":guava"), project(":jcache")).forEach { coveredProject ->
