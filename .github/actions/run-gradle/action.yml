@@ -50,6 +50,7 @@ runs:
         toolchainVersion=$(grep -oP '(?<=^toolchainVersion=).*' gradle/gradle-daemon-jvm.properties)
         echo "version=${toolchainVersion}" >> $GITHUB_OUTPUT
     - name: Set up JDK ${{ steps.gradle_toolchain.outputs.version }}
+      id: gradle_jdk
       uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
       with:
         java-version: ${{ steps.gradle_toolchain.outputs.version }}
@@ -101,6 +102,7 @@ runs:
         INPUTS_ARGUMENTS: ${{ inputs.arguments }}
         INPUTS_ATTEMPT_DELAY: ${{ inputs.attempt-delay }}
         INPUTS_ATTEMPT_LIMIT: ${{ inputs.attempt-limit }}
+        DAEMON_JDK: ${{ steps.gradle_jdk.outputs.path }}
         JDK_CI: ${{ steps.java_toolchain.outputs.java_home }}
         LOCAL_BUILD_CACHE_CI: ${{ inputs.local-build-cache }}
         GRAALVM_HOME: ${{ steps.java_toolchain.outputs.graalvm_home }}

@@ -2000,33 +2000,49 @@ final class AsMapTest {
 
   @CheckNoStats
   @ParameterizedTest
-  @CacheSpec(population = Population.FULL)
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG)
   void keySet_removeAll_byCollection(Map<Int, Int> map, CacheContext context) {
-    var delegate = Sets.union(context.original().keySet(), context.absentKeys());
-    Collection<Int> keys = Mockito.mock();
-    when(keys.iterator()).thenReturn(delegate.iterator());
+    var keys = Mockito.spy(Sets.union(context.original().keySet(), context.absentKeys()));
+    when(keys.size()).thenReturn(3);
 
     assertThat(map.keySet().removeAll(keys)).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
     verify(keys).iterator();
-    if (context.isGuava()) {
-      verify(keys).size();
-    }
+    verify(keys).size();
     verifyNoMoreInteractions(keys);
   }
 
   @CheckNoStats
   @ParameterizedTest
-  @CacheSpec(population = Population.FULL)
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG)
   void keySet_removeAll_bySet(Map<Int, Int> map, CacheContext context) {
-    var delegate = Sets.union(context.original().keySet(), context.absentKeys());
-    Set<Int> keys = Mockito.mock();
-    when(keys.size()).thenReturn(delegate.size());
-    when(keys.contains(any())).then(invocation -> delegate.contains(invocation.getArgument(0)));
+    var keys = Mockito.spy(Sets.union(context.original().keySet(), context.absentKeys()));
 
     assertThat(map.keySet().removeAll(keys)).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
     verify(keys).size();
     verify(keys, times(context.original().size())).contains(any());
     verifyNoMoreInteractions(keys);
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  void keySet_removeAll_byIdentity(Map<Int, Int> map, CacheContext context) {
+    // For weak keys the cache compares by identity so removeAll must iterate the cache to use the
+    // stored key reference. The singleton input forces the AbstractSet.removeAll size optimization
+    // into iterating the user supplied collection that path calls remove(distinctKey), which would
+    // miss by identity.
+    var original = context.firstKey();
+    var distinctKey = new Int(original.intValue());
+    if (context.isGuava()) {
+      // Inherited from AbstractSet.removeAll (see IdentityHashMap.KeySet.removeAll)
+      assertThat(map.keySet().removeAll(Set.of(distinctKey))).isFalse();
+      assertThat(map).containsKey(original);
+    } else {
+      assertThat(map.keySet().removeAll(Set.of(distinctKey))).isTrue();
+      assertThat(map).doesNotContainKey(original);
+    }
   }
 
   @CacheSpec
@@ -2059,6 +2075,21 @@ final class AsMapTest {
     assertThat(map).isEqualTo(expected);
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(context.firstKey(), context.original().get(context.firstKey())).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  void keySet_remove_byIdentity(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
+    Int value = requireNonNull(context.original().get(key));
+
+    assertThat(map.keySet().remove(new Int(key))).isFalse();
+    assertThat(map).containsEntry(key, value);
+
+    assertThat(map.keySet().remove(key)).isTrue();
+    assertThat(map).doesNotContainKey(key);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(key, value).exclusively();
   }
 
   @CacheSpec
@@ -2721,6 +2752,25 @@ final class AsMapTest {
     assertThat(context).removalNotifications().isEmpty();
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT})
+  void values_remove_byIdentity(Map<Int, Int> map, CacheContext context) {
+    Int value = requireNonNull(context.original().get(context.firstKey()));
+
+    if (context.isGuava()) {
+      // Guava uses equality-based remove (diverges from IdentityHashMap)
+      assertThat(map.values().remove(new Int(value))).isTrue();
+    } else {
+      assertThat(map.values().remove(new Int(value))).isFalse();
+      assertThat(map).containsEntry(context.firstKey(), value);
+      assertThat(map.values().remove(value)).isTrue();
+    }
+
+    assertThat(map).doesNotContainKey(context.firstKey());
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.firstKey(), value).exclusively();
+  }
+
   @CacheSpec
   @CheckNoStats
   @ParameterizedTest
@@ -3319,33 +3369,47 @@ final class AsMapTest {
 
   @CheckNoStats
   @ParameterizedTest
-  @CacheSpec(population = Population.FULL)
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG)
   void entrySet_removeAll_byCollection(Map<Int, Int> map, CacheContext context) {
-    var delegate = Sets.union(context.original().entrySet(), context.absent().entrySet());
-    Collection<Map.Entry<Int, Int>> entries = Mockito.mock();
-    when(entries.iterator()).thenReturn(delegate.iterator());
+    var entries = Mockito.spy(Sets.union(context.original().entrySet(), context.absent().entrySet()));
+    when(entries.size()).thenReturn(3);
 
     assertThat(map.entrySet().removeAll(entries)).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
     verify(entries).iterator();
-    if (context.isGuava()) {
-      verify(entries).size();
-    }
+    verify(entries).size();
     verifyNoMoreInteractions(entries);
   }
 
   @CheckNoStats
   @ParameterizedTest
-  @CacheSpec(population = Population.FULL)
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG)
   void entrySet_removeAll_bySet(Map<Int, Int> map, CacheContext context) {
-    var delegate = Sets.union(context.original().entrySet(), context.absent().entrySet());
-    Set<Map.Entry<Int, Int>> entries = Mockito.mock();
-    when(entries.size()).thenReturn(delegate.size());
-    when(entries.contains(any())).then(invocation -> delegate.contains(invocation.getArgument(0)));
+    var entries = Mockito.spy(Sets.union(context.original().entrySet(), context.absent().entrySet()));
 
     assertThat(map.entrySet().removeAll(entries)).isTrue();
+    assertThat(map).isExhaustivelyEmpty();
     verify(entries).size();
     verify(entries, times(context.original().size())).contains(any());
     verifyNoMoreInteractions(entries);
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  void entrySet_removeAll_byIdentity(Map<Int, Int> map, CacheContext context) {
+    var original = context.firstKey();
+    var value = requireNonNull(context.original().get(original));
+    var distinctEntry = Map.entry(new Int(original.intValue()), value);
+
+    if (context.isGuava()) {
+      // Inherited from AbstractSet.removeAll (see IdentityHashMap.KeySet.removeAll)
+      assertThat(map.entrySet().removeAll(Set.of(distinctEntry))).isFalse();
+      assertThat(map).containsKey(original);
+    } else {
+      assertThat(map.entrySet().removeAll(Set.of(distinctEntry))).isTrue();
+      assertThat(map).doesNotContainKey(original);
+    }
   }
 
   @CacheSpec
@@ -3486,6 +3550,37 @@ final class AsMapTest {
     assertThat(map).isEqualTo(expected);
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(entry).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  void entrySet_remove_keyByIdentity(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
+    Int value = requireNonNull(context.original().get(key));
+
+    assertThat(map.entrySet().remove(Map.entry(new Int(key), value))).isFalse();
+    assertThat(map).containsEntry(key, value);
+
+    assertThat(map.entrySet().remove(Map.entry(key, value))).isTrue();
+    assertThat(map).doesNotContainKey(key);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(key, value).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT})
+  void entrySet_remove_valueByIdentity(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
+    Int value = requireNonNull(context.original().get(key));
+
+    assertThat(map.entrySet().remove(Map.entry(key, new Int(value)))).isFalse();
+    assertThat(map).containsEntry(key, value);
+
+    assertThat(map.entrySet().remove(Map.entry(key, value))).isTrue();
+    assertThat(map).doesNotContainKey(key);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(key, value).exclusively();
   }
 
   @CacheSpec

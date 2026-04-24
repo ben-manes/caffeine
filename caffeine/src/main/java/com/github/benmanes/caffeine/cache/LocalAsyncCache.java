@@ -1439,7 +1439,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       public boolean removeAll(Collection<?> collection) {
         requireNonNull(collection);
         @Var boolean modified = false;
-        if ((collection instanceof Set<?>) && (collection.size() > size())) {
+        if (delegate.collectKeys()
+            || ((collection instanceof Set<?>) && (collection.size() > size()))) {
           for (var entry : this) {
             if (collection.contains(entry)) {
               modified |= remove(entry);

@@ -19,12 +19,14 @@ import static com.google.common.truth.Truth.assertAbout;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Iterator;
+import java.util.Set;
 
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.testing.CollectionSubject;
 import com.google.common.collect.Sets;
 import com.google.common.truth.FailureMetadata;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * Propositions for {@link LinkedDeque} subjects.
@@ -52,12 +54,18 @@ final class LinkedDequeSubject extends CollectionSubject {
     if (actual.isEmpty()) {
       isExhaustivelyEmpty();
     }
-    checkIterator(actual.iterator());
-    checkIterator(actual.descendingIterator());
+    var forward = checkIterator(actual.iterator());
+    var descending = checkIterator(actual.descendingIterator());
+    check("forward vs descending elements").that(forward).containsExactlyElementsIn(descending);
+    if (!actual.isEmpty()) {
+      check("peekFirst()").that(actual.peekFirst()).isSameInstanceAs(actual.getFirst());
+      check("peekLast()").that(actual.peekLast()).isSameInstanceAs(actual.getLast());
+    }
   }
 
-  private void checkIterator(Iterator<?> iterator) {
-    var seen = Sets.newIdentityHashSet();
+  @CanIgnoreReturnValue
+  private Set<Object> checkIterator(Iterator<?> iterator) {
+    Set<Object> seen = Sets.newIdentityHashSet();
     while (iterator.hasNext()) {
       var element = iterator.next();
       checkElement(element);
@@ -65,20 +73,25 @@ final class LinkedDequeSubject extends CollectionSubject {
           .that(seen.add(element)).isTrue();
     }
     hasSize(seen.size());
+    return seen;
   }
 
   private void checkElement(Object element) {
     var first = actual.peekFirst();
     var last = actual.peekLast();
+    var prev = actual.getPrevious(element);
+    var next = actual.getNext(element);
     if (element == first) {
-      check("getPrevious(e)").that(actual.getPrevious(element)).isNull();
+      check("getPrevious(e)").that(prev).isNull();
+    } else {
+      check("getPrevious(e)").that(prev).isNotNull();
+      check("prev.next").that(actual.getNext(requireNonNull(prev))).isSameInstanceAs(element);
     }
     if (element == last) {
-      check("getNext(e)").that(actual.getNext(element)).isNull();
-    }
-    if ((element != first) && (element != last)) {
-      check("getPrevious(e)").that(actual.getPrevious(element)).isNotNull();
-      check("getNext(e)").that(actual.getNext(element)).isNotNull();
+      check("getNext(e)").that(next).isNull();
+    } else {
+      check("getNext(e)").that(next).isNotNull();
+      check("next.prev").that(actual.getPrevious(requireNonNull(next))).isSameInstanceAs(element);
     }
   }
 }

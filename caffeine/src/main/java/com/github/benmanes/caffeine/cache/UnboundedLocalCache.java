@@ -108,6 +108,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
+  public boolean collectKeys() {
+    return false;
+  }
+
+  @Override
   @CanIgnoreReturnValue
   public Object referenceKey(K key) {
     return key;

@@ -87,6 +87,7 @@ import org.mockito.Mockito;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.ExpectedError;
@@ -2048,7 +2049,7 @@ final class AsyncAsMapTest {
 
   @CheckNoStats
   @ParameterizedTest
-  @CacheSpec(population = Population.FULL)
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG)
   void keySet_removeAll_byCollection(AsyncCache<Int, Int> cache, CacheContext context) {
     var delegate = Sets.union(context.original().keySet(), context.absentKeys());
     Collection<Int> keys = Mockito.mock();
@@ -2061,7 +2062,7 @@ final class AsyncAsMapTest {
 
   @CheckNoStats
   @ParameterizedTest
-  @CacheSpec(population = Population.FULL)
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG)
   void keySet_removeAll_bySet(AsyncCache<Int, Int> cache, CacheContext context) {
     var delegate = Sets.union(context.original().keySet(), context.absentKeys());
     Set<Int> keys = Mockito.mock();
@@ -2072,6 +2073,20 @@ final class AsyncAsMapTest {
     verify(keys).size();
     verify(keys, times(context.original().size())).contains(any());
     verifyNoMoreInteractions(keys);
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  void keySet_removeAll_byIdentity(AsyncCache<Int, Int> cache, CacheContext context) {
+    // For weak keys the cache compares by identity so removeAll must iterate the cache to use the
+    // stored key reference. The singleton input forces the AbstractSet.removeAll size optimization
+    // into iterating the user supplied collection that path calls remove(distinctKey), which would
+    // miss by identity.
+    var original = context.firstKey();
+    var distinctKey = new Int(original.intValue());
+    assertThat(cache.asMap().keySet().removeAll(Set.of(distinctKey))).isTrue();
+    assertThat(cache.asMap()).doesNotContainKey(original);
   }
 
   @CacheSpec
@@ -3148,7 +3163,7 @@ final class AsyncAsMapTest {
 
   @CheckNoStats
   @ParameterizedTest
-  @CacheSpec(population = Population.FULL)
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG)
   void entrySet_removeAll_byCollection(AsyncCache<Int, Int> cache, CacheContext context) {
     var delegate = Sets.union(cache.asMap().entrySet(),
         Maps.transformValues(context.absent(), Int::toFuture).entrySet());
@@ -3162,7 +3177,7 @@ final class AsyncAsMapTest {
 
   @CheckNoStats
   @ParameterizedTest
-  @CacheSpec(population = Population.FULL)
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG)
   void entrySet_removeAll_bySet(AsyncCache<Int, Int> cache, CacheContext context) {
     var delegate = Sets.union(cache.asMap().entrySet(),
         Maps.transformValues(context.absent(), Int::toFuture).entrySet());
@@ -3174,6 +3189,17 @@ final class AsyncAsMapTest {
     verify(entries).size();
     verify(entries, times(context.original().size())).contains(any());
     verifyNoMoreInteractions(entries);
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
+  void entrySet_removeAll_byIdentity(AsyncCache<Int, Int> cache, CacheContext context) {
+    var original = context.firstKey();
+    var future = requireNonNull(cache.asMap().get(original));
+    var distinctEntry = Map.entry(new Int(original.intValue()), future);
+    assertThat(cache.asMap().entrySet().removeAll(Set.of(distinctEntry))).isTrue();
+    assertThat(cache.asMap()).doesNotContainKey(original);
   }
 
   @CacheSpec

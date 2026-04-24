@@ -253,18 +253,32 @@ public final class CacheContextSubject extends Subject {
     private StatsSubject awaitStatistic(String label,
         ToLongFunction<CacheStats> supplier, long expectedValue) {
       if (!actual.isRecordingStats() || (supplier.applyAsLong(actual.stats()) == expectedValue)) {
+        checkInternalConsistency();
         return this;
       } else if (!isDirect) {
         try {
           await().pollInSameThread().until(() ->
               supplier.applyAsLong(actual.stats()) == expectedValue);
+          checkInternalConsistency();
           return this;
         } catch (ConditionTimeoutException expected) { /* ignored */ }
       }
       var stats = actual.stats();
       check(label).withMessage("%s", stats)
           .that(supplier.applyAsLong(stats)).isEqualTo(expectedValue);
+      checkInternalConsistency();
       return this;
+    }
+
+    private void checkInternalConsistency() {
+      if (!actual.isRecordingStats()) {
+        return;
+      }
+      var stats = actual.stats();
+      check("requestCount").withMessage("%s", stats).that(stats.requestCount())
+          .isEqualTo(stats.hitCount() + stats.missCount());
+      check("loadCount").withMessage("%s", stats).that(stats.loadCount())
+          .isEqualTo(stats.loadSuccessCount() + stats.loadFailureCount());
     }
   }
 

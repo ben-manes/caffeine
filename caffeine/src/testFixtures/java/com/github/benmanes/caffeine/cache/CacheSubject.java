@@ -75,18 +75,21 @@ public final class CacheSubject extends Subject {
   public void hasSize(long expectedSize) {
     checkArgument(expectedSize >= 0, "expectedSize (%s) must be >= 0", expectedSize);
     check("estimatedSize()").that(actual.estimatedSize()).isEqualTo(expectedSize);
+    check("asMap().size()").that(actual.asMap().size()).isEqualTo(Math.toIntExact(expectedSize));
   }
 
   /** Fails if the cache does not have less than the given size. */
   public void hasSizeLessThan(long other) {
     checkArgument(other >= 0, "expectedSize (%s) must be >= 0", other);
     check("estimatedSize()").that(actual.estimatedSize()).isLessThan(other);
+    check("asMap().size()").that(actual.asMap().size()).isLessThan(Math.toIntExact(other));
   }
 
   /** Fails if the cache does not have more than the given size. */
   public void hasSizeGreaterThan(long other) {
     checkArgument(other >= 0, "expectedSize (%s) must be >= 0", other);
     check("estimatedSize()").that(actual.estimatedSize()).isGreaterThan(other);
+    check("asMap().size()").that(actual.asMap().size()).isGreaterThan(Math.toIntExact(other));
   }
 
   /** Fails if the cache does not contain the given key. */

@@ -129,7 +129,7 @@ When to read which doc:
 
 - **Rules** (`.claude/rules/`): project conventions, loaded automatically when relevant
 - **Skills** (`/review-change`): multi-layer parallel code review with blind + design-aware + regression pattern matching
-- **Skills** (`/audit-*`): 19 deep analysis skills for concurrency, correctness, and performance
+- **Skills** (`/audit-*`): 20 deep analysis skills for concurrency, correctness, and performance
 - **Skills** (`/audit-adversarial`): hostile full-codebase review with NO design context — finds bugs domain familiarity masks
 - **Skills** (`/sim-*`): simulator workflow automation — `/sim-compare` for policy comparison charts, `/sim-analyze` for trace characterization
 - **Auditor agent** (`.claude/agents/`): multi-pass — analysis → reflection → evaluator challenge → targeted re-audit
@@ -157,5 +157,6 @@ When to read which doc:
 | Test coverage gaps and missing edge cases | `/audit-coverage-gaps` |
 | Per-subsystem concurrency correctness | `/audit-subsystem-safety` |
 | Build/CI configuration correctness | `/audit-build-ci` |
+| Documented behavior vs. implementation drift | `/audit-contract-drift` |
 
 **Review vs Audit**: `/review-change` is for pre-commit code review — reads design docs and filters known-intentional patterns. `/audit-*` skills are for correctness doubts — independent, no design context filtering. Use review for routine changes, audit when you need fresh-eyes analysis.

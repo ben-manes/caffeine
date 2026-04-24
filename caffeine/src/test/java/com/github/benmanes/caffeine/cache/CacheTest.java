@@ -1053,25 +1053,25 @@ final class CacheTest {
    */
   private static byte[] craftHierarchySkipStream(
       String className, String asyncCacheFieldSignature) throws IOException {
-    var baos = new ByteArrayOutputStream();
-    try (var dos = new DataOutputStream(baos)) {
-      dos.writeShort(ObjectStreamConstants.STREAM_MAGIC);
-      dos.writeShort(ObjectStreamConstants.STREAM_VERSION);
-      dos.writeByte(ObjectStreamConstants.TC_OBJECT);
-      dos.writeByte(ObjectStreamConstants.TC_CLASSDESC);
-      dos.writeUTF(className);
-      dos.writeLong(1L);
-      dos.writeByte(ObjectStreamConstants.SC_SERIALIZABLE);
-      dos.writeShort(1);
-      dos.writeByte('L');
-      dos.writeUTF("asyncCache");
-      dos.writeByte(ObjectStreamConstants.TC_STRING);
-      dos.writeUTF(asyncCacheFieldSignature);
-      dos.writeByte(ObjectStreamConstants.TC_ENDBLOCKDATA);
-      dos.writeByte(ObjectStreamConstants.TC_NULL);
-      dos.writeByte(ObjectStreamConstants.TC_NULL);
+    var bytes = new ByteArrayOutputStream();
+    try (var stream = new DataOutputStream(bytes)) {
+      stream.writeShort(ObjectStreamConstants.STREAM_MAGIC);
+      stream.writeShort(ObjectStreamConstants.STREAM_VERSION);
+      stream.writeByte(ObjectStreamConstants.TC_OBJECT);
+      stream.writeByte(ObjectStreamConstants.TC_CLASSDESC);
+      stream.writeUTF(className);
+      stream.writeLong(1L);
+      stream.writeByte(ObjectStreamConstants.SC_SERIALIZABLE);
+      stream.writeShort(1);
+      stream.writeByte('L');
+      stream.writeUTF("asyncCache");
+      stream.writeByte(ObjectStreamConstants.TC_STRING);
+      stream.writeUTF(asyncCacheFieldSignature);
+      stream.writeByte(ObjectStreamConstants.TC_ENDBLOCKDATA);
+      stream.writeByte(ObjectStreamConstants.TC_NULL);
+      stream.writeByte(ObjectStreamConstants.TC_NULL);
     }
-    return baos.toByteArray();
+    return bytes.toByteArray();
   }
 
   /* --------------- null parameter --------------- */
@@ -1261,8 +1261,8 @@ final class CacheTest {
 
   @Test
   void cacheEntry_equals_hashCode_toString() {
-    long snapshot = 100;
-    int weight = 200;
+    int weight = 100;
+    long snapshot = 200;
     long expiresAt = 300;
     long refreshableAt = 400;
     var tester = new EqualsTester();

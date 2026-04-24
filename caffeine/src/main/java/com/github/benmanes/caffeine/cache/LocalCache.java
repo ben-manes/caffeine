@@ -62,6 +62,9 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
   /** See {@link Cache#estimatedSize()}. */
   long estimatedSize();
 
+  /** Returns if the keys are weak reference garbage collected. */
+  boolean collectKeys();
+
   /** Returns the reference key. */
   Object referenceKey(K key);
 

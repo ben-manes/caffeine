@@ -99,6 +99,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -1472,6 +1473,74 @@ final class BoundedLocalCacheTest {
     }
   }
 
+  @Nested @Isolated
+  final class IsolatedRemovalListenerTest {
+
+    @Test
+    @CheckMaxLogLevel(WARN)
+    void removeNode_rejectedExecutor_listenerWriteBlocksUnderEvictionLock() {
+      Int victimKey = Int.valueOf(1);
+      Int blockedKey = Int.valueOf(2);
+
+      var listenerEntered = new AtomicBoolean();
+      var mappingEntered = new AtomicBoolean();
+      var continueMapping = new AtomicBoolean();
+      var cacheRef = new AtomicReference<@Nullable Cache<Int, Int>>();
+      var localRef = new AtomicReference<@Nullable BoundedLocalCache<Int, Int>>();
+
+      var listener = new RemovalListener<Int, Int>() {
+        @Override @SuppressFBWarnings("MDM_LOCK_ISLOCKED")
+        public void onRemoval(@Nullable Int key, @Nullable Int value, RemovalCause cause) {
+          listenerEntered.set(true);
+          assertThat(requireNonNull(localRef.get()).evictionLock.isHeldByCurrentThread()).isTrue();
+          requireNonNull(cacheRef.get()).put(blockedKey, Int.valueOf(3));
+        }
+      };
+      var cache = Caffeine.newBuilder()
+          .executor(command -> { throw new RejectedExecutionException(); })
+          .removalListener(listener)
+          .maximumSize(10)
+          .build();
+      var localCache = asBoundedLocalCache(cache);
+      cacheRef.set(cache);
+      localRef.set(localCache);
+
+      cache.put(victimKey, Int.valueOf(1));
+      cache.put(blockedKey, Int.valueOf(2));
+
+      var computeFuture = CompletableFuture.runAsync(() -> {
+        cache.asMap().compute(blockedKey, (key, value) -> {
+          mappingEntered.set(true);
+          await().untilTrue(listenerEntered);
+          assertThat(localCache.evictionLock.tryLock()).isFalse();
+          await().untilTrue(continueMapping);
+          return value;
+        });
+      }, executor);
+      await().untilTrue(mappingEntered);
+
+      var evictor = new AtomicReference<@Nullable Thread>();
+      var victim = requireNonNull(localCache.data.get(localCache.referenceKey(victimKey)));
+      var evictionFuture = CompletableFuture.runAsync(() -> {
+        evictor.set(Thread.currentThread());
+        localCache.evictionLock.lock();
+        try {
+          localCache.removeNode(victim, localCache.expirationTicker().read());
+        } finally {
+          localCache.evictionLock.unlock();
+        }
+      }, executor);
+
+      await().untilTrue(listenerEntered);
+      await().untilAsserted(() -> assertThat(requireNonNull(evictor.get()).getState())
+          .isAnyOf(BLOCKED, WAITING));
+
+      continueMapping.set(true);
+      assertThat(computeFuture).succeedsWithNull();
+      assertThat(evictionFuture).succeedsWithNull();
+    }
+  }
+
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
       maximumSize = Maximum.TEN, weigher = CacheWeigher.VALUE,
@@ -2222,15 +2291,14 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
-  void adapt_overflowingSampleCount(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeSampleCount(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     prepareForAdaption(cache, context, /* recencyBias= */ false);
 
-    // Set hits and misses so their int sum overflows, wrapping to negative. The long sum
-    // still exceeds sampleSize, so the hill climber should trigger an adjustment.
-    int hits = (Integer.MAX_VALUE / 2) + 1;
-    int misses = (Integer.MAX_VALUE / 2) + 1;
-    assertThat((long) hits + misses).isGreaterThan(Integer.MAX_VALUE);
-    assertThat(hits + misses).isLessThan(0); // int overflow wraps negative
+    // Counters past Integer.MAX_VALUE must not regress the hill climber: a sample count
+    // exceeding the int range under the prior storage would have wrapped to a negative value
+    // and skipped the adjustment/reset.
+    long hits = (long) Integer.MAX_VALUE + 1;
+    long misses = (long) Integer.MAX_VALUE + 1;
 
     cache.setPreviousSampleHitRate(0.80);
     cache.setHitsInSample(hits);
@@ -2240,7 +2308,6 @@ final class BoundedLocalCacheTest {
     long protectedMaximum = cache.mainProtectedMaximum();
     cache.climb();
 
-    // The adjustment should have been made despite the overflowing int sum
     assertThat(cache.windowMaximum()).isNotEqualTo(windowMaximum);
     assertThat(cache.mainProtectedMaximum()).isNotEqualTo(protectedMaximum);
     assertThat(cache.hitsInSample()).isEqualTo(0);

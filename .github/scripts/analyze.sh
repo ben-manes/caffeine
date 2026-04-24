@@ -10,5 +10,5 @@ set -eux
     forbiddenApis -PforbiddenApis \
     --warning-mode all --continue \
     --console colored --no-configuration-cache \
-    -PjavaVersion=25 \
+    -PjavaVersion=26 \
     "$@"

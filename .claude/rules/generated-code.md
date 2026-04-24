@@ -12,3 +12,9 @@ paths:
 - Feature suffixes: A=access-time, W=write-time, R=refresh, MS=unweighted eviction, MW=weighted eviction
 - To regenerate: `./gradlew :caffeine:generateNodes :caffeine:generateLocalCaches`
 - The `AddKey`, `AddValue`, `AddExpiration`, `AddMaximum`, `AddDeques`, `AddHealth` classes each add one feature dimension to nodes
+- When auditing a field that appears in a generated class but does not exist
+  in `BoundedLocalCache.java` (e.g., `hitsInSample`, `missesInSample`,
+  `weightedSize`, `policyWeight`, `queueType`, deque links), trace it back to
+  the corresponding `Add*.java` generator before reasoning about its type or
+  storage. The protected accessors in `BoundedLocalCache` only declare the
+  signatures; the actual fields and types are emitted by the generators.

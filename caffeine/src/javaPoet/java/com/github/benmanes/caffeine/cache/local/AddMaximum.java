@@ -70,8 +70,8 @@ public final class AddMaximum implements Rule<LocalCacheContext> {
   private static void addHillClimber(LocalCacheContext context) {
     addField(context, double.class, "stepSize");
     addField(context, long.class, "adjustment");
-    addField(context, int.class, "hitsInSample");
-    addField(context, int.class, "missesInSample");
+    addField(context, long.class, "hitsInSample");
+    addField(context, long.class, "missesInSample");
     addField(context, double.class, "previousSampleHitRate");
   }
 

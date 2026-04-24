@@ -449,8 +449,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /* --------------- Reference Support --------------- */
 
-  /** Returns if the keys are weak reference garbage collected. */
-  protected boolean collectKeys() {
+  @Override
+  public boolean collectKeys() {
     return false;
   }
 
@@ -629,11 +629,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     throw new UnsupportedOperationException();
   }
 
-  protected int hitsInSample() {
+  protected long hitsInSample() {
     throw new UnsupportedOperationException();
   }
 
-  protected int missesInSample() {
+  protected long missesInSample() {
     throw new UnsupportedOperationException();
   }
 
@@ -650,12 +650,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @GuardedBy("evictionLock")
-  protected void setHitsInSample(int hitCount) {
+  protected void setHitsInSample(long hitCount) {
     throw new UnsupportedOperationException();
   }
 
   @GuardedBy("evictionLock")
-  protected void setMissesInSample(int missCount) {
+  protected void setMissesInSample(long missCount) {
     throw new UnsupportedOperationException();
   }
 
@@ -1148,7 +1148,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return;
     }
 
-    long requestCount = (long) hitsInSample() + missesInSample();
+    long requestCount = hitsInSample() + missesInSample();
     if (requestCount < frequencySketch().sampleSize) {
       return;
     }
@@ -3446,7 +3446,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     public boolean removeAll(Collection<?> collection) {
       requireNonNull(collection);
       @Var boolean modified = false;
-      if ((collection instanceof Set<?>) && (collection.size() > size())) {
+      if (cache.collectKeys() || ((collection instanceof Set<?>) && (collection.size() > size()))) {
         for (K key : this) {
           if (collection.contains(key)) {
             modified |= remove(key);
@@ -3638,8 +3638,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
       for (var iterator = new EntryIterator<>(cache); iterator.hasNext();) {
         var key = requireNonNull(iterator.key);
+        var node = requireNonNull(iterator.next);
         var value = requireNonNull(iterator.value);
-        if (o.equals(value) && cache.remove(key, value)) {
+        if (node.containsValue(o) && cache.remove(key, value)) {
           return true;
         }
         iterator.advance();
@@ -3822,7 +3823,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     public boolean removeAll(Collection<?> collection) {
       requireNonNull(collection);
       @Var boolean modified = false;
-      if ((collection instanceof Set<?>) && (collection.size() > size())) {
+      if (cache.collectKeys() || ((collection instanceof Set<?>) && (collection.size() > size()))) {
         for (var entry : this) {
           if (collection.contains(entry)) {
             modified |= remove(entry);

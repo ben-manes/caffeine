@@ -85,13 +85,13 @@ jobs:
         jdk:
           - java: 11
             distribution: temurin
-          - java: 25
+          - java: 26
             distribution: temurin
           - java: 27-ea
             distribution: temurin
-          - java: 25
+          - java: 26
             distribution: graalvm
-          - java: 25
+          - java: 26
             distribution: semeru
           - java: 21
             distribution: dragonwell

@@ -15,15 +15,18 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.IDLE;
 import static com.github.benmanes.caffeine.cache.LinkedDequeSubject.deque;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.MapSubject.map;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.ref.Reference;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -44,7 +47,6 @@ import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyn
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalManualCache;
 import com.github.benmanes.caffeine.cache.Weighers.SkippedWeigher;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import com.google.common.collect.ImmutableTable;
 import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Subject;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -57,6 +59,8 @@ import com.google.errorprone.annotations.Var;
  */
 @SuppressWarnings("GuardedBy")
 public final class LocalCacheSubject extends Subject {
+  private static final int NO_QUEUE_TYPE = -1;
+
   private final Object actual;
 
   private LocalCacheSubject(FailureMetadata metadata, @Nullable Object subject) {
@@ -139,7 +143,7 @@ public final class LocalCacheSubject extends Subject {
     checkEvictionDeque(bounded);
   }
 
-  private static <K, V> void drain(BoundedLocalCache<K, V> bounded) {
+  private <K, V> void drain(BoundedLocalCache<K, V> bounded) {
     @Var long adjustment = 0;
     for (;;) {
       bounded.cleanUp();
@@ -152,6 +156,13 @@ public final class LocalCacheSubject extends Subject {
       }
       break;
     }
+
+    check("writeBuffer").withMessage("writeBuffer not empty after drain")
+        .that(bounded.writeBuffer.isEmpty()).isTrue();
+    if (bounded.drainStatusOpaque() != IDLE) {
+      await().pollInSameThread().until(() -> bounded.drainStatusOpaque() == IDLE);
+    }
+    check("drainStatus").that(bounded.drainStatusOpaque()).isEqualTo(IDLE);
   }
 
   private static <K, V> void checkReadBuffer(BoundedLocalCache<K, V> bounded) {
@@ -192,6 +203,8 @@ public final class LocalCacheSubject extends Subject {
             .isAtMost(bounded.windowMaximum());
         check("mainProtectedWeightedSize()").that(bounded.mainProtectedWeightedSize())
             .isAtMost(bounded.mainProtectedMaximum());
+        checkFrequencySketch(bounded);
+        checkHillClimber(bounded);
       } finally {
         bounded.evictionLock.unlock();
       }
@@ -206,6 +219,28 @@ public final class LocalCacheSubject extends Subject {
     }
   }
 
+  private <K, V> void checkFrequencySketch(BoundedLocalCache<K, V> bounded) {
+    var sketch = bounded.frequencySketch();
+    if (sketch.isNotInitialized()) {
+      return;
+    }
+    check("sketch.size").that(sketch.size).isAtLeast(0);
+    check("sketch.table").that(sketch.table).isNotNull();
+    check("sketch.sampleSize").that(sketch.sampleSize).isAtLeast(10);
+    check("sketch.size").that(sketch.size).isLessThan(sketch.sampleSize);
+    check("sketch.blockMask").that(sketch.blockMask).isEqualTo((sketch.table.length >>> 3) - 1);
+  }
+
+  private <K, V> void checkHillClimber(BoundedLocalCache<K, V> bounded) {
+    check("hitsInSample").that(bounded.hitsInSample()).isAtLeast(0);
+    check("missesInSample").that(bounded.missesInSample()).isAtLeast(0);
+    if (!bounded.frequencySketch().isNotInitialized()) {
+      long requestCount = bounded.hitsInSample() + bounded.missesInSample();
+      check("hitsInSample + missesInSample")
+          .that(requestCount).isLessThan(bounded.frequencySketch().sampleSize);
+    }
+  }
+
   private <K, V> void checkTimerWheel(BoundedLocalCache<K, V> bounded) {
     if (!bounded.expiresVariable()) {
       return;
@@ -214,9 +249,11 @@ public final class LocalCacheSubject extends Subject {
     }
 
     var seen = Collections.newSetFromMap(new IdentityHashMap<>(bounded.size()));
-    for (int i = 0; i < bounded.timerWheel().wheel.length; i++) {
-      for (int j = 0; j < bounded.timerWheel().wheel[i].length; j++) {
-        var sentinel = bounded.timerWheel().wheel[i][j];
+    var wheel = bounded.timerWheel().wheel;
+    long nanos = bounded.timerWheel().nanos;
+    for (int i = 0; i < wheel.length; i++) {
+      for (int j = 0; j < wheel[i].length; j++) {
+        var sentinel = wheel[i][j];
         check("first").that(sentinel).isInstanceOf(Sentinel.class);
         check("previousInVariableOrder")
             .that(sentinel.getPreviousInVariableOrder().getNextInVariableOrder())
@@ -229,16 +266,32 @@ public final class LocalCacheSubject extends Subject {
         while (node != sentinel) {
           var next = node.getNextInVariableOrder();
           var prev = node.getPreviousInVariableOrder();
-          long duration = node.getVariableTime() - bounded.timerWheel().nanos;
+          long duration = node.getVariableTime() - nanos;
           check("notTooStale").that(duration).isAtLeast(-Pacer.TOLERANCE);
           check("loopDetected").that(seen.add(node)).isTrue();
           check("wrongPrev").that(prev.getNextInVariableOrder()).isSameInstanceAs(node);
           check("wrongNext").that(next.getPreviousInVariableOrder()).isSameInstanceAs(node);
+          checkTimerWheelBucket(wheel, nanos, node, i, j);
           node = node.getNextInVariableOrder();
         }
       }
     }
     check("cache.size() == timerWheel.size()").that(bounded).hasSize(seen.size());
+  }
+
+  private <K, V> void checkTimerWheelBucket(
+      Node<K, V>[][] wheel, long nanos, Node<K, V> node, int level, int bucket) {
+    long duration = (node.getVariableTime() - nanos);
+    if ((level < wheel.length - 1) && (duration > 0)) {
+      check("timerWheelLevel upper bound for %s at level %s", node, level)
+          .that(duration).isLessThan(TimerWheel.SPANS[level + 1]);
+    }
+    if (duration > 0) {
+      int mask = wheel[level].length - 1;
+      var expectedBucket = (int) ((node.getVariableTime() >>> TimerWheel.SHIFT[level]) & mask);
+      check("timerWheelBucket for %s at level %s", node, level)
+          .that(bucket).isEqualTo(expectedBucket);
+    }
   }
 
   private static <K, V> boolean doesTimerWheelMatch(BoundedLocalCache<K, V> bounded) {
@@ -267,49 +320,49 @@ public final class LocalCacheSubject extends Subject {
     if (bounded.evicts()) {
       long mainProbation = bounded.weightedSize()
           - bounded.windowWeightedSize() - bounded.mainProtectedWeightedSize();
-      var deques = new ImmutableTable.Builder<String, Long, LinkedDeque<Node<K, V>>>()
-          .put("window", bounded.windowWeightedSize(), bounded.accessOrderWindowDeque())
-          .put("probation", mainProbation, bounded.accessOrderProbationDeque())
-          .put("protected", bounded.mainProtectedWeightedSize(),
-              bounded.accessOrderProtectedDeque())
-          .buildOrThrow();
-      checkLinks(bounded, deques);
+      var checks = List.of(
+          new DequeCheck<>("window", bounded.windowWeightedSize(),
+              bounded.accessOrderWindowDeque(), Node.WINDOW),
+          new DequeCheck<>("probation", mainProbation,
+              bounded.accessOrderProbationDeque(), Node.PROBATION),
+          new DequeCheck<>("protected", bounded.mainProtectedWeightedSize(),
+              bounded.accessOrderProtectedDeque(), Node.PROTECTED));
+      checkLinks(bounded, checks);
       check("accessOrderWindowDeque()").about(deque())
           .that(bounded.accessOrderWindowDeque()).isValid();
       check("accessOrderProbationDeque()").about(deque())
           .that(bounded.accessOrderProbationDeque()).isValid();
     } else if (bounded.expiresAfterAccess()) {
-      checkLinks(bounded, ImmutableTable.of("window",
-          bounded.estimatedSize(), bounded.accessOrderWindowDeque()));
+      checkLinks(bounded, List.of(new DequeCheck<>("window",
+          bounded.estimatedSize(), bounded.accessOrderWindowDeque(), Node.WINDOW)));
       check("accessOrderWindowDeque()").about(deque())
           .that(bounded.accessOrderWindowDeque()).isValid();
     }
 
     if (bounded.expiresAfterWrite()) {
       long expectedSize = bounded.evicts() ? bounded.weightedSize() : bounded.estimatedSize();
-      checkLinks(bounded, ImmutableTable.of("writeOrder", expectedSize, bounded.writeOrderDeque()));
+      checkLinks(bounded, List.of(
+          new DequeCheck<>("writeOrder", expectedSize, bounded.writeOrderDeque(), NO_QUEUE_TYPE)));
       check("writeOrderDeque()").about(deque())
           .that(bounded.writeOrderDeque()).isValid();
     }
   }
 
-  private <K, V> void checkLinks(BoundedLocalCache<K, V> bounded,
-      ImmutableTable<String, Long, LinkedDeque<Node<K, V>>> deques) {
-    if (!doLinksMatch(bounded, deques.values())) {
-      await().pollInSameThread().until(() -> doLinksMatch(bounded, deques.values()));
+  private <K, V> void checkLinks(BoundedLocalCache<K, V> bounded, List<DequeCheck<K, V>> checks) {
+    if (!doLinksMatch(bounded, checks)) {
+      await().pollInSameThread().until(() -> doLinksMatch(bounded, checks));
     }
 
     @Var int totalSize = 0;
     @Var long totalWeightedSize = 0;
     Set<Node<K, V>> seen = Collections.newSetFromMap(
         new IdentityHashMap<>(bounded.size()));
-    for (var cell : deques.cellSet()) {
-      var deque = requireNonNull(cell.getValue());
-      long weightedSize = scanLinks(bounded, deque, seen);
-      check("%s: %s in %s", cell.getRowKey(), deque, bounded.data)
-          .that(weightedSize).isEqualTo(cell.getColumnKey());
+    for (var dequeCheck : checks) {
+      long weightedSize = scanLinks(bounded, dequeCheck, seen);
+      check("%s: %s in %s", dequeCheck.name, dequeCheck.deque, bounded.data)
+          .that(weightedSize).isEqualTo(dequeCheck.expectedWeight);
+      totalSize += dequeCheck.deque.size();
       totalWeightedSize += weightedSize;
-      totalSize += deque.size();
     }
     check("linkSize").withMessage("cache.size() != links").that(bounded).hasSize(seen.size());
     check("totalSize").withMessage("cache.size() == deque.size()").that(bounded).hasSize(totalSize);
@@ -322,13 +375,13 @@ public final class LocalCacheSubject extends Subject {
   }
 
   private <K, V> boolean doLinksMatch(BoundedLocalCache<K, V> bounded,
-      Collection<LinkedDeque<Node<K, V>>> deques) {
+      Collection<DequeCheck<K, V>> checks) {
     bounded.evictionLock.lock();
     try {
       Set<Node<K, V>> seen = Collections.newSetFromMap(
           new IdentityHashMap<>(bounded.size()));
-      for (var deque : deques) {
-        scanLinks(bounded, deque, seen);
+      for (var dequeCheck : checks) {
+        scanLinks(bounded, dequeCheck, seen);
       }
       return (bounded.size() == seen.size());
     } finally {
@@ -338,14 +391,20 @@ public final class LocalCacheSubject extends Subject {
 
   @CanIgnoreReturnValue
   private <K, V> long scanLinks(BoundedLocalCache<K, V> bounded,
-      LinkedDeque<Node<K, V>> deque, Set<Node<K, V>> seen) {
+      DequeCheck<K, V> dequeCheck, Set<Node<K, V>> seen) {
     @Var long weightedSize = 0;
     @Var Node<?, ?> prev = null;
-    for (var node : deque) {
+    for (var node : dequeCheck.deque) {
       check("scanLinks").withMessage("Loop detected: %s, saw %s in %s", node, seen, bounded)
           .that(seen.add(node)).isTrue();
       check("getPolicyWeight()").that(node.getPolicyWeight()).isEqualTo(node.getWeight());
-      check("getPrevious(node)").that(deque.getPrevious(node)).isEqualTo(prev);
+      check("getPrevious(node)").that(dequeCheck.deque.getPrevious(node)).isEqualTo(prev);
+      check("dataContainment for %s", node)
+          .that(bounded.data.get(node.getKeyReference())).isSameInstanceAs(node);
+      if (dequeCheck.expectedQueueType != NO_QUEUE_TYPE) {
+        check("queueType for %s", node)
+            .that(node.getQueueType()).isEqualTo(dequeCheck.expectedQueueType);
+      }
       weightedSize += node.getWeight();
       prev = node;
     }
@@ -355,10 +414,20 @@ public final class LocalCacheSubject extends Subject {
   private <K, V> void checkNode(BoundedLocalCache<K, V> bounded, Node<K, V> node) {
     var key = node.getKey();
     var value = node.getValue();
+    checkNodeState(node);
     checkKey(bounded, node, key, value);
     checkValue(bounded, node, key, value);
     checkWeight(bounded, node, key, value);
     checkRefreshAfterWrite(bounded, node);
+  }
+
+  private <K, V> void checkNodeState(Node<K, V> node) {
+    check("isAlive").withMessage("node in data must be alive: %s", node)
+        .that(node.isAlive()).isTrue();
+    check("isRetired").withMessage("node in data must not be retired: %s", node)
+        .that(node.isRetired()).isFalse();
+    check("isDead").withMessage("node in data must not be dead: %s", node)
+        .that(node.isDead()).isFalse();
   }
 
   private <K, V> void checkKey(BoundedLocalCache<K, V> bounded,
@@ -377,6 +446,8 @@ public final class LocalCacheSubject extends Subject {
       } else {
         check("keyReferenceOrNull").that(node.getKeyReferenceOrNull())
             .isSameInstanceAs(node.getKeyReference());
+        var reference = (Reference<?>) node.getKeyReference();
+        check("weakKeyReference.get()").that(reference.get()).isSameInstanceAs(key);
       }
     } else {
       check("key").that(key).isNotNull();
@@ -395,10 +466,13 @@ public final class LocalCacheSubject extends Subject {
             .about(map()).that(bounded).containsValue(value);
       }
     }
-    checkIfAsyncValue(value);
+    checkIfAsyncValue(bounded.isAsync(), value);
   }
 
-  private void checkIfAsyncValue(@Nullable Object value) {
+  private void checkIfAsyncValue(boolean isAsync, @Nullable Object value) {
+    if (isAsync && (value != null)) {
+      check("asyncValueType").that(value).isInstanceOf(CompletableFuture.class);
+    }
     if (value instanceof CompletableFuture<?>) {
       var future = (CompletableFuture<?>) value;
       if (!future.isDone() || future.isCompletedExceptionally()) {
@@ -437,14 +511,31 @@ public final class LocalCacheSubject extends Subject {
   /* --------------- Unbounded --------------- */
 
   private void checkUnbounded(UnboundedLocalCache<?, ?> unbounded) {
+    check("size").withMessage("cache.size() equal to data.size()")
+        .that(unbounded.size()).isEqualTo(unbounded.data.size());
     if (unbounded.isEmpty()) {
       check("unbounded").about(map()).that(unbounded).isExhaustivelyEmpty();
     }
     unbounded.data.forEach((key, value) -> {
       check("key").that(key).isNotNull();
       check("value").that(value).isNotNull();
-      checkIfAsyncValue(value);
+      checkIfAsyncValue(unbounded.isAsync(), value);
     });
     checkStats(unbounded);
+  }
+
+  private static final class DequeCheck<K, V> {
+    final LinkedDeque<Node<K, V>> deque;
+    final int expectedQueueType;
+    final long expectedWeight;
+    final String name;
+
+    DequeCheck(String name, long expectedWeight,
+        LinkedDeque<Node<K, V>> deque, int expectedQueueType) {
+      this.name = requireNonNull(name);
+      this.deque = requireNonNull(deque);
+      this.expectedWeight = expectedWeight;
+      this.expectedQueueType = expectedQueueType;
+    }
   }
 }

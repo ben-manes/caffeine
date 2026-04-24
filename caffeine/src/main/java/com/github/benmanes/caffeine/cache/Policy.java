@@ -586,8 +586,8 @@ public interface Policy<K, V> {
     /**
      * Associates the {@code value} with the {@code key} in this cache if the specified key is not
      * already associated with a value. This method differs from {@link Map#putIfAbsent} by
-     * substituting the configured {@link Expiry} with the specified duration, has no effect on the
-     * duration if the entry was present, and returns the success rather than a value.
+     * substituting the configured {@link Expiry} with the specified duration and has no effect on
+     * the duration if the entry was present.
      *
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key
@@ -603,8 +603,8 @@ public interface Policy<K, V> {
     /**
      * Associates the {@code value} with the {@code key} in this cache if the specified key is not
      * already associated with a value. This method differs from {@link Map#putIfAbsent} by
-     * substituting the configured {@link Expiry} with the specified duration, has no effect on the
-     * duration if the entry was present, and returns the success rather than a value.
+     * substituting the configured {@link Expiry} with the specified duration and has no effect on
+     * the duration if the entry was present.
      *
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key

@@ -66,7 +66,7 @@ public final class AddKeyValueStrength implements Rule<LocalCacheContext> {
         .initializer("new $T()", type)
         .build());
     context.classSpec.addMethod(MethodSpec.methodBuilder(collectName)
-        .addModifiers(context.protectedFinalModifiers())
+        .addModifiers(context.publicFinalModifiers())
         .addStatement("return true")
         .returns(boolean.class)
         .build());

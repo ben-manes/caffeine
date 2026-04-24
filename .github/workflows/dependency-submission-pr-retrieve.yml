@@ -10,7 +10,7 @@ concurrency:
 
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-  JAVA_VERSION: 25
+  JAVA_VERSION: 26
 
 jobs:
   submit-dependency-graph:

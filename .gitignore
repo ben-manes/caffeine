@@ -9,9 +9,10 @@ test-output
 jitwatch.out
 .DS_Store
 .claude/settings.local.json
-.claude/reports/
-.claude/worktrees/
 .claude/agent-memory*/
+.claude/worktrees/
+.claude/reports/
+.opencode/
 .cifuzz-corpus
 .classpath
 .settings
@@ -21,6 +22,7 @@ jitwatch.out
 .vscode
 .idea
 *.iml
+*.lock
 *.hprof
 crash-*
 hs_err_pid*.log
