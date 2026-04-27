@@ -523,7 +523,7 @@ final class AsyncAsMapTest {
       await().untilTrue(computing);
       var f = cache.asMap().putIfAbsent(context.absentKey(), context.absentValue().toFuture());
       return requireNonNull(f).join();
-    }, ConcurrentTestHarness.executor);
+    }, executor);
 
     cache.asMap().computeIfAbsent(context.absentKey(), key -> {
       await().untilTrue(started);
@@ -1140,7 +1140,7 @@ final class AsyncAsMapTest {
       started.set(true);
       await().untilTrue(computing);
       cache.asMap().replaceAll((k, v) -> context.absentValue().toFuture());
-    }, ConcurrentTestHarness.executor);
+    }, executor);
 
     cache.asMap().compute(context.firstKey(), (key, value) -> {
       await().untilTrue(started);

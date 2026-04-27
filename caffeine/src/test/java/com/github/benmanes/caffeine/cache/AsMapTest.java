@@ -92,7 +92,6 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
-import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
@@ -531,7 +530,7 @@ final class AsMapTest {
       started.set(true);
       await().untilTrue(computing);
       return map.putIfAbsent(context.absentKey(), context.absentValue());
-    }, ConcurrentTestHarness.executor);
+    }, executor);
 
     map.computeIfAbsent(context.absentKey(), key -> {
       await().untilTrue(started);
@@ -1049,7 +1048,7 @@ final class AsMapTest {
       started.set(true);
       await().untilTrue(computing);
       map.replaceAll((k, v) -> context.absentValue());
-    }, ConcurrentTestHarness.executor);
+    }, executor);
 
     map.compute(context.firstKey(), (key, value) -> {
       await().untilTrue(started);
@@ -1712,7 +1711,7 @@ final class AsMapTest {
         writer.set(Thread.currentThread());
         return cache.synchronous().asMap().merge(context.absentKey(),
             context.absentKey(), (v1, v2) -> new Int(v1.intValue() * v2.intValue()));
-      }, ConcurrentTestHarness.executor));
+      }, executor));
 
       var threadState = EnumSet.of(BLOCKED, WAITING);
       await().until(() -> {
@@ -2171,7 +2170,7 @@ final class AsMapTest {
       } else {
         assertThat(modified).isFalse();
       }
-    }, ConcurrentTestHarness.executor);
+    }, executor);
 
     map.compute(context.firstKey(), (k, v) -> {
       await().untilTrue(started);
@@ -2293,7 +2292,7 @@ final class AsMapTest {
       } else {
         assertThat(modified).isFalse();
       }
-    }, ConcurrentTestHarness.executor);
+    }, executor);
 
     map.compute(context.absentKey(), (k, v) -> {
       await().untilTrue(started);
@@ -2626,7 +2625,7 @@ final class AsMapTest {
       } else {
         assertThat(modified).isFalse();
       }
-    }, ConcurrentTestHarness.executor);
+    }, executor);
 
     map.compute(context.firstKey(), (k, v) -> {
       await().untilTrue(started);
@@ -2691,7 +2690,7 @@ final class AsMapTest {
       } else {
         assertThat(modified).isFalse();
       }
-    }, ConcurrentTestHarness.executor);
+    }, executor);
 
     map.compute(context.firstKey(), (k, v) -> {
       await().untilTrue(started);
@@ -2940,7 +2939,7 @@ final class AsMapTest {
       } else {
         assertThat(modified).isFalse();
       }
-    }, ConcurrentTestHarness.executor);
+    }, executor);
 
     map.compute(context.absentKey(), (k, v) -> {
       await().untilTrue(started);
@@ -3439,7 +3438,7 @@ final class AsMapTest {
       var mapping = ImmutableMap.of(context.firstKey(),
           requireNonNull(context.original().get(context.firstKey())));
       assertThat(map.entrySet().removeAll(mapping.entrySet())).isFalse();
-    }, ConcurrentTestHarness.executor);
+    }, executor);
 
     map.compute(context.firstKey(), (k, v) -> {
       await().untilTrue(started);
@@ -3522,7 +3521,7 @@ final class AsMapTest {
       await().untilTrue(computing);
       var entry = Map.entry(context.firstKey(), context.original().get(context.firstKey()));
       assertThat(map.entrySet().remove(entry)).isFalse();
-    }, ConcurrentTestHarness.executor);
+    }, executor);
 
     map.compute(context.firstKey(), (k, v) -> {
       await().untilTrue(started);
@@ -3759,7 +3758,7 @@ final class AsMapTest {
       } else {
         assertThat(modified).isFalse();
       }
-    }, ConcurrentTestHarness.executor);
+    }, executor);
 
     map.compute(context.absentKey(), (k, v) -> {
       await().untilTrue(started);

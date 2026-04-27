@@ -251,9 +251,8 @@ public final class LocalCacheSubject extends Subject {
     var seen = Collections.newSetFromMap(new IdentityHashMap<>(bounded.size()));
     var wheel = bounded.timerWheel().wheel;
     long nanos = bounded.timerWheel().nanos;
-    for (int i = 0; i < wheel.length; i++) {
-      for (int j = 0; j < wheel[i].length; j++) {
-        var sentinel = wheel[i][j];
+    for (Node<K, V>[] bucket : wheel) {
+      for (Node<K, V> sentinel : bucket) {
         check("first").that(sentinel).isInstanceOf(Sentinel.class);
         check("previousInVariableOrder")
             .that(sentinel.getPreviousInVariableOrder().getNextInVariableOrder())
@@ -262,6 +261,12 @@ public final class LocalCacheSubject extends Subject {
             .that(sentinel.getNextInVariableOrder().getPreviousInVariableOrder())
             .isSameInstanceAs(sentinel);
 
+        // Variable expiry updates the timestamp via CAS and enqueues the reschedule through the
+        // lossy read buffer, so a dropped reschedule leaves the node in its previous bucket while
+        // variableTime moves on. The user's Expiry can return arbitrarily larger or smaller
+        // durations, so the bucket can drift to either a higher or lower level than the current
+        // variableTime would imply. The wheel self-corrects on advance(), so neither exact bucket
+        // placement nor the level's upper bound are valid structural invariants here.
         @Var var node = sentinel.getNextInVariableOrder();
         while (node != sentinel) {
           var next = node.getNextInVariableOrder();
@@ -271,27 +276,11 @@ public final class LocalCacheSubject extends Subject {
           check("loopDetected").that(seen.add(node)).isTrue();
           check("wrongPrev").that(prev.getNextInVariableOrder()).isSameInstanceAs(node);
           check("wrongNext").that(next.getPreviousInVariableOrder()).isSameInstanceAs(node);
-          checkTimerWheelBucket(wheel, nanos, node, i, j);
           node = node.getNextInVariableOrder();
         }
       }
     }
     check("cache.size() == timerWheel.size()").that(bounded).hasSize(seen.size());
-  }
-
-  private <K, V> void checkTimerWheelBucket(
-      Node<K, V>[][] wheel, long nanos, Node<K, V> node, int level, int bucket) {
-    long duration = (node.getVariableTime() - nanos);
-    if ((level < wheel.length - 1) && (duration > 0)) {
-      check("timerWheelLevel upper bound for %s at level %s", node, level)
-          .that(duration).isLessThan(TimerWheel.SPANS[level + 1]);
-    }
-    if (duration > 0) {
-      int mask = wheel[level].length - 1;
-      var expectedBucket = (int) ((node.getVariableTime() >>> TimerWheel.SHIFT[level]) & mask);
-      check("timerWheelBucket for %s at level %s", node, level)
-          .that(bucket).isEqualTo(expectedBucket);
-    }
   }
 
   private static <K, V> boolean doesTimerWheelMatch(BoundedLocalCache<K, V> bounded) {
