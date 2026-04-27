@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-  JAVA_VERSION: 26
+  JAVA_VERSION: 25
 
 jobs:
   dependency-check:

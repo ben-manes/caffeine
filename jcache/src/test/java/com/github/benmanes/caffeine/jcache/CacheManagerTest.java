@@ -129,6 +129,55 @@ final class CacheManagerTest {
     }
   }
 
+  @Test
+  void close_clearsCachesAndIsIdempotent() {
+    try (var fixture = JCacheFixture.builder().build()) {
+      @SuppressWarnings("PMD.CloseResource")
+      var manager = (CacheManagerImpl) fixture.cachingProvider().getCacheManager(
+          URI.create(getClass().getName()), fixture.cachingProvider().getDefaultClassLoader());
+      assertThat(manager.createCache("a", new MutableConfiguration<>())).isNotNull();
+      assertThat(manager.createCache("b", new MutableConfiguration<>())).isNotNull();
+
+      manager.close();
+      assertThat(manager.isClosed()).isTrue();
+      assertThat(manager.caches).isEmpty();
+    }
+  }
+
+  @Test
+  @SuppressLint("THREAD_SAFETY_VIOLATION")
+  void close_blocksConcurrentCreateCache() throws InterruptedException, ExecutionException {
+    try (var fixture = JCacheFixture.builder().build()) {
+      @SuppressWarnings("PMD.CloseResource")
+      var manager = (CacheManagerImpl) fixture.cachingProvider().getCacheManager(
+          URI.create(getClass().getName()), fixture.cachingProvider().getDefaultClassLoader());
+      var closeTask = new FutureTask<>(manager::close, /* result= */ null);
+      var createTask = new FutureTask<Cache<Integer, Integer>>(() ->
+          manager.createCache("racing", new MutableConfiguration<>()));
+      var closeThread = new Thread(closeTask);
+      var createThread = new Thread(createTask);
+
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      synchronized (manager.lock) {
+        closeThread.start();
+        await().until(() -> threadState.contains(closeThread.getState()));
+        createThread.start();
+        await().until(() -> threadState.contains(createThread.getState()));
+      }
+
+      closeTask.get();
+      // createCache must serialize with close: either it lost the race and threw,
+      // or it inserted a cache that close subsequently closed and removed
+      try {
+        createTask.get();
+      } catch (ExecutionException expected) {
+        assertThat(expected).hasCauseThat().isInstanceOf(IllegalStateException.class);
+      }
+      assertThat(manager.isClosed()).isTrue();
+      assertThat(manager.caches).isEmpty();
+    }
+  }
+
   private static void checkConfigurationJmx(Cache<?, ?> cache) throws OperationsException {
     @SuppressWarnings("unchecked")
     CompleteConfiguration<?, ?> configuration = cache.getConfiguration(CompleteConfiguration.class);

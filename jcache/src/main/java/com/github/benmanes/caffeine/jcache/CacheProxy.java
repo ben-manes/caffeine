@@ -958,8 +958,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if (!isClosed()) {
         enableManagement(false);
         enableStatistics(false);
-        cacheManager.destroyCache(name);
         closed = true;
+        try {
+          cacheManager.destroyCache(name);
+        } catch (IllegalStateException ignored) { /* manager already closed */ }
 
         @Var var thrown = shutdownExecutor();
         thrown = tryClose(expiry, thrown);

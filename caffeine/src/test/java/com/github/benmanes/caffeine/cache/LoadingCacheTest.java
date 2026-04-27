@@ -591,6 +591,24 @@ final class LoadingCacheTest {
 
   @CheckNoEvictions
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE)
+  void refresh_inflight_noProgress(LoadingCache<Int, Int> cache, CacheContext context) {
+    var key = context.original().isEmpty() ? context.absentKey() : context.firstKey();
+    var future1 = cache.refresh(key);
+    assertThat(future1).isNotDone();
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    // A second refresh while the first is in-flight is deduped to the same never-completing future.
+    var future2 = cache.refresh(key);
+    assertThat(future2).isSameInstanceAs(future1);
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    future1.complete(context.absentValue());
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   void refresh_timeout(LoadingCache<Int, Int> cache, CacheContext context) {

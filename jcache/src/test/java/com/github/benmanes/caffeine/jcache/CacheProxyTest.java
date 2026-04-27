@@ -644,6 +644,44 @@ final class CacheProxyTest {
     }
   }
 
+  @Test
+  void close_singlePass_closeablesInvokedOnce() throws IOException {
+    try (CloseableCacheLoader loader = Mockito.mock();
+        CloseableCacheWriter writer = Mockito.mock();
+        CloseableExpiryPolicy expiry = Mockito.mock();
+        CloseableCacheEntryListener listener = Mockito.mock();
+        var fixture = jcacheFixture(loader, writer, expiry)) {
+      var configuration = new MutableCacheEntryListenerConfiguration<>(
+          /* listenerFactory= */ () -> listener, /* filterFactory= */ () -> event -> true,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ false);
+      fixture.jcacheLoading().registerCacheEntryListener(configuration);
+
+      fixture.jcacheLoading().close();
+      verify(expiry).close();
+      verify(loader).close();
+      verify(writer).close();
+      verify(listener).close();
+    }
+  }
+
+  @Test
+  @SuppressWarnings("try")
+  void close_afterManagerClosed_releasesResources() throws IOException {
+    try (CloseableExpiryPolicy expiry = Mockito.mock();
+        var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      when(expiry.getExpiryForCreation()).thenReturn(ETERNAL);
+      try (var orphan = new CacheProxy<Integer, Integer>("orphan", Runnable::run,
+          fixture.cacheManager(), new CaffeineConfiguration<>(), Mockito.mock(), Mockito.mock(),
+          Optional.empty(), expiry, Mockito.mock(), Mockito.mock())) {
+        fixture.cacheManager().close();
+        orphan.close();
+
+        assertThat(orphan.isClosed()).isTrue();
+        verify(expiry).close();
+      }
+    }
+  }
+
   interface CloseableExpiryPolicy extends ExpiryPolicy, Closeable {}
   interface CloseableCacheLoader extends CacheLoader<Integer, Integer>, Closeable {}
   interface CloseableCacheWriter extends CacheWriter<Integer, Integer>, Closeable {}

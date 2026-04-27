@@ -408,6 +408,29 @@ final class BoundedLocalCacheTest {
     assertThat(cache.evictionLock.isLocked()).isFalse();
   }
 
+  @ParameterizedTest
+  @SuppressWarnings("resource")
+  @SuppressFBWarnings("MDM_LOCK_ISLOCKED")
+  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.DISCARDING)
+  void scheduleDrainBuffers_discarded_quiescent(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var oldValue = cache.put(context.absentKey(), context.absentValue());
+    assertThat(oldValue).isNull();
+
+    assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_IDLE);
+    assertThat(cache.writeBuffer.isEmpty()).isFalse();
+    assertThat(cache.evictionLock.isLocked()).isFalse();
+    assertThat(context.executor().submitted()).isGreaterThan(0);
+    assertThat(context.executor().completed()).isEqualTo(0);
+
+    // No follow-up writes are issued, so there is no writer-assist fallback path.
+    Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(10));
+
+    assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_IDLE);
+    assertThat(cache.writeBuffer.isEmpty()).isFalse();
+    assertThat(context.executor().completed()).isEqualTo(0);
+  }
+
   @Test
   void shouldDrainBuffers_invalidDrainStatus() {
     var cache = new BoundedLocalCache<>(

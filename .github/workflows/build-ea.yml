@@ -79,7 +79,7 @@ jobs:
       matrix:
         suite: ${{ fromJson(needs.setup.outputs.suites) }}
     env:
-      JAVA_VERSION: 26
+      JAVA_VERSION: 25
       JAVA_TEST_VERSION: 27
     steps:
       - name: Harden Runner

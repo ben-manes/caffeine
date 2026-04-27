@@ -629,8 +629,6 @@ final class ReferenceTest {
   }
 
   @ParameterizedTest
-  @SuppressWarnings("PMD.UnusedAssignment")
-  @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE_OF_NULL")
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.WEAK,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -639,7 +637,6 @@ final class ReferenceTest {
       AsyncCache<Int, Int> cache, CacheContext context) {
     var started = new CountDownLatch(1);
     var allowCompletion = new CountDownLatch(1);
-    @Var Int key = context.absentKey();
     var future = CompletableFuture.supplyAsync(() -> {
       started.countDown();
       try {
@@ -651,7 +648,7 @@ final class ReferenceTest {
       return context.absentValue();
     });
 
-    cache.put(key, future);
+    cache.put(context.absentKey(), future);
     try {
       started.await();
     } catch (InterruptedException e) {
@@ -659,7 +656,6 @@ final class ReferenceTest {
       throw new AssertionError(e);
     }
 
-    key = null;
     retry(() -> {
       context.clear();
       awaitFullGc();

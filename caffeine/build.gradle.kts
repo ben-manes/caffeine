@@ -299,6 +299,8 @@ testing.suites {
         javaLauncher.unset()
         incompatibleWithConfigurationCache()
         maxParallelForks = Runtime.getRuntime().availableProcessors()
+        val isCompatibleJdk = java.toolchain.languageVersion.map { it.asInt() <= 25 }
+        onlyIf { isCompatibleJdk.get() }
       }
     }
   }

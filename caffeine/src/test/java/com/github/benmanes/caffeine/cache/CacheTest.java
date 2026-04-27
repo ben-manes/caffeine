@@ -937,6 +937,19 @@ final class CacheTest {
         .hasSize(context.isAsync() ? 2 : 1);
   }
 
+  @ParameterizedTest
+  @SuppressWarnings("resource")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
+      executor = CacheExecutor.DISCARDING, removalListener = Listener.CONSUMING)
+  void removalListener_submit_discarded(Cache<Int, Int> cache, CacheContext context) {
+    cache.invalidateAll();
+
+    // The executor accepted the task but silently discarded it, so no callback is delivered.
+    assertThat(context.executor().submitted()).isGreaterThan(0);
+    assertThat(context.executor().completed()).isEqualTo(0);
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
   @CheckNoStats
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.DISABLED,

@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-  JAVA_VERSION: 26
+  JAVA_VERSION: 25
 
 jobs:
   qodana:
@@ -68,7 +68,7 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Qodana - Code Inspection
-        uses: JetBrains/qodana-action@89eb4357efd2b52e639f3216e63edaf33b82622b # v2025.3.2
+        uses: JetBrains/qodana-action@d7b5ec2fbec32197ef447c450e00589ed5f34fd5 # v2026.1.0
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
