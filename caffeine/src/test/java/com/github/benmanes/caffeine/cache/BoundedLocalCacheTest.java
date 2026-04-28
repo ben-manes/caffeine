@@ -4064,6 +4064,53 @@ final class BoundedLocalCacheTest {
     assertThat(delay).isAtMost(Duration.ofMinutes(2).toNanos());
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = {Population.EMPTY, Population.FULL},
+      expireAfterAccess = Expire.ONE_MINUTE)
+  void repairsStaleHead_expireAfterAccess(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A dropped read-buffer reorder by bumping the head's time forward without moving its deque
+    // position. The expiration scan must detect that the head is fresher than the tail and move it
+    // to the back so the trailing (genuinely expired) entries can be evicted.
+    assertThat(cache.put(context.absentKey(), context.absentValue())).isNull();
+    var node = cache.accessOrderWindowDeque().getLast();
+    assertThat(node.getKey()).isEqualTo(context.absentKey());
+
+    cache.accessOrderWindowDeque().moveToFront(node);
+    context.ticker().advance(Duration.ofSeconds(50));
+    node.setAccessTime(context.ticker().read());
+
+    context.ticker().advance(Duration.ofSeconds(40));
+    cache.cleanUp();
+
+    assertThat(cache).hasSize(1);
+    assertThat(cache).containsKey(context.absentKey());
+    assertThat(cache.accessOrderWindowDeque().peekLast()).isSameInstanceAs(node);
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = {Population.EMPTY, Population.FULL}, expireAfterWrite = Expire.ONE_MINUTE)
+  void repairsStaleHead_expireAfterWrite(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.put(context.absentKey(), context.absentValue())).isNull();
+    var node = cache.writeOrderDeque().getLast();
+    assertThat(node.getKey()).isEqualTo(context.absentKey());
+
+    cache.writeOrderDeque().moveToFront(node);
+    context.ticker().advance(Duration.ofSeconds(50));
+    node.setWriteTime(context.ticker().read());
+
+    context.ticker().advance(Duration.ofSeconds(40));
+    cache.cleanUp();
+
+    assertThat(cache).hasSize(1);
+    assertThat(cache).containsKey(context.absentKey());
+    assertThat(cache.writeOrderDeque().peekLast()).isSameInstanceAs(node);
+
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
+  }
+
   /* --------------- Refresh --------------- */
 
   @Test

@@ -187,7 +187,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * access-order expiration may be discarded by the read buffer if it is full or contended.
    * Similarly, recording the touch for expiration to extend its lifetime may be ignored for an
    * entry if the last update was within a short time window. This is done to avoid overwhelming the
-   * write buffer and to avoid false sharing on reads due to modifying the access time.
+   * write buffer and to avoid false sharing on reads due to modifying the access time. The
+   * expiration scan compensates by moving a stale-positioned head to the back of the queue when its
+   * timestamp is fresher than the tail, so subsequent passes can resume from the next-oldest entry.
    *
    * [1] BP-Wrapper: A Framework Making Any Replacement Algorithms (Almost) Lock Contention Free
    * https://web.njit.edu/~dingxn/papers/BP-Wrapper.pdf
@@ -936,13 +938,25 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   /** Expires entries in an access-order queue. */
   @GuardedBy("evictionLock")
   void expireAfterAccessEntries(long now, AccessOrderDeque<Node<K, V>> accessOrderDeque) {
-    long duration = expiresAfterAccessNanos();
-    for (;;) {
-      Node<K, V> node = accessOrderDeque.peekFirst();
-      if ((node == null) || ((now - node.getAccessTime()) < duration)
-          || !evictEntry(node, RemovalCause.EXPIRED, now)) {
+    var head = accessOrderDeque.peekFirst();
+    if (head == null) {
+      return;
+    }
+    var duration = expiresAfterAccessNanos();
+    var last = requireNonNull(accessOrderDeque.peekLast());
+    for (var node = head; node != null;) {
+      var next = (node == last) ? null : node.getNextInAccessOrder();
+      if ((now - node.getAccessTime()) < duration) {
+        var stalePosition = (last.getAccessTime() < node.getAccessTime());
+        if (stalePosition || isComputingAsync(node.getValue())) {
+          accessOrderDeque.moveToBack(node);
+          node = next;
+          continue;
+        }
         return;
       }
+      evictEntry(node, RemovalCause.EXPIRED, now);
+      node = next;
     }
   }
 
@@ -952,13 +966,26 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (!expiresAfterWrite()) {
       return;
     }
-    long duration = expiresAfterWriteNanos();
-    for (;;) {
-      Node<K, V> node = writeOrderDeque().peekFirst();
-      if ((node == null) || ((now - node.getWriteTime()) < duration)
-          || !evictEntry(node, RemovalCause.EXPIRED, now)) {
-        break;
+
+    var head = writeOrderDeque().peekFirst();
+    if (head == null) {
+      return;
+    }
+    var duration = expiresAfterWriteNanos();
+    var last = requireNonNull(writeOrderDeque().peekLast());
+    for (var node = head; node != null;) {
+      var next = (node == last) ? null : node.getNextInWriteOrder();
+      if ((now - node.getWriteTime()) < duration) {
+        var stalePosition = (last.getWriteTime() < node.getWriteTime());
+        if (stalePosition || isComputingAsync(node.getValue())) {
+          writeOrderDeque().moveToBack(node);
+          node = next;
+          continue;
+        }
+        return;
       }
+      evictEntry(node, RemovalCause.EXPIRED, now);
+      node = next;
     }
   }
 

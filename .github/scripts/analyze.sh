@@ -1,6 +1,7 @@
 #!/bin/bash
 set -eux
 
+CI=true \
 ./gradlew \
     ecj \
     assemble \

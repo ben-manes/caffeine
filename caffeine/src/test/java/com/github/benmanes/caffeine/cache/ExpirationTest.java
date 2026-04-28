@@ -76,6 +76,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Range;
+import com.google.errorprone.annotations.Var;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -108,6 +109,87 @@ final class ExpirationTest {
           .contains(context.absentKey(), context.absentValue())
           .exclusively();
     }
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = {Population.EMPTY, Population.FULL}, removalListener = Listener.CONSUMING,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE}, expiryTime = Expire.ONE_MINUTE,
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void expire_inFlight_nonBlocking(AsyncCache<Int, Int> cache, CacheContext context) {
+    var stuck = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), stuck);
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    cache.synchronous().cleanUp();
+
+    assertThat(cache).containsExactlyEntriesIn(Map.of(context.absentKey(), stuck));
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
+    stuck.complete(context.absentValue());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = {Population.EMPTY, Population.FULL}, removalListener = Listener.CONSUMING,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE}, expiryTime = Expire.ONE_MINUTE,
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void expire_inFlight_nonBlocking_atHead(AsyncCache<Int, Int> cache, CacheContext context) {
+    // An in-flight future at the head of a time ordered queue must not block the expiration of
+    // trailing entries.
+    cache.synchronous().invalidateAll();
+    var stuck = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), stuck);
+    cache.synchronous().putAll(context.original());
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    cache.synchronous().cleanUp();
+
+    assertThat(cache).containsExactlyEntriesIn(Map.of(context.absentKey(), stuck));
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original());
+    stuck.complete(context.absentValue());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, removalListener = Listener.CONSUMING,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE}, expiryTime = Expire.ONE_MINUTE,
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void expire_inFlight_nonBlocking_atHead_multiple(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    // Multiple stacked in-flight futures form a contiguous prefix at the deque head. The scan must
+    // iterate past all of them via successive moveToBack calls; this catches regressions where,
+    // example, the loop boundary or `next` capture is rewritten in a way that drops
+    // for second-and-later in-flight entries.
+    var stuck = new HashMap<Int, CompletableFuture<Int>>();
+    var completed = new HashMap<Int, Int>();
+    @Var int i = 0;
+    for (var entry : context.absent().entrySet()) {
+      if (i++ < 3) {
+        var future = new CompletableFuture<Int>();
+        stuck.put(entry.getKey(), future);
+        cache.put(entry.getKey(), future);
+      } else {
+        completed.put(entry.getKey(), entry.getValue());
+        cache.put(entry.getKey(), entry.getValue().toFuture());
+      }
+    }
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    cache.synchronous().cleanUp();
+
+    assertThat(cache.synchronous()).hasSize(stuck.size());
+    stuck.forEach((key, future) -> assertThat(cache).containsEntry(key, future));
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(completed).exclusively();
+    stuck.values().forEach(f -> f.complete(context.absentValue()));
   }
 
   @CheckNoStats
