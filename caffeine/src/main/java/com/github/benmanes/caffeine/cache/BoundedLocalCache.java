@@ -1087,7 +1087,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           if (expiresVariable()) {
             expired |= ((now - node.getVariableTime()) >= 0);
           }
-          if (!expired) {
+          if (expired) {
+            if (isComputingAsync(ctx.value)) {
+              long sentinel = (now + ASYNC_EXPIRY);
+              setVariableTime(node, sentinel);
+              setAccessTime(node, sentinel);
+              setWriteTime(node, sentinel);
+              ctx.resurrect = true;
+              return node;
+            }
+          } else {
             ctx.resurrect = true;
             return node;
           }

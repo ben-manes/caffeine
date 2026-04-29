@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
 import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_IDLE;
@@ -1877,6 +1878,48 @@ final class BoundedLocalCacheTest {
     assertThat(future).succeedsWithNull();
     assertThat(context).notifications().isEmpty();
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, removalListener = Listener.CONSUMING,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE}, expiryTime = Expire.ONE_MINUTE,
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  void evict_resurrect_expireInFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+
+    var localCache = asBoundedLocalCache(cache);
+    var node = requireNonNull(localCache.data.get(localCache.referenceKey(context.absentKey())));
+
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(2)));
+    cache.synchronous().cleanUp();
+
+    assertThat(cache).containsEntry(context.absentKey(), future);
+    assertThat(context).notifications().isEmpty();
+
+    long expected = (context.ticker().read() + ASYNC_EXPIRY);
+    if (context.expiresAfterAccess()) {
+      assertThat(node.getAccessTime()).isEqualTo(expected);
+    }
+    if (context.expiresAfterWrite() || context.refreshes()) {
+      assertThat(node.getWriteTime()).isEqualTo(expected & ~1L);
+    }
+    if (context.expiresVariably()) {
+      assertThat(node.getVariableTime()).isEqualTo(expected);
+    }
+
+    future.complete(context.absentValue());
+    assertThat(cache).containsEntry(context.absentKey(), future);
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    cache.synchronous().cleanUp();
+
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.absentKey(), context.absentValue())
+        .exclusively();
   }
 
   @ParameterizedTest
