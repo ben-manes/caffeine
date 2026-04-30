@@ -2249,8 +2249,8 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
-  void drain_onWrite(BoundedLocalCache<Int, Int> cache) {
-    var oldValue = cache.put(Int.valueOf(1), Int.valueOf(1));
+  void drain_onWrite(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var oldValue = cache.put(context.absentKey(), context.absentValue());
     assertThat(oldValue).isNull();
 
     int size = cache.accessOrderWindowDeque().size() + cache.accessOrderProbationDeque().size();
@@ -3821,6 +3821,43 @@ final class BoundedLocalCacheTest {
         .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
     assertThat(cache.get(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
     assertThat(node.getVariableTime()).isNotEqualTo(initialVariableTime);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      compute = Compute.ASYNC, expireAfterWrite = Expire.ONE_MINUTE)
+  void expireTolerance_writeTime_put_syncToAsync_updatesSentinel(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var localCache = asBoundedLocalCache(cache);
+    cache.put(context.absentKey(), context.absentValue().toFuture());
+    var node = requireNonNull(localCache.data.get(
+        localCache.nodeFactory.newLookupKey(context.absentKey())));
+    long realWriteTime = node.getWriteTime();
+
+    // Replacing the completed future with an in-flight one within the tolerance window must
+    // bump writeTime to the async sentinel — comparing the *candidate* new writeTime against
+    // the stored writeTime (rather than wall-clock now) is what surfaces the transition.
+    var inFlight = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), inFlight);
+    long expected = (context.ticker().read() + ASYNC_EXPIRY) & ~1L;
+    assertThat(node.getWriteTime()).isEqualTo(expected);
+    assertThat(node.getWriteTime()).isNotEqualTo(realWriteTime);
+    inFlight.complete(context.absentKey());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      compute = Compute.SYNC, expireAfterWrite = Expire.ONE_MINUTE)
+  void expireTolerance_writeTime_put_syncToSync_skipsWithinTolerance(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.put(context.absentKey(), context.absentValue())).isNull();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.absentKey())));
+    long initialWriteTime = node.getWriteTime();
+
+    // Within tolerance, repeated sync writes leave writeTime alone (the existing optimization).
+    assertThat(cache.put(context.absentKey(), context.absentKey()))
+        .isEqualTo(context.absentValue());
+    assertThat(node.getWriteTime()).isEqualTo(initialWriteTime);
   }
 
   @ParameterizedTest

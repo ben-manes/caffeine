@@ -40,10 +40,10 @@ tasks.withType<SpotBugsTask>().configureEach {
   val isEnabled = providers.gradleProperty("spotbugs")
   onlyIf { isEnabled.isPresent }
   group = "SpotBugs"
-  reports.create("html") {
+  reports.register("html") {
     required = true
   }
-  reports.create("sarif") {
+  reports.register("sarif") {
     required = isCI()
   }
   launcher = javaToolchains.launcherFor {

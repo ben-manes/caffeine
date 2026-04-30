@@ -13,6 +13,9 @@ jitwatch.out
 .claude/worktrees/
 .claude/reports/
 .opencode/
+.agents/
+.codex/
+AGENTS*.md
 .cifuzz-corpus
 .classpath
 .settings
