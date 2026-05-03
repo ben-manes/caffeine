@@ -1972,11 +1972,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           }
         }
 
-        var keyRef = node.getKeyReferenceOrNull();
-        if (keyRef != null) {
-          frequencySketch().increment(keyRef);
-        }
-
         setMissesInSample(missesInSample() + 1);
       }
 
@@ -1993,6 +1988,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           timerWheel().schedule(node);
         }
         if (evicts()) {
+          var keyRef = node.getKeyReferenceOrNull();
+          if ((keyRef != null) && node.isAlive()) {
+            frequencySketch().increment(keyRef);
+          }
           if (weight > maximum()) {
             evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
           } else if (weight > windowMaximum()) {
@@ -3234,7 +3233,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
     Comparator<Node<K, V>> comparator = Comparator.comparingInt(node -> {
       var keyRef = node.getKeyReferenceOrNull();
-      return (keyRef == null) ? 0 : frequencySketch().frequency(keyRef);
+      return ((keyRef == null) || !node.isAlive()) ? 0 : frequencySketch().frequency(keyRef);
     });
     Iterable<Node<K, V>> iterable;
     if (hottest) {

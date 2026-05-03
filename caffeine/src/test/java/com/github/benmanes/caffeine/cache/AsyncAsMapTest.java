@@ -2995,7 +2995,6 @@ final class AsyncAsMapTest {
     }
   }
 
-  @CheckNoStats
   @ParameterizedTest
   @SuppressWarnings("UndefinedEquals")
   @CacheSpec(population = Population.FULL,
@@ -3011,9 +3010,11 @@ final class AsyncAsMapTest {
     @SuppressWarnings("unchecked")
     var array = (Map.Entry<Int, CompletableFuture<Int>>[])
         cache.asMap().entrySet().toArray(new Map.Entry<?, ?>[0]);
+    @Var int replaced = 0;
     for (var entry : array) {
       var future = expected.get(entry.getKey());
       if (!Objects.equals(entry.getValue(), future)) {
+        replaced++;
         entry.setValue(future);
         assertThat(entry.getValue()).isEqualTo(future);
       }
@@ -3023,6 +3024,7 @@ final class AsyncAsMapTest {
         .contains(Maps.toMap(context.firstMiddleLastKeys(),
             key -> requireNonNull(context.original().get(key))))
         .exclusively();
+    assertThat(context).stats().hits(0).misses(0).success(replaced).failures(0);
   }
 
   @CheckNoStats
@@ -3587,7 +3589,6 @@ final class AsyncAsMapTest {
 
   /* ---------------- WriteThroughEntry -------------- */
 
-  @CheckNoStats
   @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   void writeThroughEntry(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -3600,6 +3601,7 @@ final class AsyncAsMapTest {
     assertThat(cache).containsEntry(entry.getKey(), value);
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(entry.getKey(), oldValue).exclusively();
+    assertThat(context).stats().hits(0).misses(0).success(1).failures(0);
   }
 
   @CheckNoStats
@@ -3608,6 +3610,21 @@ final class AsyncAsMapTest {
   void writeThroughEntry_null(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
         cache.asMap().entrySet().iterator().next().setValue(nullFuture()));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON, removalListener = Listener.DISABLED)
+  void writeThroughEntry_incompleteFuture(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var entry = cache.asMap().entrySet().iterator().next();
+    var future = new CompletableFuture<Int>();
+    entry.setValue(future);
+
+    // EntrySet's WriteThroughEntries route setValue through AsyncAsMapView.put,
+    // which wires handleCompletion so weight/expiry are recomputed and load
+    // stats are recorded when the future resolves.
+    future.complete(Int.valueOf(42));
+    assertThat(context).stats().hits(0).misses(0).success(1).failures(0);
   }
 
   // writeThroughEntry_serialize() - CompletableFuture is not serializable

@@ -2,6 +2,7 @@
 @file:Suppress("UnstableApiUsage")
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
+import org.gradle.api.tasks.PathSensitivity.RELATIVE
 
 plugins {
   id("application")
@@ -105,7 +106,9 @@ val runTasks = listOf(
 runTasks.forEach { task ->
   task.configure {
     inputs.files(tasks.named<ProcessResources>("processResources").map { it.outputs.files })
+      .withPathSensitivity(RELATIVE)
     inputs.files(tasks.named<JavaCompile>("compileJava").map { it.outputs.files })
+      .withPathSensitivity(RELATIVE)
     classpath(sourceSets.named("main").map { it.runtimeClasspath })
     jvmArgs("-XX:+UseCompactObjectHeaders")
     outputs.upToDateWhen { false }

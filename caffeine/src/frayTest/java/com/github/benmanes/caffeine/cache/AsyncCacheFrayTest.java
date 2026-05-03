@@ -322,4 +322,39 @@ final class AsyncCacheFrayTest {
     assertThat(reportedWeight).isEqualTo(actualWeight);
     assertThat(reportedWeight).isAtMost(20);
   }
+
+  /**
+   * AsyncLoadingCache.refresh(K) uses a for(;;) retry loop because tryOptimisticRefresh may see
+   * a ready entry and fall through, while a concurrent eviction can make tryComputeRefresh see
+   * the entry as absent and return null. The loop must terminate even under adversarial
+   * scheduling that interleaves eviction-and-re-add between the two helpers.
+   */
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void refresh_concurrentEvictionAndReadd() throws InterruptedException {
+    var ticker = new FakeTicker();
+    AsyncLoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(1)
+        .buildAsync(key -> key * 10);
+    cache.synchronous().get(1);
+    ticker.advance(Duration.ofMinutes(2));
+
+    var threadA = new Thread(() -> cache.synchronous().refresh(1));
+    var threadB = new Thread(() -> {
+      cache.synchronous().put(2, 20);
+      cache.synchronous().put(1, 100);
+    });
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+    cache.synchronous().cleanUp();
+
+    assertThat(cache.synchronous().estimatedSize()).isAtMost(1);
+    assertThat(cache.synchronous().estimatedSize())
+        .isEqualTo(cache.synchronous().asMap().size());
+  }
 }

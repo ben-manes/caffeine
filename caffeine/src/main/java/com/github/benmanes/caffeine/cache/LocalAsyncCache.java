@@ -537,7 +537,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return asyncCache.cache().values();
     }
     @Override public Set<Entry<K, CompletableFuture<V>>> entrySet() {
-      return asyncCache.cache().entrySet();
+      return new AsyncEntrySet();
     }
     @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     @Override public boolean equals(@Nullable Object o) {
@@ -548,6 +548,85 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
     @Override public String toString() {
       return asyncCache.cache().toString();
+    }
+
+    private final class AsyncEntrySet extends AbstractSet<Entry<K, CompletableFuture<V>>> {
+      @Override public int size() {
+        return AsyncAsMapView.this.size();
+      }
+      @Override public boolean isEmpty() {
+        return AsyncAsMapView.this.isEmpty();
+      }
+      @Override public void clear() {
+        AsyncAsMapView.this.clear();
+      }
+      @Override public boolean contains(Object o) {
+        return asyncCache.cache().entrySet().contains(o);
+      }
+      @Override public boolean remove(Object o) {
+        return asyncCache.cache().entrySet().remove(o);
+      }
+      @Override public boolean removeAll(Collection<?> collection) {
+        return asyncCache.cache().entrySet().removeAll(collection);
+      }
+      @Override public boolean retainAll(Collection<?> collection) {
+        return asyncCache.cache().entrySet().retainAll(collection);
+      }
+      @Override public Iterator<Entry<K, CompletableFuture<V>>> iterator() {
+        return new AsyncEntryIterator();
+      }
+      @Override public Spliterator<Entry<K, CompletableFuture<V>>> spliterator() {
+        return new AsyncEntrySpliterator();
+      }
+    }
+
+    private final class AsyncEntryIterator implements Iterator<Entry<K, CompletableFuture<V>>> {
+      final Iterator<Entry<K, CompletableFuture<V>>> iterator =
+          asyncCache.cache().entrySet().iterator();
+
+      @Override public boolean hasNext() {
+        return iterator.hasNext();
+      }
+      @Override public Entry<K, CompletableFuture<V>> next() {
+        var entry = iterator.next();
+        return new WriteThroughEntry<>(AsyncAsMapView.this, entry.getKey(), entry.getValue());
+      }
+      @Override public void remove() {
+        iterator.remove();
+      }
+    }
+
+    private final class AsyncEntrySpliterator
+        implements Spliterator<Entry<K, CompletableFuture<V>>> {
+      final Spliterator<Entry<K, CompletableFuture<V>>> spliterator;
+
+      AsyncEntrySpliterator() {
+        this(asyncCache.cache().entrySet().spliterator());
+      }
+      AsyncEntrySpliterator(Spliterator<Entry<K, CompletableFuture<V>>> spliterator) {
+        this.spliterator = requireNonNull(spliterator);
+      }
+      @Override public boolean tryAdvance(Consumer<? super Entry<K, CompletableFuture<V>>> action) {
+        requireNonNull(action);
+        return spliterator.tryAdvance(entry -> action.accept(
+            new WriteThroughEntry<>(AsyncAsMapView.this, entry.getKey(), entry.getValue())));
+      }
+      @Override public void forEachRemaining(
+          Consumer<? super Entry<K, CompletableFuture<V>>> action) {
+        requireNonNull(action);
+        spliterator.forEachRemaining(entry -> action.accept(
+            new WriteThroughEntry<>(AsyncAsMapView.this, entry.getKey(), entry.getValue())));
+      }
+      @Override public @Nullable Spliterator<Entry<K, CompletableFuture<V>>> trySplit() {
+        var split = spliterator.trySplit();
+        return (split == null) ? null : new AsyncEntrySpliterator(split);
+      }
+      @Override public long estimateSize() {
+        return spliterator.estimateSize();
+      }
+      @Override public int characteristics() {
+        return spliterator.characteristics();
+      }
     }
   }
 

@@ -709,6 +709,71 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG, maximumSize = Maximum.FULL)
+  void evictionOrder_notAlive(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Mark nodes as dead while still in the access-order deques to exercise the
+    // comparator's !isAlive() guard for retired strong-key sentinels.
+    for (var node : cache.data.values()) {
+      node.die();
+    }
+    var result = cache.evictionOrder(/* hottest= */ false, identity(),
+        stream -> stream.collect(toImmutableList()));
+    assertThat(result).isEmpty();
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK, maximumSize = Maximum.FULL)
+  void evictionOrder_collectedKey(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Clear weak key references to simulate GC; nodes remain in the access-order
+    // deques. Exercises the comparator's keyRef == null branch.
+    for (var node : cache.data.values()) {
+      ((Reference<?>) node.getKeyReference()).clear();
+    }
+    var result = cache.evictionOrder(/* hottest= */ false, identity(),
+        stream -> stream.collect(toImmutableList()));
+    assertThat(result).isEmpty();
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
+  void addTask_retiredAfterSnapshot(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Mock a node where isAlive() returns true for the synchronized snapshot
+    // and false for the inner re-check, simulating a concurrent retire between
+    // the two reads. Exercises the !isAlive() branch of the sketch-increment
+    // guard at the AddTask.run path.
+    var calls = new MutableInt();
+    Node<Int, Int> node = Mockito.mock();
+    when(node.isAlive()).thenAnswer(inv -> calls.getAndIncrement() == 0);
+    when(node.getKeyReferenceOrNull()).thenReturn(context.absentKey());
+
+    cache.new AddTask(node, /* weight= */ 0).run();
+    assertThat(calls.get()).isEqualTo(2);
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
+  void addTask_collectedKeyAfterSnapshot(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Mock a node whose key reference reports null after the synchronized snapshot,
+    // simulating a weak/soft reference collected between AddTask creation and run.
+    // Exercises the keyRef == null branch of the sketch-increment guard.
+    Node<Int, Int> node = Mockito.mock();
+    when(node.isAlive()).thenReturn(true);
+    when(node.getKeyReferenceOrNull()).thenReturn(null);
+
+    cache.new AddTask(node, /* weight= */ 0).run();
+    // reset due to intentionally corrupting the internal state
+    requireNonNull(context.build(key -> key));
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.FULL)
   void equals_notAlive(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (var node : cache.data.values()) {
@@ -3072,6 +3137,128 @@ final class BoundedLocalCacheTest {
     assertThat(expiredNotifications).hasSize(1);
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON, keys = ReferenceType.STRONG,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT}, weigher = CacheWeigher.TEN,
+      maximumSize = Maximum.FULL, removalListener = Listener.CONSUMING,
+      executor = CacheExecutor.DIRECT)
+  void compute_collectedEntry_mappingThrows_evictionCommitted(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    node.setValue(nullValue(), cache.valueReferenceQueue());
+
+    assertThrows(IllegalStateException.class, () ->
+        cache.compute(context.firstKey(), (k, v) -> {
+          throw new IllegalStateException("compute failure");
+        }));
+
+    assertThat(cache).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(COLLECTED)
+        .contains(context.firstKey(), null).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON, keys = ReferenceType.STRONG,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT}, weigher = CacheWeigher.TEN,
+      maximumSize = Maximum.FULL, removalListener = Listener.CONSUMING,
+      executor = CacheExecutor.DIRECT)
+  void computeIfAbsent_collectedEntry_mappingThrows_evictionCommitted(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    node.setValue(nullValue(), cache.valueReferenceQueue());
+
+    assertThrows(IllegalStateException.class, () ->
+        cache.computeIfAbsent(context.firstKey(), k -> {
+          throw new IllegalStateException("mapping failure");
+        }));
+
+    assertThat(cache).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(COLLECTED)
+        .contains(context.firstKey(), null).exclusively();
+  }
+
+  @Test
+  void compute_expiredEntry_weigherThrows_evictionCommitted() {
+    var ticker = new FakeTicker();
+    var listener = new ConsumingRemovalListener<Int, Int>();
+    var throwOnWeigh = new AtomicBoolean();
+    var cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .weigher((Int k, Int v) -> {
+          checkState(!throwOnWeigh.get(), "weigher failure");
+          return v.intValue();
+        })
+        .removalListener(listener)
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumWeight(100)
+        .recordStats()
+        .build();
+
+    cache.put(Int.valueOf(1), Int.valueOf(7));
+    ticker.advance(Duration.ofMinutes(2));
+    throwOnWeigh.set(true);
+
+    assertThrows(IllegalStateException.class, () ->
+        cache.asMap().compute(Int.valueOf(1), (k, v) -> Int.valueOf(10)));
+
+    assertThat(cache.asMap()).doesNotContainKey(Int.valueOf(1));
+    assertThat(cache.stats().evictionWeight()).isEqualTo(7);
+    var expired = listener.removed().stream()
+        .filter(n -> n.getCause() == EXPIRED)
+        .collect(toImmutableList());
+    assertThat(expired).hasSize(1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON, keys = ReferenceType.STRONG,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT}, weigher = CacheWeigher.MOCKITO,
+      maximumSize = Maximum.FULL, removalListener = Listener.CONSUMING,
+      executor = CacheExecutor.DIRECT)
+  void compute_collectedEntry_weigherThrows_evictionCommitted(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
+    node.setValue(nullValue(), cache.valueReferenceQueue());
+    when(context.weigher().weigh(any(), any()))
+        .thenThrow(new IllegalStateException("weigher failure"));
+
+    assertThrows(IllegalStateException.class, () ->
+        cache.compute(context.firstKey(), (k, v) -> context.absentValue()));
+
+    assertThat(cache).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(COLLECTED)
+        .contains(context.firstKey(), null).exclusively();
+  }
+
+  @Test
+  void replaceConditionally_weigherThrows_wrongOldValue() {
+    var throwOnWeigh = new AtomicBoolean();
+    var listener = new ConsumingRemovalListener<Int, Int>();
+    var cache = Caffeine.newBuilder()
+        .weigher((Int k, Int v) -> {
+          checkState(!throwOnWeigh.get(), "weigher failure");
+          return v.intValue();
+        })
+        .removalListener(listener)
+        .executor(Runnable::run)
+        .maximumWeight(100)
+        .recordStats()
+        .build();
+
+    cache.put(Int.valueOf(1), Int.valueOf(7));
+    throwOnWeigh.set(true);
+
+    // The weigher is invoked before the data.computeIfPresent lookup, by design: user
+    // code is kept out of the bin's critical section. A buggy weigher therefore throws
+    // even when the value-equality check would have made the replacement a no-op.
+    assertThrows(IllegalStateException.class, () ->
+        cache.asMap().replace(Int.valueOf(1), Int.valueOf(99), Int.valueOf(10)));
+
+    // The mapping should not have changed, since no replace took place.
+    assertThat(cache.asMap()).containsEntry(Int.valueOf(1), Int.valueOf(7));
+    assertThat(listener.removed()).isEmpty();
+  }
+
   @Test
   @CheckMaxLogLevel(WARN)
   void asyncCompletion_expiryThrows_entryRemoved() {
@@ -4868,6 +5055,39 @@ final class BoundedLocalCacheTest {
     testForBrokenEquality(cache, context, key -> {
       boolean removed = cache.remove(key, context.absentValue());
       assertThat(removed).isTrue();
+    });
+  }
+
+  @ParameterizedTest
+  @CheckMaxLogLevel(ERROR)
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  void brokenEquality_compute(
+      BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
+    testForBrokenEquality(cache, context, key -> {
+      var value = cache.compute(key, (k, v) -> context.absentValue().negate());
+      assertThat(value).isEqualTo(context.absentValue().negate());
+    });
+  }
+
+  @ParameterizedTest
+  @CheckMaxLogLevel(ERROR)
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  void brokenEquality_computeIfAbsent(
+      BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
+    testForBrokenEquality(cache, context, key -> {
+      var value = cache.computeIfAbsent(key, k -> context.absentValue().negate());
+      assertThat(value).isEqualTo(context.absentValue().negate());
+    });
+  }
+
+  @ParameterizedTest
+  @CheckMaxLogLevel(ERROR)
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  void brokenEquality_merge(
+      BoundedLocalCache<MutableInt, Int> cache, CacheContext context) {
+    testForBrokenEquality(cache, context, key -> {
+      var value = cache.merge(key, context.absentValue().negate(), (a, b) -> b);
+      assertThat(value).isEqualTo(context.absentValue().negate());
     });
   }
 
