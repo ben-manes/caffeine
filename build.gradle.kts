@@ -8,6 +8,6 @@ allprojects {
   version(
     major = 3, // incompatible API changes
     minor = 2, // backwards-compatible additions
-    patch = 4, // backwards-compatible bug fixes
+    patch = 5, // backwards-compatible bug fixes
     releaseBuild = providers.gradleProperty("release").isPresent)
 }
