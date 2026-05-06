@@ -1,0 +1,80 @@
+You are auditing a Java caching library's git history for bugs.
+You walk commits chronologically and maintain a forward-looking issue database.
+At each commit you flag concerns; later commits either resolve them or they survive to HEAD as candidate bugs.
+
+CURRENT COMMIT
+  sha:     $sha
+  date:    $date
+  message: $message
+  files in scope changed: $files
+
+DIFF (scoped to caffeine/src/main/java/com/github/benmanes/caffeine/cache/):
+$diff
+
+CURRENTLY-OPEN ISSUES TOUCHING FILES THIS COMMIT CHANGES:
+$open_issues
+
+(Issues touching unaffected files exist but are hidden to keep prompt size bounded.)
+
+TOOL ACCESS
+$tool_instructions
+
+OUTPUT JSON (and nothing else — no prose, no code fences):
+{
+  "resolved": [{"id": "...", "evidence": "diff line/hunk that fixes it"}],
+  "modified": [{"id": "...", "update": "contract change in this diff that ripples to this issue"}],
+  "new":      [{"description":"...", "files":["BoundedLocalCache.java", ...], "bug_witness":"...", "confidence":"high|med|low", "pattern_match":"P<n>|null"}]
+}
+
+PATTERN CATALOG (PRIORS — high-yield shapes that have recurred in this codebase. NOT exhaustive. Flag anything bug-shaped, including concerns that don't match any of these. Set pattern_match=null for novel issues.):
+  P1.  Operator-order in arithmetic — (x>>>1)-(y>>>2) should be (x-(y>>>2))>>>1; "now-time+duration" should be "duration-(now-time)"
+  P2.  Sibling divergence — guard added in path A; new path B in this diff omits it (sync vs async, single vs bulk, Function vs BiFunction)
+  P3.  Wrong reference picked — multiple same-typed locals in scope (oldValue/newValue, victim/candidate, promoted/demoted, weight/oldWeight); chosen variable doesn't match operation intent
+  P4.  Sentinel collision — config field uses 0/-1/MAX_VALUE as "unset" while accepting it as valid input
+  P5.  Missing lifecycle guard — node.isAlive() / isComputingAsync(value) / hasExpired skipped before write/notify/sketch update
+  P6.  Snapshot-too-late — collection.size() or iteration after the collection mutated; iterate-and-mutate via reentrant listener
+  P7.  Int overflow — int+int silent wrap, (int)cast outside Math.min, now-time can be negative for in-flight async
+  P8.  Identity vs equality in weak/soft views — o.equals(value) where identity required
+  P9.  Iterator/spliterator non-progress — tryAdvance returns true even after filter skipped
+  P10. Catch-type narrowness — RuntimeException|Error misses sneaky-throw; whenComplete BiConsumer can't propagate
+  P11. Wrong API call — size() vs estimatedSize(), getKey() vs getKeyReference(), plain vs acquire reads
+  P12. Inverted boolean / missing escape — multi-clause condition with one branch missed; missing default return after if-only path
+
+OTHER BUG SHAPES TO WATCH FOR (non-exhaustive examples — these don't have catalog codes, but are equally flaggable):
+  - Race conditions, memory model violations (missing volatile / acquire / release)
+  - API contract drift (Javadoc says X, code does Y)
+  - Resource leaks (unclosed future, abandoned in-flight task, listener not unregistered)
+  - Cache invariant violations (eviction policy / weight / size book-keeping desync)
+  - Listener firing order / duplicate firing / skipped firing
+  - Recursion / re-entrancy hazards in user-callback paths
+  - Numerical precision, time-source assumptions, scheduling assumptions
+  - Anything else that has a concrete bug_witness — pattern_match=null is fine
+
+DESIGN PRIORS (intentional patterns documented in .claude/docs/design-decisions.md and cross_model_audit_results.md — DO NOT flag a diff that matches one of these):
+  - Lossy/best-effort: read buffer drops, approximate frequency counts, eventual consistency, transient negative weightedSize, size() is documented as estimate, expiration is amortized not instant, no debug-mode assertions
+  - Refresh is lock-free and best-effort: refreshIfNeeded reads writeTime/getKey/getValue/isAlive without synchronized(node); one extra loader call per rare interleaving is acceptable; discardRefresh over-aggressively invalidates concurrent refresh generations (correct for linearizability); writeTime ABA check is legacy extra-safety, not load-bearing for refresh
+  - Async listeners fire only on resolved values: AsyncRemovalListener.onRemoval uses thenAccept and silently drops exceptional/cancelled futures; AsyncEvictionListener uses Async.getIfReady and skips in-flight/exceptional; analogous to "Async REPLACED only fires if the old value resolves"
+  - LoadingCache.refresh and refreshAll Javadoc "exception logged and swallowed" refers to the cache MAPPING (failed reload leaves previous value in place, not removed); the returned future itself can still complete exceptionally — that's the caller-observable signal
+  - AsyncCache.synchronous().asMap() query/mutation split: containsKey/get/iteration/containsValue treat in-flight as absent (logical); KeySet.remove/removeAll/removeIf/retainAll and EntryIterator.remove operate physically on the raw delegate map. Inherent sync-over-async tradeoff
+  - LocalAsyncCache.put(k, null-or-failed-future) calls unconditional cache().remove(key) — by design, last-writer-wins
+  - Weight=0 is a pinning feature (not eligible for eviction)
+  - Weak/soft references: cleared refs are eventually drained by drainKeyReferences/drainValueReferences; cleared-ref equals returning true for two cleared refs is harmless because CHM indexes by stored hash; remove on a cleared key is harmless because lookup misses
+  - accessTime uses opaque write (no CAS) by design; backward movement = benign early expiration. writeTime uses plain write under synchronized(node)
+  - notifyEviction is called BEFORE user code; catch-commit-rethrow handles user-thrown exceptions in mappingFunction/weigher/expiry. Same-instance return from compute/merge skips setValue but still updates weight/accessTime/variableTime/writeTime (intentional)
+  - ASYNC_EXPIRY ~220 years and MAXIMUM_EXPIRY ~150 years are durations, not absolute times. hasExpired uses (now - variableTime) >= 0 signed subtraction (overflow-safe)
+  - CHM bin blocking on slow loaders is not a Caffeine bug; no close() by design (cache is GC-eligible when unreferenced)
+  - asMap() iteration is not a cache read (does not update access times or frequency)
+  - WriteThroughEntry.setValue is not fully atomic — documented per Map contract
+  - Serialization proxy hardening (readObject/readObjectNoData) is defense-in-depth, not a bug if absent — cache is not designed for adversarial deserialization
+
+RULES
+- bug_witness REQUIRED on every new entry: a concrete input or scenario that triggers the failure. Acceptance test: a competent developer should be able to write a failing unit test from your bug_witness alone, without having to fill in "and then somehow X happens". If your witness is "under certain conditions" or "if X were called with Y" without explaining how Y arises from the public API, drop the finding.
+- DEFENSIVE-CODING ABSENCE IS NOT A BUG. Missing null/range/state checks against inputs the public API cannot produce are not bugs. The bug_witness must trace from a real public API call, not from "if a caller violated the contract".
+- confidence: "high" = reproducible failure mode; "med" = pattern matches but trigger is uncommon; "low" = smell only (will be auto-decayed).
+- A commit RESOLVES an open issue when it adds the missing guard, fixes the operator order, restores symmetry to a divergent sibling, or refactors the affected code path out of existence.
+- A commit MODIFIES an open issue when it changes the contract of code referenced by the issue (low-level method gains a throw / null / new exception type) — the issue may now be MORE dangerous.
+- DO NOT flag: style/format/naming, javadoc-only changes, behavior-preserving refactors, items already in the open list (look first), anything matching DESIGN PRIORS above.
+- If the diff is pure docs/style/build/deps/imports/copyright, output {"resolved":[],"modified":[],"new":[]} and stop.
+- If the diff is truncated (you'll see [DIFF TRUNCATED]), focus on what you saw and don't speculate about omitted regions.
+
+Output JSON only. Do not include prose, explanations, or markdown code fences. Your entire response must be a single JSON object starting with an open brace and ending with a close brace.

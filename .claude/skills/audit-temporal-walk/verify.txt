@@ -1,0 +1,83 @@
+You are verifying whether a tracked concern still exists in current code.
+We walked git history forward from the introducing commit and never observed
+the concern being resolved. Your job: judge against current HEAD.
+
+ISSUE
+$issue_block
+
+HISTORY (forward-tracked across commits)
+$history_block
+
+CURRENT CODE AT AFFECTED LOCATIONS (HEAD)
+$code_block
+
+CROSS-CHECK SOURCES (the most relevant excerpts are below; the full files
+are too large to include, but you may rely on the descriptions)
+
+design-decisions.md (intentional patterns — do NOT flag these as bugs):
+$design_decisions
+
+cross_model_audit_results.md (known false positives — do NOT re-flag):
+$known_fps
+
+YOUR TASK
+
+1. Read the bug witness. Does the input/scenario it describes still produce
+   the failure mode in the CURRENT CODE shown above?
+2. If the affected method/class no longer exists, has been refactored, or
+   has been moved/renamed such that the witness no longer applies, return
+   verdict="implicitly_resolved".
+3. If the pattern is documented as intentional in design-decisions.md or
+   matches a known false positive, return verdict="false_positive".
+4. Otherwise verdict="still_exists" and produce a detail.dev-format finding.
+
+GROUNDING RULES (violations of any of these mean you must NOT return
+"still_exists"):
+- The CURRENT CODE block is the only source of truth for HEAD. If the
+  affected method, class, or symbol from the issue does NOT appear in
+  CURRENT CODE, return "implicitly_resolved" — the file may have been
+  renamed, refactored, or removed.
+- Any code you quote in `finding_markdown` must be COPIED VERBATIM from
+  CURRENT CODE. Do not paraphrase, do not reconstruct from training,
+  do not invent file paths or method names.
+- The file path you cite in the finding must be one of the files shown
+  in CURRENT CODE — never a historical file name from the issue's
+  `files` field if it was renamed.
+- Trace the bug witness step by step through the shown code. If you
+  cannot point to the specific lines in CURRENT CODE that produce the
+  failure, return "implicitly_resolved".
+- If CURRENT CODE shows a guard, sibling fix, or refactor that prevents
+  the witness's failure path, return "implicitly_resolved" and explain
+  what guards it.
+
+OUTPUT JSON ONLY (no prose, no markdown fences). Schema:
+{
+  "verdict": "still_exists" | "implicitly_resolved" | "false_positive",
+  "explanation": "1-3 sentences justifying the verdict against the current code",
+  "finding_markdown": "<empty string if not still_exists, otherwise detail.dev-format>"
+}
+
+When verdict = "still_exists", `finding_markdown` MUST contain these sections
+in this order, separated by blank lines (use markdown headings exactly as shown):
+
+### Summary
+One paragraph: what the bug is, and the smallest reproducer scenario.
+
+### Code with bug
+File path (no line numbers — they go stale). A short code excerpt with the
+buggy line marked with `// <-- BUG` or similar.
+
+### Explanation
+Why the witness produces the failure. If a sibling/peer method handles it
+correctly, add a `#### Codebase Inconsistency` subsection that quotes the
+sibling's correct shape.
+
+### Recommended fix
+Specific change. Code if it's small.
+
+History/lineage is attached automatically by the driver — do NOT restate it.
+
+Be ruthless about "implicitly_resolved" and "false_positive". The whole point
+of this pass is to filter the surviving open list down to bugs you can defend
+against current code with a concrete witness. If you're not sure, lean
+"implicitly_resolved" with the reason you're unsure.

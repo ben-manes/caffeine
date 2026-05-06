@@ -12,6 +12,7 @@ jitwatch.out
 .claude/agent-memory*/
 .claude/worktrees/
 .claude/reports/
+__pycache__/
 .opencode/
 .agents/
 .codex/
@@ -25,6 +26,7 @@ AGENTS*.md
 .vscode
 .idea
 *.iml
+*.pyc
 *.lock
 *.hprof
 crash-*
