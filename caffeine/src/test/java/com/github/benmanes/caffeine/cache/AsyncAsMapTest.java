@@ -56,6 +56,7 @@ import static org.slf4j.event.Level.ERROR;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
+import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1415,6 +1416,17 @@ final class AsyncAsMapTest {
     assertThat(future).succeedsWith(context.firstKey().negate());
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  void computeIfPresent_throwsCheckedException(AsyncCache<Int, Int> cache, CacheContext context) {
+    var expected = new IOException();
+    var actual = assertThrows(IOException.class, () -> cache.asMap().computeIfPresent(
+        context.firstKey(), (key, value) -> { throw uncheckedThrow(expected); }));
+    assertThat(actual).isSameInstanceAs(expected);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
+  }
+
   @CheckNoStats
   @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -1551,6 +1563,17 @@ final class AsyncAsMapTest {
 
     var future = context.absentKey().negate().toFuture();
     assertThat(cache.asMap().compute(context.absentKey(), (k, v) -> future)).isEqualTo(future);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void compute_throwsCheckedException(AsyncCache<Int, Int> cache, CacheContext context) {
+    var expected = new IOException();
+    var actual = assertThrows(IOException.class, () -> cache.asMap().compute(
+        context.absentKey(), (key, value) -> { throw uncheckedThrow(expected); }));
+    assertThat(actual).isSameInstanceAs(expected);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
   }
 
   @CheckNoStats
@@ -1744,6 +1767,20 @@ final class AsyncAsMapTest {
     var result = cache.asMap().merge(context.firstKey(), future,
         (oldValue, value) -> context.absentValue().toFuture());
     assertThat(result).succeedsWith(context.absentValue());
+  }
+
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void merge_throwsCheckedException(AsyncCache<Int, Int> cache, CacheContext context) {
+    var key = context.firstKey();
+    var expected = new IOException();
+    var actual = assertThrows(IOException.class, () -> cache.asMap().merge(
+        key, key.toFuture(), (oldValue, value) -> { throw uncheckedThrow(expected); }));
+    assertThat(actual).isSameInstanceAs(expected);
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
   }
 
   @ParameterizedTest
@@ -3637,5 +3674,10 @@ final class AsyncAsMapTest {
     @Override public int hashCode() {
       return System.identityHashCode(this);
     }
+  }
+
+  @SuppressWarnings({"TypeParameterUnusedInFormals", "unchecked"})
+  private static <E extends Throwable> E uncheckedThrow(Throwable throwable) throws E {
+    throw (E) throwable;
   }
 }

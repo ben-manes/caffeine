@@ -219,7 +219,7 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
       long startTime = statsTicker().read();
       try {
         result = remappingFunction.apply(t, u);
-      } catch (RuntimeException | Error e) {
+      } catch (Throwable e) {
         if (recordLoadFailure) {
           statsCounter().recordLoadFailure(statsTicker().read() - startTime);
         }

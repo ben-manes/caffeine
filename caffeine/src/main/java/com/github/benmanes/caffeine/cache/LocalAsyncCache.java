@@ -264,7 +264,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       var failure = handleResponse(result, error);
 
       if (failure == null) {
-        cache.statsCounter().recordLoadSuccess(loadTime);
+        if ((result == null) || result.isEmpty()) {
+          cache.statsCounter().recordLoadFailure(loadTime);
+        } else {
+          cache.statsCounter().recordLoadSuccess(loadTime);
+        }
         return result;
       }
 

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.guava;
 
+import static com.github.benmanes.caffeine.guava.CaffeinatedGuava.caffeinate;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -27,9 +28,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Stream;
 
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.CaffeinatedLoader;
@@ -38,6 +42,8 @@ import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.ExternalS
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.InternalBulkLoader;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.InternalSingleLoader;
 import com.google.common.base.Function;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.LoadingCache;
@@ -79,6 +85,17 @@ final class CaffeinatedGuavaTest {
   @Test
   void hasMethod_notFound() {
     assertThat(CaffeinatedGuava.hasMethod(CacheLoader.from(k -> k), "abc")).isFalse();
+  }
+
+  @ParameterizedTest
+  @MethodSource("caches")
+  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
+  void asMap_get_null(Cache<Integer, Integer> cache) {
+    cache.put(1, 2);
+
+    assertThat(cache.asMap().get(null)).isNull();
+    assertThat(cache.asMap().containsKey(null)).isFalse();
+    assertThat(cache.asMap().containsValue(null)).isFalse();
   }
 
   @Test
@@ -269,6 +286,40 @@ final class CaffeinatedGuavaTest {
     checkBulkLoader(error, caffeine);
   }
 
+  @ParameterizedTest
+  @MethodSource("bulkLoadingCaches")
+  void cacheLoader_bulk_nullValue(
+      Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
+    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        var result = new HashMap<Integer, Integer>();
+        for (var key : keys) {
+          result.put(key, null);
+        }
+        return result;
+      }
+    });
+    assertThrows(InvalidCacheLoadException.class, () -> cache.getAll(ImmutableList.of(1, 2, 3)));
+  }
+
+  @ParameterizedTest
+  @MethodSource("bulkLoadingCaches")
+  void cacheLoader_bulk_nullMap(
+      Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
+    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        return nullRef();
+      }
+    });
+    assertThrows(InvalidCacheLoadException.class, () -> cache.getAll(ImmutableList.of(1, 2, 3)));
+  }
+
   @Test
   void cacheLoader_reload() throws Exception {
     var reloader = SettableFuture.<Integer>create();
@@ -310,6 +361,18 @@ final class CaffeinatedGuavaTest {
 
     var e = assertThrows(CompletionException.class, future::join);
     assertThat(e).hasCauseThat().isSameInstanceAs(error);
+  }
+
+  static Stream<Cache<String, String>> caches() {
+    return Stream.of(CacheBuilder.newBuilder().build(),
+        CaffeinatedGuava.build(Caffeine.newBuilder()));
+  }
+
+  static Stream<Function<CacheLoader<?, ?>, LoadingCache<?, ?>>> bulkLoadingCaches() {
+    return Stream.of(
+        loader -> CacheBuilder.newBuilder().build(loader),
+        loader -> CaffeinatedGuava.build(Caffeine.newBuilder(), loader),
+        loader -> CaffeinatedGuava.build(Caffeine.newBuilder(), caffeinate(loader)));
   }
 
   @SuppressWarnings("PMD.SignatureDeclareThrowsException")

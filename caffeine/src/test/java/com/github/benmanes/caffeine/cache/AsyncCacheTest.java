@@ -932,6 +932,16 @@ final class AsyncCacheTest {
     assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
   }
 
+  @CacheSpec
+  @ParameterizedTest
+  void getAllBifunction_absent_emptyMap(AsyncCache<Int, Int> cache, CacheContext context) {
+    var result = cache.getAll(context.absentKeys(), (keys, executor) ->
+        CompletableFuture.completedFuture(Map.of())).join();
+    assertThat(result).isEmpty();
+    int count = context.absentKeys().size();
+    assertThat(context).stats().hits(0).misses(count).success(0).failures(1);
+  }
+
   @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DISABLED, Listener.REJECTING })

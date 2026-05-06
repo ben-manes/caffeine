@@ -59,6 +59,7 @@ import static org.slf4j.event.Level.ERROR;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
+import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
@@ -1264,6 +1265,16 @@ final class AsMapTest {
         .isEqualTo(context.firstKey().negate());
   }
 
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  void computeIfPresent_throwsCheckedException(Map<Int, Int> map, CacheContext context) {
+    assertThrows(IOException.class, () -> map.computeIfPresent(context.firstKey(),
+        (key, value) -> { throw uncheckedThrow(new IOException()); }));
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
+  }
+
   @CheckNoStats
   @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
@@ -1416,6 +1427,16 @@ final class AsMapTest {
     assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
     assertThat(map.compute(context.absentKey(), (k, v) -> intern(k.negate())))
         .isEqualTo(context.absentKey().negate());
+  }
+
+  @CacheSpec
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  void compute_throwsCheckedException(Map<Int, Int> map, CacheContext context) {
+    assertThrows(IOException.class, () -> map.compute(context.absentKey(),
+        (key, value) -> { throw uncheckedThrow(new IOException()); }));
+    assertThat(map).isEqualTo(context.original());
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
   }
 
   @ParameterizedTest
@@ -1598,6 +1619,18 @@ final class AsMapTest {
     assertThrows(ExpectedError.class, () ->
         map.merge(context.firstKey(), context.original().get(context.firstKey()),
             (oldValue, value) -> { throw ExpectedError.INSTANCE; }));
+    assertThat(map).containsExactlyEntriesIn(context.original());
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
+  }
+
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void merge_throwsCheckedException(Map<Int, Int> map, CacheContext context) {
+    assertThrows(IOException.class, () ->
+        map.merge(context.firstKey(), context.original().get(context.firstKey()),
+            (oldValue, value) -> { throw uncheckedThrow(new IOException()); }));
     assertThat(map).containsExactlyEntriesIn(context.original());
     assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
   }
@@ -3996,5 +4029,10 @@ final class AsMapTest {
     @Override public int hashCode() {
       return System.identityHashCode(this);
     }
+  }
+
+  @SuppressWarnings({"TypeParameterUnusedInFormals", "unchecked"})
+  private static <E extends Throwable> E uncheckedThrow(Throwable throwable) throws E {
+    throw (E) throwable;
   }
 }

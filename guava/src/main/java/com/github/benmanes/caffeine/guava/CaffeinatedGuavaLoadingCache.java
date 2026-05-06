@@ -232,8 +232,18 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     ExternalBulkLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
       super(cacheLoader);
     }
+    @SuppressWarnings("ConstantValue")
     @Override public Map<K, V> loadAll(Set<? extends K> keys) throws Exception {
-      return cacheLoader.loadAll(keys);
+      Map<K, V> loaded = cacheLoader.loadAll(keys);
+      if (loaded == null) {
+        throw new InvalidCacheLoadException("null map");
+      }
+      for (var value : loaded.values()) {
+        if (value == null) {
+          throw new InvalidCacheLoadException("null value");
+        }
+      }
+      return loaded;
     }
   }
 
