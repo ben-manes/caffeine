@@ -21,5 +21,6 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
 - **`Pacer.calculateSchedule` bumps a would-be 0L result to 1L** — `nextFireTime = 0L` is the unscheduled sentinel. Don't remove the guard.
 - **`LoadingCache.getAll` partial-commits valid entries when `loadAll` returns nulls** — the Javadoc's "the mapping is left unestablished" is singular; only invalid (null) mappings are dropped, valid ones are retained.
 - **`Caffeine.from(CaffeineSpec)` disables strict parsing** — mirrors Guava's `CacheBuilderSpec`; permits programmatic overrides like adding a weigher after `maximumSize`. The footgun of disabled eviction is accepted.
+- **`BoundedLocalCache.equals` uses size + iterate-this + count==expectedSize**, not CHM-style two-sided iteration. AbstractMap-style is symmetric with the most common comparison target (HashMap), `BLC.size()` is reliable enough that the prescreen earns its keep, and O(n) beats O(n+m). The `count == expectedSize` postcondition catches the f6071dd race shape: maintenance trimming dead entries between the size prescreen and iteration would otherwise yield a silent false-true on the surviving subset. Don't propose CHM's no-size two-sided iteration here. The same pattern is mirrored in `LocalAsyncCache.AsMapView.equals` (the future-typed view).
 
 For full rationale, see `.claude/docs/design-decisions.md`

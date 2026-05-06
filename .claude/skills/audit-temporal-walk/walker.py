@@ -108,6 +108,48 @@ def extract_balanced_json(text: str, required_keys: tuple[str, ...]) -> dict:
             continue
         if isinstance(obj, dict) and any(k in obj for k in required_keys):
             return obj
+
+    # Repair-fallback for trailing-brace truncation. The walker has observed
+    # the model emitting a complete-looking response (stop_reason=end_turn)
+    # whose tail is missing a closing `}` or `]` — the prefix is well-formed
+    # but the outer object never balances. Re-walk the first `{` tracking the
+    # bracket stack; if the text ended at depth>0, append the matching
+    # closers and try once more.
+    start = text.find("{")
+    if start != -1:
+        stack: list[str] = []
+        in_str = False
+        escape = False
+        last_complete = start  # last index where stack was empty
+        for j in range(start, n):
+            ch = text[j]
+            if in_str:
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif ch == '"':
+                    in_str = False
+                continue
+            if ch == '"':
+                in_str = True
+            elif ch in "{[":
+                stack.append(ch)
+            elif ch in "}]":
+                if stack:
+                    stack.pop()
+                if not stack:
+                    last_complete = j + 1
+        if stack:
+            tail = text[start:].rstrip().rstrip(",")
+            repair = "".join("}" if c == "{" else "]" for c in reversed(stack))
+            try:
+                obj = json.loads(tail + repair)
+                if isinstance(obj, dict) and any(k in obj for k in required_keys):
+                    return obj
+            except json.JSONDecodeError:
+                pass
+
     raise ValueError(f"No parseable response JSON found in: {text[:600]}")
 
 
@@ -138,7 +180,9 @@ def ensure_worktree() -> Path:
     if WORKTREE_DIR.exists():
         # Stale dir without a worktree linkage — clear and re-create.
         shutil.rmtree(WORKTREE_DIR)
-        run_git("worktree", "prune")
+    # Prune unconditionally: handles both "stale dir" and "dir gone but
+    # registration survives" cases. No-op if nothing to prune.
+    run_git("worktree", "prune")
     WORKTREE_DIR.parent.mkdir(parents=True, exist_ok=True)
     run_git("worktree", "add", "--detach", str(WORKTREE_DIR), "HEAD")
     return WORKTREE_DIR
@@ -184,6 +228,28 @@ def commit_diff(sha: str) -> str:
 def issue_id(description: str, first_seen: str) -> str:
     h = hashlib.sha256(f"{description}|{first_seen}".encode()).hexdigest()[:8]
     return f"iss_{h}"
+
+
+def normalize_files(files: list[str]) -> list[str]:
+    """Strip the configured SCOPE prefix from issue file paths and remove any
+    leading slash. The model is asked to emit scope-relative names but
+    sometimes returns scope-prefixed or absolute paths; storing canonical
+    relative paths keeps the open-issue filter (which matches against
+    commit_metadata's scope-stripped file list) reliable."""
+    out: list[str] = []
+    for f in files:
+        s = (f or "").strip()
+        if not s:
+            continue
+        if s.startswith(SCOPE):
+            s = s[len(SCOPE):]
+        elif "/" + SCOPE in ("/" + s):
+            idx = s.find(SCOPE)
+            if idx >= 0:
+                s = s[idx + len(SCOPE):]
+        s = s.lstrip("/")
+        out.append(s)
+    return out
 
 
 def init_state(state_path: Path, commits: list[str]) -> dict:
@@ -237,6 +303,13 @@ def load_state(state_path: Path) -> dict:
             issue["times_touched"] = sum(
                 1 for h in issue.get("history", []) if h.get("action") == "modified"
             )
+
+    # Normalize issue file paths to scope-relative form. Older entries may
+    # have stored scope-prefixed or absolute paths, which the open-issue
+    # filter (matching against scope-stripped commit_metadata files) would
+    # never hit, hiding resolutions.
+    for issue in state.get("issues", {}).values():
+        issue["files"] = normalize_files(issue.get("files", []))
 
     # Migrate older `commits_doc_only` stat key to `commits_no_changes`.
     stats = state.setdefault("stats", {})
@@ -314,12 +387,14 @@ def render_prompt(template: string.Template, sha: str, date: str, message: str,
 # Claude CLI
 # --------------------------------------------------------------------------
 
-def call_claude(prompt: str, model: str | None, log_dir: Path, sha: str,
-                cwd: Path | None, tools: str) -> dict:
+def call_claude(prompt: str, model: str | None, effort: str | None,
+                log_dir: Path, sha: str, cwd: Path | None, tools: str) -> dict:
     log_dir.mkdir(parents=True, exist_ok=True)
     cmd = ["claude", "-p"]
     if model is not None:
         cmd += ["--model", model]
+    if effort is not None:
+        cmd += ["--effort", effort]
     cmd += [
         "--no-session-persistence",
         "--tools", tools,
@@ -327,7 +402,7 @@ def call_claude(prompt: str, model: str | None, log_dir: Path, sha: str,
         "--output-format", "json",
     ]
     proc = subprocess.run(
-        cmd, input=prompt, capture_output=True, text=True, timeout=900,
+        cmd, input=prompt, capture_output=True, text=True, timeout=1800,
         cwd=str(cwd) if cwd is not None else None,
     )
     (log_dir / f"{sha}.raw.json").write_text(proc.stdout)
@@ -389,7 +464,7 @@ def apply_response(response: dict, state: dict, sha: str, date: str
         issues[iid] = {
             "id": iid,
             "description": desc,
-            "files": n.get("files", []),
+            "files": normalize_files(n.get("files", [])),
             "first_seen_commit": sha,
             "first_seen_date": date,
             "last_updated_commit": sha,
@@ -425,6 +500,12 @@ def main() -> None:
         "--model", default=None,
         help="Claude model alias or full name. If omitted, uses the claude "
              "CLI's default (the session model).")
+    parser.add_argument(
+        "--effort", default=None,
+        choices=["low", "medium", "high", "xhigh", "max"],
+        help="Reasoning effort level for the inner model. Higher levels "
+             "use more thinking tokens per commit; 'max' is appropriate "
+             "for a heavyweight rare-run audit.")
     parser.add_argument(
         "--max-commits", type=int, default=None,
         help="Process at most N commits this run, then exit cleanly.")
@@ -501,8 +582,8 @@ def main() -> None:
             if worktree is not None:
                 checkout_at(worktree, sha)
             prompt = render_prompt(template, sha, date, message, files, state, worktree)
-            response = call_claude(prompt, args.model, args.log_dir, sha,
-                                   cwd=worktree, tools=tools)
+            response = call_claude(prompt, args.model, args.effort,
+                                   args.log_dir, sha, cwd=worktree, tools=tools)
             n_new, n_res, n_mod = apply_response(response, state, sha, date)
 
             state["checkpoint"]["last_processed_commit"] = sha

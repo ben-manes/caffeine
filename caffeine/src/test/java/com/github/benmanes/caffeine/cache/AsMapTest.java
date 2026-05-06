@@ -91,6 +91,7 @@ import org.mockito.Mockito;
 import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
 import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.testing.ExpectedError;
@@ -1835,6 +1836,30 @@ final class AsMapTest {
     assertThat(map.equals(empty)).isFalse();
     assertThat(empty.equals(map)).isFalse();
     assertThat(map.hashCode()).isNotEqualTo(empty.hashCode());
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = { Population.PARTIAL, Population.FULL },
+      maximumSize = Maximum.UNREACHABLE,
+      removalListener = Listener.DISABLED)
+  void equals_dropsLiveEntriesDuringTraversal(Cache<Int, Int> cache, CacheContext context) {
+    // The argument map's size() invalidates two cache entries before reporting its size,
+    // simulating concurrent maintenance trimming dead entries between BoundedLocalCache.equals'
+    // size prescreen and the data.values() iteration. The traversal then visits fewer than
+    // expectedSize entries and they all match (since the argument retains all originals); the
+    // count postcondition is what catches the divergence.
+    var keys = List.copyOf(context.original().keySet());
+    var sideEffect = new HashMap<Int, Int>(context.original()) {
+      private static final long serialVersionUID = 1;
+      @Override public int size() {
+        cache.invalidate(keys.get(0));
+        cache.invalidate(keys.get(1));
+        return super.size();
+      }
+    };
+    assertThat(cache.asMap().equals(sideEffect)).isFalse();
   }
 
   /* --------------- toString --------------- */

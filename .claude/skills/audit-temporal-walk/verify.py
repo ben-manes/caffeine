@@ -250,11 +250,14 @@ def render_prompt(template: string.Template, issue: dict,
 # Claude CLI
 # --------------------------------------------------------------------------
 
-def call_claude(prompt: str, model: str | None, log_dir: Path, iid: str) -> dict:
+def call_claude(prompt: str, model: str | None, effort: str | None,
+                log_dir: Path, iid: str) -> dict:
     log_dir.mkdir(parents=True, exist_ok=True)
     cmd = ["claude", "-p"]
     if model is not None:
         cmd += ["--model", model]
+    if effort is not None:
+        cmd += ["--effort", effort]
     cmd += [
         "--no-session-persistence",
         "--tools", "",
@@ -262,7 +265,7 @@ def call_claude(prompt: str, model: str | None, log_dir: Path, iid: str) -> dict
         "--output-format", "json",
     ]
     proc = subprocess.run(
-        cmd, input=prompt, capture_output=True, text=True, timeout=900,
+        cmd, input=prompt, capture_output=True, text=True, timeout=1800,
     )
     (log_dir / f"{iid}.raw.json").write_text(proc.stdout)
     if proc.returncode != 0:
@@ -348,6 +351,10 @@ def main() -> None:
         "--model", default=None,
         help="Claude model alias or full name. If omitted, uses the claude "
              "CLI's default (the session model).")
+    parser.add_argument(
+        "--effort", default=None,
+        choices=["low", "medium", "high", "xhigh", "max"],
+        help="Reasoning effort level for the verifier model.")
     parser.add_argument("--min-confidence", choices=["high", "med", "low"],
                         default="med")
     parser.add_argument("--max-issues", type=int, default=None)
@@ -393,7 +400,8 @@ def main() -> None:
         try:
             prompt = render_prompt(template, issue, design_excerpt, fps_excerpt)
             t0 = time.time()
-            result = call_claude(prompt, args.model, args.log_dir, iid)
+            result = call_claude(prompt, args.model, args.effort,
+                                 args.log_dir, iid)
             elapsed = time.time() - t0
             verified[iid] = result
             save_verified(verified, args.verified)

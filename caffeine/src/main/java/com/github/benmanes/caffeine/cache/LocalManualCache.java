@@ -73,16 +73,19 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
       Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     requireNonNull(mappingFunction);
 
-    var found = cache().getAllPresent(keys);
     int initialCapacity = calculateHashMapCapacity(keys);
-    var keysToLoad = new LinkedHashSet<K>(initialCapacity);
     var result = new LinkedHashMap<K, @Nullable V>(initialCapacity);
     for (K key : keys) {
-      V value = found.get(key);
+      result.put(key, null);
+    }
+    var keysToLoad = new LinkedHashSet<K>(initialCapacity);
+    var found = cache().getAllPresent(result.keySet());
+    for (var entry : result.entrySet()) {
+      V value = found.get(entry.getKey());
       if (value == null) {
-        keysToLoad.add(key);
+        keysToLoad.add(entry.getKey());
       }
-      result.put(key, value);
+      entry.setValue(value);
     }
     if (keysToLoad.isEmpty()) {
       return found;

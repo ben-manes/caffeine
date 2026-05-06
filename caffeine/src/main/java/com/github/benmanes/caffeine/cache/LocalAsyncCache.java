@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
@@ -1692,6 +1693,15 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     SyncViewProxy(AsyncCache<K, V> asyncCache) {
       this.asyncCache = requireNonNull(asyncCache);
+    }
+
+    @SuppressWarnings("unused")
+    private void readObject(ObjectInputStream stream)
+        throws IOException, ClassNotFoundException {
+      stream.defaultReadObject();
+      if (asyncCache == null) {
+        throw new InvalidObjectException("asyncCache required");
+      }
     }
 
     Object readResolve() {

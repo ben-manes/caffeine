@@ -3140,7 +3140,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * trigger the removal of these dead entries when skipped over during traversal. To ensure
    * consistency and symmetry, usages should call {@link #cleanUp()} before this method while no
    * other concurrent operations are being performed on this cache. This is not done implicitly by
-   * {@link #size()} as many usages assume it to be instantaneous and lock-free.
+   * {@link #size()} as many usages assume it to be instantaneous and lock-free. As a postcondition
+   * the iteration count is verified against the prescreened {@link #size()} so that a concurrent
+   * maintenance pass that drops dead entries during traversal is detected and reported as not
+   * equal, rather than silently returning {@code true} on the surviving subset.
    */
   @Override
   public boolean equals(@Nullable Object o) {
@@ -3151,11 +3154,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     var map = (Map<?, ?>) o;
-    if (size() != map.size()) {
+    int expectedSize = size();
+    if (map.size() != expectedSize) {
       return false;
     }
 
     long now = expirationTicker().read();
+    @Var int count = 0;
     for (var node : data.values()) {
       K key = node.getKey();
       V value = node.getValue();
@@ -3169,8 +3174,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           return false;
         }
       }
+      count++;
     }
-    return true;
+    return (count == expectedSize);
   }
 
   @Override
@@ -3274,11 +3280,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         PeekingIterator<Node<K, V>> second;
         PeekingIterator<Node<K, V>> third;
         if (oldest) {
+          comparator = comparator.reversed();
           first = accessOrderWindowDeque().iterator();
           second = accessOrderProbationDeque().iterator();
           third = accessOrderProtectedDeque().iterator();
         } else {
-          comparator = comparator.reversed();
           first = accessOrderWindowDeque().descendingIterator();
           second = accessOrderProbationDeque().descendingIterator();
           third = accessOrderProtectedDeque().descendingIterator();

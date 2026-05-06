@@ -605,6 +605,21 @@ final class CacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = { Population.SINGLETON, Population.PARTIAL },
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  @SuppressWarnings("StreamToIterable") // intentional one-shot Iterable for this test
+  void getAll_oneShotIterable(Cache<Int, Int> cache, CacheContext context) {
+    var keys = new ArrayList<Int>();
+    keys.addAll(context.original().keySet());
+    keys.addAll(context.absentKeys());
+
+    Iterable<Int> oneShot = keys.stream()::iterator;
+    var result = cache.getAll(oneShot, CacheTest::bulkMapping);
+    assertThat(result).containsExactlyKeys(keys);
+  }
+
+  @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void getAll_present_ordered_exceeds(Cache<Int, Int> cache, CacheContext context) {
     var keys = new ArrayList<>(context.original().keySet());
@@ -1054,6 +1069,21 @@ final class CacheTest {
     try (var input = new ObjectInputStream(new ByteArrayInputStream(stream))) {
       var exception = assertThrows(InvalidObjectException.class, input::readObject);
       assertThat(exception).hasMessageThat().isEqualTo("Proxy required");
+    }
+  }
+
+  @Test
+  void readObject_syncViewProxy_rejectsNullAsyncCache() throws IOException {
+    // Java deserialization populates final fields directly from the stream, bypassing the
+    // constructor's requireNonNull(asyncCache) guard. A crafted stream with asyncCache = null
+    // would otherwise NPE in readResolve(); the readObject hook surfaces it as
+    // InvalidObjectException with a clear message.
+    var stream = craftHierarchySkipStream(
+        "com.github.benmanes.caffeine.cache.LocalAsyncCache$SyncViewProxy",
+        "Lcom/github/benmanes/caffeine/cache/AsyncCache;");
+    try (var input = new ObjectInputStream(new ByteArrayInputStream(stream))) {
+      var exception = assertThrows(InvalidObjectException.class, input::readObject);
+      assertThat(exception).hasMessageThat().isEqualTo("asyncCache required");
     }
   }
 
