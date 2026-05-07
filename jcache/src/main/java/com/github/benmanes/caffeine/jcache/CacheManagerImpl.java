@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.ref.WeakReference;
 import java.net.URI;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -182,7 +183,8 @@ public final class CacheManagerImpl implements CacheManager {
   }
 
   @Override
-  public List<String> getCacheNames() {
+  @SuppressWarnings("PreferredInterfaceType")
+  public Collection<String> getCacheNames() {
     requireNotClosed();
     return List.copyOf(caches.keySet());
   }
