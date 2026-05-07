@@ -19,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.ref.WeakReference;
 import java.net.URI;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -183,7 +182,7 @@ public final class CacheManagerImpl implements CacheManager {
   }
 
   @Override
-  public Collection<String> getCacheNames() {
+  public List<String> getCacheNames() {
     requireNotClosed();
     return List.copyOf(caches.keySet());
   }
