@@ -66,6 +66,10 @@ DESIGN PRIORS (intentional patterns documented in .claude/docs/design-decisions.
   - asMap() iteration is not a cache read (does not update access times or frequency)
   - WriteThroughEntry.setValue is not fully atomic — documented per Map contract
   - Serialization proxy hardening (readObject/readObjectNoData) is defense-in-depth, not a bug if absent — cache is not designed for adversarial deserialization
+  - Caffeine.from(CaffeineSpec).<setter>(...) intentionally permits programmatic overrides that conflict with the spec (e.g., weigher without maximumWeight). from(spec) sets strictParsing=false; the warning is informational, the configuration is accepted as-is
+  - clear()/invalidate*() use state-based RemovalCause: an entry past its expiration deadline at removal time fires EXPIRED, otherwise EXPLICIT. Consistent across all removal paths (remove, removeNode, doComputeIfAbsent, remap, put-over-expired)
+  - Refresh-rejection's REPLACED notification fires with the *discarded computed value* (not cache-resident) — intentional dual-notification: the prior cache value was notified separately when actually replaced
+  - FrequencySketch's table/tableMask/sampleSize fields are non-final and not volatile. All readers and writers (admit, increment, frequency, ensureCapacity) are serialized through evictionLock via @GuardedBy on call sites in BoundedLocalCache; the lack of volatile/final on these fields is not a JMM gap
 
 RULES
 - bug_witness REQUIRED on every new entry: a concrete input or scenario that triggers the failure. Acceptance test: a competent developer should be able to write a failing unit test from your bug_witness alone, without having to fill in "and then somehow X happens". If your witness is "under certain conditions" or "if X were called with Y" without explaining how Y arises from the public API, drop the finding.

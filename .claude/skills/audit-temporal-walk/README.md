@@ -95,9 +95,11 @@ verify.py + verify.txt
 | `verify.txt` | Verification prompt template |
 
 Mutable state, the snapshot worktree, and reports live under
-`.claude/reports/audit-temporal-walk/`, which is gitignored at the
-project root via `.claude/reports/`. State files are local to a
-developer's run; the worktree is reusable across walks.
+`.claude/reports/audit-temporal-walk-<module>/` — the suffix is derived
+from the first segment of `WALKER_SCOPE` so caffeine and jcache audits
+don't clobber each other. The whole `.claude/reports/` tree is gitignored
+at the project root. State files are local to a developer's run; the
+worktree is reusable across walks.
 
 ## Tuning
 

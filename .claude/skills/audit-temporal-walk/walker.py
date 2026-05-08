@@ -27,7 +27,11 @@ DEFAULT_SCOPE = "caffeine/src/main/java/com/github/benmanes/caffeine/cache/"
 SCOPE = os.environ.get("WALKER_SCOPE", DEFAULT_SCOPE)
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[2]
-REPORTS_DIR = REPO_ROOT / ".claude" / "reports" / "audit-temporal-walk"
+# Derive the reports directory from the first segment of the configured SCOPE so
+# audits of different modules (caffeine, jcache, ...) write to disjoint trees and
+# don't clobber each other's state.json / log / worktree.
+_MODULE = SCOPE.split("/", 1)[0] if "/" in SCOPE else "default"
+REPORTS_DIR = REPO_ROOT / ".claude" / "reports" / f"audit-temporal-walk-{_MODULE}"
 DEFAULT_STATE = REPORTS_DIR / "state.json"
 DEFAULT_PROMPT = SCRIPT_DIR / "per-commit.txt"
 DEFAULT_LOG_DIR = REPORTS_DIR / "log"

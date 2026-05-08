@@ -31,7 +31,7 @@ python3 .claude/skills/audit-temporal-walk/walker.py
 
 # In tmux/nohup for multi-hour reliability:
 nohup python3 .claude/skills/audit-temporal-walk/walker.py \
-  > .claude/reports/audit-temporal-walk/walk.log 2>&1 &
+  > .claude/reports/audit-temporal-walk-<module>/walk.log 2>&1 &
 
 # Process N commits then stop cleanly (useful for chunked runs):
 python3 .claude/skills/audit-temporal-walk/walker.py --max-commits 200
@@ -46,7 +46,7 @@ python3 .claude/skills/audit-temporal-walk/walker.py --summary
 python3 .claude/skills/audit-temporal-walk/verify.py --min-confidence med
 
 # Read the verified findings:
-cat .claude/reports/audit-temporal-walk/findings.md
+cat .claude/reports/audit-temporal-walk-<module>/findings.md
 ```
 
 Wall clock is roughly 8-14 hours for the full caffeine module (~750 commits)
@@ -58,7 +58,7 @@ after quota exhaustion or interruption.
 
 For each substantive commit (skipping doc/style/dep-bump only), the walker:
 1. Checks out the commit into a managed detached worktree under
-   `.claude/reports/audit-temporal-walk/worktree/`
+   `.claude/reports/audit-temporal-walk-<module>/worktree/`
 2. Invokes `claude -p` with `cwd=worktree` and `--tools "Read,Glob,Grep"`,
    so the inner model can verify hypotheses against the codebase **at that
    commit's state**, not HEAD
@@ -93,8 +93,10 @@ already attached to each finding.
 
 ## Output
 
-All output lives under `.claude/reports/audit-temporal-walk/` (gitignored
-via `.claude/reports/`):
+The reports directory is auto-derived from the first segment of `WALKER_SCOPE`
+(the module name): caffeine runs write to `.claude/reports/audit-temporal-walk-caffeine/`,
+jcache runs to `audit-temporal-walk-jcache/`, etc. All outputs are gitignored
+via `.claude/reports/`:
 
 - `state.json` — walker's issue database
 - `verified.json` — per-issue verdicts
