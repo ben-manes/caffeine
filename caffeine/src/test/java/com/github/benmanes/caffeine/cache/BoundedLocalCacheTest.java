@@ -3516,6 +3516,37 @@ final class BoundedLocalCacheTest {
         .exclusively();
   }
 
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.DIRECT,
+      loader = Loader.IDENTITY, compute = Compute.SYNC, stats = Stats.DISABLED)
+  void doComputeIfAbsent_existingEntry_returnsRefreshedValue(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var node = requireNonNull(cache.data.get(
+        cache.nodeFactory.newLookupKey(context.firstKey())));
+    Int original = requireNonNull(node.getValue());
+
+    // No expiration policy is configured, so the locked hasExpired check inside
+    // data.compute returns false and the lambda takes the `return n` branch —
+    // the existing-entry-found path that mirrors the optimistic fast path.
+    // Advancing past refreshAfterWrite makes the entry refresh-eligible; with
+    // a DIRECT executor and Loader.IDENTITY the reload completes inline so
+    // afterRead returns the refreshed value (the key itself, distinct from
+    // the populated negation). The bug discarded that return; the fix uses it.
+    context.ticker().advance(Duration.ofMinutes(2));
+    long now = context.ticker().read();
+
+    var result = cache.doComputeIfAbsent(context.firstKey(), node.getKeyReference(),
+        key -> { throw new AssertionError("mapping must not run for valid entry"); },
+        new ComputeContext<>(now), /* recordStats= */ false);
+
+    assertThat(cache).containsEntry(context.firstKey(), context.firstKey());
+    assertThat(result).isEqualTo(context.firstKey());
+    assertThat(result).isNotEqualTo(original);
+  }
+
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   void computeIfAbsent_removesRefresh_absent(

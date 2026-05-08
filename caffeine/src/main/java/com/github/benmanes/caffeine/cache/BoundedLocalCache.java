@@ -2851,8 +2851,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         setAccessTime(node, ctx.now);
       }
 
-      afterRead(node, ctx.now, /* recordHit= */ recordStats);
-      return ctx.oldValue;
+      @Nullable V refreshed = afterRead(node, ctx.now, /* recordHit= */ recordStats);
+      return (refreshed == null) ? ctx.oldValue : refreshed;
     }
     if ((ctx.oldValue == null) && (ctx.cause == null)) {
       afterWrite(new AddTask(node, ctx.newWeight));
