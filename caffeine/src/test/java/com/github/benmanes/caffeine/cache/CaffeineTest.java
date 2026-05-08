@@ -1082,14 +1082,12 @@ final class CaffeineTest {
 
   @Test
   void getExpiry_syncReturnsRaw() {
-    Expiry<Object, Object> expiry = Expiry.creating((k, v) -> Duration.ofMinutes(1));
     var result = Caffeine.newBuilder().expireAfter(expiry).getExpiry(false);
     assertThat(result).isSameInstanceAs(expiry);
   }
 
   @Test
   void getExpiry_asyncWrapsRaw() {
-    Expiry<Object, Object> expiry = Expiry.creating((k, v) -> Duration.ofMinutes(1));
     var result = Caffeine.newBuilder().expireAfter(expiry).getExpiry(true);
     assertThat(result).isNotNull();
     assertThat(result).isNotSameInstanceAs(expiry);
@@ -1154,14 +1152,12 @@ final class CaffeineTest {
 
   @Test
   void build_unbounded_returnsUnboundedLoadingCache() {
-    CacheLoader<Object, Object> loader = key -> key;
     var cache = Caffeine.newBuilder().build(loader);
     assertThat(cache).isInstanceOf(UnboundedLocalCache.UnboundedLocalLoadingCache.class);
   }
 
   @Test
   void build_bounded_returnsBoundedLoadingCache() {
-    CacheLoader<Object, Object> loader = key -> key;
     var cache = Caffeine.newBuilder().maximumSize(10).build(loader);
     assertThat(cache).isInstanceOf(BoundedLocalCache.BoundedLocalLoadingCache.class);
   }
@@ -1180,21 +1176,18 @@ final class CaffeineTest {
 
   @Test
   void buildAsync_loader_unbounded_returnsUnboundedAsyncLoadingCache() {
-    CacheLoader<Object, Object> loader = key -> key;
     var cache = Caffeine.newBuilder().buildAsync(loader);
     assertThat(cache).isInstanceOf(UnboundedLocalCache.UnboundedLocalAsyncLoadingCache.class);
   }
 
   @Test
   void buildAsync_loader_bounded_returnsBoundedAsyncLoadingCache() {
-    CacheLoader<Object, Object> loader = key -> key;
     var cache = Caffeine.newBuilder().maximumSize(10).buildAsync(loader);
     assertThat(cache).isInstanceOf(BoundedLocalCache.BoundedLocalAsyncLoadingCache.class);
   }
 
   @Test
   void buildAsync_loader_refreshAfterWrite_returnsBoundedAsyncLoadingCache() {
-    CacheLoader<Object, Object> loader = key -> key;
     var cache = Caffeine.newBuilder().refreshAfterWrite(Duration.ofMinutes(1)).buildAsync(loader);
     assertThat(cache).isInstanceOf(BoundedLocalCache.BoundedLocalAsyncLoadingCache.class);
   }

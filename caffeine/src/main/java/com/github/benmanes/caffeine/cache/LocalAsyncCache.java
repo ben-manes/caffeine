@@ -858,12 +858,18 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         }
 
         boolean[] added = { false };
+        var hints = new LocalCache.RemapHints();
         CompletableFuture<V> computed = delegate.compute(
             key, (K k, @Nullable CompletableFuture<V> valueFuture) -> {
               added[0] = (valueFuture == null)
                   || (valueFuture.isDone() && (Async.getIfReady(valueFuture) == null));
-              return added[0] ? CompletableFuture.completedFuture(value) : valueFuture;
-            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
+              if (added[0]) {
+                return CompletableFuture.completedFuture(value);
+              }
+              hints.preserveTimestamps = true;
+              hints.preserveRefresh = true;
+              return valueFuture;
+            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
 
         if (added[0]) {
           return null;
@@ -918,19 +924,26 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         }
 
         Async.getWhenSuccessful(future);
+        var hints = new LocalCache.RemapHints();
         delegate.compute(castedKey, (K k, @Nullable CompletableFuture<V> oldValueFuture) -> {
           if (oldValueFuture == null) {
             done[0] = true;
             return null;
           } else if (!oldValueFuture.isDone()) {
+            hints.preserveTimestamps = true;
+            hints.preserveRefresh = true;
             return oldValueFuture;
           }
 
           done[0] = true;
           V oldValue = Async.getIfReady(oldValueFuture);
           removed[0] = Objects.equals(value, oldValue);
+          if (!removed[0] && (oldValue != null)) {
+            hints.preserveTimestamps = true;
+            hints.preserveRefresh = true;
+          }
           return (oldValue == null) || removed[0] ? null : oldValueFuture;
-        }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true);
+        }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true, hints);
 
         if (done[0]) {
           return removed[0];
@@ -953,18 +966,21 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         }
 
         Async.getWhenSuccessful(future);
+        var hints = new LocalCache.RemapHints();
         delegate.compute(key, (K k, @Nullable CompletableFuture<V> oldValueFuture) -> {
           if (oldValueFuture == null) {
             done[0] = true;
             return null;
           } else if (!oldValueFuture.isDone()) {
+            hints.preserveTimestamps = true;
+            hints.preserveRefresh = true;
             return oldValueFuture;
           }
 
           done[0] = true;
           oldValue[0] = Async.getIfReady(oldValueFuture);
           return (oldValue[0] == null) ? null : CompletableFuture.completedFuture(value);
-        }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
+        }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
 
         if (done[0]) {
           return oldValue[0];
@@ -987,18 +1003,25 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         }
 
         Async.getWhenSuccessful(future);
+        var hints = new LocalCache.RemapHints();
         delegate.compute(key, (K k, @Nullable CompletableFuture<V> oldValueFuture) -> {
           if (oldValueFuture == null) {
             done[0] = true;
             return null;
           } else if (!oldValueFuture.isDone()) {
+            hints.preserveTimestamps = true;
+            hints.preserveRefresh = true;
             return oldValueFuture;
           }
 
           done[0] = true;
           replaced[0] = Objects.equals(oldValue, Async.getIfReady(oldValueFuture));
+          if (!replaced[0]) {
+            hints.preserveTimestamps = true;
+            hints.preserveRefresh = true;
+          }
           return replaced[0] ? CompletableFuture.completedFuture(newValue) : oldValueFuture;
-        }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
+        }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
 
         if (done[0]) {
           return replaced[0];
@@ -1031,10 +1054,13 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
         @SuppressWarnings({"rawtypes", "unchecked"})
         CompletableFuture<V>[] future = new CompletableFuture[1];
+        var hints = new LocalCache.RemapHints();
         CompletableFuture<V> computed = delegate.compute(
             key, (K k, @Nullable CompletableFuture<V> valueFuture) -> {
               if ((valueFuture != null)
                   && (!valueFuture.isDone() || (Async.getIfReady(valueFuture) != null))) {
+                hints.preserveTimestamps = true;
+                hints.preserveRefresh = true;
                 return valueFuture;
               }
 
@@ -1044,7 +1070,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
               }
               future[0] = CompletableFuture.completedFuture(newValue);
               return future[0];
-            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
+            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
 
         V result = Async.getWhenSuccessful(computed);
         if ((computed == future[0]) || (result != null)) {
@@ -1064,19 +1090,27 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       for (;;) {
         Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));
 
-        CompletableFuture<V> valueFuture = delegate.computeIfPresent(key, (k, oldValueFuture) -> {
-          if (!oldValueFuture.isDone()) {
-            return oldValueFuture;
-          }
+        var hints = new LocalCache.RemapHints();
+        CompletableFuture<V> valueFuture = delegate.compute(
+            key, (K k, @Nullable CompletableFuture<V> oldValueFuture) -> {
+              if (oldValueFuture == null) {
+                return null;
+              } else if (!oldValueFuture.isDone()) {
+                hints.preserveTimestamps = true;
+                hints.preserveRefresh = true;
+                return oldValueFuture;
+              }
 
-          V oldValue = Async.getIfReady(oldValueFuture);
-          if (oldValue == null) {
-            return null;
-          }
+              V oldValue = Async.getIfReady(oldValueFuture);
+              if (oldValue == null) {
+                return null;
+              }
 
-          newValue[0] = remappingFunction.apply(key, oldValue);
-          return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
-        });
+              BiFunction<? super K, ? super V, ? extends @Nullable V> function =
+                  delegate.statsAware(remappingFunction);
+              newValue[0] = function.apply(key, oldValue);
+              return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
+            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
 
         if (newValue[0] != null) {
           return newValue[0];
@@ -1098,9 +1132,12 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       for (;;) {
         Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));
 
+        var hints = new LocalCache.RemapHints();
         CompletableFuture<V> valueFuture = delegate.compute(
             key, (K k, @Nullable CompletableFuture<V> oldValueFuture) -> {
               if ((oldValueFuture != null) && !oldValueFuture.isDone()) {
+                hints.preserveTimestamps = true;
+                hints.preserveRefresh = true;
                 return oldValueFuture;
               }
 
@@ -1110,7 +1147,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
                       /* recordLoad= */ true, /* recordLoadFailure= */ true);
               newValue[0] = function.apply(key, oldValue);
               return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
-            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
+            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
 
         if (newValue[0] != null) {
           return newValue[0];
@@ -1132,27 +1169,35 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       for (;;) {
         Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));
 
-        CompletableFuture<V> mergedValueFuture = delegate.merge(
-            key, newValueFuture, (oldValueFuture, valueFuture) -> {
-          if (!oldValueFuture.isDone()) {
-            return oldValueFuture;
-          }
+        var hints = new LocalCache.RemapHints();
+        CompletableFuture<V> mergedValueFuture = delegate.compute(
+            key, (K k, @Nullable CompletableFuture<V> oldValueFuture) -> {
+              if (oldValueFuture == null) {
+                merged[0] = true;
+                return newValueFuture;
+              } else if (!oldValueFuture.isDone()) {
+                hints.preserveTimestamps = true;
+                hints.preserveRefresh = true;
+                return oldValueFuture;
+              }
 
-          merged[0] = true;
-          V oldValue = Async.getIfReady(oldValueFuture);
-          if (oldValue == null) {
-            return valueFuture;
-          }
-          V mergedValue = remappingFunction.apply(oldValue, value);
-          if (mergedValue == null) {
-            return null;
-          } else if (mergedValue == oldValue) {
-            return oldValueFuture;
-          } else if (mergedValue == value) {
-            return valueFuture;
-          }
-          return CompletableFuture.completedFuture(mergedValue);
-        });
+              merged[0] = true;
+              V oldValue = Async.getIfReady(oldValueFuture);
+              if (oldValue == null) {
+                return newValueFuture;
+              }
+              V mergedValue = delegate.statsAware(remappingFunction).apply(oldValue, value);
+              if (mergedValue == null) {
+                return null;
+              } else if (mergedValue == oldValue) {
+                hints.preserveTimestamps = true;
+                hints.preserveRefresh = true;
+                return oldValueFuture;
+              } else if (mergedValue == value) {
+                return newValueFuture;
+              }
+              return CompletableFuture.completedFuture(mergedValue);
+            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
 
         if (merged[0] || (mergedValueFuture == newValueFuture)) {
           return Async.getWhenSuccessful(mergedValueFuture);

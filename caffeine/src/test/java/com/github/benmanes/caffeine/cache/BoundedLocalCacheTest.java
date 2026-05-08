@@ -4799,12 +4799,13 @@ final class BoundedLocalCacheTest {
   void remap_preserveTimestamps_newValueDiffers(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     // White-box: the L2961 no-op guard checks that newValue matches oldValue. A caller
-    // that pre-sets the preserveTimestamps flag but returns a different value must NOT
+    // that pre-sets the preserveTimestamps hint but returns a different value must NOT
     // take the short-circuit — covers the defensive mismatch branch.
     var key = context.firstKey();
-    var preserveTimestamps = new boolean[]{true};
+    var hints = new LocalCache.RemapHints();
+    hints.preserveTimestamps = true;
     assertThat(cache.compute(key, (k, old) -> context.absentValue(), cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, preserveTimestamps))
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints))
         .isEqualTo(context.absentValue());
     assertThat(cache).containsEntry(key, context.absentValue());
   }
@@ -4815,7 +4816,7 @@ final class BoundedLocalCacheTest {
       mustExpireWithAnyOf = AFTER_WRITE)
   void remap_preserveTimestamps_causeSet(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    // White-box: pre-set preserveTimestamps[0]=true with a lambda that returns the
+    // White-box: pre-set hints.preserveTimestamps with a lambda that returns the
     // captured old value. Expire the entry so remap sets ctx.cause=EXPIRED. The
     // L2961 guard's cause==null check must prevent the no-op short-circuit.
     var key = context.firstKey();
@@ -4823,10 +4824,66 @@ final class BoundedLocalCacheTest {
     var originalValue = requireNonNull(node.getValue());
     context.ticker().advance(Duration.ofMinutes(2));
 
-    var preserveTimestamps = new boolean[]{true};
+    var hints = new LocalCache.RemapHints();
+    hints.preserveTimestamps = true;
     assertThat(cache.compute(key, (k, old) -> originalValue, cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, preserveTimestamps))
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints))
         .isEqualTo(originalValue);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
+      keys = ReferenceType.STRONG, refreshAfterWrite = Expire.ONE_MINUTE,
+      compute = Compute.SYNC)
+  void remap_preserveRefresh_leavesPendingRefreshIntact(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // White-box for iss_2a0b20db: a query-style caller (e.g., putIfAbsentAsync)
+    // returns oldValue from compute's lambda to signal a no-op and sets BOTH
+    // hint flags. The L2961 no-op tail must skip discardRefresh so any
+    // in-flight refreshAfterWrite remains in cache.refreshes(). Without
+    // hints.preserveRefresh, the discardRefresh would cancel the pending
+    // reload silently.
+    var key = context.firstKey();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));
+    var keyRef = node.getKeyReference();
+    var oldValue = requireNonNull(node.getValue());
+    var pendingRefresh = new CompletableFuture<Int>();
+    cache.refreshes().put(keyRef, pendingRefresh);
+
+    var hints = new LocalCache.RemapHints();
+    hints.preserveTimestamps = true;
+    hints.preserveRefresh = true;
+    var result = cache.compute(key, (k, old) -> oldValue, cache.expiry(),
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
+
+    assertThat(result).isEqualTo(oldValue);
+    assertThat(cache.refreshes()).containsEntry(keyRef, pendingRefresh);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
+      keys = ReferenceType.STRONG, refreshAfterWrite = Expire.ONE_MINUTE,
+      compute = Compute.SYNC)
+  void remap_preserveTimestamps_withoutPreserveRefresh_discardsPendingRefresh(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // The complement of the above: refresh-rejection callers (the existing
+    // refreshIfNeeded paths) set only preserveTimestamps and want the rejected
+    // refresh cleaned up — discardRefresh must still fire when preserveRefresh
+    // is left at its default false.
+    var key = context.firstKey();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));
+    var keyRef = node.getKeyReference();
+    var oldValue = requireNonNull(node.getValue());
+    var pendingRefresh = new CompletableFuture<Int>();
+    cache.refreshes().put(keyRef, pendingRefresh);
+
+    var hints = new LocalCache.RemapHints();
+    hints.preserveTimestamps = true;
+    assertThat(cache.compute(key, (k, old) -> oldValue, cache.expiry(),
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints)).isNotNull();
+    assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
 
   @Nested @Isolated

@@ -97,6 +97,7 @@ import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ForwardingMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -1851,12 +1852,13 @@ final class AsMapTest {
     // expectedSize entries and they all match (since the argument retains all originals); the
     // count postcondition is what catches the divergence.
     var keys = List.copyOf(context.original().keySet());
-    var sideEffect = new HashMap<Int, Int>(context.original()) {
-      private static final long serialVersionUID = 1;
+    var sideEffect = new ForwardingMap<Int, Int>() {
       @Override public int size() {
-        cache.invalidate(keys.get(0));
-        cache.invalidate(keys.get(1));
-        return super.size();
+        cache.invalidateAll(keys.subList(0, 2));
+        return delegate().size();
+      }
+      @Override protected Map<Int, Int> delegate() {
+        return context.original();
       }
     };
     assertThat(cache.asMap().equals(sideEffect)).isFalse();

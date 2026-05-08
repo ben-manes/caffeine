@@ -1417,7 +1417,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         V value = (isAsync && (newValue != null)) ? (V) refreshFuture[0] : newValue;
 
         @Nullable RemovalCause[] cause = new RemovalCause[1];
-        var preserveTimestamps = new boolean[1];
+        var hints = new RemapHints();
         @Nullable V result;
         try {
           result = compute(key, (K k, @Nullable V currentValue) -> {
@@ -1448,10 +1448,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
               cause[0] = RemovalCause.REPLACED;
             }
             if ((currentValue != oldValue) || (node.getWriteTime() != writeTime)) {
-              preserveTimestamps[0] = true;
+              hints.preserveTimestamps = true;
             }
             return currentValue;
-          }, expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true, preserveTimestamps);
+          }, expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true, hints);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
           statsCounter().recordLoadFailure(loadTime);
@@ -2893,7 +2893,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   public @Nullable V compute(K key,
       BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad, boolean recordLoadFailure,
-      boolean @Nullable[] preserveTimestamps) {
+      @Nullable RemapHints hints) {
     requireNonNull(key);
     requireNonNull(remappingFunction);
 
@@ -2901,7 +2901,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
         statsAware(remappingFunction, recordLoad, recordLoadFailure);
     var ctx = new ComputeContext<K, V>(expirationTicker().read());
-    ctx.preserveTimestamps = preserveTimestamps;
+    ctx.hints = hints;
     return remap(key, keyRef, statsAwareRemappingFunction,
         expiry, ctx, /* computeIfAbsent= */ true);
   }
@@ -3006,9 +3006,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
           // If the caller flagged a same-instance return as a no-op (e.g., a refresh was rejected
           // and should not touch the entry), skip the metadata updates below.
-          if ((ctx.preserveTimestamps != null) && ctx.preserveTimestamps[0]
+          if ((ctx.hints != null) && ctx.hints.preserveTimestamps
               && (ctx.newValue == ctx.oldValue) && (ctx.cause == null)) {
-            discardRefresh(kr);
+            // Skip for query-style callers whose no-op path must leave any in-flight refresh intact
+            if (!ctx.hints.preserveRefresh) {
+              discardRefresh(kr);
+            }
             return n;
           }
 
@@ -3070,7 +3073,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       afterWrite(new RemovalTask(ctx.removed));
     } else if (node == null) {
       // absent and not computable
-    } else if ((ctx.preserveTimestamps != null) && ctx.preserveTimestamps[0]) {
+    } else if ((ctx.hints != null) && ctx.hints.preserveTimestamps) {
       // The remapping was a signaled no-op; the node was not modified
     } else if ((ctx.oldValue == null) && (ctx.cause == null)) {
       afterWrite(new AddTask(node, ctx.newWeight));
@@ -3406,7 +3409,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Nullable Node<K, V> removed;
     @Nullable RemovalCause cause;
     @Nullable Throwable exception;
-    boolean @Nullable[] preserveTimestamps;
+    @Nullable RemapHints hints;
 
     long now;
     int oldWeight;
@@ -4533,12 +4536,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           }
 
           boolean[] added = { false };
+          var hints = new LocalCache.RemapHints();
           var computed = (CompletableFuture<V>) cache.compute(key, (K k, @Nullable V oldValue) -> {
             var oldValueFuture = (CompletableFuture<V>) oldValue;
             added[0] = (oldValueFuture == null)
                 || (oldValueFuture.isDone() && (Async.getIfReady(oldValueFuture) == null));
-            return added[0] ? asyncValue : oldValue;
-          }, expiry, /* recordLoad= */ false, /* recordLoadFailure= */ false);
+            if (added[0]) {
+              return asyncValue;
+            }
+            hints.preserveTimestamps = true;
+            hints.preserveRefresh = true;
+            return oldValue;
+          }, expiry, /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
 
           if (added[0]) {
             return null;
@@ -4586,9 +4595,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         for (;;) {
           Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));
 
+          var hints = new LocalCache.RemapHints();
           CompletableFuture<V> valueFuture = delegate.compute(
               key, (K k, @Nullable CompletableFuture<V> oldValueFuture) -> {
                 if ((oldValueFuture != null) && !oldValueFuture.isDone()) {
+                  hints.preserveTimestamps = true;
+                  hints.preserveRefresh = true;
                   return oldValueFuture;
                 }
 
@@ -4600,7 +4612,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
                 return (newValue[0] == null) ? null
                     : CompletableFuture.completedFuture(newValue[0]);
               }, new AsyncExpiry<>(expiry), /* recordLoad= */ false,
-              /* recordLoadFailure= */ false);
+              /* recordLoadFailure= */ false, hints);
 
           if (newValue[0] != null) {
             return newValue[0];

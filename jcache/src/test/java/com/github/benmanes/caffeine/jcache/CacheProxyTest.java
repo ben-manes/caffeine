@@ -630,7 +630,7 @@ final class CacheProxyTest {
   }
 
   @Test
-  void close_interrupted() throws IOException {
+  void close_interrupted() {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       var neverCompletes = new CompletableFuture<@Nullable Void>();
       fixture.jcache().inFlight.add(neverCompletes);

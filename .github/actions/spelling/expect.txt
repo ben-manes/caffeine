@@ -41,7 +41,6 @@ deschedule
 develocity
 devskim
 dotnet
-dragonwell
 ecj
 edu
 ehcache
@@ -61,7 +60,6 @@ frd
 Freqs
 ful
 gdsf
-getput
 GETRESOURCE
 GETVIDEO
 githubsecuritylab
@@ -143,8 +141,8 @@ outbrain
 pgs
 pinact
 pmd
+prescreened
 proactively
-putremove
 qls
 qlty
 QMETA
@@ -188,7 +186,6 @@ temurin
 tencent
 testlib
 testng
-timerwheel
 tinycache
 TINYLFU
 TRACENAME

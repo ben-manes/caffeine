@@ -146,17 +146,17 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
         }
 
         var discard = new boolean[1];
-        var preserveTimestamps = new boolean[1];
+        var hints = new LocalCache.RemapHints();
         @Nullable V value = cache().compute(key, (K k, @Nullable V currentValue) -> {
           boolean removed = cache().refreshes().remove(keyReference, reloading[0]);
           if (removed && (currentValue == oldValue[0])) {
             return (currentValue == null) && (newValue == null) ? null : newValue;
           }
           discard[0] = (currentValue != newValue);
-          preserveTimestamps[0] = true;
+          hints.preserveTimestamps = true;
           return currentValue;
         }, cache().expiry(), /* recordLoad= */ false,
-            /* recordLoadFailure= */ true, preserveTimestamps);
+            /* recordLoadFailure= */ true, hints);
 
         if (discard[0] && (newValue != null)) {
           var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;

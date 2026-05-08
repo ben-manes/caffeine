@@ -326,7 +326,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   public @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
-      boolean recordLoadFailure, boolean @Nullable[] preserveTimestamps) {
+      boolean recordLoadFailure, @Nullable RemapHints hints) {
     requireNonNull(remappingFunction);
     return remap(key, statsAware(remappingFunction, recordLoad, recordLoadFailure));
   }

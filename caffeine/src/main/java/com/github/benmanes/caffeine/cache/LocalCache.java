@@ -111,20 +111,21 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
       @Nullable Expiry<? super K, ? super V> expiry,
       boolean recordLoad, boolean recordLoadFailure) {
     return compute(key, remappingFunction, expiry, recordLoad, recordLoadFailure,
-        /* preserveTimestamps= */ null);
+        /* hints= */ null);
   }
 
   /**
    * See {@link ConcurrentMap#compute}. This method differs by accepting parameters indicating
-   * whether to record load statistics and whether to skip updating the entry's timestamps when
-   * the remapping function returns the same value instance (e.g., because a refresh is being
-   * discarded and should not touch the entry). The {@code preserveTimestamps} parameter is a
-   * shared reference that the remapping function sets to {@code true} to signal the no-op.
+   * whether to record load statistics and an optional {@link RemapHints} the remapping function
+   * may set to signal a same-instance no-op return (e.g. a refresh that needs to be discarded
+   * without touching the entry, or a putIfAbsent-style query that should not interfere with an
+   * in-flight refresh). The {@code hints} is captured by the function which may mutate the fields
+   * to communicate intent back to the cache.
    */
   @Nullable V compute(K key,
       BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
-      boolean recordLoadFailure, boolean @Nullable[] preserveTimestamps);
+      boolean recordLoadFailure, @Nullable RemapHints hints);
 
   @Override
   default @Nullable V computeIfAbsent(K key,
@@ -235,5 +236,20 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
       }
       return result;
     };
+  }
+
+  /**
+   * Mutable hints that the remapping function may set when returning the same value instance to
+   * signal a no-op (to skip writes to the entry's metadata or leave an in-flight refresh intact).
+   */
+  final class RemapHints {
+    /**
+     * Skip writes to the entry's metadata (accessTime, writeTime, variableTime, and weight) for a
+     * same-instance return. Used by callers that detect a no-op.
+     */
+    boolean preserveTimestamps;
+
+    /** Additionally, leave any in-flight refresh intact so that no-op paths do not interfere. */
+    boolean preserveRefresh;
   }
 }

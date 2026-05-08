@@ -289,7 +289,7 @@ abstract class LocalAsyncLoadingCache<K, V>
 
           try {
             var discard = new boolean[1];
-            var preserveTimestamps = new boolean[1];
+            var hints = new LocalCache.RemapHints();
             var value = asyncCache.cache().compute(key, (ignored, currentValue) -> {
               var successful = asyncCache.cache().refreshes().remove(keyReference, castedFuture);
               if (successful && (currentValue == oldValueFuture[0])) {
@@ -303,11 +303,11 @@ abstract class LocalAsyncLoadingCache<K, V>
                 return (newValue == null) ? null : castedFuture;
               }
               // Otherwise, a write invalidated the refresh so discard it and notify the listener
-              preserveTimestamps[0] = true;
+              hints.preserveTimestamps = true;
               discard[0] = true;
               return currentValue;
             }, asyncCache.cache().expiry(), /* recordLoad= */ false,
-                /* recordLoadFailure= */ true, preserveTimestamps);
+                /* recordLoadFailure= */ true, hints);
 
             if (discard[0] && (newValue != null)) {
               var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
