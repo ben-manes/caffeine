@@ -769,6 +769,8 @@ final class BoundedLocalCacheTest {
     when(node.getKeyReferenceOrNull()).thenReturn(null);
 
     cache.new AddTask(node, /* weight= */ 0).run();
+    verify(node).getKeyReferenceOrNull();
+    verify(node).isAlive();
     // reset due to intentionally corrupting the internal state
     requireNonNull(context.build(key -> key));
   }

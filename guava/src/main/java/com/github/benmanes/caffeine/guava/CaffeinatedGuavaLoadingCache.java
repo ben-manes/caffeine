@@ -75,9 +75,10 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   @Override
   @SuppressWarnings({"CatchingUnchecked", "PMD.PreserveStackTrace"})
   public V getUnchecked(K key) {
+    requireNonNull(key);
     try {
       return cache.get(key);
-    } catch (NullPointerException | InvalidCacheLoadException e) {
+    } catch (InvalidCacheLoadException e) {
       throw e;
     } catch (CacheLoaderException e) {
       throw new UncheckedExecutionException(e.getCause());
@@ -91,6 +92,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   @Override
   @SuppressWarnings({"CatchingUnchecked", "PMD.PreserveStackTrace"})
   public ImmutableMap<K, V> getAll(Iterable<? extends K> keys) throws ExecutionException {
+    requireNonNull(keys);
     try {
       Map<K, V> result = cache.getAll(keys);
       if (nullBulkLoad.get() != null) {
@@ -102,7 +104,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
         }
       }
       return ImmutableMap.copyOf(result);
-    } catch (NullPointerException | InvalidCacheLoadException e) {
+    } catch (InvalidCacheLoadException e) {
       throw e;
     } catch (CacheLoaderException e) {
       throw new ExecutionException(e.getCause());
@@ -118,7 +120,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   @Override
   @SuppressWarnings("deprecation")
   public V apply(K key) {
-    return cache.get(key);
+    return getUnchecked(key);
   }
 
   @Override

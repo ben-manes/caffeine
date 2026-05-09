@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
@@ -42,6 +43,7 @@ import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.ExternalS
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.InternalBulkLoader;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.InternalSingleLoader;
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -56,6 +58,7 @@ import com.google.common.testing.SerializableTester;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -245,6 +248,114 @@ final class CaffeinatedGuavaTest {
     var e3 = assertThrows(CompletionException.class, () ->
         caffeine.asyncReload(1, 2, Runnable::run).join());
     assertThat(e3).hasCauseThat().isSameInstanceAs(error);
+  }
+
+  @ParameterizedTest
+  @MethodSource("bulkLoadingCaches")
+  void getUnchecked_loaderNullPointerException(
+      Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
+    var npe = new NullPointerException("loader bug");
+    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+      @SuppressWarnings("PMD.AvoidThrowingNullPointerException")
+      @Override public Integer load(Integer key) {
+        throw npe;
+      }
+    });
+    var e = assertThrows(UncheckedExecutionException.class, () -> cache.getUnchecked(1));
+    assertThat(e).hasCauseThat().isSameInstanceAs(npe);
+  }
+
+  @ParameterizedTest
+  @MethodSource("bulkLoadingCaches")
+  void getUnchecked_nullKey(
+      Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
+    var cache = factory.apply(CacheLoader.from(key -> key));
+    assertThrows(NullPointerException.class, () -> cache.getUnchecked(nullRef()));
+  }
+
+  @ParameterizedTest
+  @MethodSource("bulkLoadingCaches")
+  void getAll_loaderNullPointerException(
+      Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
+    var npe = new NullPointerException("loader bug");
+    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+      @SuppressWarnings("PMD.AvoidThrowingNullPointerException")
+      @Override public Integer load(Integer key) {
+        throw npe;
+      }
+    });
+    var e = assertThrows(UncheckedExecutionException.class,
+        () -> cache.getAll(ImmutableList.of(1, 2)));
+    assertThat(e).hasCauseThat().isSameInstanceAs(npe);
+  }
+
+  @ParameterizedTest
+  @MethodSource("bulkLoadingCaches")
+  void getAll_bulkLoaderNullPointerException(
+      Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
+    var npe = new NullPointerException("bulk loader bug");
+    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) {
+        throw new UnsupportedOperationException();
+      }
+      @SuppressWarnings("PMD.AvoidThrowingNullPointerException")
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        throw npe;
+      }
+    });
+    var e = assertThrows(UncheckedExecutionException.class,
+        () -> cache.getAll(ImmutableList.of(1, 2)));
+    assertThat(e).hasCauseThat().isSameInstanceAs(npe);
+  }
+
+  @ParameterizedTest
+  @MethodSource("bulkLoadingCaches")
+  void getAll_nullKeys(
+      Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
+    var cache = factory.apply(CacheLoader.from(key -> key));
+    assertThrows(NullPointerException.class, () -> cache.getAll(nullRef()));
+  }
+
+  @ParameterizedTest
+  @MethodSource("bulkLoadingCaches")
+  void apply_loaderNullPointerException(
+      Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
+    var npe = new NullPointerException("loader bug");
+    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+      @SuppressWarnings("PMD.AvoidThrowingNullPointerException")
+      @Override public Integer load(Integer key) {
+        throw npe;
+      }
+    });
+    @SuppressWarnings("deprecation")
+    var e = assertThrows(UncheckedExecutionException.class, () -> cache.apply(1));
+    assertThat(e).hasCauseThat().isSameInstanceAs(npe);
+  }
+
+  @ParameterizedTest
+  @MethodSource("bulkLoadingCaches")
+  void apply_loaderCheckedException(
+      Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
+    var error = new IOException("checked");
+    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) throws Exception {
+        throw error;
+      }
+    });
+    @SuppressWarnings("deprecation")
+    var e = assertThrows(UncheckedExecutionException.class, () -> cache.apply(1));
+    // The caffeinate(loader) path adds a CompletionException wrap from Caffeine's mapping
+    // function; pure Guava and the Caffeine wrapper with a Guava loader unwrap to the cause.
+    assertThat(Throwables.getRootCause(e)).isSameInstanceAs(error);
+  }
+
+  @ParameterizedTest
+  @SuppressWarnings("deprecation")
+  @MethodSource("bulkLoadingCaches")
+  void apply_nullKey(
+      Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
+    var cache = factory.apply(CacheLoader.from(key -> key));
+    assertThrows(NullPointerException.class, () -> cache.apply(nullRef()));
   }
 
   @Test
