@@ -199,14 +199,27 @@ def checkout_at(worktree: Path, sha: str) -> None:
     run_git("-C", str(worktree), "checkout", "--force", "--detach", sha)
 
 
+_METADATA_SENTINEL = "----audit-temporal-walk-metadata-end----"
+
+
 def commit_metadata(sha: str) -> tuple[str, str, list[str]]:
-    """Return (date, message, scope_relative_files) in one git invocation."""
-    out = run_git("show", "--name-only", "--format=%aI%n%s", sha, "--", SCOPE)
-    parts = out.strip().split("\n")
-    date = parts[0] if parts else ""
-    message = parts[1] if len(parts) > 1 else ""
+    """Return (date, full_message, scope_relative_files) in one git invocation.
+    Uses %B so the auditor sees the full commit body, not just the subject —
+    bodies often contain "passes the X.Y TCK" or "fixes #NNN" hints that
+    materially change whether a diff looks like a bug or an intentional
+    contract change. A sentinel separates the format output from the
+    --name-only file list since %B is multi-line."""
+    out = run_git(
+        "show", "--name-only",
+        f"--format=%aI%n%B%n{_METADATA_SENTINEL}",
+        sha, "--", SCOPE,
+    )
+    head, _, tail = out.partition(f"\n{_METADATA_SENTINEL}\n")
+    head_lines = head.split("\n", 1)
+    date = head_lines[0] if head_lines else ""
+    message = head_lines[1].rstrip() if len(head_lines) > 1 else ""
     files = []
-    for line in parts[2:]:
+    for line in tail.splitlines():
         line = line.strip()
         if line.startswith(SCOPE):
             files.append(line[len(SCOPE):])

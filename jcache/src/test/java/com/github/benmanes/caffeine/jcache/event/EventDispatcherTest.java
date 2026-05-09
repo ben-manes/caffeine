@@ -29,6 +29,7 @@ import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -38,6 +39,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.cache.Cache;
+import javax.cache.configuration.CacheEntryListenerConfiguration;
+import javax.cache.configuration.Factory;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
@@ -119,6 +122,18 @@ final class EventDispatcherTest {
     CacheEntryCreatedListener<Integer, Integer> createdListener = Mockito.mock();
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     var configuration = new MutableCacheEntryListenerConfiguration<>(
+        () -> createdListener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false);
+    dispatcher.register(configuration);
+    dispatcher.deregister(configuration);
+    assertThat(dispatcher.dispatchQueues).isEmpty();
+  }
+
+  @Test
+  void deregister_classStrictCustomConfiguration() {
+    CacheEntryCreatedListener<Integer, Integer> createdListener = Mockito.mock();
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var configuration = new CustomCacheEntryListenerConfiguration<Integer, Integer>(
         () -> createdListener, /* filterFactory= */ null,
         /* isOldValueRequired= */ false, /* isSynchronous= */ false);
     dispatcher.register(configuration);
@@ -398,6 +413,54 @@ final class EventDispatcherTest {
     }
   }
 
+  @SuppressWarnings("serial")
+  private static final class CustomCacheEntryListenerConfiguration<K, V>
+      implements CacheEntryListenerConfiguration<K, V> {
+    private final @Nullable Factory<CacheEntryEventFilter<? super K, ? super V>> filterFactory;
+    private final @Nullable Factory<CacheEntryListener<? super K, ? super V>> listenerFactory;
+    private final boolean oldValueRequired;
+    private final boolean synchronous;
+
+    CustomCacheEntryListenerConfiguration(
+        @Nullable Factory<CacheEntryListener<? super K, ? super V>> listenerFactory,
+        @Nullable Factory<CacheEntryEventFilter<? super K, ? super V>> filterFactory,
+        boolean isOldValueRequired, boolean isSynchronous) {
+      this.oldValueRequired = isOldValueRequired;
+      this.listenerFactory = listenerFactory;
+      this.filterFactory = filterFactory;
+      this.synchronous = isSynchronous;
+    }
+    @Override public boolean isSynchronous() {
+      return synchronous;
+    }
+    @Override public boolean isOldValueRequired() {
+      return oldValueRequired;
+    }
+    @Override public @Nullable Factory<CacheEntryListener<? super K, ? super V>>
+    getCacheEntryListenerFactory() {
+      return listenerFactory;
+    }
+    @Override public @Nullable Factory<CacheEntryEventFilter<? super K, ? super V>>
+    getCacheEntryEventFilterFactory() {
+      return filterFactory;
+    }
+    @Override public boolean equals(@Nullable Object o) {
+      if (this == o) {
+        return true;
+      } else if (!(o instanceof CustomCacheEntryListenerConfiguration<?, ?>)) {
+        return false;
+      }
+      var other = (CustomCacheEntryListenerConfiguration<?, ?>) o;
+      return (synchronous == other.synchronous)
+          && (oldValueRequired == other.oldValueRequired)
+          && Objects.equals(filterFactory, other.filterFactory)
+          && Objects.equals(listenerFactory, other.listenerFactory);
+    }
+    @Override public int hashCode() {
+      return Objects.hash(listenerFactory, filterFactory, oldValueRequired, synchronous);
+    }
+  }
+
   private static final class ConsumingCacheListener implements
       CacheEntryCreatedListener<Integer, Integer>,  CacheEntryUpdatedListener<Integer, Integer>,
       CacheEntryRemovedListener<Integer, Integer>, CacheEntryExpiredListener<Integer, Integer> {
@@ -407,17 +470,14 @@ final class EventDispatcherTest {
     public void onCreated(Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {
       Iterables.addAll(queue, events);
     }
-
     @Override
     public void onUpdated(Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {
       Iterables.addAll(queue, events);
     }
-
     @Override
     public void onRemoved(Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {
       Iterables.addAll(queue, events);
     }
-
     @Override
     public void onExpired(Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {
       Iterables.addAll(queue, events);

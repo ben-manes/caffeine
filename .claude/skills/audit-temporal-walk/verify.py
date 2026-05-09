@@ -150,6 +150,23 @@ def render_history(issue: dict) -> str:
     return "\n".join(lines)
 
 
+def introducing_commit_message(sha: str) -> str:
+    """Fetch the full commit body for the introducing SHA so the verifier
+    can read intent (e.g., "passes the X.Y TCK", "fixes #NNN") that the
+    walker saw but didn't preserve in history notes. Returns "" on failure
+    so verification proceeds without it rather than aborting."""
+    if not sha:
+        return ""
+    try:
+        out = subprocess.run(
+            ["git", "show", "-s", "--format=%B", sha],
+            cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=10,
+        )
+        return out.stdout.rstrip() if out.returncode == 0 else ""
+    except subprocess.SubprocessError:
+        return ""
+
+
 def render_issue_block(issue: dict) -> str:
     return json.dumps({
         "id": issue["id"],
@@ -241,6 +258,10 @@ def render_prompt(template: string.Template, issue: dict,
     return template.substitute(
         issue_block=render_issue_block(issue),
         history_block=render_history(issue),
+        introducing_commit_message=(
+            introducing_commit_message(issue.get("first_seen_commit", ""))
+            or "[introducing commit message unavailable]"
+        ),
         code_block=render_code_block(issue),
         design_decisions=design_excerpt,
         known_fps=fps_excerpt,

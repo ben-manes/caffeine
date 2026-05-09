@@ -5,8 +5,10 @@ At each commit you flag concerns; later commits either resolve them or they surv
 CURRENT COMMIT
   sha:     $sha
   date:    $date
-  message: $message
   files in scope changed: $files
+  message (full body — read it; "passes the X.Y TCK", "fixes #NNN", "matches RI"
+  signal that a contract change is intentional, not a regression):
+$message
 
 DIFF (scoped to caffeine/src/main/java/com/github/benmanes/caffeine/cache/):
 $diff
@@ -75,6 +77,7 @@ DESIGN PRIORS (intentional patterns documented in .claude/docs/design-decisions.
 RULES
 - bug_witness REQUIRED on every new entry: a concrete input or scenario that triggers the failure. Acceptance test: a competent developer should be able to write a failing unit test from your bug_witness alone, without having to fill in "and then somehow X happens". If your witness is "under certain conditions" or "if X were called with Y" without explaining how Y arises from the public API, drop the finding.
 - DEFENSIVE-CODING ABSENCE IS NOT A BUG. Missing null/range/state checks against inputs the public API cannot produce are not bugs. The bug_witness must trace from a real public API call, not from "if a caller violated the contract".
+- SPEC JAVADOC IS NOT A WITNESS. When the diff removes a check that a downstream specification's javadoc mandates, the commit message often reveals it as deliberate conformance work ("passes the X.Y TCK", "matches the RI", "spec compliance fix"). If the message says so AND the change looks intentional in shape (single coherent edit, not a sloppy refactor), do NOT flag — the spec javadoc and its TCK frequently disagree, and the TCK wins. Only flag if the bug_witness names a concrete failing TCK / conformance test, not a javadoc paragraph.
 - confidence: "high" = reproducible failure mode; "med" = pattern matches but trigger is uncommon; "low" = smell only (will be auto-decayed).
 - A commit RESOLVES an open issue when it adds the missing guard, fixes the operator order, restores symmetry to a divergent sibling, or refactors the affected code path out of existence.
 - A commit MODIFIES an open issue when it changes the contract of code referenced by the issue (low-level method gains a throw / null / new exception type) — the issue may now be MORE dangerous.

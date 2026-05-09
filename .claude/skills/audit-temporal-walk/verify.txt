@@ -5,6 +5,9 @@ the concern being resolved. Your job: judge against current HEAD.
 ISSUE
 $issue_block
 
+INTRODUCING COMMIT MESSAGE (full body of the SHA in `first_seen_commit`)
+$introducing_commit_message
+
 HISTORY (forward-tracked across commits)
 $history_block
 
@@ -29,7 +32,12 @@ YOUR TASK
    verdict="implicitly_resolved".
 3. If the pattern is documented as intentional in design-decisions.md or
    matches a known false positive, return verdict="false_positive".
-4. Otherwise verdict="still_exists" and produce a detail.dev-format finding.
+4. If the introducing commit message says the change was made deliberately
+   to satisfy a downstream conformance suite (e.g., "passes the X.Y TCK",
+   "matches RI behavior", "spec compliance fix") AND the current code
+   matches that intent, return verdict="false_positive" — the witness is
+   relying on a specification that the actual conformance suite overrides.
+5. Otherwise verdict="still_exists" and produce a detail.dev-format finding.
 
 GROUNDING RULES (violations of any of these mean you must NOT return
 "still_exists"):
@@ -49,6 +57,11 @@ GROUNDING RULES (violations of any of these mean you must NOT return
 - If CURRENT CODE shows a guard, sibling fix, or refactor that prevents
   the witness's failure path, return "implicitly_resolved" and explain
   what guards it.
+- Spec javadoc wording (e.g., "may only be used", "must throw") is a hint,
+  not a witness. Specifications and their TCKs frequently diverge — a
+  contract change made to pass the JCache 1.1 TCK looks like a regression
+  if you only read the JSR-107 javadoc. Cite the test that proves the
+  contract, not just the javadoc.
 
 OUTPUT JSON ONLY (no prose, no markdown fences). Schema:
 {

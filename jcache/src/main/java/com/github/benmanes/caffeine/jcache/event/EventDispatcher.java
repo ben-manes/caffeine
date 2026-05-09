@@ -31,6 +31,7 @@ import java.util.concurrent.Executor;
 
 import javax.cache.Cache;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
+import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryListener;
 import javax.cache.event.EventType;
@@ -113,8 +114,8 @@ public final class EventDispatcher<K, V> {
    */
   public void deregister(CacheEntryListenerConfiguration<K, V> configuration) {
     requireNonNull(configuration);
-    dispatchQueues.keySet().removeIf(registration ->
-        configuration.equals(registration.getConfiguration()));
+    var key = new MutableCacheEntryListenerConfiguration<>(configuration);
+    dispatchQueues.keySet().removeIf(registration -> key.equals(registration.getConfiguration()));
   }
 
   /**
