@@ -383,7 +383,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         // See CacheExpiryTest.expire_whenCreated_CreatedExpiryPolicy()
         result.oldValue = (expirable == null) ? null : expirable.get();
 
-        dispatcher.publishExpired(this, key, value);
+        dispatcher.publishExpired(this, key, newValue);
         return null;
       } else if (expirable == null) {
         dispatcher.publishCreated(this, key, newValue);

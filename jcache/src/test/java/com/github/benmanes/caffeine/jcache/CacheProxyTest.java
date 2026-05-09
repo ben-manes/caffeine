@@ -64,7 +64,11 @@ import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.configuration.Configuration;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
+import javax.cache.configuration.MutableConfiguration;
+import javax.cache.event.CacheEntryEvent;
+import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryListener;
+import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
@@ -73,12 +77,14 @@ import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CompletionListener;
 import javax.cache.integration.CompletionListenerFuture;
 
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -566,6 +572,31 @@ final class CacheProxyTest {
       fixture.jcache().put(KEY_1, VALUE_1);
       var item = fixture.jcache().iterator().next();
       assertThrows(IllegalArgumentException.class, () -> item.unwrap(String.class));
+    }
+  }
+
+  @Test
+  void put_zeroExpiryOnCreate_publishesCopiedValue() {
+    CacheEntryExpiredListener<String, MutableInt> listener = Mockito.mock();
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      var config = new MutableConfiguration<String, MutableInt>()
+          .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(
+              new Duration(TimeUnit.MILLISECONDS, 0L)))
+          .addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ true, /* isSynchronous= */ true));
+      try (Cache<String, MutableInt> cache = fixture.cacheManager()
+              .createCache("expire-on-create", config)) {
+        var original = new MutableInt(42);
+        cache.put("k", original);
+
+        ArgumentCaptor<Iterable<CacheEntryEvent<? extends String, ? extends MutableInt>>> events =
+            ArgumentCaptor.captor();
+        verify(listener).onExpired(events.capture());
+        var captured = events.getValue().iterator().next().getValue();
+        assertThat(captured).isNotSameInstanceAs(original);
+        assertThat(captured).isEqualTo(original);
+      }
     }
   }
 

@@ -413,9 +413,10 @@ final class EventDispatcherTest {
     }
   }
 
-  @SuppressWarnings("serial")
   private static final class CustomCacheEntryListenerConfiguration<K, V>
       implements CacheEntryListenerConfiguration<K, V> {
+    private static final long serialVersionUID = 1L;
+
     private final @Nullable Factory<CacheEntryEventFilter<? super K, ? super V>> filterFactory;
     private final @Nullable Factory<CacheEntryListener<? super K, ? super V>> listenerFactory;
     private final boolean oldValueRequired;
