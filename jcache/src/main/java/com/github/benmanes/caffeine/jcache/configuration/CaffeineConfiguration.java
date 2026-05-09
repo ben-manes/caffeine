@@ -599,13 +599,15 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       return false;
     }
     var config = (CaffeineConfiguration<?, ?>) o;
-    return Objects.equals(refreshAfterWriteNanos, config.refreshAfterWriteNanos)
+    return (nativeStatistics == config.nativeStatistics)
+        && Objects.equals(refreshAfterWriteNanos, config.refreshAfterWriteNanos)
         && Objects.equals(expireAfterAccessNanos, config.expireAfterAccessNanos)
         && Objects.equals(expireAfterWriteNanos, config.expireAfterWriteNanos)
         && Objects.equals(schedulerFactory, config.schedulerFactory)
         && Objects.equals(executorFactory, config.executorFactory)
         && Objects.equals(weigherFactory, config.weigherFactory)
         && Objects.equals(copierFactory, config.copierFactory)
+        && Objects.equals(expiryFactory, config.expiryFactory)
         && Objects.equals(maximumWeight, config.maximumWeight)
         && Objects.equals(tickerFactory, config.tickerFactory)
         && Objects.equals(maximumSize, config.maximumSize)
@@ -614,7 +616,9 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   @Override
   public int hashCode() {
-    return delegate.hashCode();
+    return Objects.hash(nativeStatistics, refreshAfterWriteNanos, expireAfterAccessNanos,
+        expireAfterWriteNanos, schedulerFactory, executorFactory, weigherFactory, expiryFactory,
+        copierFactory, maximumWeight, tickerFactory, maximumSize, delegate);
   }
 
   private static final class UnmodifiableIterable<E> implements Iterable<E> {

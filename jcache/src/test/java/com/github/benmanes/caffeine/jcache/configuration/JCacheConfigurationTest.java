@@ -33,6 +33,7 @@ import javax.cache.configuration.MutableConfiguration;
 
 import org.junit.jupiter.api.Test;
 
+import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.Weigher;
@@ -101,7 +102,7 @@ final class JCacheConfigurationTest {
         .addEqualityGroup(cacheConfig,
             new MutableConfiguration<>(new CaffeineConfiguration<>(cacheConfig)))
         .addEqualityGroup(new CaffeineConfiguration<>(cacheConfig));
-    var configurations = Lists.cartesianProduct(IntStream.range(0, 10)
+    var configurations = Lists.cartesianProduct(IntStream.range(0, 12)
         .mapToObj(i -> ImmutableList.of(true, false)).collect(toImmutableList()));
     for (var config : configurations) {
       var absent = OptionalLong.empty();
@@ -126,6 +127,10 @@ final class JCacheConfigurationTest {
       configuration.setSchedulerFactory(config.get(9)
           ? Scheduler::systemScheduler
           : Scheduler::disabledScheduler);
+      configuration.setNativeStatisticsEnabled(config.get(10));
+      configuration.setExpiryFactory(config.get(11)
+          ? Optional.of(() -> Expiry.creating((k, v) -> Duration.ZERO))
+          : Optional.empty());
       tester.addEqualityGroup(config);
       tester.addEqualityGroup(new CaffeineConfiguration<>(configuration));
     }
