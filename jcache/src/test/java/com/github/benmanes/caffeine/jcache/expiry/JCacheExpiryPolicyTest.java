@@ -20,8 +20,13 @@ import static com.google.common.truth.Truth.assertThat;
 import java.util.HashSet;
 import java.util.List;
 
+import javax.cache.expiry.AccessedExpiryPolicy;
+import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
+import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.expiry.ModifiedExpiryPolicy;
+import javax.cache.expiry.TouchedExpiryPolicy;
 
 import org.junit.jupiter.api.Test;
 
@@ -57,6 +62,19 @@ final class JCacheExpiryPolicyTest {
   @Test
   void equals_wrongType() {
     assertThat(eternal.equals(new Object())).isFalse();
+  }
+
+  @Test
+  void equals_other() {
+    new EqualsTester()
+        .addEqualityGroup(new JCacheExpiryPolicy(
+            Duration.ETERNAL, /* update= */ null, /* access= */ null))
+        .addEqualityGroup(new AccessedExpiryPolicy(Duration.ETERNAL))
+        .addEqualityGroup(new ModifiedExpiryPolicy(Duration.ETERNAL))
+        .addEqualityGroup(new CreatedExpiryPolicy(Duration.ETERNAL))
+        .addEqualityGroup(new TouchedExpiryPolicy(Duration.ETERNAL))
+        .addEqualityGroup(new EternalExpiryPolicy())
+        .testEquals();
   }
 
   @Test
