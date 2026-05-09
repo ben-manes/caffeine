@@ -145,6 +145,26 @@ final class CacheManagerTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
+  void createCache_completeConfiguration_withDefaultListeners() {
+    var defaultConfigSource = TypesafeConfigurator.configSource();
+    var overlay = ConfigFactory.parseString("caffeine.jcache.default.listeners = ["
+        + "caffeine.jcache.listeners.test-listener,"
+        + "caffeine.jcache.listeners.test-listener2]");
+    var merged = overlay.withFallback(ConfigFactory.load());
+    TypesafeConfigurator.setConfigSource(() -> merged);
+    try (var fixture = JCacheFixture.builder().build();
+         var cache = fixture.cacheManager().createCache(
+             "complete-defaults", new MutableConfiguration<String, String>())) {
+      assertThat(cache).isNotNull();
+      var resolved = cache.getConfiguration(CompleteConfiguration.class);
+      assertThat(resolved.getCacheEntryListenerConfigurations()).isEmpty();
+    } finally {
+      TypesafeConfigurator.setConfigSource(defaultConfigSource);
+    }
+  }
+
+  @Test
   @SuppressLint("THREAD_SAFETY_VIOLATION")
   void close_blocksConcurrentCreateCache() throws InterruptedException, ExecutionException {
     try (var fixture = JCacheFixture.builder().build()) {

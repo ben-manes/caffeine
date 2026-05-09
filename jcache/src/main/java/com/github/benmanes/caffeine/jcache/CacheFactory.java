@@ -18,11 +18,13 @@ package com.github.benmanes.caffeine.jcache;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import javax.cache.CacheManager;
+import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
 import javax.cache.configuration.Factory;
@@ -115,8 +117,9 @@ final class CacheFactory {
       template.setWriteThrough(complete.isWriteThrough());
       template.setManagementEnabled(complete.isManagementEnabled());
       template.setStatisticsEnabled(complete.isStatisticsEnabled());
-      template.getCacheEntryListenerConfigurations()
-          .forEach(template::removeCacheEntryListenerConfiguration);
+      var existing = new ArrayList<CacheEntryListenerConfiguration<K, V>>();
+      template.getCacheEntryListenerConfigurations().forEach(existing::add);
+      existing.forEach(template::removeCacheEntryListenerConfiguration);
       complete.getCacheEntryListenerConfigurations()
           .forEach(template::addCacheEntryListenerConfiguration);
       template.setCacheLoaderFactory(complete.getCacheLoaderFactory());
