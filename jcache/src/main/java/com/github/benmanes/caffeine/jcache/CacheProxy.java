@@ -153,18 +153,24 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public @Nullable V get(K key) {
     requireNotClosed();
+    boolean statsEnabled = statistics.isEnabled();
+    long start = statsEnabled ? ticker.read() : 0L;
+
     Expirable<V> expirable = cache.getIfPresent(key);
     if (expirable == null) {
       statistics.recordMisses(1L);
+      if (statsEnabled) {
+        statistics.recordGetTime(ticker.read() - start);
+      }
       return null;
     }
 
-    long start;
     long millis;
-    boolean statsEnabled = statistics.isEnabled();
-    if (!expirable.isEternal()) {
-      start = ticker.read();
-      millis = nanosToMillis(start);
+    if (expirable.isEternal()) {
+      millis = 0L;
+    } else {
+      long now = ticker.read();
+      millis = nanosToMillis(now);
       if (expirable.hasExpired(millis)) {
         cache.asMap().computeIfPresent(key, (k, e) -> {
           if (e == expirable) {
@@ -176,13 +182,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         });
         dispatcher.awaitSynchronous();
         statistics.recordMisses(1L);
+        if (statsEnabled) {
+          statistics.recordGetTime(ticker.read() - start);
+        }
         return null;
       }
-    } else if (statsEnabled) {
-      start = ticker.read();
-      millis = nanosToMillis(start);
-    } else {
-      start = millis = 0L;
     }
 
     setAccessExpireTime(key, expirable, millis);
@@ -708,13 +712,18 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     dispatcher.awaitSynchronous();
     if (oldValue == null) {
       statistics.recordMisses(1L);
+      if (statsEnabled) {
+        statistics.recordGetTime(ticker.read() - start);
+      }
       return false;
     }
 
     if (statsEnabled) {
       statistics.recordHits(1L);
       statistics.recordPuts(1L);
-      statistics.recordPutTime(ticker.read() - start);
+      long duration = ticker.read() - start;
+      statistics.recordGetTime(duration);
+      statistics.recordPutTime(duration);
     }
     return true;
   }

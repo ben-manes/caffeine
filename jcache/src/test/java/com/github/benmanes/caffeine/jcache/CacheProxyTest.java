@@ -75,6 +75,7 @@ import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryListener;
+import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
@@ -247,6 +248,67 @@ final class CacheProxyTest {
       CompletionListener listener = Mockito.mock();
       fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, listener);
       verify(listener).onException(any(CacheLoaderException.class));
+    }
+  }
+
+  @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
+  void get_miss_recordsGetTime() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      fixture.ticker().setAutoIncrementStep(1, TimeUnit.SECONDS);
+      assertThat(fixture.jcache().get(KEY_1)).isNull();
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      assertThat(stats.getCacheMisses()).isEqualTo(1);
+      assertThat(stats.getCacheGets()).isEqualTo(1);
+      assertThat(stats.getAverageGetTime()).isGreaterThan(0F);
+    }
+  }
+
+  @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
+  void get_expired_recordsGetTime() {
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExpiryPolicyFactory(() -> new AccessedExpiryPolicy(
+              new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION.toMillis())));
+          config.setStatisticsEnabled(true);
+        }).build()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.ticker().setAutoIncrementStep(EXPIRY_DURATION.dividedBy(2));
+      assertThat(fixture.jcache().get(KEY_1)).isNull();
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      assertThat(stats.getCacheMisses()).isEqualTo(1);
+      assertThat(stats.getAverageGetTime()).isGreaterThan(0F);
+    }
+  }
+
+  @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
+  void replace_miss_recordsGetTime() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      fixture.ticker().setAutoIncrementStep(1, TimeUnit.SECONDS);
+      assertThat(fixture.jcache().replace(KEY_1, VALUE_1)).isFalse();
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      assertThat(stats.getCacheMisses()).isEqualTo(1);
+      assertThat(stats.getAverageGetTime()).isGreaterThan(0F);
+    }
+  }
+
+  @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
+  void replace_hit_recordsGetTime() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.ticker().setAutoIncrementStep(1, TimeUnit.SECONDS);
+      assertThat(fixture.jcache().replace(KEY_1, VALUE_2)).isTrue();
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      assertThat(stats.getCacheHits()).isEqualTo(1);
+      assertThat(stats.getAverageGetTime()).isGreaterThan(0F);
+      assertThat(stats.getAveragePutTime()).isGreaterThan(0F);
     }
   }
 
