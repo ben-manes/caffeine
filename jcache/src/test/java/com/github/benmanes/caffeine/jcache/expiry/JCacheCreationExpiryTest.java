@@ -27,6 +27,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.time.Duration;
+import java.util.Set;
 
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
@@ -54,12 +55,25 @@ import com.google.common.util.concurrent.MoreExecutors;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class JCacheCreationExpiryTest {
+  private static final javax.cache.expiry.Duration CREATION =
+      new javax.cache.expiry.Duration(MILLISECONDS, EXPIRY_DURATION.toMillis());
+  private static final javax.cache.expiry.Duration ACCESS =
+      new javax.cache.expiry.Duration(MILLISECONDS, EXPIRY_DURATION.multipliedBy(3).toMillis());
 
   private static JCacheFixture jcacheFixture() {
     return JCacheFixture.builder()
         .configure(config -> {
-          config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(
-                new javax.cache.expiry.Duration(MILLISECONDS, EXPIRY_DURATION.toMillis())));
+          config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(CREATION));
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setStatisticsEnabled(true);
+        }).build();
+  }
+
+  private static JCacheFixture distinctDurationsFixture() {
+    return JCacheFixture.builder()
+        .configure(config -> {
+          config.setExpiryPolicyFactory(
+              () -> new JCacheExpiryPolicy(CREATION, /* update= */ null, ACCESS));
           config.setExecutorFactory(MoreExecutors::directExecutor);
           config.setStatisticsEnabled(true);
         }).build();
@@ -143,6 +157,62 @@ final class JCacheCreationExpiryTest {
       assertThat(expirable).isNotNull();
       assertThat(expirable.getExpireTimeMillis())
           .isEqualTo(START_TIME.plus(EXPIRY_DURATION).toMillis());
+    }
+  }
+
+  @Test
+  void get_loading_absent_usesCreationExpiry() {
+    try (var fixture = distinctDurationsFixture()) {
+      assertThat(fixture.jcacheLoading().get(KEY_1)).isEqualTo(KEY_1);
+
+      Expirable<Integer> expirable = getExpirable(fixture.jcacheLoading(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+    }
+  }
+
+  @Test
+  void get_loading_present_usesAccessExpiry() {
+    try (var fixture = distinctDurationsFixture()) {
+      fixture.jcacheLoading().put(KEY_1, VALUE_1);
+      fixture.advanceHalfExpiry();
+
+      assertThat(fixture.jcacheLoading().get(KEY_1)).isEqualTo(VALUE_1);
+
+      Expirable<Integer> expirable = getExpirable(fixture.jcacheLoading(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION.multipliedBy(3)).toMillis());
+    }
+  }
+
+  /* --------------- getAll (loading) --------------- */
+
+  @Test
+  void getAll_loading_absent_usesCreationExpiry() {
+    try (var fixture = distinctDurationsFixture()) {
+      assertThat(fixture.jcacheLoading().getAll(Set.of(KEY_1))).containsExactly(KEY_1, KEY_1);
+
+      Expirable<Integer> expirable = getExpirable(fixture.jcacheLoading(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+    }
+  }
+
+  @Test
+  void getAll_loading_present_usesAccessExpiry() {
+    try (var fixture = distinctDurationsFixture()) {
+      fixture.jcacheLoading().put(KEY_1, VALUE_1);
+      fixture.advanceHalfExpiry();
+
+      assertThat(fixture.jcacheLoading().getAll(Set.of(KEY_1))).containsExactly(KEY_1, VALUE_1);
+
+      Expirable<Integer> expirable = getExpirable(fixture.jcacheLoading(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION.multipliedBy(3)).toMillis());
     }
   }
 
