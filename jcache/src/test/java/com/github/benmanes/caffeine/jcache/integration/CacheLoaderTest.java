@@ -77,6 +77,28 @@ final class CacheLoaderTest {
     }
   }
 
+  @Test
+  void load_null_subtractsLoaderTimeFromGetTime() {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    try (var fixture = jcacheFixture(expiry, cacheLoader)) {
+      // Simulate a slow loader by advancing the cache's ticker inside load().
+      when(cacheLoader.load(any())).thenAnswer(invocation -> {
+        fixture.ticker().advance(java.time.Duration.ofMillis(100));
+        return nullRef();
+      });
+
+      assertThat(fixture.jcacheLoading().get(1)).isNull();
+
+      // recordGetTime is documented as excluding loader time. Pre-fix, the null-result
+      // early return skipped the subtraction; the 100ms loader stayed attributed to
+      // average get-time (~100_000 microseconds). Post-fix the loader's elapsed time
+      // is subtracted regardless of the loader's result.
+      assertThat(JCacheFixture.getStatistics(fixture.jcacheLoading())
+          .getAverageGetTime()).isLessThan(50_000f);
+    }
+  }
+
   @ParameterizedTest @MethodSource("throwables")
   void load_failure(Throwable throwable) {
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ZERO);

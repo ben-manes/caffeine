@@ -36,6 +36,7 @@ import com.github.benmanes.caffeine.jcache.CacheProxy;
 import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
+import com.google.errorprone.annotations.Var;
 
 /**
  * An adapter from a JCache cache loader to Caffeine's.
@@ -80,18 +81,18 @@ public final class JCacheLoaderAdapter<K, V>
       long start = statsEnabled ? ticker.read() : 0L;
 
       V value = delegate.load(key);
-      if (value == null) {
-        return null;
+      @Var Expirable<V> expirable = null;
+      if (value != null) {
+        requireNonNull(cache);
+        dispatcher.publishCreated(cache, key, value);
+        expirable = new Expirable<>(value, expireTimeMillis());
       }
-
-      requireNonNull(cache);
-      dispatcher.publishCreated(cache, key, value);
 
       if (statsEnabled) {
         // Subtracts the load time from the get time
         statistics.recordGetTime(start - ticker.read());
       }
-      return new Expirable<>(value, expireTimeMillis());
+      return expirable;
     } catch (CacheLoaderException e) {
       throw e;
     } catch (RuntimeException e) {
