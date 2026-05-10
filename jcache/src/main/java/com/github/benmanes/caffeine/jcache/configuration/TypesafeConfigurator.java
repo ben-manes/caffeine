@@ -364,7 +364,7 @@ public final class TypesafeConfigurator {
         configuration.setExpireAfterAccess(OptionalLong.of(nanos));
       }
       if (isSet("policy.eager-expiration.variable")) {
-        configuration.setExpiryFactory(Optional.of(FactoryBuilder.factoryOf(
+        configuration.setExpiryFactory(Optional.of(factoryCreator().factoryOf(
             merged.getString("policy.eager-expiration.variable"))));
       }
     }
@@ -387,7 +387,7 @@ public final class TypesafeConfigurator {
       }
       if (isSet("policy.maximum.weigher")) {
         configuration.setWeigherFactory(Optional.of(
-            FactoryBuilder.factoryOf(merged.getString("policy.maximum.weigher"))));
+            factoryCreator().factoryOf(merged.getString("policy.maximum.weigher"))));
       }
     }
 

@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
@@ -36,6 +37,8 @@ import java.util.function.Supplier;
 
 import javax.cache.Cache;
 import javax.cache.configuration.CompleteConfiguration;
+import javax.cache.configuration.Factory;
+import javax.cache.configuration.FactoryBuilder;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
@@ -61,6 +64,7 @@ final class TypesafeConfigurationTest {
   @AfterEach
   void afterEach() {
     TypesafeConfigurator.setConfigSource(defaultConfigSource);
+    TypesafeConfigurator.setFactoryCreator(FactoryBuilder::factoryOf);
   }
 
   @Test
@@ -297,6 +301,34 @@ final class TypesafeConfigurationTest {
     assertThat(expiry.getExpiryForCreation()).isEqualTo(Duration.ETERNAL);
     assertThat(expiry.getExpiryForUpdate()).isEqualTo(Duration.FIVE_MINUTES);
     assertThat(expiry.getExpiryForAccess()).isEqualTo(Duration.TEN_MINUTES);
+  }
+
+  @Test
+  void variableExpiry_usesFactoryCreator() {
+    var calls = new ArrayList<String>();
+    TypesafeConfigurator.setFactoryCreator(new FactoryCreator() {
+      @Override public <T> Factory<T> factoryOf(String className) {
+        calls.add(className);
+        return FactoryBuilder.factoryOf(className);
+      }
+    });
+    var config = TypesafeConfigurator.from(ConfigFactory.load(), "test-cache-2").orElseThrow();
+    assertThat(config.getExpiryFactory().orElseThrow().create()).isInstanceOf(TestExpiry.class);
+    assertThat(calls).contains(TestExpiry.class.getName());
+  }
+
+  @Test
+  void weigher_usesFactoryCreator() {
+    var calls = new ArrayList<String>();
+    TypesafeConfigurator.setFactoryCreator(new FactoryCreator() {
+      @Override public <T> Factory<T> factoryOf(String className) {
+        calls.add(className);
+        return FactoryBuilder.factoryOf(className);
+      }
+    });
+    var config = TypesafeConfigurator.from(ConfigFactory.load(), "test-cache").orElseThrow();
+    assertThat(config.getWeigherFactory().orElseThrow().create()).isInstanceOf(TestWeigher.class);
+    assertThat(calls).contains(TestWeigher.class.getName());
   }
 
   @Test
