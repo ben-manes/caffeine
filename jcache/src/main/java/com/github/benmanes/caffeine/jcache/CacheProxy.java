@@ -921,6 +921,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public <T> Map<K, EntryProcessorResult<T>> invokeAll(Set<? extends K> keys,
       EntryProcessor<K, V, T> entryProcessor, Object... arguments) {
+    requireNotClosed();
+    requireNonNull(keys);
+    requireNonNull(arguments);
+    requireNonNull(entryProcessor);
+    keys.forEach(Objects::requireNonNull);
+
     var results = new HashMap<K, EntryProcessorResult<T>>(keys.size(), 1.0f);
     for (K key : keys) {
       try {

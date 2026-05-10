@@ -617,6 +617,24 @@ final class CacheProxyTest {
   }
 
   @Test
+  void invokeAll_emptyKeys_closed_throws() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      var cache = fixture.jcache();
+      cache.close();
+      assertThrows(IllegalStateException.class, () ->
+          cache.invokeAll(Set.of(), Mockito.mock()));
+    }
+  }
+
+  @Test
+  void invokeAll_emptyKeys_nullProcessor_throws() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      assertThrows(NullPointerException.class, () ->
+          fixture.jcache().invokeAll(Set.of(), nullRef()));
+    }
+  }
+
+  @Test
   void close_alreadyClosed() {
     LoadingCache<Integer, @Nullable Expirable<Integer>> underlying = Mockito.mock();
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
