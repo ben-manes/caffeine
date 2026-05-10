@@ -86,6 +86,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private static final Logger logger = System.getLogger(CacheProxy.class.getName());
 
   protected final com.github.benmanes.caffeine.cache.Cache<K, @Nullable Expirable<V>> cache;
+  protected final CaffeineConfiguration<K, V> configuration;
   protected final Optional<CacheLoader<K, V>> cacheLoader;
   protected final Set<CompletableFuture<?>> inFlight;
   protected final JCacheStatisticsMXBean statistics;
@@ -93,7 +94,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected final Executor executor;
   protected final Ticker ticker;
 
-  private final CaffeineConfiguration<K, V> configuration;
   private final CacheManager cacheManager;
   private final CacheWriter<K, V> writer;
   private final JCacheMXBean cacheMxBean;
@@ -263,25 +263,36 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       return;
     }
 
-    var future = CompletableFuture.runAsync(() -> {
-      try {
-        if (replaceExistingValues) {
-          loadAllAndReplaceExisting(keys);
-        } else {
-          loadAllAndKeepExisting(keys);
+    var future = new CompletableFuture<@Nullable Void>();
+    synchronized (configuration) {
+      requireNotClosed();
+      inFlight.add(future);
+    }
+    try {
+      CompletableFuture.runAsync(() -> {
+        try {
+          if (replaceExistingValues) {
+            loadAllAndReplaceExisting(keys);
+          } else {
+            loadAllAndKeepExisting(keys);
+          }
+          listener.onCompletion();
+        } catch (CacheLoaderException e) {
+          listener.onException(e);
+        } catch (RuntimeException e) {
+          listener.onException(new CacheLoaderException(e));
+        } finally {
+          dispatcher.ignoreSynchronous();
         }
-        listener.onCompletion();
-      } catch (CacheLoaderException e) {
-        listener.onException(e);
-      } catch (RuntimeException e) {
-        listener.onException(new CacheLoaderException(e));
-      } finally {
-        dispatcher.ignoreSynchronous();
-      }
-    }, executor);
-
-    inFlight.add(future);
-    future.whenComplete((r, e) -> inFlight.remove(future));
+      }, executor).whenComplete((r, e) -> {
+        inFlight.remove(future);
+        future.complete(null);
+      });
+    } catch (Throwable t) {
+      inFlight.remove(future);
+      future.complete(null);
+      throw t;
+    }
   }
 
   /** Performs the bulk load where the existing entries are replaced. */

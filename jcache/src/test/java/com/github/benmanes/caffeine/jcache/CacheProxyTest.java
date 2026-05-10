@@ -29,6 +29,7 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.TERMINATED;
+import static java.lang.Thread.State.TIMED_WAITING;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
@@ -55,6 +56,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -633,6 +635,64 @@ final class CacheProxyTest {
         supplied.setValue(VALUE_2);
         assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
       }
+    }
+  }
+
+  @Test
+  @SuppressFBWarnings("HES_LOCAL_EXECUTOR_SERVICE")
+  void close_awaitsInFlightLoadAll() throws InterruptedException {
+    @SuppressWarnings("PMD.CloseResource")
+    var executor = Executors.newSingleThreadExecutor();
+    var letProceed = new CountDownLatch(1);
+    var listenerNotified = new AtomicBoolean();
+    var blockingLoader = new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) {
+        try {
+          letProceed.await();
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+        return key;
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        var result = new HashMap<Integer, Integer>();
+        keys.forEach(key -> result.put(key, load(key)));
+        return result;
+      }
+    };
+    var listener = new CompletionListener() {
+      @Override public void onCompletion() {
+        listenerNotified.set(true);
+      }
+      @Override public void onException(Exception e) { /* unused */ }
+    };
+    try {
+      try (var fixture = JCacheFixture.builder()
+          .loading(config -> {
+            config.setCacheLoaderFactory(() -> blockingLoader);
+            config.setReadThrough(true);
+          })
+          .configure(config -> config.setExecutorFactory(() -> executor))
+          .build()) {
+        fixture.jcacheLoading().loadAll(Set.of(KEY_1), /* replaceExistingValues= */ true, listener);
+
+        var closeThread = new Thread(() -> fixture.jcacheLoading().close());
+        closeThread.start();
+
+        // close() must wait for the in-flight loadAll future. Pre-fix the race window
+        // between runAsync and inFlight.add could let close() observe an empty inFlight
+        // and return before the loader completed; post-fix the registration is inside
+        // the same configuration lock that close() takes.
+        var blocked = EnumSet.of(BLOCKED, WAITING, TIMED_WAITING);
+        await().until(() -> blocked.contains(closeThread.getState()));
+        assertThat(closeThread.isAlive()).isTrue();
+
+        letProceed.countDown();
+        closeThread.join();
+        assertThat(listenerNotified.get()).isTrue();
+      }
+    } finally {
+      executor.shutdownNow();
     }
   }
 

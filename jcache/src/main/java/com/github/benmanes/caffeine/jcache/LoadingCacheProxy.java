@@ -160,25 +160,36 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
         ? NullCompletionListener.INSTANCE
         : completionListener;
 
-    var future = CompletableFuture.runAsync(() -> {
-      try {
-        if (replaceExistingValues) {
-          Map<K, V> loaded = cacheLoader.orElseThrow().loadAll(keys);
-          for (var entry : loaded.entrySet()) {
-            putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter= */ false);
+    var future = new CompletableFuture<@Nullable Void>();
+    synchronized (configuration) {
+      requireNotClosed();
+      inFlight.add(future);
+    }
+    try {
+      CompletableFuture.runAsync(() -> {
+        try {
+          if (replaceExistingValues) {
+            Map<K, V> loaded = cacheLoader.orElseThrow().loadAll(keys);
+            for (var entry : loaded.entrySet()) {
+              putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter= */ false);
+            }
+          } else {
+            getAll(keys, /* updateAccessTime= */ false);
           }
-        } else {
-          getAll(keys, /* updateAccessTime= */ false);
+          listener.onCompletion();
+        } catch (RuntimeException e) {
+          listener.onException(e);
+        } finally {
+          dispatcher.ignoreSynchronous();
         }
-        listener.onCompletion();
-      } catch (RuntimeException e) {
-        listener.onException(e);
-      } finally {
-        dispatcher.ignoreSynchronous();
-      }
-    }, executor);
-
-    inFlight.add(future);
-    future.whenComplete((r, e) -> inFlight.remove(future));
+      }, executor).whenComplete((r, e) -> {
+        inFlight.remove(future);
+        future.complete(null);
+      });
+    } catch (Throwable t) {
+      inFlight.remove(future);
+      future.complete(null);
+      throw t;
+    }
   }
 }
