@@ -20,6 +20,8 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
@@ -27,6 +29,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
+import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
@@ -121,6 +125,27 @@ final class CacheLoaderTest {
       when(cacheLoader.load(any())).thenReturn(-1);
       var e = assertThrows(CacheLoaderException.class, () -> fixture.jcacheLoading().get(1));
       assertThat(e).hasCauseThat().isInstanceOf(IllegalStateException.class);
+    }
+  }
+
+  @Test
+  void load_failure_expiry_doesNotPublishCreated() {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ZERO);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    CacheEntryCreatedListener<Integer, Integer> listener = Mockito.mock();
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setCacheLoaderFactory(() -> cacheLoader);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setReadThrough(true);
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        }).build()) {
+      when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
+      when(cacheLoader.load(any())).thenReturn(-1);
+      assertThrows(CacheLoaderException.class, () -> fixture.jcacheLoading().get(1));
+      verify(listener, never()).onCreated(any());
     }
   }
 

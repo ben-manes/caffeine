@@ -84,8 +84,8 @@ public final class JCacheLoaderAdapter<K, V>
       @Var Expirable<V> expirable = null;
       if (value != null) {
         requireNonNull(cache);
-        dispatcher.publishCreated(cache, key, value);
         expirable = new Expirable<>(value, expireTimeMillis());
+        dispatcher.publishCreated(cache, key, value);
       }
 
       if (statsEnabled) {
