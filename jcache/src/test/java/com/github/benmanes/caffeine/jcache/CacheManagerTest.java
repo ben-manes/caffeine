@@ -130,6 +130,33 @@ final class CacheManagerTest {
   }
 
   @Test
+  @SuppressLint("THREAD_SAFETY_VIOLATION")
+  void close_classLoaderGced_doesNotClosePeerManager() {
+    try (var fixture = JCacheFixture.builder().build()) {
+      var customLoader = new ClassLoader() {};
+      var sharedUri = URI.create("shared-" + getClass().getName());
+
+      @SuppressWarnings("PMD.CloseResource")
+      var managerA = (CacheManagerImpl) fixture.cachingProvider()
+          .getCacheManager(sharedUri, customLoader);
+      @SuppressWarnings("PMD.CloseResource")
+      var managerB = (CacheManagerImpl) fixture.cachingProvider().getCacheManager(
+          sharedUri, fixture.cachingProvider().getDefaultClassLoader());
+      assertThat(managerA).isNotSameInstanceAs(managerB);
+
+      // Simulate managerA's custom ClassLoader being GC'd while managerA is still
+      // strongly reachable. Pre-fix, managerA.close() would forward null to the
+      // provider, which falls back to the default loader and closes managerB.
+      managerA.classLoaderReference.clear();
+      managerA.close();
+
+      assertThat(managerA.isClosed()).isTrue();
+      assertThat(managerB.isClosed()).isFalse();
+      managerB.close();
+    }
+  }
+
+  @Test
   void close_clearsCachesAndIsIdempotent() {
     try (var fixture = JCacheFixture.builder().build()) {
       @SuppressWarnings("PMD.CloseResource")

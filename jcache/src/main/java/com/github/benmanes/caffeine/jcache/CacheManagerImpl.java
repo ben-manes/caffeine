@@ -232,7 +232,10 @@ public final class CacheManagerImpl implements CacheManager {
           cache.close();
         }
         closed = true;
-        cacheProvider.close(uri, classLoaderReference.get());
+        ClassLoader classLoader = classLoaderReference.get();
+        if (classLoader != null) {
+          cacheProvider.close(uri, classLoader);
+        }
       }
     }
   }
