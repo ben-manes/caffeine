@@ -186,6 +186,10 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
         inFlight.remove(future);
         future.complete(null);
       });
+    } catch (RuntimeException e) {
+      inFlight.remove(future);
+      future.complete(null);
+      listener.onException(e);
     } catch (Throwable t) {
       inFlight.remove(future);
       future.complete(null);

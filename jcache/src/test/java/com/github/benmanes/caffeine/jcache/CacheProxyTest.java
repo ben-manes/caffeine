@@ -58,7 +58,9 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -227,6 +229,36 @@ final class CacheProxyTest {
       doThrow(e).when(completionListener).onCompletion();
       fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, completionListener);
       verify(completionListener).onException(e);
+    }
+  }
+
+  @Test
+  void loadAll_executorRejects_notifiesListener() {
+    Executor rejecting = task -> { throw new RejectedExecutionException("test"); };
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExecutorFactory(() -> rejecting);
+          config.setCacheLoaderFactory(() -> loader);
+        }).build()) {
+      // jcache() is a plain CacheProxy (no read-through); CacheProxy.loadAll wraps
+      // the rejection in CacheLoaderException to match its inner-catch convention.
+      assertThat(fixture.jcache()).isNotInstanceOf(LoadingCacheProxy.class);
+      CompletionListener listener = Mockito.mock();
+      fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, listener);
+      verify(listener).onException(any(CacheLoaderException.class));
+    }
+  }
+
+  @Test
+  void loadAll_loading_executorRejects_notifiesListener() {
+    Executor rejecting = task -> { throw new RejectedExecutionException("test"); };
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> config.setExecutorFactory(() -> rejecting))
+        .build()) {
+      CompletionListener listener = Mockito.mock();
+      fixture.jcacheLoading().loadAll(KEYS, /* replaceExistingValues= */ true, listener);
+      verify(listener).onException(any(RejectedExecutionException.class));
     }
   }
 

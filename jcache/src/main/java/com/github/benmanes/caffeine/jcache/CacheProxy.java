@@ -288,6 +288,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         inFlight.remove(future);
         future.complete(null);
       });
+    } catch (RuntimeException e) {
+      inFlight.remove(future);
+      future.complete(null);
+      listener.onException(new CacheLoaderException(e));
     } catch (Throwable t) {
       inFlight.remove(future);
       future.complete(null);
