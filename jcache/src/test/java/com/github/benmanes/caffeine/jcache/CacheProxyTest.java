@@ -577,25 +577,41 @@ final class CacheProxyTest {
 
   @Test
   void put_zeroExpiryOnCreate_publishesCopiedValue() {
-    CacheEntryExpiredListener<String, MutableInt> listener = Mockito.mock();
+    CacheEntryExpiredListener<Integer, MutableInt> listener = Mockito.mock();
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
-      var config = new MutableConfiguration<String, MutableInt>()
+      var config = new MutableConfiguration<Integer, MutableInt>()
           .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(
               new Duration(TimeUnit.MILLISECONDS, 0L)))
           .addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
               /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
               /* isOldValueRequired= */ true, /* isSynchronous= */ true));
-      try (Cache<String, MutableInt> cache = fixture.cacheManager()
+      try (Cache<Integer, MutableInt> cache = fixture.cacheManager()
               .createCache("expire-on-create", config)) {
         var original = new MutableInt(42);
-        cache.put("k", original);
+        cache.put(KEY_1, original);
 
-        ArgumentCaptor<Iterable<CacheEntryEvent<? extends String, ? extends MutableInt>>> events =
+        ArgumentCaptor<Iterable<CacheEntryEvent<? extends Integer, ? extends MutableInt>>> events =
             ArgumentCaptor.captor();
         verify(listener).onExpired(events.capture());
         var captured = events.getValue().iterator().next().getValue();
         assertThat(captured).isNotSameInstanceAs(original);
         assertThat(captured).isEqualTo(original);
+      }
+    }
+  }
+
+  @Test
+  void replaceConditional_storesCopiedValue() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      var config = new MutableConfiguration<Integer, MutableInt>();
+      try (Cache<Integer, MutableInt> cache = fixture.cacheManager()
+              .createCache("replace-conditional", config)) {
+        var original = new MutableInt(VALUE_1);
+        var replacement = new MutableInt(VALUE_2);
+        cache.put(KEY_1, original);
+        assertThat(cache.replace(KEY_1, original, replacement)).isTrue();
+        replacement.setValue(VALUE_3);
+        assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_2));
       }
     }
   }

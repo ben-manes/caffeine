@@ -651,13 +651,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       found[0] = true;
       Expirable<V> result;
       if (oldValue.equals(expirable.get())) {
+        V copy = copyOf(newValue);
         publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, newValue));
-        dispatcher.publishUpdated(this, key, expirable.get(), copyOf(newValue));
+        dispatcher.publishUpdated(this, key, expirable.get(), copy);
         @Var long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ false);
         if (expireTimeMillis == Long.MIN_VALUE) {
           expireTimeMillis = expirable.getExpireTimeMillis();
         }
-        result = new Expirable<>(newValue, expireTimeMillis);
+        result = new Expirable<>(copy, expireTimeMillis);
         replaced[0] = true;
       } else {
         result = expirable;
