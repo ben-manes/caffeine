@@ -891,7 +891,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         // fallthrough
       case LOADED: {
         statistics.recordPuts(1L);
-        var value = requireNonNull(entry.getValue());
+        V value = copyOf(requireNonNull(entry.getValue()));
         dispatcher.publishCreated(this, entry.getKey(), value);
         return new Expirable<>(value, getWriteExpireTimeMillis(/* created= */ true));
       }
@@ -899,7 +899,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         statistics.recordPuts(1L);
         publishToCacheWriter(writer::write, () -> entry);
         requireNonNull(expirable, "Expected a previous value but was null");
-        var value = requireNonNull(entry.getValue(), "Expected a new value but was null");
+        V value = copyOf(requireNonNull(entry.getValue(), "Expected a new value but was null"));
         dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), value);
         @Var long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ false);
         if (expireTimeMillis == Long.MIN_VALUE) {

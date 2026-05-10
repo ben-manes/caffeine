@@ -617,6 +617,23 @@ final class CacheProxyTest {
   }
 
   @Test
+  void invoke_setValue_storesCopiedValue() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      var config = new MutableConfiguration<Integer, MutableInt>();
+      try (Cache<Integer, MutableInt> cache = fixture.cacheManager()
+              .createCache("invoke-set-value", config)) {
+        var supplied = new MutableInt(VALUE_1);
+        cache.invoke(KEY_1, (entry, args) -> {
+          entry.setValue(supplied);
+          return null;
+        });
+        supplied.setValue(VALUE_2);
+        assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
+      }
+    }
+  }
+
+  @Test
   void invokeAll_emptyKeys_closed_throws() {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       var cache = fixture.jcache();
