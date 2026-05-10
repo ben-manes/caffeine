@@ -254,6 +254,23 @@ final class JCacheAccessExpiryTest {
     }
   }
 
+  @Test
+  void invoke_existsOnly_doesNotExtendAccessExpiry() {
+    try (var fixture = jcacheFixture()) {
+      var expirable = getExpirable(fixture.jcache(), KEY_1);
+      assertThat(expirable).isNotNull();
+      long expireTimeBefore = expirable.getExpireTimeMillis();
+
+      // Advance the ticker so any access-expiry update would be observable as a
+      // different expireTimeMillis (currentTime+duration != expireTimeBefore).
+      fixture.advanceHalfExpiry();
+
+      var result = fixture.jcache().invoke(KEY_1, (entry, args) -> entry.exists());
+      assertThat(expirable.getExpireTimeMillis()).isEqualTo(expireTimeBefore);
+      assertThat(result).isTrue();
+    }
+  }
+
   /* --------------- invokeAll --------------- */
 
   @Test

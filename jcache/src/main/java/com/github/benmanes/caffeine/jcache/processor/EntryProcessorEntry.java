@@ -50,7 +50,7 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
 
   @Override
   public boolean exists() {
-    return (getValue() != null);
+    return (action == Action.NONE) ? hasEntry : (value != null);
   }
 
   @Override

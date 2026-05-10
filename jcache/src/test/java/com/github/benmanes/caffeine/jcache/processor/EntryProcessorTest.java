@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.processor;
 
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -103,6 +104,19 @@ final class EntryProcessorTest {
       assertThat(writer.writes).isEqualTo(1);
       assertThat(loader.loads).isEqualTo(1);
       assertThat(value).isNull();
+    }
+  }
+
+  @Test
+  void invoke_existsOnly_doesNotInvokeReadThroughLoader() {
+    var map = new HashMap<Integer, Integer>();
+    var loader = new MapLoader(map);
+    var writer = new MapWriter(map);
+    map.put(KEY_1, VALUE_1);
+    try (var fixture = jcacheFixture(loader, writer)) {
+      var result = fixture.jcacheLoading().invoke(KEY_1, (entry, args) -> entry.exists());
+      assertThat(loader.loads).isEqualTo(0);
+      assertThat(result).isFalse();
     }
   }
 
