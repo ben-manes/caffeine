@@ -200,13 +200,16 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     boolean statsEnabled = statistics.isEnabled();
     long now = statsEnabled ? ticker.read() : 0L;
-
-    Map<K, Expirable<V>> result = getAndFilterExpiredEntries(keys, /* updateAccessTime= */ true);
-
-    if (statsEnabled) {
-      statistics.recordGetTime(ticker.read() - now);
+    try {
+      Map<K, Expirable<V>> result =
+          getAndFilterExpiredEntries(keys, /* updateAccessTime= */ true);
+      if (statsEnabled) {
+        statistics.recordGetTime(ticker.read() - now);
+      }
+      return copyMap(result);
+    } finally {
+      dispatcher.awaitSynchronous();
     }
-    return copyMap(result);
   }
 
   /**

@@ -28,6 +28,7 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.TERMINATED;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
@@ -55,6 +56,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -65,6 +67,7 @@ import javax.cache.CacheException;
 import javax.cache.configuration.Configuration;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.configuration.MutableConfiguration;
+import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryListener;
@@ -634,9 +637,55 @@ final class CacheProxyTest {
   }
 
   @Test
+  @SuppressFBWarnings("HES_LOCAL_EXECUTOR_SERVICE")
+  void getAll_awaitsSynchronousListeners() throws InterruptedException {
+    @SuppressWarnings("PMD.CloseResource")
+    var executor = Executors.newSingleThreadExecutor();
+    try {
+      var letProceed = new AtomicBoolean();
+      var listenerEntered = new AtomicBoolean();
+      CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+        listenerEntered.set(true);
+        await().untilTrue(letProceed);
+      };
+      var listenerConfig = new MutableCacheEntryListenerConfiguration<>(
+          /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+      try (var fixture = JCacheFixture.builder()
+          .configure(config -> {
+            config.setExecutorFactory(() -> executor);
+            config.addCacheEntryListenerConfiguration(listenerConfig);
+          }).build()) {
+        // Both publish and getAll must run on the same worker thread so they share the
+        // dispatcher's per-thread `pending` ThreadLocal. publish queues the listener on
+        // the executor (separate thread) where it parks, so the future stays incomplete;
+        // getAll(emptySet) is then expected to block in awaitSynchronous waiting on it.
+        var worker = new Thread(() -> {
+          fixture.jcache().dispatcher.publishCreated(fixture.jcache(), KEY_1, VALUE_1);
+          assertThat(fixture.jcache().getAll(Set.of())).isEmpty();
+        });
+        worker.start();
+        await().untilTrue(listenerEntered);
+
+        // Pre-fix: getAll returns immediately and the worker terminates without joining
+        // the pending future. Post-fix: getAll blocks in awaitSynchronous.
+        var settled = EnumSet.of(BLOCKED, WAITING, TERMINATED);
+        await().until(() -> settled.contains(worker.getState()));
+        assertThat(worker.isAlive()).isTrue();
+
+        letProceed.set(true);
+        worker.join();
+      }
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  @Test
+  @SuppressWarnings("try")
   void invokeAll_emptyKeys_closed_throws() {
-    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
-      var cache = fixture.jcache();
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+         var cache = fixture.jcache()) {
       cache.close();
       assertThrows(IllegalStateException.class, () ->
           cache.invokeAll(Set.of(), Mockito.mock()));
