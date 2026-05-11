@@ -16,10 +16,10 @@
 package com.github.benmanes.caffeine.jcache.integration;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toUnmodifiableMap;
 
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -84,8 +84,16 @@ public final class JCacheLoaderAdapter<K, V>
       @Var Expirable<V> expirable = null;
       if (value != null) {
         requireNonNull(cache);
-        expirable = new Expirable<>(value, expireTimeMillis());
-        dispatcher.publishCreated(cache, key, value);
+        long expireTime = expireTimeMillis();
+        if (expireTime == 0L) {
+          // Per JSR-107 1.1.1 p.55: ZERO duration → entry is already expired
+          // and will not be added to the Cache. Match the put-path convention
+          // of publishing EXPIRED in place of CREATED.
+          dispatcher.publishExpired(cache, key, value);
+        } else {
+          expirable = new Expirable<>(value, expireTime);
+          dispatcher.publishCreated(cache, key, value);
+        }
       }
 
       if (statsEnabled) {
@@ -108,10 +116,22 @@ public final class JCacheLoaderAdapter<K, V>
       requireNonNull(cache);
 
       @SuppressWarnings("ConstantValue")
-      Map<K, Expirable<V>> result = delegate.loadAll(keys).entrySet().stream()
-          .filter(entry -> (entry.getKey() != null) && (entry.getValue() != null))
-          .collect(toUnmodifiableMap(Map.Entry::getKey,
-              entry -> new Expirable<>(entry.getValue(), expireTimeMillis())));
+      Map<K, V> loaded = delegate.loadAll(keys);
+      var result = new HashMap<K, Expirable<V>>(loaded.size());
+      for (var entry : loaded.entrySet()) {
+        K key = entry.getKey();
+        V value = entry.getValue();
+        if ((key == null) || (value == null)) {
+          continue;
+        }
+        long expireTime = expireTimeMillis();
+        if (expireTime == 0L) {
+          // ZERO → already expired and not added; match the put-path convention.
+          dispatcher.publishExpired(cache, key, value);
+        } else {
+          result.put(key, new Expirable<>(value, expireTime));
+        }
+      }
       for (var entry : result.entrySet()) {
         dispatcher.publishCreated(cache, entry.getKey(), entry.getValue().get());
       }

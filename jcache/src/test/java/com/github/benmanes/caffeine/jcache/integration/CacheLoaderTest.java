@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,6 +31,7 @@ import java.util.stream.Stream;
 
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryCreatedListener;
+import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
@@ -62,7 +64,7 @@ final class CacheLoaderTest {
 
   @Test
   void load() {
-    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ZERO);
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
     CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
     try (var fixture = jcacheFixture(expiry, cacheLoader)) {
       when(cacheLoader.load(any())).thenReturn(-1);
@@ -130,6 +132,60 @@ final class CacheLoaderTest {
   }
 
   @Test
+  void load_zeroExpiry_publishesExpiredNotCreated() {
+    // Per JSR-107 1.1.1 p.55: "If a Duration#ZERO is returned the new Cache.Entry
+    // is considered to be already expired and will not be added to the Cache."
+    // Match the put-path convention: publish EXPIRED in place of CREATED.
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ZERO);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    CacheEntryCreatedListener<Integer, Integer> created = Mockito.mock();
+    CacheEntryExpiredListener<Integer, Integer> expired = Mockito.mock();
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setCacheLoaderFactory(() -> cacheLoader);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setReadThrough(true);
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> created, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> expired, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        }).build()) {
+      when(cacheLoader.load(any())).thenReturn(-1);
+      assertThat(fixture.jcacheLoading().get(1)).isNull();
+      assertThat(fixture.jcacheLoading().containsKey(1)).isFalse();
+      verify(created, never()).onCreated(any());
+      verify(expired).onExpired(any());
+    }
+  }
+
+  @Test
+  void loadAll_zeroExpiry_publishesExpiredNotCreated() {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ZERO);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    CacheEntryCreatedListener<Integer, Integer> created = Mockito.mock();
+    CacheEntryExpiredListener<Integer, Integer> expired = Mockito.mock();
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setCacheLoaderFactory(() -> cacheLoader);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setReadThrough(true);
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> created, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> expired, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        }).build()) {
+      when(cacheLoader.loadAll(anyIterable())).thenReturn(Map.of(1, -1, 2, -2));
+      assertThat(fixture.jcacheLoading().getAll(Set.of(1, 2))).isEmpty();
+      verify(created, never()).onCreated(any());
+      verify(expired, Mockito.atLeastOnce()).onExpired(any());
+    }
+  }
+
+  @Test
   void load_failure_expiry_publishesCreated() {
     // Counterpart to load_failure_expiry: with the policy throwing, the load
     // still succeeds (default Duration is used) and CREATED is published.
@@ -154,7 +210,7 @@ final class CacheLoaderTest {
 
   @Test
   void loadAll() {
-    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ZERO);
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
     CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
     try (var fixture = jcacheFixture(expiry, cacheLoader)) {
       when(cacheLoader.loadAll(anyIterable())).then(answer -> {
