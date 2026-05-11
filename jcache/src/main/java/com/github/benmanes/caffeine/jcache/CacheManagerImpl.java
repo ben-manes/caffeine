@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.jcache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.util.Collection;
@@ -41,6 +43,8 @@ import org.jspecify.annotations.Nullable;
  */
 @SuppressWarnings("PMD.CloseResource")
 public final class CacheManagerImpl implements CacheManager {
+  private static final Logger logger = System.getLogger(CacheManagerImpl.class.getName());
+
   final WeakReference<ClassLoader> classLoaderReference;
   final Map<String, CacheProxy<?, ?>> caches;
   final CachingProvider cacheProvider;
@@ -229,7 +233,11 @@ public final class CacheManagerImpl implements CacheManager {
     synchronized (lock) {
       if (!isClosed()) {
         for (Cache<?, ?> cache : caches.values()) {
-          cache.close();
+          try {
+            cache.close();
+          } catch (RuntimeException e) {
+            logger.log(Level.WARNING, "Exception thrown when closing cache " + cache.getName(), e);
+          }
         }
         closed = true;
         ClassLoader classLoader = classLoaderReference.get();

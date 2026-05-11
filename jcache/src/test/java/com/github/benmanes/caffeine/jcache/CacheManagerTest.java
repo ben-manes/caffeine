@@ -157,6 +157,28 @@ final class CacheManagerTest {
   }
 
   @Test
+  void close_throwingCacheClose_continuesAndMarksClosed() {
+    try (var fixture = JCacheFixture.builder().build()) {
+      @SuppressWarnings("PMD.CloseResource")
+      var manager = (CacheManagerImpl) fixture.cachingProvider().getCacheManager(
+          URI.create(getClass().getName() + "-throwing-close"),
+          fixture.cachingProvider().getDefaultClassLoader());
+
+      CacheProxy<?, ?> bomb = Mockito.mock();
+      Mockito.doThrow(new RuntimeException("boom")).when(bomb).close();
+      Mockito.when(bomb.getName()).thenReturn("bomb");
+      manager.caches.put("bomb", bomb);
+
+      manager.close();
+
+      // Per spec p.26: "If a Cache#close() call throws an exception, the exception
+      // will be ignored. After executing this method, the isClosed() method will
+      // return true."
+      assertThat(manager.isClosed()).isTrue();
+    }
+  }
+
+  @Test
   void close_clearsCachesAndIsIdempotent() {
     try (var fixture = JCacheFixture.builder().build()) {
       @SuppressWarnings("PMD.CloseResource")
