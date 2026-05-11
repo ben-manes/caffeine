@@ -223,6 +223,26 @@ final class CacheProxyTest {
   }
 
   @Test
+  void iterator_recordsHitPerYield() {
+    // Per JSR-107 1.1.1 §12.4 statistics table (p.126): iterator()'s "Hits"
+    // column is Yes — every yielded entry counts as a hit.
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.jcache().put(KEY_2, VALUE_2);
+      fixture.jcache().put(KEY_3, VALUE_3);
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long hitsBefore = stats.getCacheHits();
+      int yielded = 0;
+      for (var unused : fixture.jcache()) {
+        yielded++;
+      }
+      assertThat(yielded).isEqualTo(3);
+      assertThat(stats.getCacheHits() - hitsBefore).isEqualTo(3);
+    }
+  }
+
+  @Test
   void loadAll_listenerOnCompletionThrows_doesNotFireOnException() {
     // Per JSR-107 1.1.1 p.64: onCompletion and onException are the terminal
     // success/failure callbacks for one operation. If the user listener's
