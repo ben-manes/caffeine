@@ -1310,7 +1310,33 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if (current == null) {
         throw new IllegalStateException();
       }
-      CacheProxy.this.remove(current.getKey(), current.getValue().get());
+      boolean[] removed = { false };
+      boolean statsEnabled = statistics.isEnabled();
+      long start = statsEnabled ? ticker.read() : 0L;
+
+      K key = current.getKey();
+      V oldValue = current.getValue().get();
+      cache.asMap().computeIfPresent(key, (k, expirable) -> {
+        if (!expirable.isEternal() && expirable.hasExpired(currentTimeMillis())) {
+          dispatcher.publishExpired(CacheProxy.this, key, expirable.get());
+          statistics.recordEvictions(1L);
+          return null;
+        }
+        if (oldValue.equals(expirable.get())) {
+          publishToCacheWriter(writer::delete, () -> key);
+          dispatcher.publishRemoved(CacheProxy.this, key, expirable.get());
+          removed[0] = true;
+          return null;
+        }
+        return expirable;
+      });
+      dispatcher.awaitSynchronous();
+      if (removed[0]) {
+        statistics.recordRemovals(1L);
+        if (statsEnabled) {
+          statistics.recordRemoveTime(ticker.read() - start);
+        }
+      }
       current = null;
     }
   }

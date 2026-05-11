@@ -30,6 +30,7 @@ import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CompletionListener;
 
 import org.jspecify.annotations.Nullable;
@@ -181,8 +182,10 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
             loadAllAndKeepExisting(keys);
           }
           success = true;
-        } catch (RuntimeException e) {
+        } catch (CacheLoaderException e) {
           listener.onException(e);
+        } catch (RuntimeException e) {
+          listener.onException(new CacheLoaderException(e));
         } finally {
           dispatcher.ignoreSynchronous();
         }
