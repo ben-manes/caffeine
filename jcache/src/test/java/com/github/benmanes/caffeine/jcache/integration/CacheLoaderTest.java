@@ -20,7 +20,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -118,18 +117,22 @@ final class CacheLoaderTest {
 
   @Test
   void load_failure_expiry() {
+    // Per JSR-107 1.1.1 p.55: "Should an exception occur while determining the
+    // Duration, an implementation specific default Duration will be used."
+    // The load returns the value; the exception is swallowed and logged.
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ZERO);
     CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
     try (var fixture = jcacheFixture(expiry, cacheLoader)) {
       when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
       when(cacheLoader.load(any())).thenReturn(-1);
-      var e = assertThrows(CacheLoaderException.class, () -> fixture.jcacheLoading().get(1));
-      assertThat(e).hasCauseThat().isInstanceOf(IllegalStateException.class);
+      assertThat(fixture.jcacheLoading().get(1)).isEqualTo(-1);
     }
   }
 
   @Test
-  void load_failure_expiry_doesNotPublishCreated() {
+  void load_failure_expiry_publishesCreated() {
+    // Counterpart to load_failure_expiry: with the policy throwing, the load
+    // still succeeds (default Duration is used) and CREATED is published.
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ZERO);
     CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
     CacheEntryCreatedListener<Integer, Integer> listener = Mockito.mock();
@@ -144,8 +147,8 @@ final class CacheLoaderTest {
         }).build()) {
       when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
       when(cacheLoader.load(any())).thenReturn(-1);
-      assertThrows(CacheLoaderException.class, () -> fixture.jcacheLoading().get(1));
-      verify(listener, never()).onCreated(any());
+      assertThat(fixture.jcacheLoading().get(1)).isEqualTo(-1);
+      verify(listener).onCreated(any());
     }
   }
 
@@ -205,14 +208,15 @@ final class CacheLoaderTest {
 
   @Test
   void loadAll_failure_expiry() {
+    // Per JSR-107 1.1.1 p.55: a thrown getExpiryForCreation uses an
+    // implementation default. The bulk load still succeeds.
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ZERO);
     CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
     try (var fixture = jcacheFixture(expiry, cacheLoader)) {
       when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
       when(cacheLoader.loadAll(anyIterable())).thenReturn(Map.of(1, 1, 2, 2));
-      var e = assertThrows(CacheLoaderException.class, () ->
-          fixture.jcacheLoading().getAll(Set.of(1, 2, 3)));
-      assertThat(e).hasCauseThat().isInstanceOf(IllegalStateException.class);
+      var result = fixture.jcacheLoading().getAll(Set.of(1, 2, 3));
+      assertThat(result).containsExactly(1, 1, 2, 2);
     }
   }
 
