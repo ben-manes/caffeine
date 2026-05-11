@@ -274,19 +274,26 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
     try {
       CompletableFuture.runAsync(() -> {
+        @Var boolean success = false;
         try {
           if (replaceExistingValues) {
             loadAllAndReplaceExisting(keys);
           } else {
             loadAllAndKeepExisting(keys);
           }
-          listener.onCompletion();
+          success = true;
         } catch (CacheLoaderException e) {
           listener.onException(e);
         } catch (RuntimeException e) {
           listener.onException(new CacheLoaderException(e));
         } finally {
           dispatcher.ignoreSynchronous();
+        }
+        // Per JSR-107 1.1.1 p.64: success → onCompletion, failure → onException.
+        // Both are terminal callbacks for one operation. Call onCompletion outside
+        // the catch so a throw from it does not also fire onException.
+        if (success) {
+          listener.onCompletion();
         }
       }, executor).whenComplete((r, e) -> {
         inFlight.remove(future);

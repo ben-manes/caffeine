@@ -167,6 +167,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     }
     try {
       CompletableFuture.runAsync(() -> {
+        @Var boolean success = false;
         try {
           if (replaceExistingValues) {
             Map<K, V> loaded = cacheLoader.orElseThrow().loadAll(keys);
@@ -176,11 +177,16 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
           } else {
             getAll(keys, /* updateAccessTime= */ false);
           }
-          listener.onCompletion();
+          success = true;
         } catch (RuntimeException e) {
           listener.onException(e);
         } finally {
           dispatcher.ignoreSynchronous();
+        }
+        // Call onCompletion outside the catch so a throw from it doesn't also
+        // fire onException; per JSR-107 1.1.1 p.64 they're terminal callbacks.
+        if (success) {
+          listener.onCompletion();
         }
       }, executor).whenComplete((r, e) -> {
         inFlight.remove(future);

@@ -223,13 +223,16 @@ final class CacheProxyTest {
   }
 
   @Test
-  void loadAll_cacheLoaderException() {
+  void loadAll_listenerOnCompletionThrows_doesNotFireOnException() {
+    // Per JSR-107 1.1.1 p.64: onCompletion and onException are the terminal
+    // success/failure callbacks for one operation. If the user listener's
+    // onCompletion throws, it must not also route through onException.
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
-      var e = new CacheLoaderException();
-      CompletionListener completionListener = Mockito.mock();
-      doThrow(e).when(completionListener).onCompletion();
-      fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, completionListener);
-      verify(completionListener).onException(e);
+      CompletionListener listener = Mockito.mock();
+      doThrow(new RuntimeException("boom")).when(listener).onCompletion();
+      fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, listener);
+      verify(listener).onCompletion();
+      verify(listener, Mockito.never()).onException(any());
     }
   }
 
