@@ -268,6 +268,102 @@ final class CacheProxyTest {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
+  void getAndFilterExpiredEntries_deprecatedTwoArg_delegates() {
+    // Cover the deprecated 2-arg protected delegator retained for binary
+    // compatibility with the 3.2.4 baseline. The boolean is ignored.
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      var result = fixture.jcache().getAndFilterExpiredEntries(
+          Set.of(KEY_1), /* updateAccessTime= */ false);
+      assertThat(result).containsKey(KEY_1);
+    }
+  }
+
+  @Test
+  void get_expired_statsDisabled_doesNotRecordGetTime() {
+    // Covers the statsEnabled=false branch on the expired-entry early return.
+    // The auto-increment pattern keeps the entry visible to cache.getIfPresent
+    // (so JCache reaches its expiry check) while the subsequent ticker read
+    // inside the get() flow pushes millis past the entry's expireTimeMillis.
+    ExpiryPolicy expiry = Mockito.mock();
+    when(expiry.getExpiryForCreation()).thenReturn(Duration.ONE_MINUTE);
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> config.setExpiryPolicyFactory(() -> expiry))
+        .build()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.ticker().setAutoIncrementStep(EXPIRY_DURATION.dividedBy(2));
+      assertThat(fixture.jcache().get(KEY_1)).isNull();
+      assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+    }
+  }
+
+  @Test
+  void loadAll_cacheLoaderException_unwrapped() {
+    // Covers the inner catch (CacheLoaderException) branch in
+    // CacheProxy.loadAll's runAsync — the wrapped path is exercised by
+    // loadAll_executorRejects_notifiesListener.
+    var cle = new CacheLoaderException("test");
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.loadAll(anyIterable())).thenThrow(cle);
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setCacheLoaderFactory(() -> loader);
+        }).build()) {
+      assertThat(fixture.jcache()).isNotInstanceOf(LoadingCacheProxy.class);
+      CompletionListener listener = Mockito.mock();
+      fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, listener);
+      verify(listener).onException(cle);
+    }
+  }
+
+  @Test
+  void loadAll_loading_cacheLoaderException_unwrapped() {
+    // Covers the inner catch (CacheLoaderException) branch in
+    // LoadingCacheProxy.loadAll's runAsync.
+    var cle = new CacheLoaderException("test");
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.loadAll(anyIterable())).thenThrow(cle);
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> config.setExecutorFactory(MoreExecutors::directExecutor))
+        .loading(config -> {
+          config.setCacheLoaderFactory(() -> loader);
+          config.setReadThrough(true);
+        }).build()) {
+      CompletionListener listener = Mockito.mock();
+      fixture.jcacheLoading().loadAll(KEYS, /* replaceExistingValues= */ true, listener);
+      verify(listener).onException(cle);
+    }
+  }
+
+  @Test
+  void iterator_remove_calledTwice_throwsISE() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      var iter = fixture.jcache().iterator();
+      iter.next();
+      iter.remove();
+      assertThrows(IllegalStateException.class, iter::remove);
+    }
+  }
+
+  @Test
+  void iterator_remove_valueChangedConcurrently_doesNotRemove() {
+    // Covers the value-mismatch branch in EntryIterator.remove's lambda:
+    // value changed between next() and remove(), so the conditional remove
+    // returns false and `removed[0]` stays false.
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      var iter = fixture.jcache().iterator();
+      iter.next();
+      fixture.jcache().put(KEY_1, VALUE_2);
+      iter.remove();
+      assertThat(fixture.jcache().get(KEY_1)).isEqualTo(VALUE_2);
+    }
+  }
+
+  @Test
   void loadAll_listenerOnCompletionThrows_doesNotFireOnException() {
     // Per JSR-107 1.1.1 p.64: onCompletion and onException are the terminal
     // success/failure callbacks for one operation. If the user listener's

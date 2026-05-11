@@ -118,16 +118,11 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
   @Override
   public Map<K, V> getAll(Set<? extends K> keys) {
-    return getAll(keys, /* updateAccessTime= */ true);
-  }
-
-  /** Returns the entries, loading if necessary, and optionally updates their access expiry time. */
-  private Map<K, V> getAll(Set<? extends K> keys, boolean updateAccessTime) {
     requireNotClosed();
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
     try {
-      Map<K, Expirable<V>> entries = getAndFilterExpiredEntries(keys, updateAccessTime);
+      Map<K, Expirable<V>> entries = getAndFilterExpiredEntries(keys);
 
       if (entries.size() != keys.size()) {
         List<K> keysToLoad = keys.stream()
@@ -202,10 +197,6 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       inFlight.remove(future);
       future.complete(null);
       listener.onException(e);
-    } catch (Throwable t) {
-      inFlight.remove(future);
-      future.complete(null);
-      throw t;
     }
   }
 }

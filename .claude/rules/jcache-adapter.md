@@ -22,3 +22,10 @@ paths:
 - **OSGi classloader**: `CacheManagerImpl` swaps thread context classloader for OSGi
   bundle environments. The classloader is held via WeakReference.
 - Tests include JSR-107 TCK (auto-unpacked) and isolated tests (per-JVM forking)
+- **Run `:jcache:tckTest` for spec-conformance changes** — not just `:jcache:test`. The
+  TCK encodes interpretations (and some pre-1.1.1 strictness) that unit tests don't
+  cover, e.g. `CacheLoaderTest.shouldPropagateExceptionUsingLoadAll` still asserts
+  `CacheLoaderException` wrapping even after the 1.1.1 spec relaxed that rule, and
+  `CacheMBStatisticsBeanTest.testIterateAndRemove` pins the hit/removal accounting
+  split for iterator.next vs iterator.remove. When TCK and spec javadoc disagree,
+  TCK wins.

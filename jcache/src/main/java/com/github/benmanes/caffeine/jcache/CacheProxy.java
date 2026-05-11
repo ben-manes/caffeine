@@ -205,8 +205,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     boolean statsEnabled = statistics.isEnabled();
     long now = statsEnabled ? ticker.read() : 0L;
     try {
-      Map<K, Expirable<V>> result =
-          getAndFilterExpiredEntries(keys, /* updateAccessTime= */ true);
+      Map<K, Expirable<V>> result = getAndFilterExpiredEntries(keys);
       if (statsEnabled) {
         statistics.recordGetTime(ticker.read() - now);
       }
@@ -217,11 +216,24 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /**
-   * Returns all of the mappings present, expiring as required, and optionally updates their access
-   * expiry time.
+   * Returns all of the mappings present, expiring as required, and updates their access expiry
+   * time.
+   *
+   * @deprecated The {@code updateAccessTime} parameter is ignored — access expiry is always
+   *     updated. Use {@link #getAndFilterExpiredEntries(Set)} instead.
    */
+  @Deprecated
+  @SuppressWarnings({"InlineMeSuggester", "unused"})
   protected Map<K, Expirable<V>> getAndFilterExpiredEntries(
       Set<? extends K> keys, boolean updateAccessTime) {
+    return getAndFilterExpiredEntries(keys);
+  }
+
+  /**
+   * Returns all of the mappings present, expiring as required, and updates their access expiry
+   * time.
+   */
+  protected Map<K, Expirable<V>> getAndFilterExpiredEntries(Set<? extends K> keys) {
     int[] expired = { 0 };
     long[] millis = { 0L };
     var result = new HashMap<K, @NonNull Expirable<V>>(cache.getAllPresent(keys));
@@ -240,9 +252,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         });
         return true;
       }
-      if (updateAccessTime) {
-        setAccessExpireTime(entry.getKey(), entry.getValue(), millis[0]);
-      }
+      setAccessExpireTime(entry.getKey(), entry.getValue(), millis[0]);
       return false;
     });
 
@@ -303,10 +313,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       inFlight.remove(future);
       future.complete(null);
       listener.onException(new CacheLoaderException(e));
-    } catch (Throwable t) {
-      inFlight.remove(future);
-      future.complete(null);
-      throw t;
     }
   }
 
@@ -1317,11 +1323,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       K key = current.getKey();
       V oldValue = current.getValue().get();
       cache.asMap().computeIfPresent(key, (k, expirable) -> {
-        if (!expirable.isEternal() && expirable.hasExpired(currentTimeMillis())) {
-          dispatcher.publishExpired(CacheProxy.this, key, expirable.get());
-          statistics.recordEvictions(1L);
-          return null;
-        }
         if (oldValue.equals(expirable.get())) {
           publishToCacheWriter(writer::delete, () -> key);
           dispatcher.publishRemoved(CacheProxy.this, key, expirable.get());
