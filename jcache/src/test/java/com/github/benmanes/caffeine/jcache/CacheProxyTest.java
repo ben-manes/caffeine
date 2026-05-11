@@ -100,6 +100,7 @@ import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.processor.Action;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.UncheckedTimeoutException;
 
@@ -223,6 +224,33 @@ final class CacheProxyTest {
   }
 
   @Test
+  void loadAll_doesNotRecordHitsOrMisses() throws Exception {
+    // Per JSR-107 1.1.1 §12.4 (p.126): loadAll's stats columns Puts/Removals/
+    // Hits/Misses are all No — the operation must not touch these counters
+    // even for the keep-existing path that internally examines present entries.
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> config.setExecutorFactory(MoreExecutors::directExecutor))
+        .build()) {
+      fixture.jcacheLoading().put(KEY_1, VALUE_1);
+      fixture.cacheManager().enableStatistics(fixture.jcacheLoading().getName(), true);
+
+      var stats = JCacheFixture.getStatistics(fixture.jcacheLoading());
+      long hitsBefore = stats.getCacheHits();
+      long missesBefore = stats.getCacheMisses();
+      long putsBefore = stats.getCachePuts();
+
+      var completionListener = new CompletionListenerFuture();
+      fixture.jcacheLoading().loadAll(KEYS,
+          /* replaceExistingValues= */ false, completionListener);
+      completionListener.get();
+
+      assertThat(stats.getCacheHits()).isEqualTo(hitsBefore);
+      assertThat(stats.getCacheMisses()).isEqualTo(missesBefore);
+      assertThat(stats.getCachePuts()).isEqualTo(putsBefore);
+    }
+  }
+
+  @Test
   void iterator_recordsHitPerYield() {
     // Per JSR-107 1.1.1 §12.4 statistics table (p.126): iterator()'s "Hits"
     // column is Yes — every yielded entry counts as a hit.
@@ -233,11 +261,8 @@ final class CacheProxyTest {
 
       var stats = JCacheFixture.getStatistics(fixture.jcache());
       long hitsBefore = stats.getCacheHits();
-      int yielded = 0;
-      for (var unused : fixture.jcache()) {
-        yielded++;
-      }
-      assertThat(yielded).isEqualTo(3);
+      int size = Iterators.size(fixture.jcache().iterator());
+      assertThat(size).isEqualTo(3);
       assertThat(stats.getCacheHits() - hitsBefore).isEqualTo(3);
     }
   }

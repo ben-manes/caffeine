@@ -175,7 +175,10 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
               putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter= */ false);
             }
           } else {
-            getAll(keys, /* updateAccessTime= */ false);
+            // Don't route through getAll(...) — its getAndFilterExpiredEntries
+            // records hits/misses, which JSR-107 1.1.1 §12.4 (p.126) prohibits
+            // for loadAll. Use the same put-if-absent path as CacheProxy.
+            loadAllAndKeepExisting(keys);
           }
           success = true;
         } catch (RuntimeException e) {

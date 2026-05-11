@@ -320,7 +320,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   /** Performs the bulk load where the existing entries are retained. */
   @SuppressWarnings("ConstantValue")
-  private void loadAllAndKeepExisting(Set<? extends K> keys) {
+  protected void loadAllAndKeepExisting(Set<? extends K> keys) {
     List<K> keysToLoad = keys.stream()
         .filter(key -> !cache.asMap().containsKey(key))
         .collect(toUnmodifiableList());
