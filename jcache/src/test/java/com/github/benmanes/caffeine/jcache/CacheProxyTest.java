@@ -464,7 +464,7 @@ final class CacheProxyTest {
         .build()) {
       CompletionListener listener = Mockito.mock();
       fixture.jcacheLoading().loadAll(KEYS, /* replaceExistingValues= */ true, listener);
-      verify(listener).onException(any(RejectedExecutionException.class));
+      verify(listener).onException(any(CacheLoaderException.class));
     }
   }
 
