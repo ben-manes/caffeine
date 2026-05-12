@@ -271,7 +271,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     CompletionListener listener = (completionListener == null)
         ? NullCompletionListener.INSTANCE
         : completionListener;
-
     if (cacheLoader.isEmpty()) {
       listener.onCompletion();
       return;
@@ -299,9 +298,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         } finally {
           dispatcher.ignoreSynchronous();
         }
-        // Per JSR-107 1.1.1 p.64: success → onCompletion, failure → onException.
-        // Both are terminal callbacks for one operation. Call onCompletion outside
-        // the catch so a throw from it does not also fire onException.
         if (success) {
           listener.onCompletion();
         }

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
@@ -52,6 +53,7 @@ public final class ClairvoyantPolicy implements Policy {
 
   private @Nullable Recorder recorder;
 
+  private boolean isPenaltyAware;
   private int infiniteTimestamp;
   private int tick;
 
@@ -67,7 +69,11 @@ public final class ClairvoyantPolicy implements Policy {
   @Override
   public void record(AccessEvent event) {
     if (recorder == null) {
-      recorder = event.isPenaltyAware() ? new EventRecorder() : new KeyOnlyRecorder();
+      isPenaltyAware = event.isPenaltyAware();
+      recorder = isPenaltyAware ? new EventRecorder() : new KeyOnlyRecorder();
+    } else {
+      checkState(isPenaltyAware == event.isPenaltyAware(),
+          "Cannot mix penalty-aware and non-penalty-aware events");
     }
 
     tick++;

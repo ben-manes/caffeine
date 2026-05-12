@@ -19,10 +19,8 @@ import static java.util.stream.Collectors.toUnmodifiableList;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import javax.cache.Cache;
@@ -30,8 +28,6 @@ import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
-import javax.cache.integration.CacheLoaderException;
-import javax.cache.integration.CompletionListener;
 
 import org.jspecify.annotations.Nullable;
 
@@ -142,58 +138,6 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       throw new CacheException(e);
     } finally {
       dispatcher.awaitSynchronous();
-    }
-  }
-
-  @Override
-  @SuppressWarnings({"CheckReturnValue", "CollectionUndefinedEquality",
-      "FutureReturnValueIgnored", "ResultOfMethodCallIgnored"})
-  public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
-      @Nullable CompletionListener completionListener) {
-    requireNotClosed();
-    keys.forEach(Objects::requireNonNull);
-    CompletionListener listener = (completionListener == null)
-        ? NullCompletionListener.INSTANCE
-        : completionListener;
-
-    var future = new CompletableFuture<@Nullable Void>();
-    synchronized (configuration) {
-      requireNotClosed();
-      inFlight.add(future);
-    }
-    try {
-      CompletableFuture.runAsync(() -> {
-        @Var boolean success = false;
-        try {
-          if (replaceExistingValues) {
-            loadAllAndReplaceExisting(keys);
-          } else {
-            // Don't route through getAll(...) — its getAndFilterExpiredEntries
-            // records hits/misses, which JSR-107 1.1.1 §12.4 (p.126) prohibits
-            // for loadAll. Use the same put-if-absent path as CacheProxy.
-            loadAllAndKeepExisting(keys);
-          }
-          success = true;
-        } catch (CacheLoaderException e) {
-          listener.onException(e);
-        } catch (RuntimeException e) {
-          listener.onException(new CacheLoaderException(e));
-        } finally {
-          dispatcher.ignoreSynchronous();
-        }
-        // Call onCompletion outside the catch so a throw from it doesn't also
-        // fire onException; per JSR-107 1.1.1 p.64 they're terminal callbacks.
-        if (success) {
-          listener.onCompletion();
-        }
-      }, executor).whenComplete((r, e) -> {
-        inFlight.remove(future);
-        future.complete(null);
-      });
-    } catch (RuntimeException e) {
-      inFlight.remove(future);
-      future.complete(null);
-      listener.onException(new CacheLoaderException(e));
     }
   }
 }

@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admitter.KeyOnlyAdmitter;
@@ -36,8 +37,6 @@ import it.unimi.dsi.fastutil.ints.IntPriorityQueue;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-
-import org.jspecify.annotations.Nullable;
 
 /**
  * {@literal Bélády's} optimal page replacement policy applied as an admission policy by comparing
@@ -101,10 +100,12 @@ public final class Clairvoyant implements KeyOnlyAdmitter {
 
   private static Long2ObjectMap<IntList> readAccessTimes(BasicSettings settings) {
     checkState(!settings.trace().isSynthetic(), "Synthetic traces cannot be predicted");
+    var skip = settings.trace().skip();
+    var limit = settings.trace().limit();
     var accessTimes = new Long2ObjectOpenHashMap<IntList>();
     var trace = settings.trace().traceFiles().format()
         .readFiles(settings.trace().traceFiles().paths());
-    try (Stream<AccessEvent> events = trace.events()) {
+    try (Stream<AccessEvent> events = trace.events().skip(skip).limit(limit)) {
       var tick = new MutableInt();
       events.forEach(event -> {
         var times = accessTimes.computeIfAbsent(event.key(), _ -> new IntArrayList());
