@@ -904,23 +904,20 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   /** Returns the updated expirable value after performing the post-processing actions. */
   @SuppressWarnings("fallthrough")
-  @Nullable Expirable<V> postProcess(@Nullable Expirable<V> expirable,
+  @Nullable Expirable<V> postProcess(@Var @Nullable Expirable<V> expirable,
       EntryProcessorEntry<K, V> entry, @Var long currentTimeMillis) {
+    if ((expirable != null) && !expirable.isEternal()) {
+      if (currentTimeMillis == 0) {
+        currentTimeMillis = currentTimeMillis();
+      }
+      if (expirable.hasExpired(currentTimeMillis)) {
+        dispatcher.publishExpired(this, entry.getKey(), expirable.get());
+        statistics.recordEvictions(1);
+        expirable = null;
+      }
+    }
     switch (entry.getAction()) {
       case NONE:
-        if (expirable == null) {
-          return null;
-        } else if (expirable.isEternal()) {
-          return expirable;
-        }
-        if (currentTimeMillis == 0) {
-          currentTimeMillis = currentTimeMillis();
-        }
-        if (expirable.hasExpired(currentTimeMillis)) {
-          dispatcher.publishExpired(this, entry.getKey(), expirable.get());
-          statistics.recordEvictions(1);
-          return null;
-        }
         return expirable;
       case READ: {
         setAccessExpireTime(entry.getKey(), requireNonNull(expirable), 0L);

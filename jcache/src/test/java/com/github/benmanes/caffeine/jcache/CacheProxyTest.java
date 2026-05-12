@@ -268,7 +268,7 @@ final class CacheProxyTest {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
+  @SuppressWarnings({"deprecation", "removal"})
   void getAndFilterExpiredEntries_deprecatedTwoArg_delegates() {
     // Cover the deprecated 2-arg protected delegator retained for binary
     // compatibility with the 3.2.4 baseline. The boolean is ignored.
@@ -701,6 +701,43 @@ final class CacheProxyTest {
       long removalsBefore = stats.getCacheRemovals();
       assertThat(fixture.jcache().postProcess(null, entry, 0L)).isNull();
       assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore);
+    }
+  }
+
+  @Test
+  void postProcess_deleted_expired_publishesExpiredNotRemoved() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      var expired = new Expirable<>(VALUE_1, fixture.currentTime().toMillis() - 1);
+      EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
+      when(entry.getAction()).thenReturn(Action.DELETED);
+      when(entry.getKey()).thenReturn(KEY_1);
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long removalsBefore = stats.getCacheRemovals();
+      long evictionsBefore = stats.getCacheEvictions();
+      assertThat(fixture.jcache().postProcess(expired, entry, 0L)).isNull();
+      assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore);
+      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
+    }
+  }
+
+  @Test
+  void postProcess_created_expiredPrior_publishesExpiredForPrior() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      var expired = new Expirable<>(VALUE_1, fixture.currentTime().toMillis() - 1);
+      EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
+      when(entry.getAction()).thenReturn(Action.CREATED);
+      when(entry.getKey()).thenReturn(KEY_1);
+      when(entry.getValue()).thenReturn(VALUE_2);
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long evictionsBefore = stats.getCacheEvictions();
+      long putsBefore = stats.getCachePuts();
+      var result = fixture.jcache().postProcess(expired, entry, 0L);
+      assertThat(result).isNotNull();
+      assertThat(result.get()).isEqualTo(VALUE_2);
+      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
+      assertThat(stats.getCachePuts()).isEqualTo(putsBefore + 1);
     }
   }
 
