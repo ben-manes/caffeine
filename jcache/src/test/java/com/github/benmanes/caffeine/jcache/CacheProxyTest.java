@@ -224,6 +224,46 @@ final class CacheProxyTest {
   }
 
   @Test
+  @SuppressWarnings("NullableProblems")
+  void loadAll_replaceExisting_nullMapping()
+      throws IOException, InterruptedException, ExecutionException {
+    try (CloseableCacheLoader loader = Mockito.mock();
+        var fixture = jcacheFixture(loader, Mockito.mock(), Mockito.mock())) {
+      var result = new HashMap<@Nullable Integer, @Nullable Integer>();
+      result.put(KEY_1, VALUE_1);
+      result.put(KEY_2, null);
+      result.put(null, VALUE_3);
+
+      var completionListener = new CompletionListenerFuture();
+      when(loader.loadAll(anyIterable())).thenReturn(result);
+      fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, completionListener);
+      completionListener.get();
+      assertThat(fixture.jcache()).containsExactlyElementsIn(Map.of(KEY_1, VALUE_1).entrySet());
+    }
+  }
+
+  @Test
+  @SuppressWarnings("NullableProblems")
+  void loadAll_loading_replaceExisting_nullMapping()
+      throws IOException, InterruptedException, ExecutionException {
+    try (CloseableCacheLoader loader = Mockito.mock();
+        var fixture = jcacheFixture(loader, Mockito.mock(), Mockito.mock())) {
+      var result = new HashMap<@Nullable Integer, @Nullable Integer>();
+      result.put(KEY_1, VALUE_1);
+      result.put(KEY_2, null);
+      result.put(null, VALUE_3);
+
+      var completionListener = new CompletionListenerFuture();
+      when(loader.loadAll(anyIterable())).thenReturn(result);
+      fixture.jcacheLoading().loadAll(KEYS,
+          /* replaceExistingValues= */ true, completionListener);
+      completionListener.get();
+      assertThat(fixture.jcacheLoading())
+          .containsExactlyElementsIn(Map.of(KEY_1, VALUE_1).entrySet());
+    }
+  }
+
+  @Test
   void loadAll_doesNotRecordHitsOrMisses() throws Exception {
     // Per JSR-107 1.1.1 §12.4 (p.126): loadAll's stats columns Puts/Removals/
     // Hits/Misses are all No — the operation must not touch these counters

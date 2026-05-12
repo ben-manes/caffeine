@@ -317,10 +317,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Performs the bulk load where the existing entries are replaced. */
-  private void loadAllAndReplaceExisting(Set<? extends K> keys) {
+  protected void loadAllAndReplaceExisting(Set<? extends K> keys) {
     Map<K, V> loaded = cacheLoader.orElseThrow().loadAll(keys);
     for (var entry : loaded.entrySet()) {
-      putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter= */ false);
+      if ((entry.getKey() != null) && (entry.getValue() != null)) {
+        putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter= */ false);
+      }
     }
   }
 

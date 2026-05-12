@@ -166,10 +166,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
         @Var boolean success = false;
         try {
           if (replaceExistingValues) {
-            Map<K, V> loaded = cacheLoader.orElseThrow().loadAll(keys);
-            for (var entry : loaded.entrySet()) {
-              putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter= */ false);
-            }
+            loadAllAndReplaceExisting(keys);
           } else {
             // Don't route through getAll(...) — its getAndFilterExpiredEntries
             // records hits/misses, which JSR-107 1.1.1 §12.4 (p.126) prohibits
