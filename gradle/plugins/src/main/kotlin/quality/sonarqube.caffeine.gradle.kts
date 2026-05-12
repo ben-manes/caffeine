@@ -12,6 +12,7 @@ sonarqube {
     property("sonar.host.url", "https://sonarcloud.io")
     property("sonar.cpd.exclusions", "**/simulator/**")
     property("sonar.coverage.exclusions", "**/simulator/**")
+    property("sonar.cpd.java.minimumTokens", "1000")
     property("sonar.coverage.jacoco.xmlReportPaths",
       file(layout.buildDirectory.file("reports/jacoco/jacocoFullReport/jacocoFullReport.xml")))
   }

@@ -948,9 +948,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         return new Expirable<>(value, expireTimeMillis);
       }
       case DELETED:
-        statistics.recordRemovals(1L);
         publishToCacheWriter(writer::delete, entry::getKey);
         if (expirable != null) {
+          statistics.recordRemovals(1L);
           dispatcher.publishRemoved(this, entry.getKey(), expirable.get());
         }
         return null;

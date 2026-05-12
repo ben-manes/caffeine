@@ -675,6 +675,36 @@ final class CacheProxyTest {
   }
 
   @Test
+  void postProcess_deleted_present() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      var expirable = new Expirable<>(VALUE_1,
+          fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+      EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
+      when(entry.getAction()).thenReturn(Action.DELETED);
+      when(entry.getKey()).thenReturn(KEY_1);
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long removalsBefore = stats.getCacheRemovals();
+      assertThat(fixture.jcache().postProcess(expirable, entry, 0L)).isNull();
+      assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore + 1);
+    }
+  }
+
+  @Test
+  void postProcess_deleted_missing() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
+      when(entry.getAction()).thenReturn(Action.DELETED);
+      when(entry.getKey()).thenReturn(KEY_1);
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long removalsBefore = stats.getCacheRemovals();
+      assertThat(fixture.jcache().postProcess(null, entry, 0L)).isNull();
+      assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore);
+    }
+  }
+
+  @Test
   void copyValue_null() {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       assertThat(fixture.jcache().copyValue(null)).isNull();
