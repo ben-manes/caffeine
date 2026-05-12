@@ -745,11 +745,21 @@ final class CacheProxyTest {
   }
 
   @Test
-  void getWriteExpireTime_exception() throws IOException {
+  void getWriteExpireTime_exception_create() throws IOException {
     try (CloseableExpiryPolicy expiry = Mockito.mock();
         var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry)) {
       when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
       long time = fixture.jcache().getWriteExpireTimeMillis(true);
+      assertThat(time).isEqualTo(Long.MAX_VALUE);
+    }
+  }
+
+  @Test
+  void getWriteExpireTime_exception_update() throws IOException {
+    try (CloseableExpiryPolicy expiry = Mockito.mock();
+        var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry)) {
+      when(expiry.getExpiryForUpdate()).thenThrow(IllegalStateException.class);
+      long time = fixture.jcache().getWriteExpireTimeMillis(false);
       assertThat(time).isEqualTo(Long.MIN_VALUE);
     }
   }

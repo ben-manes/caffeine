@@ -222,7 +222,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @deprecated The {@code updateAccessTime} parameter is ignored — access expiry is always
    *     updated. Use {@link #getAndFilterExpiredEntries(Set)} instead.
    */
-  @Deprecated
+  @Deprecated(since = "3.2.5", forRemoval = true)
   @SuppressWarnings({"InlineMeSuggester", "unused"})
   protected Map<K, Expirable<V>> getAndFilterExpiredEntries(
       Set<? extends K> keys, boolean updateAccessTime) {
@@ -1274,7 +1274,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           : expireTimeMillis;
     } catch (RuntimeException e) {
       logger.log(Level.WARNING, "Failed to get the policy's expiration time", e);
-      return Long.MIN_VALUE;
+      return created ? Long.MAX_VALUE : Long.MIN_VALUE;
     }
   }
 
