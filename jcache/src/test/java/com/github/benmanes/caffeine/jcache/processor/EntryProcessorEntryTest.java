@@ -57,4 +57,37 @@ final class EntryProcessorEntryTest {
   void string() {
     assertThat(ENTRY.toString()).isEqualTo(Map.entry(1, 2).toString());
   }
+
+  @Test
+  void setValue_afterRemove_onPresentEntry_isUpdated() {
+    var entry = new EntryProcessorEntry<Integer, Integer>(1, 2, Optional.empty());
+    entry.remove();
+    entry.setValue(3);
+    assertThat(entry.getAction()).isEqualTo(Action.UPDATED);
+    assertThat(entry.getValue()).isEqualTo(3);
+  }
+
+  @Test
+  void setValue_afterRemove_onMissingEntry_isCreated() {
+    var entry = new EntryProcessorEntry<Integer, Integer>(1, null, Optional.empty());
+    entry.setValue(2);
+    entry.remove();
+    entry.setValue(3);
+    assertThat(entry.getAction()).isEqualTo(Action.CREATED);
+    assertThat(entry.getValue()).isEqualTo(3);
+  }
+
+  @Test
+  void setValue_onPresentEntry_isUpdated() {
+    var entry = new EntryProcessorEntry<Integer, Integer>(1, 2, Optional.empty());
+    entry.setValue(3);
+    assertThat(entry.getAction()).isEqualTo(Action.UPDATED);
+  }
+
+  @Test
+  void setValue_onMissingEntry_isCreated() {
+    var entry = new EntryProcessorEntry<Integer, Integer>(1, null, Optional.empty());
+    entry.setValue(2);
+    assertThat(entry.getAction()).isEqualTo(Action.CREATED);
+  }
 }
