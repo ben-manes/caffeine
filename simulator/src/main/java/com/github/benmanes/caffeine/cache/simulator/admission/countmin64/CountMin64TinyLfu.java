@@ -77,6 +77,6 @@ public final class CountMin64TinyLfu implements Frequency {
         sketch.table[i][j] >>>= 1;
       }
     }
-    size = (size / 2) - (oddCount / sketch.depth);
+    size = (size - (oddCount / sketch.depth)) / 2;
   }
 }
