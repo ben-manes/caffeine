@@ -27,7 +27,6 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTr
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TencentBlockTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
-  static final int BLOCK_SIZE = 512;
   static final char READ = '0';
 
   public TencentBlockTraceReader(String filePath) {
@@ -41,10 +40,9 @@ public final class TencentBlockTraceReader extends TextTraceReader implements Ke
         .filter(array -> array[3].charAt(0) == READ)
         .flatMapToLong(array -> {
           long offset = Long.parseLong(array[1]);
-          long startBlock = (offset / BLOCK_SIZE);
           int sequence = Integer.parseInt(array[2]);
           int volumeId = Integer.parseInt(array[4]);
-          long key = (((long) volumeId) << 31) | Long.hashCode(startBlock);
+          long key = (((long) volumeId) << 40) | (offset & 0xFFFFFFFFFFL);
           return LongStream.range(key, key + sequence);
         });
   }
