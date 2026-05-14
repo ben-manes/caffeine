@@ -45,6 +45,7 @@ public final class CambridgeTraceReader extends TextTraceReader {
   public Stream<AccessEvent> events() {
     return lines()
         .map(line -> line.split(","))
+        .filter(array -> array[3].equals("Read"))
         .map(array -> AccessEvent.forKeyAndWeight(
             Long.parseLong(array[4]), Integer.parseInt(array[5])));
   }
