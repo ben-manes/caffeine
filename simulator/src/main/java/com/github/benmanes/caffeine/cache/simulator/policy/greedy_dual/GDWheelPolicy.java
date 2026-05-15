@@ -102,19 +102,26 @@ public final class GDWheelPolicy implements Policy {
     while ((size + event.weight()) > maximumSize) {
       // C[1] ← index of next non-empty queue in level 1 Cost Wheel
       int hand = findNextQueue();
-      if (hand >= 0) {
-        // Evict q at the tail of the C[1]th queue in level 1 Cost Wheel
-        var victim = requireNonNull(wheel[0][hand].prev);
-        policyStats.recordEviction();
-        remove(victim);
-      } else {
-        // if C[1] has advanced a whole round back to 1, call migration(2)
+      if (hand < 0) {
+        // wheel[0] is fully empty — drain a queue from the next-level wheel
+        migrate(1);
+        continue;
+      }
+      boolean wrapped = (hand < clockHand[0]);
+      clockHand[0] = hand;
+      // Evict q at the tail of the C[1]th queue in level 1 Cost Wheel
+      var victim = requireNonNull(wheel[0][hand].prev);
+      policyStats.recordEviction();
+      remove(victim);
+      // if C[1] has advanced a whole round back to 1, call migration(2)
+      if (wrapped && (wheel.length > 1)) {
         migrate(1);
       }
     }
   }
 
-  /** Returns the index to the next non-empty queue, or -1 if all are empty. */
+  /** Returns the index of the next non-empty queue at or after {@code clockHand[0]},
+   *  or -1 if all are empty. */
   private int findNextQueue() {
     for (int i = 0; i < wheel[0].length; i++) {
       int index = (clockHand[0] + i) % wheel[0].length;
@@ -137,22 +144,21 @@ public final class GDWheelPolicy implements Policy {
     }
 
     // For each object p in the C[idx]th queue in the level idx Cost Wheel
-    for (int i = 0; i < wheel[level].length; i++) {
-      var sentinel = wheel[level][hand];
-      if (!sentinel.isEmpty()) {
-        // Remove p
-        var node = requireNonNull(sentinel.next);
-        node.remove();
+    var sentinel = wheel[level][hand];
+    while (!sentinel.isEmpty()) {
+      // Remove p
+      var node = requireNonNull(sentinel.next);
+      node.remove();
 
-        // Cost Remainder ← c(p) mod NQ^(idx-1)
-        double remainder = (node.cost % cost[level]);
+      // Cost Remainder ← c(p) mod NQ^(idx-1)
+      double remainder = (node.cost % cost[level]);
 
-        // Q ← (round(Cost Remainder / NQ^(idx-2)) + C[idx-1]) mod NQ
-        int index = (int) ((Math.round(remainder / cost[level - 1]) + hand) % wheel[level].length);
+      // Q ← (round(Cost Remainder / NQ^(idx-2)) + C[idx-1]) mod NQ
+      int index = (int) ((Math.round(remainder / cost[level - 1])
+          + clockHand[level - 1]) % wheel[level - 1].length);
 
-        // Insert p to the head of Qth queue in the level (idx−1) Cost Wheel
-        wheel[level - 1][index].appendToHead(node);
-      }
+      // Insert p to the head of Qth queue in the level (idx−1) Cost Wheel
+      wheel[level - 1][index].appendToHead(node);
     }
   }
 
