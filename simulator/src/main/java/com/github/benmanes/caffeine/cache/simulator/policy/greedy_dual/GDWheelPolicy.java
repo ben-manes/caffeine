@@ -183,7 +183,7 @@ public final class GDWheelPolicy implements Policy {
     }
 
     // Q ← (round( c(p) / NQ^(W-1) ) + C[W]) mod NQ
-    int queueIndex = (int) ((relativeCost + wheelHand) % wheel.length);
+    int queueIndex = (int) ((relativeCost + wheelHand) % wheel[wheelIndex].length);
     var sentinel = wheel[wheelIndex][queueIndex];
 
     // Insert p to the head of Qth queue in the level W Cost Wheel
