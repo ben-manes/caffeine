@@ -225,6 +225,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
     }
     // This candidate cold page is accessed during its test period, so we increment coldTarget by 1.
     coldTargetAdjust(+1);
+    candidate.marked = false;
     while (sizeHot >= maxSize - coldTarget) {
       // handHot has passed the candidate and terminates its test period. Reject the promotion.
       if (!candidate.isInTest()) {

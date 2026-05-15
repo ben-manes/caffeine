@@ -21,6 +21,7 @@ import static java.util.Locale.US;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.EnumSet;
+import java.util.Properties;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -40,6 +41,7 @@ import com.hazelcast.internal.nearcache.impl.DefaultNearCache;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.partition.PartitioningStrategy;
+import com.hazelcast.spi.properties.HazelcastProperties;
 import com.typesafe.config.Config;
 
 /**
@@ -65,7 +67,8 @@ public final class HazelcastPolicy implements Policy {
             .setEvictionPolicy(policy)
             .setSize(maximumSize));
     cache = new DefaultNearCache<>("simulation", config, DummySerializationService.INSTANCE,
-        /* scheduler= */ null, getClass().getClassLoader(), /* properties= */ null);
+        /* scheduler= */ null, getClass().getClassLoader(),
+        new HazelcastProperties(new Properties()));
     cache.initialize();
   }
 
