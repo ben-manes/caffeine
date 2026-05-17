@@ -17,7 +17,7 @@ paths:
 
 ## Policy Implementation
 
-- Consecutive-duplicate-access dedup is a per-policy decision in `record()`, not a trace-reader/framework concern. LIRS-family operations are idempotent on dups; LIRS2 (role swap) and frequency-counting policies are not.
+- Consecutive-duplicate-access dedup is a per-policy decision in `record()`, not a trace-reader/framework concern. Song Jiang's reference C code applies it at the top of `run_lirs` / `run_clock_pro` to avoid counting "correlated references" — rapid re-accesses to the same block from one logical event; the 2Q paper (VLDB '94) discusses the same concern. Not described in the published LIRS / CLOCK-Pro papers (author intent, confirmed via direct correspondence). All IRR-family policies (LirsPolicy, Lirs2Policy, ClockProPolicy) should match this convention. Empirical impact is narrow on the canonical LIRS trace set (cs only on ClockPro), but matches author intent.
 - For ports from a reference implementation, achieve bit-for-bit hit/miss match against the reference on canonical traces before introducing quality deviations (memory bounds, paper-faithfulness, naming). The baseline proves the algorithm is correctly understood; deviations layer on top.
 
 ## Hit-Rate Validation

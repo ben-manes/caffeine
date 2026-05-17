@@ -113,6 +113,12 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
   private final int minResColdSize;
   private final int maxResColdSize;
 
+  // Skips consecutive duplicate accesses to a page. The reference bit is idempotent on a hit, but
+  // the C reference's `last_ref_pg` check and CLOCK-Pro's per-period coldTarget accounting both
+  // treat consecutive duplicates as a single event.
+  private long lastKey = Long.MIN_VALUE;
+  private boolean hasLastKey;
+
   public ClockProPlusPolicy(Config config) {
     var settings = new ClockProPlusSettings(config);
     maxSize = Math.toIntExact(settings.maximumSize());
@@ -149,6 +155,11 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
+    if (hasLastKey && (key == lastKey)) {
+      return;
+    }
+    lastKey = key;
+    hasLastKey = true;
     policyStats.recordOperation();
     @Var @Nullable Node node = data.get(key);
     if (node == null) {
