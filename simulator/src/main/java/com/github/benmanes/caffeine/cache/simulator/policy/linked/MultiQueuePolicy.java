@@ -110,8 +110,10 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
     currentTime++;
     for (int i = 1; i < headQ.length; i++) {
       Node node = requireNonNull(headQ[i].next);
-      requireNonNull(node.next);
-      if (node.next.expireTime < currentTime) {
+      if (node == headQ[i]) {
+        continue;
+      }
+      if (node.expireTime < currentTime) {
         node.remove();
         node.queueIndex = (i - 1);
         node.appendToTail(headQ[node.queueIndex]);
