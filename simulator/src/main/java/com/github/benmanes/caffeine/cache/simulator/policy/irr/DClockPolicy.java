@@ -78,6 +78,7 @@ public final class DClockPolicy implements KeyOnlyPolicy {
     this.headInactive = new Node();
     this.headActive = new Node();
 
+    checkArgument(maxActive > 0, "Must allocate some space for the active region");
     checkArgument(maxActive != maximumSize, "Must allocate some space for the inactive region");
   }
 
@@ -129,10 +130,11 @@ public final class DClockPolicy implements KeyOnlyPolicy {
   private void activate(Node node) {
     activeSize++;
     if (activeSize > maxActive) {
-      Node demote = requireNonNull(headActive.next);
+      Node demote = selectActiveDemotionVictim();
       inactiveSize++;
       demote.remove();
       demote.status = Status.INACTIVE;
+      demote.referenced = false;
       demote.appendToHead(headInactive);
       activeSize--;
     }
@@ -144,13 +146,35 @@ public final class DClockPolicy implements KeyOnlyPolicy {
     }
     node.remove();
     node.status = Status.ACTIVE;
+    node.referenced = false;
     node.appendToHead(headActive);
 
     activations++;
   }
 
+  /**
+   * Picks a demotion victim from the active list using a clock-style second-chance scan, mirroring
+   * the kernel's {@code shrink_active_list}: walk from the LRU end, rotating referenced pages back
+   * to the MRU end (and clearing the bit), and demote the first page with no referenced bit set.
+   */
+  private Node selectActiveDemotionVictim() {
+    Node candidate = requireNonNull(headActive.prev);
+    while ((candidate != headActive) && candidate.referenced) {
+      Node prev = requireNonNull(candidate.prev);
+      candidate.referenced = false;
+      candidate.remove();
+      candidate.appendToHead(headActive);
+      candidate = prev;
+    }
+    if (candidate == headActive) {
+      // Every active entry was rotated; fall back to the new LRU end (all bits now clear).
+      candidate = requireNonNull(headActive.prev);
+    }
+    return candidate;
+  }
+
   private void onActiveHit(Node node) {
-    node.moveToHead(headActive);
+    node.referenced = true;
     policyStats.recordHit();
   }
 
@@ -180,12 +204,12 @@ public final class DClockPolicy implements KeyOnlyPolicy {
       Node victim = requireNonNull(headInactive.prev);
       policyStats.recordEviction();
 
+      victim.nonResidentAge = currentNonResidentAge();
       evictions++;
       inactiveSize--;
       victim.remove();
       victim.status = Status.NON_RESIDENT;
       victim.appendToHead(headNonResident);
-      victim.nonResidentAge = currentNonResidentAge();
     }
     prune();
   }
@@ -207,7 +231,7 @@ public final class DClockPolicy implements KeyOnlyPolicy {
     // eviction, and comparing it to another reading (R) at the time the page faults back into
     // memory tells the minimum number of accesses while the page was not cached. This is called
     // the refault distance.
-    return Math.abs(currentNonResidentAge() - node.nonResidentAge);
+    return currentNonResidentAge() - node.nonResidentAge;
   }
 
   private long currentNonResidentAge() {
@@ -257,6 +281,7 @@ public final class DClockPolicy implements KeyOnlyPolicy {
     @Nullable Status status;
 
     long nonResidentAge;
+    boolean referenced;
 
     public Node() {
       this.key = Integer.MIN_VALUE;
