@@ -206,7 +206,9 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
   }
 
   private void evict() {
-    policyStats.recordEviction();
+    if (maxSize < sizeCold + sizeHot) {
+      policyStats.recordEviction();
+    }
     while (maxSize < sizeCold + sizeHot) {
       if (sizeCold > 0) {
         scanCold();
