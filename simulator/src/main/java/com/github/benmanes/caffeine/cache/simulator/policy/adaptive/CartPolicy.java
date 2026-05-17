@@ -267,7 +267,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
         node.moveToTail(headT1);
         node.marked = false;
 
-        if ((sizeT1 >= Math.max(p + 1, sizeB1)) && (node.filter == FilterType.SHORT_TERM)) {
+        if ((sizeT1 >= Math.min(p + 1, sizeB1)) && (node.filter == FilterType.SHORT_TERM)) {
           node.filter = FilterType.LONG_TERM;
           sizeS--;
           sizeL++;
