@@ -31,6 +31,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -158,7 +159,7 @@ public final class DClockPolicy implements KeyOnlyPolicy {
    * to the MRU end (and clearing the bit), and demote the first page with no referenced bit set.
    */
   private Node selectActiveDemotionVictim() {
-    Node candidate = requireNonNull(headActive.prev);
+    @Var Node candidate = requireNonNull(headActive.prev);
     while ((candidate != headActive) && candidate.referenced) {
       Node prev = requireNonNull(candidate.prev);
       candidate.referenced = false;

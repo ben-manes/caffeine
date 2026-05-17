@@ -45,6 +45,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.irr.DClockPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.FrdPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.HillClimberFrdPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.IndicatorFrdPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.irr.Lirs2Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.LirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
@@ -205,6 +206,7 @@ public final class Registry {
     register(HillClimberFrdPolicy.class, HillClimberFrdPolicy::new);
 
     register(LirsPolicy.class, LirsPolicy::new);
+    register(Lirs2Policy.class, Lirs2Policy::new);
     register(ClockProPolicy.class, ClockProPolicy::new);
     register(ClockProPlusPolicy.class, ClockProPlusPolicy::new);
     register(ClockProSimplePolicy.class, ClockProSimplePolicy::new);
