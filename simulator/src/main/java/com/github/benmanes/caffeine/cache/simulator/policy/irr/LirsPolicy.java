@@ -183,6 +183,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   /** Records a miss when the cold set is not full. */
   private static void onHirWarmupMiss(Node node) {
     node.status = Status.HIR_RESIDENT;
+    node.moveToTop(StackType.S);
     node.moveToTop(StackType.Q);
   }
 
