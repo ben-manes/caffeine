@@ -291,18 +291,22 @@ abstract class LocalAsyncLoadingCache<K, V>
             var discard = new boolean[1];
             var hints = new LocalCache.RemapHints();
             var value = asyncCache.cache().compute(key, (ignored, currentValue) -> {
+              if (newValue == Async.getIfReady((CompletableFuture<?>) currentValue)) {
+                // If the completed futures hold the same value instance then no-op
+                hints.preserveTimestamps = true;
+                return currentValue;
+              }
+
               var successful = asyncCache.cache().refreshes().remove(keyReference, castedFuture);
               if (successful && (currentValue == oldValueFuture[0])) {
                 if (currentValue == castedFuture) {
                   // If the reloaded value is the same instance then no-op
-                  return currentValue;
-                } else if (newValue == Async.getIfReady((CompletableFuture<?>) currentValue)) {
-                  // If the completed futures hold the same value instance then no-op
+                  hints.preserveTimestamps = true;
                   return currentValue;
                 }
                 return (newValue == null) ? null : castedFuture;
               }
-              // Otherwise, a write invalidated the refresh so discard it and notify the listener
+              // Otherwise, a write invalidated the refresh so discard it
               hints.preserveTimestamps = true;
               discard[0] = true;
               return currentValue;

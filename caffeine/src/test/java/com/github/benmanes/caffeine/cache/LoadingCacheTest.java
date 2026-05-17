@@ -502,6 +502,23 @@ final class LoadingCacheTest {
 
   @CheckNoEvictions
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      removalListener = Listener.CONSUMING, loader = Loader.ASYNC_INCOMPLETE)
+  void refresh_replaced_sameValue(LoadingCache<Int, Int> cache, CacheContext context) {
+    // An explicit refresh that resolves to the SAME value instance as a racing put must not fire a
+    // second REPLACED notification: the discard is a value no-op, only the put itself is observable
+    var future = cache.refresh(context.firstKey());
+    cache.put(context.firstKey(), context.absentValue());
+    future.complete(context.absentValue());
+
+    assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.firstKey(), requireNonNull(context.original().get(context.firstKey())))
+        .exclusively();
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.NULL,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   void refresh_remove(LoadingCache<Int, Int> cache, CacheContext context) {
