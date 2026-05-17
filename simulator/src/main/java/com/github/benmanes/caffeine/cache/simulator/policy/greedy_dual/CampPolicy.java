@@ -31,6 +31,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -137,17 +138,25 @@ public final class CampPolicy implements Policy {
     }
 
     int roundCost = roundedCost(event);
-    int priority = priorityQueue.isEmpty()
-        ? roundCost
-        : priorityQueue.first().priority + roundCost;
-    var sentinel = sentinelMapping.computeIfAbsent(roundCost, cost -> {
-      // Add a new LRU list for the rounded cost
-      var head = new Sentinel(cost);
-      head.lastRequest = requestCount;
-      head.priority = priority;
-      priorityQueue.add(head);
-      return head;
-    });
+    @Var var sentinel = sentinelMapping.get(roundCost);
+    if (sentinel == null) {
+      sentinel = new Sentinel(roundCost);
+      sentinel.priority = priorityQueue.isEmpty()
+          ? roundCost
+          : priorityQueue.first().priority + roundCost;
+      sentinel.lastRequest = requestCount;
+      sentinelMapping.put(roundCost, sentinel);
+      priorityQueue.add(sentinel);
+    } else {
+      // refresh the priority to L + c_i as CAMP prescribes whenever an item is added to the list
+      checkState(priorityQueue.remove(sentinel),
+          "cost %s not found in priority queue", sentinel);
+      sentinel.priority = priorityQueue.isEmpty()
+          ? sentinel.cost
+          : priorityQueue.first().priority + sentinel.cost;
+      sentinel.lastRequest = requestCount;
+      priorityQueue.add(sentinel);
+    }
 
     // cost of entry might be used later to find sentinel in case of hit
     var node = new Node(event.key(), event.weight(), sentinel);
@@ -212,10 +221,9 @@ public final class CampPolicy implements Policy {
 
     @Override
     public int compareTo(Sentinel sentinel) {
-      if (priority != sentinel.priority) {
-        return Integer.compare(priority, sentinel.priority);
-      }
-      return Long.signum(sentinel.lastRequest - lastRequest);
+      return (priority == sentinel.priority)
+          ? Long.compare(lastRequest, sentinel.lastRequest)
+          : Integer.compare(priority, sentinel.priority);
     }
 
     @Override
