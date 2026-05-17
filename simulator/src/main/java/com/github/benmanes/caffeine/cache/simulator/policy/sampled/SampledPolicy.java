@@ -172,7 +172,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
           }
           count++;
           requireNonNull(e);
-          if (sample.size() <= sampleSize) {
+          if (sample.size() < sampleSize) {
             sample.add(e);
           } else {
             int index = random.nextInt(count);
