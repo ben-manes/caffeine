@@ -103,6 +103,8 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   private void onHit(Node node) {
     if (node.type == QueueType.PROTECTED) {
       node.moveToTail(headProtected);
+    } else if (maxProtected == 0) {
+      node.moveToTail(headProbation);
     } else {
       sizeProtected++;
       if (sizeProtected > maxProtected) {
@@ -130,9 +132,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
   private void evict(Node candidate) {
     if (data.size() > maximumSize) {
-      Node victim = (maxProtected == 0)
-          ? headProtected.next // degrade to LRU
-          : headProbation.next;
+      Node victim = headProbation.next;
       policyStats.recordEviction();
 
       boolean admit = admitter.admit(candidate.key, victim.key);

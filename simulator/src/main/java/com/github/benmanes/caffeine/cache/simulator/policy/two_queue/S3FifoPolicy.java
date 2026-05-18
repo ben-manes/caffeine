@@ -187,9 +187,9 @@ public final class S3FifoPolicy implements Policy {
         }
       } else {
         insertGhost(victim.key, victim.weight);
+        policyStats.recordEviction();
         evicted = true;
       }
-      policyStats.recordEviction();
       dataSmall.remove(victim.key);
       sizeSmall -= victim.weight;
       victim.remove();

@@ -91,7 +91,7 @@ public final class SievePolicy implements Policy {
       policyStats.recordWeightedMiss(event.weight());
       return;
     }
-    while ((size + event.weight()) >= maximumSize) {
+    while ((size + event.weight()) > maximumSize) {
       evict();
     }
     policyStats.recordWeightedMiss(event.weight());
