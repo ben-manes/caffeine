@@ -60,20 +60,23 @@ public final class Stochastic extends AbstractClimber {
 
   @Override
   protected double adjust(double hitRate) {
-    double currentMissRate = (1 - hitRate);
-    double previousMissRate = (1 - previousHitRate);
-    double gradient = currentMissRate - previousMissRate;
+    if (firstSample) {
+      // No movement history yet, so no gradient can be estimated. Probe in the positive
+      // direction so subsequent samples have a Δw to differentiate against.
+      return stepSize;
+    }
+    double gradient = missRateGradient(hitRate);
 
     return switch (acceleration) {
-      case NONE -> stepSize * gradient;
+      case NONE -> -stepSize * gradient;
       case MOMENTUM -> {
         velocity = (beta * velocity) + (1 - beta) * gradient;
-        yield stepSize * velocity;
+        yield -stepSize * velocity;
       }
       case NESTEROV -> {
         // http://cs231n.github.io/neural-networks-3/#sgd
         double previousVelocity = velocity;
-        velocity = (beta * velocity) + stepSize * gradient;
+        velocity = (beta * velocity) - stepSize * gradient;
         yield -(beta * previousVelocity) + ((1 + beta) * velocity);
       }
     };

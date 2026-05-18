@@ -49,15 +49,18 @@ public final class AmsGrad extends AbstractClimber {
 
   @Override
   protected double adjust(double hitRate) {
-    double currentMissRate = (1 - hitRate);
-    double previousMissRate = (1 - previousHitRate);
-    double gradient = currentMissRate - previousMissRate;
+    if (firstSample) {
+      // No movement history yet, so no gradient can be estimated. Probe in the positive
+      // direction so subsequent samples have a Δw to differentiate against.
+      return stepSize;
+    }
+    double gradient = missRateGradient(hitRate);
 
     moment = (beta1 * moment) + ((1 - beta1) * gradient);
     velocity = (beta2 * velocity) + ((1 - beta2) * (gradient * gradient));
     maxVelocity = Math.max(velocity, maxVelocity);
 
-    return (stepSize * moment) / (Math.sqrt(maxVelocity) + epsilon);
+    return -(stepSize * moment) / (Math.sqrt(maxVelocity) + epsilon);
   }
 
   static final class AmsGradSettings extends BasicSettings {

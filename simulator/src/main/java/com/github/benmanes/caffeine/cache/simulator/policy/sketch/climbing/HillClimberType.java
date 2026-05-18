@@ -23,6 +23,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradi
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradient.AmsGrad;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradient.Nadam;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradient.Stochastic;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.hill.CorrelationClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.hill.SimpleClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.hill.SimulatedAnnealingClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.inference.IndicatorClimber;
@@ -38,6 +39,7 @@ import com.typesafe.config.Config;
 public enum HillClimberType {
   // hill climbing
   SIMPLE(SimpleClimber::new),
+  CORRELATION(CorrelationClimber::new),
   SIMULATED_ANNEALING(SimulatedAnnealingClimber::new),
 
   // gradient descent

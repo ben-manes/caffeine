@@ -254,9 +254,7 @@ public final class Lirs2Policy implements KeyOnlyPolicy {
     checkState(demoted.status == Status.LIR);
 
     block.status = Status.LIR;
-    sizeHot++;
     demoted.status = Status.HIR_RESIDENT;
-    sizeHot--;
     demoted.instanceOne().moveToTop(StackType.Q);
     demotedRmax2.recency2 = false;
 

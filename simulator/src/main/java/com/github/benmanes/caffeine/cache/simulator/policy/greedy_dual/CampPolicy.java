@@ -97,7 +97,7 @@ public final class CampPolicy implements Policy {
   private void onHit(Node node) {
     node.moveToTail();
     if (priorityQueue.size() > 1) {
-      var sentinel = sentinelMapping.get(node.cost);
+      var sentinel = requireNonNull(sentinelMapping.get(node.cost));
       checkState(priorityQueue.remove(sentinel), "cost %s not found in priority queue", sentinel);
       sentinel.priority = priorityQueue.first().priority + sentinel.cost;
       sentinel.lastRequest = requestCount; // break ties in priority queue
