@@ -66,6 +66,7 @@ final class FrequencySketch {
 
   static final long RESET_MASK = 0x7777777777777777L;
   static final long ONE_MASK = 0x1111111111111111L;
+  static final int MIN_SKETCH_SIZE = 256;
 
   int sampleSize;
   int blockMask;
@@ -89,13 +90,13 @@ final class FrequencySketch {
   @SuppressWarnings("Varifier")
   public void ensureCapacity(long maximumSize) {
     requireArgument(maximumSize >= 0);
-    int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
+    int maximum = Math.max((int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1), MIN_SKETCH_SIZE);
     if ((table != null) && (table.length >= maximum)) {
       return;
     }
 
-    sampleSize = (maximumSize == 0) ? 10 : (int) Math.min(10L * maximum, Integer.MAX_VALUE);
-    table = new long[Math.max(Caffeine.ceilingPowerOfTwo(maximum), 8)];
+    sampleSize = (int) Math.min(10L * maximum, Integer.MAX_VALUE);
+    table = new long[Caffeine.ceilingPowerOfTwo(maximum)];
     blockMask = (table.length >>> 3) - 1;
     size = 0;
   }

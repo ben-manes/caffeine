@@ -299,11 +299,6 @@ abstract class LocalAsyncLoadingCache<K, V>
 
               var successful = asyncCache.cache().refreshes().remove(keyReference, castedFuture);
               if (successful && (currentValue == oldValueFuture[0])) {
-                if (currentValue == castedFuture) {
-                  // If the reloaded value is the same instance then no-op
-                  hints.preserveTimestamps = true;
-                  return currentValue;
-                }
                 return (newValue == null) ? null : castedFuture;
               }
               // Otherwise, a write invalidated the refresh so discard it

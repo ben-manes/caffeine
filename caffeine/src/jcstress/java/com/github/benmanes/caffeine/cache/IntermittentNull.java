@@ -15,10 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.lang.invoke.ConstantBootstraps.fieldVarHandle;
+
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
-
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import org.jspecify.annotations.Nullable;
 import org.openjdk.jcstress.annotations.Actor;
@@ -30,6 +30,8 @@ import org.openjdk.jcstress.infra.results.II_Result;
 import org.openjdk.jcstress.infra.results.L_Result;
 
 import com.google.errorprone.annotations.Var;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * A stress test that simulates the behavior for {@link java.lang.ref.Reference} reads and writes in
@@ -57,7 +59,8 @@ public final class IntermittentNull {
   @Outcome(id = "ok", expect = Expect.ACCEPTABLE, desc = "Reference seen and valid")
   @Outcome(id = "null", expect = Expect.FORBIDDEN, desc = "Reference seen but field not visible")
   public static class Simple {
-    private static final VarHandle VALUE;
+    private static final VarHandle VALUE = fieldVarHandle(MethodHandles.lookup(),
+        "value", VarHandle.class, Simple.class, Value.class);
 
     @SuppressWarnings("CanBeFinal")
     @SuppressFBWarnings("URF_UNREAD_FIELD")
@@ -88,14 +91,6 @@ public final class IntermittentNull {
           return;
         }
         value = current;
-      }
-    }
-
-    static {
-      try {
-        VALUE = MethodHandles.lookup().findVarHandle(Simple.class, "value", Value.class);
-      } catch (ReflectiveOperationException e) {
-        throw new ExceptionInInitializerError(e);
       }
     }
 

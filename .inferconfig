@@ -4,6 +4,8 @@
     "NULLPTR_DEREFERENCE:!.*/.*[Tt]est.*/.*:expected null passed in tests",
     "THREAD_SAFETY_VIOLATION:!.*/.*[Tt]est.*/.*:expected thread-safety noise in tests",
     "THREAD_SAFETY_VIOLATION:!.*/.*[Jj]mh.*/.*:expected thread-safety noise in benchmarks",
-    "THREAD_SAFETY_VIOLATION:!caffeine/src/main/java/com/github/benmanes/caffeine/cache/BoundedLocalCache\\.java:expected thread-safety noise in BoundedLocalCache"
+    "THREAD_SAFETY_VIOLATION:!caffeine/src/main/java/com/github/benmanes/caffeine/cache/BoundedLocalCache\\.java:expected thread-safety noise in BoundedLocalCache",
+    "INEFFICIENT_KEYSET_ITERATOR:!.*/.*[Tt]est.*/.*:keySet iteration intentionally drives the cache access path in tests",
+    "NULLPTR_DEREFERENCE:!simulator/src/main/java/com/github/benmanes/caffeine/cache/simulator/policy/linked/LinkedPolicy\\.java:oversized-weight eviction loop guarded by Σ(weight)==currentSize invariant"
   ]
 }

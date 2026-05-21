@@ -231,13 +231,26 @@ public final class LocalCacheSubject extends Subject {
     check("sketch.blockMask").that(sketch.blockMask).isEqualTo((sketch.table.length >>> 3) - 1);
   }
 
+  @SuppressWarnings("MathClampDouble")
   private <K, V> void checkHillClimber(BoundedLocalCache<K, V> bounded) {
     check("hitsInSample").that(bounded.hitsInSample()).isAtLeast(0);
     check("missesInSample").that(bounded.missesInSample()).isAtLeast(0);
     if (!bounded.frequencySketch().isNotInitialized()) {
       long requestCount = bounded.hitsInSample() + bounded.missesInSample();
+      @Var long effectiveSampleSize = bounded.frequencySketch().sampleSize;
+      long maximum = bounded.maximum();
+      if ((maximum > 0) && (maximum <= BoundedLocalCache.SMALL_CACHE_THRESHOLD)) {
+        // Mirror the adaptive sample-period gate in BoundedLocalCache#determineAdjustment.
+        double initialStep = BoundedLocalCache.HILL_CLIMBER_STEP_PERCENT * maximum;
+        double magnitude = Math.max(
+            initialStep / BoundedLocalCache.SMALL_CACHE_SAMPLE_RATIO_CAP,
+            Math.abs(bounded.stepSize()));
+        double ratio = Math.max(1.0, Math.min(
+            BoundedLocalCache.SMALL_CACHE_SAMPLE_RATIO_CAP, initialStep / magnitude));
+        effectiveSampleSize = (long) (effectiveSampleSize * ratio);
+      }
       check("hitsInSample + missesInSample")
-          .that(requestCount).isLessThan(bounded.frequencySketch().sampleSize);
+          .that(requestCount).isLessThan(effectiveSampleSize);
     }
   }
 

@@ -265,7 +265,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       var failure = handleResponse(result, error);
 
       if (failure == null) {
-        if ((result == null) || result.isEmpty()) {
+        if (requireNonNull(result).isEmpty()) {
           cache.statsCounter().recordLoadFailure(loadTime);
         } else {
           cache.statsCounter().recordLoadSuccess(loadTime);
@@ -1199,7 +1199,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
               return CompletableFuture.completedFuture(mergedValue);
             }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
 
-        if (merged[0] || (mergedValueFuture == newValueFuture)) {
+        if (merged[0]) {
           return Async.getWhenSuccessful(mergedValueFuture);
         }
       }

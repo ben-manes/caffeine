@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
+import static java.lang.invoke.ConstantBootstraps.fieldVarHandle;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InvalidObjectException;
@@ -65,8 +66,8 @@ import com.google.errorprone.annotations.Var;
 @SuppressWarnings("serial")
 final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   static final Logger logger = System.getLogger(UnboundedLocalCache.class.getName());
-  static final VarHandle REFRESHES =
-      findVarHandle(UnboundedLocalCache.class, "refreshes", ConcurrentMap.class);
+  static final VarHandle REFRESHES = fieldVarHandle(MethodHandles.lookup(),
+      "refreshes", VarHandle.class, UnboundedLocalCache.class, ConcurrentMap.class);
 
   final @Nullable RemovalListener<K, V> removalListener;
   final ConcurrentHashMap<K, V> data;
@@ -87,14 +88,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     this.isRecordingStats = builder.isRecordingStats();
     this.executor = builder.getExecutor();
     this.isAsync = isAsync;
-  }
-
-  static VarHandle findVarHandle(Class<?> recv, String name, Class<?> type) {
-    try {
-      return MethodHandles.lookup().findVarHandle(recv, name, type);
-    } catch (ReflectiveOperationException e) {
-      throw new ExceptionInInitializerError(e);
-    }
   }
 
   @Override

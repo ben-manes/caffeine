@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
+import static java.lang.invoke.ConstantBootstraps.fieldVarHandle;
+
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
@@ -166,7 +168,12 @@ final class FastFlowHeader {
 
   /** Enforces a memory layout to avoid false sharing by padding the write counter. */
   abstract static class ReadAndWriteCounterRef<E> extends PadWriteCounter<E> {
-    static final VarHandle READ_CACHE, READ, WRITE;
+    static final VarHandle READ = fieldVarHandle(MethodHandles.lookup(),
+        "readCounter", VarHandle.class, ReadCounterRef.class, long.class);
+    static final VarHandle READ_CACHE = fieldVarHandle(MethodHandles.lookup(),
+        "readCache", VarHandle.class, ReadCacheRef.class, long.class);
+    static final VarHandle WRITE = fieldVarHandle(MethodHandles.lookup(),
+        "writeCounter", VarHandle.class, ReadAndWriteCounterRef.class, long.class);
 
     volatile long writeCounter;
 
@@ -180,17 +187,6 @@ final class FastFlowHeader {
 
     boolean casWriteCounter(long expect, long update) {
       return WRITE.weakCompareAndSet(this, expect, update);
-    }
-
-    static {
-      var lookup = MethodHandles.lookup();
-      try {
-        READ = lookup.findVarHandle(ReadCounterRef.class, "readCounter", long.class);
-        READ_CACHE = lookup.findVarHandle(ReadCacheRef.class, "readCache", long.class);
-        WRITE = lookup.findVarHandle(ReadAndWriteCounterRef.class, "writeCounter", long.class);
-      } catch (ReflectiveOperationException e) {
-        throw new ExceptionInInitializerError(e);
-      }
     }
   }
 }

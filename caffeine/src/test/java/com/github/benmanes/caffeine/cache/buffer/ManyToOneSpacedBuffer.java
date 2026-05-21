@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
+import static java.lang.invoke.ConstantBootstraps.fieldVarHandle;
+
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
@@ -141,7 +143,10 @@ final class ManyToOneSpacedHeader {
 
   /** Enforces a memory layout to avoid false sharing by padding the write counter. */
   abstract static class ReadAndWriteCounterRef<E> extends PadWriteCounter<E> {
-    static final VarHandle READ, WRITE;
+    static final VarHandle READ = fieldVarHandle(MethodHandles.lookup(),
+        "readCounter", VarHandle.class, ReadCounterRef.class, long.class);
+    static final VarHandle WRITE = fieldVarHandle(MethodHandles.lookup(),
+        "writeCounter", VarHandle.class, ReadAndWriteCounterRef.class, long.class);
 
     volatile long writeCounter;
 
@@ -155,16 +160,6 @@ final class ManyToOneSpacedHeader {
 
     boolean casWriteCounter(long expect, long update) {
       return WRITE.weakCompareAndSet(this, expect, update);
-    }
-
-    static {
-      var lookup = MethodHandles.lookup();
-      try {
-        READ = lookup.findVarHandle(ReadCounterRef.class, "readCounter", long.class);
-        WRITE = lookup.findVarHandle(ReadAndWriteCounterRef.class, "writeCounter", long.class);
-      } catch (ReflectiveOperationException e) {
-        throw new ExceptionInInitializerError(e);
-      }
     }
   }
 }

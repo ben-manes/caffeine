@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.lang.invoke.ConstantBootstraps.fieldVarHandle;
+
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.function.Consumer;
@@ -173,10 +175,10 @@ final class BBHeader {
 
   /** Enforces a memory layout to avoid false sharing by padding the write counter. */
   abstract static class ReadAndWriteCounterRef extends PadWriteCounter {
-    static final VarHandle READ = findVarHandle(
-        ReadCounterRef.class, "readCounter", long.class);
-    static final VarHandle WRITE = findVarHandle(
-        ReadAndWriteCounterRef.class, "writeCounter", long.class);
+    static final VarHandle READ = fieldVarHandle(MethodHandles.lookup(),
+        "readCounter", VarHandle.class, ReadCounterRef.class, long.class);
+    static final VarHandle WRITE = fieldVarHandle(MethodHandles.lookup(),
+        "writeCounter", VarHandle.class, ReadAndWriteCounterRef.class, long.class);
 
     volatile long writeCounter;
 
@@ -190,14 +192,6 @@ final class BBHeader {
 
     boolean casWriteCounter(long expect, long update) {
       return WRITE.weakCompareAndSet(this, expect, update);
-    }
-
-    static VarHandle findVarHandle(Class<?> recv, String name, Class<?> type) {
-      try {
-        return MethodHandles.lookup().findVarHandle(recv, name, type);
-      } catch (ReflectiveOperationException e) {
-        throw new ExceptionInInitializerError(e);
-      }
     }
   }
 }

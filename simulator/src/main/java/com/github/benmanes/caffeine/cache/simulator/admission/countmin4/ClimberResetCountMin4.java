@@ -130,7 +130,7 @@ public final class ClimberResetCountMin4 extends CountMin4 {
   }
 
   public void setStep(int x) {
-    this.step = Math.max(1, Math.min(15, x));
+    this.step = Math.clamp(x, 1, 15);
   }
 
   public int getEventsToCount() {

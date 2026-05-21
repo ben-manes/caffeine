@@ -773,6 +773,40 @@ final class AsyncLoadingCacheTest {
     });
   }
 
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.ASYNC,
+      removalListener = Listener.CONSUMING, executor = CacheExecutor.THREADED)
+  void refresh_current_replaced_null(CacheContext context) {
+    // A refresh that resolves to null after a concurrent write replaced the entry must not
+    // fire a notification — the discard path with newValue == null is silently swallowed.
+    var started = new AtomicBoolean();
+    var refreshFuture = new CompletableFuture<Int>();
+    var cache = context.<Int, Int>buildAsync(new AsyncCacheLoader<Int, Int>() {
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) {
+        started.set(true);
+        return refreshFuture;
+      }
+    });
+
+    cache.put(context.absentKey(), context.absentValue().toFuture());
+    cache.synchronous().refresh(context.absentKey());
+    await().untilTrue(started);
+
+    cache.synchronous().put(context.absentKey(), context.absentKey().negate());
+    refreshFuture.complete(null);
+
+    await().untilAsserted(() -> {
+      assertThat(cache).containsEntry(context.absentKey(), context.absentKey().negate());
+      assertThat(context).removalNotifications().withCause(REPLACED)
+          .contains(context.absentKey(), context.absentValue())
+          .exclusively();
+    });
+  }
+
   /* --------------- AsyncCacheLoader --------------- */
 
   @Test

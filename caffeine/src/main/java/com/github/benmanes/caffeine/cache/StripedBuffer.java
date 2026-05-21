@@ -21,6 +21,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
+import static java.lang.invoke.ConstantBootstraps.fieldVarHandle;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -86,7 +87,8 @@ abstract class StripedBuffer<E> implements Buffer<E> {
    * again; and for short-lived ones, it does not matter.
    */
 
-  static final VarHandle TABLE_BUSY = findVarHandle(StripedBuffer.class, "tableBusy", int.class);
+  static final VarHandle TABLE_BUSY = fieldVarHandle(MethodHandles.lookup(),
+      "tableBusy", VarHandle.class, StripedBuffer.class, int.class);
 
   /** Number of CPUS. */
   static final int NCPU = Runtime.getRuntime().availableProcessors();
@@ -269,13 +271,5 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     z = (z ^ (z >>> 30)) * 0xbf58476d1ce4e5b9L;
     z = (z ^ (z >>> 27)) * 0x94d049bb133111ebL;
     return z ^ (z >>> 31);
-  }
-
-  static VarHandle findVarHandle(Class<?> recv, String name, Class<?> type) {
-    try {
-      return MethodHandles.lookup().findVarHandle(recv, name, type);
-    } catch (ReflectiveOperationException e) {
-      throw new ExceptionInInitializerError(e);
-    }
   }
 }

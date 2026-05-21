@@ -26,6 +26,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradi
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.hill.CorrelationClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.hill.SimpleClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.hill.SimulatedAnnealingClimber;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.hill.TrustRegionEwmaClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.inference.IndicatorClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.sim.MiniSimClimber;
 import com.typesafe.config.Config;
@@ -40,6 +41,7 @@ public enum HillClimberType {
   // hill climbing
   SIMPLE(SimpleClimber::new),
   CORRELATION(CorrelationClimber::new),
+  TRUST_REGION_EWMA(TrustRegionEwmaClimber::new),
   SIMULATED_ANNEALING(SimulatedAnnealingClimber::new),
 
   // gradient descent

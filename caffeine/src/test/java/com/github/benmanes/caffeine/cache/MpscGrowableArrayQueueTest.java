@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.BaseMpscLinkedArrayQueue.findVarHandle;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Uninterruptibles.awaitUninterruptibly;
@@ -252,12 +251,6 @@ final class MpscGrowableArrayQueueTest {
     var full = makePopulated(FULL_SIZE);
     assertThat(empty.toString()).contains(empty.getClass().getSimpleName());
     assertThat(full.toString()).contains(empty.getClass().getSimpleName());
-  }
-
-  @Test
-  void findVarHandle_absent() {
-    assertThrows(ExceptionInInitializerError.class, () ->
-        findVarHandle(BaseMpscLinkedArrayQueueProducerFields.class, "absent", int.class));
   }
 
   /* --------------- Concurrency --------------- */

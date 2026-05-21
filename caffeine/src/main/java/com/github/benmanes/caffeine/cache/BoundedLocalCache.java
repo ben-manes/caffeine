@@ -25,6 +25,7 @@ import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFun
 import static com.github.benmanes.caffeine.cache.Node.PROBATION;
 import static com.github.benmanes.caffeine.cache.Node.PROTECTED;
 import static com.github.benmanes.caffeine.cache.Node.WINDOW;
+import static java.lang.invoke.ConstantBootstraps.fieldVarHandle;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 import static java.util.Spliterator.DISTINCT;
@@ -159,9 +160,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * The optimal configuration is dynamically determined by using hill climbing to walk the hit rate
    * curve. This is achieved by sampling the hit rate and adjusting the window size in the direction
    * that is improving (making positive or negative steps). At each interval, the step size is
-   * decreased until the hit rate climber converges at the optimal setting. The process is restarted
-   * when the hit rate changes over a threshold, indicating that the workload altered, and a new
-   * setting may be required.
+   * decreased until the hit rate climber converges at the optimal setting. For small caches the
+   * sample period grows as its step decays to avoid getting stuck at a poor initial configuration.
+   * The process is restarted when the hit rate changes over a threshold, indicating that the
+   * workload altered, and a new setting may be required.
    *
    * The historic usage is retained in a compact popularity sketch, which uses hashing to
    * probabilistically estimate an item's frequency. This exposes a flaw where an adversary could
@@ -225,6 +227,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final double HILL_CLIMBER_STEP_PERCENT = 0.0625d;
   /** The rate to decrease the step size to adapt by. */
   static final double HILL_CLIMBER_STEP_DECAY_RATE = 0.98d;
+  /** Lower bound on the initial step size so that small caches have an opportunity to adapt. */
+  static final double HILL_CLIMBER_MIN_INITIAL_STEP = 2.0d;
+  /** The threshold below which the climber's sample period grows as its step size decays. */
+  static final long SMALL_CACHE_THRESHOLD = 512L;
+  /** Maximum factor by which the climber's sample period may grow. */
+  static final double SMALL_CACHE_SAMPLE_RATIO_CAP = 4.0d;
+  /** The step decay rate for small caches, slower to keep the step large enough for restarts. */
+  static final double SMALL_CACHE_STEP_DECAY_RATE = 0.995d;
   /** The minimum popularity for allowing randomized admission. */
   static final int ADMIT_HASHDOS_THRESHOLD = 6;
   /** The maximum number of entries that can be transferred between queues. */
@@ -238,8 +248,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   /** The number of retries before computing to validate the entry's integrity; pow2 modulus. */
   static final int MAX_PUT_SPIN_WAIT_ATTEMPTS = 1024 - 1;
   /** The handle for the in-flight refresh operations. */
-  static final VarHandle REFRESHES = findVarHandle(
-      BoundedLocalCache.class, "refreshes", ConcurrentMap.class);
+  static final VarHandle REFRESHES = fieldVarHandle(MethodHandles.lookup(),
+      "refreshes", VarHandle.class, BoundedLocalCache.class, ConcurrentMap.class);
 
   final @Nullable RemovalListener<K, V> evictionListener;
   final @Nullable AsyncCacheLoader<K, V> cacheLoader;
@@ -688,9 +698,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return;
     }
 
-    long max = Math.min(maximum, MAXIMUM_CAPACITY);
-    long window = max - (long) (PERCENT_MAIN * max);
-    long mainProtected = (long) (PERCENT_MAIN_PROTECTED * (max - window));
+    var max = Math.min(maximum, MAXIMUM_CAPACITY);
+    var window = max - (long) (PERCENT_MAIN * max);
+    var mainProtected = (long) (PERCENT_MAIN_PROTECTED * (max - window));
+    var stepSize = Math.max(HILL_CLIMBER_STEP_PERCENT * max, HILL_CLIMBER_MIN_INITIAL_STEP);
 
     setMaximum(max);
     setWindowMaximum(window);
@@ -698,7 +709,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     setHitsInSample(0);
     setMissesInSample(0);
-    setStepSize(-HILL_CLIMBER_STEP_PERCENT * max);
+    setStepSize((max <= SMALL_CACHE_THRESHOLD) ? stepSize : -stepSize);
 
     if ((frequencySketch() != null) && !isWeighted() && (weightedSize() >= (max >>> 1))) {
       // Lazily initialize when close to the maximum size
@@ -1161,7 +1172,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (!evicts()) {
       return;
     }
-
     determineAdjustment();
     demoteFromMainProtected();
     long amount = adjustment();
@@ -1176,6 +1186,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /** Calculates the amount to adapt the window by and sets {@link #adjustment()} accordingly. */
   @GuardedBy("evictionLock")
+  @SuppressWarnings("MathClampDouble")
   void determineAdjustment() {
     if (frequencySketch().isNotInitialized()) {
       setPreviousSampleHitRate(0.0);
@@ -1185,7 +1196,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     long requestCount = hitsInSample() + missesInSample();
-    if (requestCount < frequencySketch().sampleSize) {
+    @Var double stepDecayRate = HILL_CLIMBER_STEP_DECAY_RATE;
+    @Var long effectiveSampleSize = frequencySketch().sampleSize;
+    if (maximum() <= SMALL_CACHE_THRESHOLD) {
+      // Grows the sample period as the step size decays to avoid converging near the initial ratio
+      double initialStep = HILL_CLIMBER_STEP_PERCENT * maximum();
+      double magnitude = Math.max(initialStep / SMALL_CACHE_SAMPLE_RATIO_CAP, Math.abs(stepSize()));
+      double ratio = Math.max(1.0, Math.min(SMALL_CACHE_SAMPLE_RATIO_CAP, initialStep / magnitude));
+      effectiveSampleSize = (long) (effectiveSampleSize * ratio);
+      stepDecayRate = SMALL_CACHE_STEP_DECAY_RATE;
+    }
+    if (requestCount < effectiveSampleSize) {
       return;
     }
 
@@ -1193,8 +1214,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     double hitRateChange = hitRate - previousSampleHitRate();
     double amount = (hitRateChange >= 0) ? stepSize() : -stepSize();
     double nextStepSize = (Math.abs(hitRateChange) >= HILL_CLIMBER_RESTART_THRESHOLD)
-        ? HILL_CLIMBER_STEP_PERCENT * maximum() * (amount >= 0 ? 1 : -1)
-        : HILL_CLIMBER_STEP_DECAY_RATE * amount;
+        ? Math.copySign(
+            Math.max(HILL_CLIMBER_STEP_PERCENT * maximum(), HILL_CLIMBER_MIN_INITIAL_STEP), amount)
+        : (stepDecayRate * amount);
     setPreviousSampleHitRate(hitRate);
     setAdjustment((long) amount);
     setStepSize(nextStepSize);
@@ -1215,6 +1237,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return;
     }
 
+    @SuppressWarnings("MathClampLong")
     @Var long quota = Math.min(adjustment(), mainProtectedMaximum());
     setMainProtectedMaximum(mainProtectedMaximum() - quota);
     setWindowMaximum(windowMaximum() + quota);
@@ -1260,6 +1283,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return;
     }
 
+    @SuppressWarnings("MathClampLong")
     @Var long quota = Math.min(-adjustment(), Math.max(0, windowMaximum() - 1));
     setMainProtectedMaximum(mainProtectedMaximum() + quota);
     setWindowMaximum(windowMaximum() - quota);
@@ -4866,8 +4890,8 @@ final class BLCHeader {
 
   /** Enforces a memory layout to avoid false sharing by padding the drain status. */
   abstract static class DrainStatusRef extends PadDrainStatus {
-    static final VarHandle DRAIN_STATUS = findVarHandle(
-        DrainStatusRef.class, "drainStatus", int.class);
+    static final VarHandle DRAIN_STATUS = fieldVarHandle(MethodHandles.lookup(),
+        "drainStatus", VarHandle.class, DrainStatusRef.class, int.class);
 
     /** A drain is not taking place. */
     static final int IDLE = 0;
@@ -4919,14 +4943,6 @@ final class BLCHeader {
 
     boolean casDrainStatus(int expect, int update) {
       return DRAIN_STATUS.compareAndSet(this, expect, update);
-    }
-
-    static VarHandle findVarHandle(Class<?> recv, String name, Class<?> type) {
-      try {
-        return MethodHandles.lookup().findVarHandle(recv, name, type);
-      } catch (ReflectiveOperationException e) {
-        throw new ExceptionInInitializerError(e);
-      }
     }
   }
 }

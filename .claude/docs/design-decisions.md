@@ -19,6 +19,16 @@ buffer task orderings.
 time. The weight is not recalculated afterward — relative weights don't influence
 eviction ordering, only total capacity accounting.
 
+**Small-cache climber adaptation (≤512 entries).** At small cache sizes, the
+per-sample hit-rate signal is noisy and the default window (1% of max) is so tiny
+that the climber's initial shrink is a no-op, locking it into a direction that
+never flips. Three coordinated fixes: (1) positive initial step — small caches
+grow the window first instead of shrinking; (2) slower step decay (0.995 vs 0.98)
+so the step stays large enough for HR shifts to trip the restart threshold on
+workload transitions; (3) min initial step floor (2 entries) so very small caches
+can move the integer window. The sample-period growth (proportional to step decay,
+capped at 4×) reduces noise when fine-tuning near the optimum.
+
 **~1% random admission of rejected candidates.** The TinyLFU admission filter
 randomly admits ~1% of candidates that would otherwise be rejected. This provides
 HashDoS protection by making frequency estimation attacks non-deterministic.

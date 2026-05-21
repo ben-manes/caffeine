@@ -16,10 +16,10 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
+import static java.lang.invoke.ConstantBootstraps.fieldVarHandle;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.VarHandle;
 import java.util.AbstractQueue;
 import java.util.Iterator;
@@ -215,12 +215,12 @@ abstract class BaseMpscLinkedArrayQueueColdProducerFields<E>
 }
 
 abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdProducerFields<E> {
-  static final VarHandle P_INDEX = findVarHandle(
-      BaseMpscLinkedArrayQueueProducerFields.class, "producerIndex", long.class);
-  static final VarHandle C_INDEX = findVarHandle(
-      BaseMpscLinkedArrayQueueConsumerFields.class, "consumerIndex", long.class);
-  static final VarHandle P_LIMIT = findVarHandle(
-      BaseMpscLinkedArrayQueueColdProducerFields.class, "producerLimit", long.class);
+  static final VarHandle P_INDEX = fieldVarHandle(MethodHandles.lookup(), "producerIndex",
+      VarHandle.class, BaseMpscLinkedArrayQueueProducerFields.class, long.class);
+  static final VarHandle C_INDEX = fieldVarHandle(MethodHandles.lookup(), "consumerIndex",
+      VarHandle.class, BaseMpscLinkedArrayQueueConsumerFields.class, long.class);
+  static final VarHandle P_LIMIT = fieldVarHandle(MethodHandles.lookup(), "producerLimit",
+      VarHandle.class, BaseMpscLinkedArrayQueueColdProducerFields.class, long.class);
   static final VarHandle REF_ARRAY = MethodHandles.arrayElementVarHandle(Object[].class);
 
   // No post padding here, subclasses must add
@@ -632,14 +632,5 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    */
   static long modifiedCalcElementOffset(long index, long mask) {
     return (index & mask) >> 1;
-  }
-
-  static VarHandle findVarHandle(Class<?> recv, String name, Class<?> type) {
-    try {
-      Lookup lookup = MethodHandles.privateLookupIn(recv, MethodHandles.lookup());
-      return lookup.findVarHandle(recv, name, type);
-    } catch (ReflectiveOperationException e) {
-      throw new ExceptionInInitializerError(e);
-    }
   }
 }

@@ -21,12 +21,14 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_REQUIRED;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
-import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.findVarHandle;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.ADMIT_HASHDOS_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_TOLERANCE;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.HILL_CLIMBER_STEP_PERCENT;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.MAXIMUM_EXPIRY;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.QUEUE_TRANSFER_THRESHOLD;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.SMALL_CACHE_SAMPLE_RATIO_CAP;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.SMALL_CACHE_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WARN_AFTER_LOCK_WAIT_NANOS;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WRITE_BUFFER_MAX;
 import static com.github.benmanes.caffeine.cache.CacheContext.intern;
@@ -2443,6 +2445,88 @@ final class BoundedLocalCacheTest {
 
     assertThat(cache.windowMaximum()).isNotEqualTo(windowMaximum);
     assertThat(cache.mainProtectedMaximum()).isNotEqualTo(protectedMaximum);
+    assertThat(cache.hitsInSample()).isEqualTo(0);
+    assertThat(cache.missesInSample()).isEqualTo(0);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
+  void adapt_smallCache_postponesAdjustmentAsStepDecays(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Maximum.FULL is well below SMALL_CACHE_THRESHOLD so the adaptive-sample logic applies.
+    assertThat(cache.maximum()).isAtMost(SMALL_CACHE_THRESHOLD);
+    prepareForAdaption(cache, context, /* recencyBias= */ false);
+
+    // Decay the step size to half its initial magnitude, which doubles the effective sample
+    // period. Filling the sample buffer to only the base sample size should not trigger an
+    // adjustment because the climber is waiting for more requests.
+    double initialStep = HILL_CLIMBER_STEP_PERCENT * cache.maximum();
+    cache.setStepSize(Math.copySign(initialStep / 2, cache.stepSize()));
+
+    int baseSampleSize = cache.frequencySketch().sampleSize;
+    long windowMaximum = cache.windowMaximum();
+    long protectedMaximum = cache.mainProtectedMaximum();
+
+    cache.setPreviousSampleHitRate(0.80);
+    cache.setMissesInSample(baseSampleSize / 2);
+    cache.setHitsInSample(baseSampleSize - cache.missesInSample());
+    cache.climb();
+
+    // Adjustment should have been postponed: counters preserved, sizes unchanged.
+    assertThat(cache.hitsInSample()).isGreaterThan(0);
+    assertThat(cache.windowMaximum()).isEqualTo(windowMaximum);
+    assertThat(cache.mainProtectedMaximum()).isEqualTo(protectedMaximum);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
+  void adapt_smallCache_triggersAtGrownSamplePeriod(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.maximum()).isAtMost(SMALL_CACHE_THRESHOLD);
+    prepareForAdaption(cache, context, /* recencyBias= */ false);
+
+    // With step decayed to half magnitude, the effective sample size is ratio=2 * base. A
+    // sample size matching that grown threshold should trigger the climber.
+    double initialStep = HILL_CLIMBER_STEP_PERCENT * cache.maximum();
+    cache.setStepSize(Math.copySign(initialStep / 2, cache.stepSize()));
+
+    int baseSampleSize = cache.frequencySketch().sampleSize;
+    int grownSampleSize = 2 * baseSampleSize;
+
+    cache.setPreviousSampleHitRate(0.80);
+    cache.setMissesInSample(grownSampleSize / 2);
+    cache.setHitsInSample(grownSampleSize - cache.missesInSample());
+    cache.climb();
+
+    // Adjustment ran: counters reset.
+    assertThat(cache.hitsInSample()).isEqualTo(0);
+    assertThat(cache.missesInSample()).isEqualTo(0);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
+  void adapt_smallCache_samplePeriodGrowthCappedAtRatioCap(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.maximum()).isAtMost(SMALL_CACHE_THRESHOLD);
+    prepareForAdaption(cache, context, /* recencyBias= */ false);
+
+    // Force step to a value far below the cap: ratio would be > cap, so should be clamped.
+    double initialStep = HILL_CLIMBER_STEP_PERCENT * cache.maximum();
+    double tinyStep = initialStep / (SMALL_CACHE_SAMPLE_RATIO_CAP * 10);
+    cache.setStepSize(Math.copySign(Math.max(tinyStep, 0.001), cache.stepSize()));
+
+    int baseSampleSize = cache.frequencySketch().sampleSize;
+    var cappedSampleSize = (int) (baseSampleSize * SMALL_CACHE_SAMPLE_RATIO_CAP);
+
+    // At the capped threshold, the climber should run.
+    cache.setPreviousSampleHitRate(0.80);
+    cache.setMissesInSample(cappedSampleSize / 2);
+    cache.setHitsInSample(cappedSampleSize - cache.missesInSample());
+    cache.climb();
+
     assertThat(cache.hitsInSample()).isEqualTo(0);
     assertThat(cache.missesInSample()).isEqualTo(0);
   }
@@ -5238,12 +5322,6 @@ final class BoundedLocalCacheTest {
   void toUncheckedException_error() {
     assertThrows(AssertionError.class, () ->
         BoundedLocalCache.toUncheckedException(new AssertionError("test")));
-  }
-
-  @Test
-  void findVarHandle_absent() {
-    assertThrows(ExceptionInInitializerError.class, () ->
-        findVarHandle(BoundedLocalCache.class, "absent", int.class));
   }
 
   @Test

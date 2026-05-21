@@ -15,13 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.BBHeader.ReadAndWriteCounterRef.findVarHandle;
 import static com.github.benmanes.caffeine.cache.Buffer.FAILED;
 import static com.github.benmanes.caffeine.cache.Buffer.FULL;
 import static com.github.benmanes.caffeine.cache.Buffer.SUCCESS;
 import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,7 +28,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.junit.jupiter.api.Test;
 
-import com.github.benmanes.caffeine.cache.BBHeader.ReadAndWriteCounterRef;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
 /**
@@ -116,11 +113,5 @@ final class BoundedBufferTest {
     var constructor = BBHeader.class.getDeclaredConstructor();
     constructor.setAccessible(true);
     constructor.newInstance();
-  }
-
-  @Test
-  void findVarHandle_absent() {
-    assertThrows(ExceptionInInitializerError.class, () ->
-        findVarHandle(ReadAndWriteCounterRef.class, "absent", int.class));
   }
 }

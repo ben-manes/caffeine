@@ -15,9 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.UnboundedLocalCache.findVarHandle;
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.slf4j.event.Level.TRACE;
 
 import java.util.concurrent.CompletableFuture;
@@ -109,11 +107,5 @@ final class UnboundedLocalCacheTest {
         /* recordStats= */ false, /* recordLoad= */ false);
     assertThat(result).isNull();
     assertThat(cache.refreshes()).doesNotContainKey(key);
-  }
-
-  @Test
-  void findVarHandle_absent() {
-    assertThrows(ExceptionInInitializerError.class, () ->
-        findVarHandle(UnboundedLocalCache.class, "absent", int.class));
   }
 }

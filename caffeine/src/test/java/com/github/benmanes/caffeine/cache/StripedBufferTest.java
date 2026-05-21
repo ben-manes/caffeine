@@ -20,10 +20,8 @@ import static com.github.benmanes.caffeine.cache.Buffer.FULL;
 import static com.github.benmanes.caffeine.cache.Buffer.SUCCESS;
 import static com.github.benmanes.caffeine.cache.StripedBuffer.MAXIMUM_TABLE_SIZE;
 import static com.github.benmanes.caffeine.cache.StripedBuffer.NCPU;
-import static com.github.benmanes.caffeine.cache.StripedBuffer.findVarHandle;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -160,18 +158,6 @@ final class StripedBufferTest {
     buffer.drainTo(e -> {});
     assertThat(buffer.reads()).isEqualTo(64);
     assertThat(buffer.size()).isEqualTo(0);
-  }
-
-  @Test
-  void findVarHandle_absent() {
-    assertThrows(ExceptionInInitializerError.class, () ->
-        findVarHandle(StripedBuffer.class, "absent", int.class));
-  }
-
-  @Test
-  void findVarHandle_present() {
-    var handle = findVarHandle(StripedBuffer.class, "tableBusy", int.class);
-    assertThat(handle).isNotNull();
   }
 
   @Test

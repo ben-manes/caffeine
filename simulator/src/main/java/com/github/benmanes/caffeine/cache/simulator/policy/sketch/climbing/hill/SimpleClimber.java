@@ -20,32 +20,47 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.Abstr
 import com.typesafe.config.Config;
 
 /**
- * A naive, simple hill climber.
+ * A simple hill climber that adapts the admission window size by walking in the direction that
+ * improves the hit rate. For small cache sizes the step decays more slowly so the climber remains
+ * reactive to workload shifts, and the sample period grows proportionally as the step shrinks to
+ * reduce noise when fine-tuning.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class SimpleClimber extends AbstractClimber {
+  private final double smallCacheSampleRatioCap;
+  private final double smallCacheStepDecayRate;
+  private final long smallCacheThreshold;
   private final double restartThreshold;
   private final double initialStepSize;
   private final double sampleDecayRate;
   private final int initialSampleSize;
   private final double stepDecayRate;
   private final double tolerance;
+  private final long maximumSize;
 
   private boolean increaseWindow;
   private double stepSize;
 
   public SimpleClimber(Config config) {
     var settings = new SimpleClimberSettings(config);
-    int maximumSize = Math.toIntExact(settings.maximumSize());
-    this.initialSampleSize = (int) (settings.percentSample() * maximumSize);
-    this.initialStepSize = settings.percentPivot() * maximumSize;
+    this.maximumSize = settings.maximumSize();
+    this.initialStepSize = Math.max(
+        settings.percentPivot() * Math.toIntExact(maximumSize), settings.minInitialStep());
+    this.initialSampleSize = (int) (settings.percentSample() * Math.toIntExact(maximumSize));
+    this.smallCacheStepDecayRate = settings.smallCacheStepDecayRate();
+    this.smallCacheSampleRatioCap = settings.smallCacheSampleRatioCap();
+    this.smallCacheThreshold = settings.smallCacheThreshold();
     this.restartThreshold = settings.restartThreshold();
     this.sampleDecayRate = settings.sampleDecayRate();
     this.stepDecayRate = settings.stepDecayRate();
     this.tolerance = 100d * settings.tolerance();
     this.sampleSize = initialSampleSize;
     this.stepSize = initialStepSize;
+  }
+
+  private boolean isSmallCache() {
+    return (smallCacheThreshold > 0) && (maximumSize <= smallCacheThreshold);
   }
 
   @Override
@@ -64,10 +79,21 @@ public final class SimpleClimber extends AbstractClimber {
   protected void resetSample(double hitRate) {
     super.resetSample(hitRate);
 
-    stepSize *= stepDecayRate;
-    sampleSize = (int) (sampleSize * sampleDecayRate);
-    if ((stepSize <= 0.01) || (sampleSize <= 1)) {
-      sampleSize = Integer.MAX_VALUE;
+    if (isSmallCache()) {
+      // Small caches decay step more slowly so the early exploration step stays large enough for
+      // HR shifts to clear restart-threshold on workload transitions, and grow the sample period
+      // proportionally as the step decays so the climber sees a less noisy gradient when tuning.
+      // Sample ratio clamped to [1, cap] so a step magnitude above initialStep doesn't shrink it.
+      stepSize *= smallCacheStepDecayRate;
+      double magnitude = Math.max(initialStepSize / smallCacheSampleRatioCap, Math.abs(stepSize));
+      double ratio = Math.clamp(initialStepSize / magnitude, 1.0, smallCacheSampleRatioCap);
+      sampleSize = (int) (initialSampleSize * ratio);
+    } else {
+      stepSize *= stepDecayRate;
+      sampleSize = (int) (sampleSize * sampleDecayRate);
+      if ((stepSize <= 0.01) || (sampleSize <= 1)) {
+        sampleSize = Integer.MAX_VALUE;
+      }
     }
   }
 
@@ -94,6 +120,18 @@ public final class SimpleClimber extends AbstractClimber {
     }
     public double restartThreshold() {
       return config().getDouble(BASE_PATH + "restart-threshold");
+    }
+    public double minInitialStep() {
+      return config().getDouble(BASE_PATH + "min-initial-step");
+    }
+    public long smallCacheThreshold() {
+      return config().getLong(BASE_PATH + "small-cache-threshold");
+    }
+    public double smallCacheSampleRatioCap() {
+      return config().getDouble(BASE_PATH + "small-cache-sample-ratio-cap");
+    }
+    public double smallCacheStepDecayRate() {
+      return config().getDouble(BASE_PATH + "small-cache-step-decay-rate");
     }
   }
 }
