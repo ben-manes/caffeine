@@ -49,6 +49,7 @@ Einziger
 equ
 errorprone
 evictable
+ewma
 Eytan
 faible
 Failable

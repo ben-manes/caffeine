@@ -56,17 +56,11 @@ public final class TinyCache {
     indexing.setChainStart(indexing.getChainStart() + offset);
     indexing.setChainEnd(indexing.getChainEnd() + offset);
 
-    // Gil: I will carefully examine this function when I have time.
-    // As far as I understand it is working right now.
     while (indexing.getChainStart() <= indexing.getChainEnd()) {
-      try {
-        if (cache[indexing.getChainStart() % cache.length] == hashFunc.fpaux.value) {
-          return true;
-        }
-        indexing.setChainStart(indexing.getChainStart() + 1);
-      } catch (RuntimeException _) {
-        System.out.println("length: " + cache.length + " Access: " + indexing.getChainStart());
+      if (cache[indexing.getChainStart()] == hashFunc.fpaux.value) {
+        return true;
       }
+      indexing.setChainStart(indexing.getChainStart() + 1);
     }
     return false;
   }

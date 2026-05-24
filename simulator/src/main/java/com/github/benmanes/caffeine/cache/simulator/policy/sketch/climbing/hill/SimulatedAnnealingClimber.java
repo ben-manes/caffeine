@@ -43,8 +43,8 @@ public final class SimulatedAnnealingClimber extends AbstractClimber {
     int maximumSize = Math.toIntExact(settings.maximumSize());
     this.initialStepSize = (int) (settings.percentPivot() * maximumSize);
     this.sampleSize = (int) (settings.percentSample() * maximumSize);
-    this.coolDownTolerance = 100 * settings.coolDownTolerance();
-    this.restartTolerance = 100 * settings.restartTolerance();
+    this.coolDownTolerance = settings.coolDownTolerance();
+    this.restartTolerance = settings.restartTolerance();
     this.random = new Random(settings.randomSeed());
     this.minTemperature = settings.minTemperature();
     this.coolDownRate = settings.coolDownRate();
@@ -67,7 +67,7 @@ public final class SimulatedAnnealingClimber extends AbstractClimber {
     }
 
     double criteria = random.nextGaussian();
-    double acceptanceProbability = Math.exp((hitRate - previousHitRate) / (100 * temperature));
+    double acceptanceProbability = Math.exp((hitRate - previousHitRate) / temperature);
     if ((hitRate < previousHitRate) && (acceptanceProbability <= criteria)) {
       increaseWindow = !increaseWindow;
       stepSize = Math.max(stepSize - 1, 0);

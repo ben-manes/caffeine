@@ -54,7 +54,7 @@ public final class SimpleClimber extends AbstractClimber {
     this.restartThreshold = settings.restartThreshold();
     this.sampleDecayRate = settings.sampleDecayRate();
     this.stepDecayRate = settings.stepDecayRate();
-    this.tolerance = 100d * settings.tolerance();
+    this.tolerance = settings.tolerance();
     this.sampleSize = initialSampleSize;
     this.stepSize = initialStepSize;
   }

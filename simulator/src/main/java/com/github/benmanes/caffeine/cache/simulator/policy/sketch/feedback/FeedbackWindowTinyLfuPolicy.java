@@ -190,7 +190,6 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Moves the entry to the MRU position. */
   private void onProtectedHit(Node node) {
-    admitter.record(node.key);
     node.moveToTail(headProtected);
   }
 
@@ -235,10 +234,9 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
 
     if (feedback.mightContain(candidate.key)) {
-      adjusted = sampled;
-
       // Increase admission window
       if (pivot < maxPivot) {
+        adjusted = sampled;
         pivot++;
 
         maxWindow++;
@@ -260,10 +258,12 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
             maxProtected--;
 
             demoteProtected();
-            requireNonNull(headProbation.next);
-            requireNonNull(headProbation.next.next);
-
-            candidate = headProbation.next.next;
+            Node victim = requireNonNull(headProbation.next);
+            Node next = requireNonNull(victim.next);
+            if (next == headProbation) {
+              break;
+            }
+            candidate = next;
             candidate.remove();
             candidate.status = Status.WINDOW;
             candidate.appendToTail(headWindow);
@@ -276,8 +276,6 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
       }
       return true;
     } else if (sampled > (adjusted + 1)) {
-      adjusted = sampled;
-
       // Decrease admission window
       @Var boolean decremented = false;
       for (int i = 0; i < pivotDecrement; i++) {
@@ -297,6 +295,9 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
         }
       }
 
+      if (decremented) {
+        adjusted = sampled;
+      }
       if (trace && decremented) {
         System.out.println("↓" + maxWindow);
       }

@@ -152,22 +152,16 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
     }
 
     if (feedback.mightContain(candidate.key)) {
-      if (sampled >= (adjusted + gain)) {
-        adjusted = sampled;
-
+      if ((sampled >= (adjusted + gain)) && (gain < maxGain)) {
         // Increase arrival emphasis
-        if (gain < maxGain) {
-          gain++;
-        }
+        adjusted = sampled;
+        gain++;
       }
       return true;
-    } else if (sampled > (adjusted + gain + 1)) {
-      adjusted = sampled;
-
+    } else if ((sampled > (adjusted + gain + 1)) && (gain > 0)) {
       // Decrease arrival emphasis
-      if (gain > 0) {
-        gain--;
-      }
+      adjusted = sampled;
+      gain--;
     }
     return false;
   }

@@ -31,7 +31,6 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TrustRegionEwmaClimber extends AbstractClimber {
-  private final double initialStepSize;
   private final double shrinkThreshold;
   private final double growThreshold;
   private final double shrinkFactor;
@@ -53,7 +52,7 @@ public final class TrustRegionEwmaClimber extends AbstractClimber {
     this.minStep = Math.max(1.0, settings.minFrac() * Math.toIntExact(max));
     this.maxStep = Math.max(minStep + 1.0, settings.maxFrac() * Math.toIntExact(max));
     this.initialSampleSize = (int) (settings.percentSample() * Math.toIntExact(max));
-    this.initialStepSize = settings.percentPivot() * Math.toIntExact(max);
+    this.stepSize = settings.percentPivot() * Math.toIntExact(max);
     this.shrinkThreshold = settings.shrinkThreshold();
     this.growThreshold = settings.growThreshold();
     this.shrinkFactor = settings.shrinkFactor();
@@ -61,7 +60,6 @@ public final class TrustRegionEwmaClimber extends AbstractClimber {
     this.ewmaAlpha = settings.ewmaAlpha();
     this.overshoot = settings.overshoot();
     this.sampleSize = initialSampleSize;
-    this.stepSize = initialStepSize;
   }
 
   @Override

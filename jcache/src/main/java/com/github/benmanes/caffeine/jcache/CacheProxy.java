@@ -223,7 +223,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    *     updated. Use {@link #getAndFilterExpiredEntries(Set)} instead.
    */
   @Deprecated(since = "3.2.5", forRemoval = true)
-  @SuppressWarnings({"InlineMeSuggester", "unused"})
+  @SuppressWarnings({"DeprecatedIsStillUsed", "InlineMeSuggester", "unused"})
   protected Map<K, Expirable<V>> getAndFilterExpiredEntries(
       Set<? extends K> keys, boolean updateAccessTime) {
     return getAndFilterExpiredEntries(keys);
