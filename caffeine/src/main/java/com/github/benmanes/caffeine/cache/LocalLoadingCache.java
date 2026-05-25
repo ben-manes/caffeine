@@ -145,27 +145,32 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
           return;
         }
 
-        var discard = new boolean[1];
-        var hints = new LocalCache.RemapHints();
-        @Nullable V value = cache().compute(key, (K k, @Nullable V currentValue) -> {
-          boolean removed = cache().refreshes().remove(keyReference, reloading[0]);
-          if (removed && (currentValue == oldValue[0])) {
-            return (currentValue == null) && (newValue == null) ? null : newValue;
-          }
-          discard[0] = (currentValue != newValue);
-          hints.preserveTimestamps = true;
-          return currentValue;
-        }, cache().expiry(), /* recordLoad= */ false,
-            /* recordLoadFailure= */ true, hints);
+        try {
+          var discard = new boolean[1];
+          var hints = new LocalCache.RemapHints();
+          @Nullable V value = cache().compute(key, (K k, @Nullable V currentValue) -> {
+            boolean removed = cache().refreshes().remove(keyReference, reloading[0]);
+            if (removed && (currentValue == oldValue[0])) {
+              return (currentValue == null) && (newValue == null) ? null : newValue;
+            }
+            discard[0] = (currentValue != newValue);
+            hints.preserveTimestamps = true;
+            return currentValue;
+          }, cache().expiry(), /* recordLoad= */ false,
+              /* recordLoadFailure= */ true, hints);
 
-        if (discard[0] && (newValue != null)) {
-          var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
-          cache().notifyRemoval(key, newValue, cause);
-        }
-        if (newValue == null) {
+          if (discard[0] && (newValue != null)) {
+            var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
+            cache().notifyRemoval(key, newValue, cause);
+          }
+          if (newValue == null) {
+            cache().statsCounter().recordLoadFailure(loadTime);
+          } else {
+            cache().statsCounter().recordLoadSuccess(loadTime);
+          }
+        } catch (Throwable t) {
+          logger.log(Level.WARNING, "Exception thrown during refresh", t);
           cache().statsCounter().recordLoadFailure(loadTime);
-        } else {
-          cache().statsCounter().recordLoadSuccess(loadTime);
         }
       });
     }

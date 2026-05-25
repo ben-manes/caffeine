@@ -142,11 +142,11 @@ abstract class Simulate @Inject constructor(
     group = "Application"
     mainClass = "com.github.benmanes.caffeine.cache.simulator.Simulate"
     description = "Runs multiple simulations and generates an aggregate report"
+    outputDir.convention(reportDir.map { it.asFile.path })
     maximumSize.convention(emptyList())
     metric.convention("Hit Rate")
     theme.convention("light")
     title.convention("")
-    outputDir.convention(reportDir.map { it.asFile.path })
     argumentProviders.add {
       buildList {
         if (maximumSize.get().isNotEmpty()) {

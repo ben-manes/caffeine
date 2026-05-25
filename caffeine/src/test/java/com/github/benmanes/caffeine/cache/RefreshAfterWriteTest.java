@@ -35,6 +35,9 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
@@ -51,7 +54,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
@@ -64,10 +66,10 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
+import com.github.benmanes.caffeine.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
-import com.google.common.testing.FakeTicker;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.Var;
 
@@ -159,8 +161,7 @@ final class RefreshAfterWriteTest {
   @ParameterizedTest
   @CheckMaxLogLevel(WARN)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
-      loader = Loader.REFRESH_INTERRUPTED, refreshAfterWrite = Expire.ONE_MINUTE,
-      executor = CacheExecutor.DIRECT)
+      loader = Loader.REFRESH_INTERRUPTED, refreshAfterWrite = Expire.ONE_MINUTE)
   void refreshIfNeeded_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.firstKey());
@@ -572,42 +573,55 @@ final class RefreshAfterWriteTest {
     assertThat(logEvents()).isEmpty();
   }
 
-  @Test
   @CheckNoEvictions
+  @ParameterizedTest
   @CheckMaxLogLevel(WARN)
-  void refreshIfNeeded_expiryThrows_logsAndRecordsFailure() {
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO,
+      expiryTime = Expire.FOREVER, refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY)
+  void refreshIfNeeded_expiryThrows_logsAndRecordsFailure(
+      LoadingCache<Int, Int> cache, CacheContext context) {
     // If the user's Expiry throws during the refresh handler's compute (after the loader
     // succeeded), the exception must be logged and the load recorded as a failure; otherwise
     // the stats/log contract documented on LoadingCache.refresh is silently violated.
-    var expected = new RuntimeException("expiry");
-    var ticker = new FakeTicker();
-    Expiry<Int, Int> expiry = new Expiry<>() {
-      @Override public long expireAfterCreate(Int k, Int v, long t) { return Long.MAX_VALUE; }
-      @Override public long expireAfterUpdate(Int k, Int v, long t, long d) { throw expected; }
-      @Override public long expireAfterRead(Int k, Int v, long t, long d) { return d; }
-    };
-    LoadingCache<Int, Int> cache = Caffeine.newBuilder()
-        .refreshAfterWrite(Duration.ofMinutes(1))
-        .executor(Runnable::run)
-        .ticker(ticker::read)
-        .expireAfter(expiry)
-        .recordStats()
-        .build(key -> Int.valueOf(key.intValue() + 1));
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenThrow(ExpectedError.INSTANCE);
 
-    var key = Int.valueOf(1);
-    var value = Int.valueOf(100);
-    cache.put(key, value);
-
-    ticker.advance(Duration.ofMinutes(2));
-    assertThat(cache.getIfPresent(key)).isNotNull();
+    cache.put(context.absentKey(), context.absentValue());
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.getIfPresent(context.absentKey())).isNotNull();
 
     // Use getIfPresentQuietly to avoid triggering a second refresh attempt.
-    assertThat(cache.policy().getIfPresentQuietly(key)).isSameInstanceAs(value);
-    assertThat(cache.stats().loadFailureCount()).isEqualTo(1);
-    assertThat(cache.stats().loadSuccessCount()).isEqualTo(0);
+    assertThat(cache.policy().getIfPresentQuietly(context.absentKey()))
+        .isSameInstanceAs(context.absentValue());
+    assertThat(context).stats().failures(1).success(0);
     assertThat(logEvents()
         .withMessage("Exception thrown during refresh")
-        .withThrowable(expected)
+        .withThrowable(ExpectedError.INSTANCE)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO,
+      expiryTime = Expire.FOREVER, refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY)
+  void refresh_expiryThrows_logsAndRecordsFailure(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenThrow(ExpectedError.INSTANCE);
+
+    cache.put(context.absentKey(), context.absentValue());
+    context.ticker().advance(Duration.ofMinutes(2));
+    cache.refresh(context.absentKey());
+
+    assertThat(cache.policy().getIfPresentQuietly(context.absentKey()))
+        .isSameInstanceAs(context.absentValue());
+    assertThat(context).stats().failures(1).success(0);
+    assertThat(logEvents()
+        .withMessage("Exception thrown during refresh")
+        .withThrowable(ExpectedError.INSTANCE)
         .withLevel(WARN)
         .exclusively())
         .hasSize(1);

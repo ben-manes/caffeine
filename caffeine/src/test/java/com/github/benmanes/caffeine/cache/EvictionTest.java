@@ -29,6 +29,7 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
+import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
@@ -997,11 +998,12 @@ final class EvictionTest {
     future.complete(context.absentValue());
     assertThat(cache).doesNotContainKey(context.absentKey());
     assertThat(logEvents()
-        .withMessage("Exception thrown during asynchronous load")
+        .withMessage(equalTo("Exception thrown during asynchronous load")
+            .or(equalTo("Exception thrown during refresh")))
         .withThrowable(IllegalStateException.class)
         .withLevel(WARN)
         .exclusively())
-        .hasSize(context.isAsync() ? 1 : 0);
+        .hasSize(1);
   }
 
   @ParameterizedTest
@@ -1031,11 +1033,11 @@ final class EvictionTest {
     future.complete(context.absentValue());
     assertThat(cache).containsExactlyEntriesIn(context.original());
     assertThat(logEvents()
-        .withMessage("Exception thrown during asynchronous load")
+        .withMessage("Exception thrown during refresh")
         .withThrowable(IllegalStateException.class)
         .withLevel(WARN)
         .exclusively())
-        .hasSize(context.isAsync() ? 1 : 0);
+        .hasSize(1);
   }
 
   /* --------------- Policy --------------- */

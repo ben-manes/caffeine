@@ -38,6 +38,7 @@ import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
 import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
 import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
+import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.base.Predicates.in;
 import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -1251,11 +1252,12 @@ final class ExpireAfterVarTest {
     future.complete(context.absentValue());
     assertThat(cache).doesNotContainKey(context.absentKey());
     assertThat(logEvents()
-        .withMessage("Exception thrown during asynchronous load")
+        .withMessage(equalTo("Exception thrown during asynchronous load")
+            .or(equalTo("Exception thrown during refresh")))
         .withThrowable(ExpirationException.class)
         .withLevel(WARN)
         .exclusively())
-        .hasSize(context.isAsync() ? 1 : 0);
+        .hasSize(1);
   }
 
   @ParameterizedTest
@@ -1304,11 +1306,11 @@ final class ExpireAfterVarTest {
     future.complete(context.absentValue());
     assertThat(cache).containsExactlyEntriesIn(context.original());
     assertThat(logEvents()
-        .withMessage("Exception thrown during asynchronous load")
+        .withMessage("Exception thrown during refresh")
         .withThrowable(ExpirationException.class)
         .withLevel(WARN)
         .exclusively())
-        .hasSize(context.isAsync() ? 1 : 0);
+        .hasSize(1);
   }
 
   /* --------------- Expire --------------- */

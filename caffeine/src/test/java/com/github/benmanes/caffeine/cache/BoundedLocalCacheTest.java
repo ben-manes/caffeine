@@ -2846,39 +2846,22 @@ final class BoundedLocalCacheTest {
     assertThat(accessTime).isAtMost(now + TimeUnit.MINUTES.toNanos(1));
   }
 
-  @Test
-  void compute_expiredEntry_evictionWeightRecorded() {
-    var ticker = new FakeTicker();
-    var cache = Caffeine.newBuilder()
-        .expireAfterWrite(Duration.ofMinutes(1))
-        .maximumWeight(100)
-        .weigher((Int k, Int v) -> v.intValue())
-        .executor(Runnable::run)
-        .ticker(ticker::read)
-        .recordStats()
-        .build();
-
-    // Insert entries with known weights
-    cache.put(Int.valueOf(1), Int.valueOf(3));
-    cache.put(Int.valueOf(2), Int.valueOf(7));
-
-    // Expire all entries
-    ticker.advance(Duration.ofMinutes(2));
-
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.SINGLETON, expireAfterWrite = Expire.ONE_MINUTE,
+      weigher = CacheWeigher.TEN, maximumSize = Maximum.UNREACHABLE, stats = Stats.ENABLED)
+  void compute_expiredEntry_evictionWeightRecorded(
+      Cache<Int, Int> cache, CacheContext context) {
     // compute() has no fast path for expired entries, so it enters remap where the expired entry
     // is evicted. The remapping function sees null (expired) and returns null, triggering the
     // eviction recording. Previously, ctx.oldWeight was not set before the eviction check, so
     // recordEviction logged weight 0 instead of the actual entry weight.
-    assertThat(cache.asMap().compute(Int.valueOf(1), (k, v) -> {
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.asMap().compute(context.firstKey(), (k, v) -> {
       assertThat(v).isNull();
       return null;
     })).isNull();
-    assertThat(cache.asMap().compute(Int.valueOf(2), (k, v) -> {
-      assertThat(v).isNull();
-      return null;
-    })).isNull();
-
-    assertThat(cache.stats().evictionWeight()).isEqualTo(10);
+    assertThat(context).stats().evictionWeight(10);
   }
 
   @Test
@@ -3042,28 +3025,18 @@ final class BoundedLocalCacheTest {
     assertThat(expiredNotifications).hasSize(1);
   }
 
-  @Test
-  void compute_expiredEntry_mappingThrowsError_evictionCommitted() {
-    var ticker = new FakeTicker();
-    var listener = new ConsumingRemovalListener<Int, Int>();
-    var cache = Caffeine.newBuilder()
-        .expireAfterWrite(Duration.ofMinutes(1))
-        .removalListener(listener)
-        .executor(Runnable::run)
-        .ticker(ticker::read)
-        .maximumSize(100)
-        .recordStats()
-        .build();
-
-    cache.put(Int.valueOf(1), Int.valueOf(5));
-    ticker.advance(Duration.ofMinutes(2));
-
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON,
+      expireAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING)
+  void compute_expiredEntry_mappingThrowsError_evictionCommitted(
+      Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(2));
     assertThrows(AssertionError.class, () ->
-        cache.asMap().compute(Int.valueOf(1), (k, v) -> { throw new AssertionError("test"); }));
-
-    assertThat(cache.asMap()).doesNotContainKey(Int.valueOf(1));
-    assertThat(listener.removed().stream()
-        .filter(n -> n.getCause() == EXPIRED)).hasSize(1);
+        cache.asMap().compute(context.firstKey(),
+            (k, v) -> { throw new AssertionError("test"); }));
+    assertThat(cache.asMap()).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
   }
 
   @Test
@@ -3093,96 +3066,55 @@ final class BoundedLocalCacheTest {
     assertThat(cache.stats().evictionWeight()).isEqualTo(5);
   }
 
-  @Test
-  void remove_expiredEntry_recordsEviction() {
-    // When remove() discovers the entry is already expired, the cache's expiration caused the
-    // removal; the user's remove only detected it. Eviction stats should be recorded.
-    var ticker = new FakeTicker();
-    var listener = new ConsumingRemovalListener<Int, Int>();
-    var cache = Caffeine.newBuilder()
-        .expireAfterWrite(Duration.ofMinutes(1))
-        .weigher((Int k, Int v) -> v.intValue())
-        .removalListener(listener)
-        .executor(Runnable::run)
-        .ticker(ticker::read)
-        .maximumWeight(1000)
-        .recordStats()
-        .build();
-
-    cache.put(Int.valueOf(1), Int.valueOf(5));
-    ticker.advance(Duration.ofMinutes(2));
-    var prior = cache.asMap().remove(Int.valueOf(1));
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.SINGLETON, expireAfterWrite = Expire.ONE_MINUTE,
+      weigher = CacheWeigher.TEN, maximumSize = Maximum.UNREACHABLE,
+      removalListener = Listener.CONSUMING, stats = Stats.ENABLED)
+  void remove_expiredEntry_recordsEviction(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(2));
+    var prior = cache.asMap().remove(context.firstKey());
     assertThat(prior).isNull();
-
-    assertThat(listener.removed().stream()
-        .filter(n -> n.getCause() == EXPIRED)).hasSize(1);
-    assertThat(cache.stats().evictionCount()).isEqualTo(1);
-    assertThat(cache.stats().evictionWeight()).isEqualTo(5);
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
+    assertThat(context).stats().evictions(1).evictionWeight(10);
   }
 
-  @Test
-  void removeConditionally_expiredEntry_recordsEviction() {
-    // Two-argument remove(key, value) on an expired entry likewise reflects the cache's
-    // eviction strategy detecting the expiration.
-    var ticker = new FakeTicker();
-    var listener = new ConsumingRemovalListener<Int, Int>();
-    var cache = Caffeine.newBuilder()
-        .expireAfterWrite(Duration.ofMinutes(1))
-        .weigher((Int k, Int v) -> v.intValue())
-        .removalListener(listener)
-        .executor(Runnable::run)
-        .ticker(ticker::read)
-        .maximumWeight(1000)
-        .recordStats()
-        .build();
-
-    cache.put(Int.valueOf(1), Int.valueOf(5));
-    ticker.advance(Duration.ofMinutes(2));
-    var removed = cache.asMap().remove(Int.valueOf(1), Int.valueOf(5));
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.SINGLETON, expireAfterWrite = Expire.ONE_MINUTE,
+      weigher = CacheWeigher.TEN, maximumSize = Maximum.UNREACHABLE,
+      removalListener = Listener.CONSUMING, stats = Stats.ENABLED)
+  void removeConditionally_expiredEntry_recordsEviction(
+      Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(2));
+    var removed = cache.asMap().remove(context.firstKey(),
+        context.original().get(context.firstKey()));
     assertThat(removed).isFalse();
-
-    assertThat(listener.removed().stream()
-        .filter(n -> n.getCause() == EXPIRED)).hasSize(1);
-    assertThat(cache.stats().evictionCount()).isEqualTo(1);
-    assertThat(cache.stats().evictionWeight()).isEqualTo(5);
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
+    assertThat(context).stats().evictions(1).evictionWeight(10);
   }
 
-  @Test
-  void compute_expiredEntry_remappingReturnsOldInstance() {
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON, expireAfterWrite = Expire.ONE_MINUTE,
+      removalListener = Listener.CONSUMING, stats = Stats.ENABLED)
+  void compute_expiredEntry_remappingReturnsOldInstance(
+      Cache<Int, Int> cache, CacheContext context) {
     // When compute() finds an expired entry and the remapping function returns a value that is
     // the same instance as the expired value, the entry should be treated as a fresh creation.
-    // The EXPIRED eviction notification should be sent for the old value, and the entry should
-    // remain in the cache with the "new" value (same instance, fresh expiration).
-    var ticker = new FakeTicker();
-    var listener = new ConsumingRemovalListener<Int, Int>();
-    var cache = Caffeine.newBuilder()
-        .expireAfterWrite(Duration.ofMinutes(1))
-        .removalListener(listener)
-        .executor(Runnable::run)
-        .ticker(ticker::read)
-        .recordStats()
-        .build();
+    var value = context.original().get(context.firstKey());
+    context.ticker().advance(Duration.ofMinutes(2));
 
-    var value = Int.valueOf(42);
-    cache.put(Int.valueOf(1), value);
-    ticker.advance(Duration.ofMinutes(2));
-
-    // The mapping function receives null (expired=absent) but returns the same instance
-    var result = cache.asMap().compute(Int.valueOf(1), (k, v) -> {
+    var result = cache.asMap().compute(context.firstKey(), (k, v) -> {
       assertThat(v).isNull();
       return value;
     });
     assertThat(result).isSameInstanceAs(value);
-
-    // Entry should be in the cache with refreshed expiration
-    assertThat(cache.getIfPresent(Int.valueOf(1))).isSameInstanceAs(value);
-
-    // EXPIRED notification should have been sent for the old value
-    var expiredNotifications = listener.removed().stream()
-        .filter(n -> n.getCause() == EXPIRED)
-        .collect(toImmutableList());
-    assertThat(expiredNotifications).hasSize(1);
-    assertThat(cache.stats().evictionCount()).isEqualTo(1);
+    assertThat(cache.getIfPresent(context.firstKey())).isSameInstanceAs(value);
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.firstKey(), value).exclusively();
+    assertThat(context).stats().evictions(1);
   }
 
   @Test
@@ -3226,8 +3158,7 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(population = Population.SINGLETON, keys = ReferenceType.STRONG,
       values = {ReferenceType.WEAK, ReferenceType.SOFT}, weigher = CacheWeigher.TEN,
-      maximumSize = Maximum.FULL, removalListener = Listener.CONSUMING,
-      executor = CacheExecutor.DIRECT)
+      maximumSize = Maximum.FULL, removalListener = Listener.CONSUMING)
   void compute_collectedEntry_mappingThrows_evictionCommitted(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
@@ -3246,8 +3177,7 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(population = Population.SINGLETON, keys = ReferenceType.STRONG,
       values = {ReferenceType.WEAK, ReferenceType.SOFT}, weigher = CacheWeigher.TEN,
-      maximumSize = Maximum.FULL, removalListener = Listener.CONSUMING,
-      executor = CacheExecutor.DIRECT)
+      maximumSize = Maximum.FULL, removalListener = Listener.CONSUMING)
   void computeIfAbsent_collectedEntry_mappingThrows_evictionCommitted(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
@@ -3299,8 +3229,7 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(population = Population.SINGLETON, keys = ReferenceType.STRONG,
       values = {ReferenceType.WEAK, ReferenceType.SOFT}, weigher = CacheWeigher.MOCKITO,
-      maximumSize = Maximum.FULL, removalListener = Listener.CONSUMING,
-      executor = CacheExecutor.DIRECT)
+      maximumSize = Maximum.FULL, removalListener = Listener.CONSUMING)
   void compute_collectedEntry_weigherThrows_evictionCommitted(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
@@ -3420,35 +3349,19 @@ final class BoundedLocalCacheTest {
     assertThat(cache.stats().loadSuccessCount()).isEqualTo(0);
   }
 
-  @Test
-  void replace_expiredEntry_schedulesCleanup() {
-    // When replace() encounters an expired entry, it should return null (no replacement) and
-    // schedule drain buffers so the expired entry is cleaned up promptly.
-    var ticker = new FakeTicker();
-    var listener = new ConsumingRemovalListener<Int, Int>();
-    var cache = Caffeine.newBuilder()
-        .expireAfterWrite(Duration.ofMinutes(1))
-        .removalListener(listener)
-        .executor(Runnable::run)
-        .ticker(ticker::read)
-        .recordStats()
-        .build();
-
-    cache.put(Int.valueOf(1), Int.valueOf(10));
-    ticker.advance(Duration.ofMinutes(2));
-
-    // replace on expired entry should return null
-    assertThat(cache.asMap().replace(Int.valueOf(1), Int.valueOf(20))).isNull();
-
-    // After cleanup, the expired entry should be removed
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON, expiryTime = Expire.ONE_MINUTE,
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  void replace_expiredEntry_schedulesCleanup(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.asMap().replace(context.firstKey(), context.absentValue())).isNull();
     cache.cleanUp();
-    assertThat(cache.asMap()).doesNotContainKey(Int.valueOf(1));
-
-    // Expiration notification should eventually be sent
-    var expiredNotifications = listener.removed().stream()
-        .filter(n -> n.getCause() == EXPIRED)
-        .collect(toImmutableList());
-    assertThat(expiredNotifications).hasSize(1);
+    assertThat(cache.asMap()).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
   }
 
   @ParameterizedTest
@@ -3606,8 +3519,7 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
-      refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.DIRECT,
-      loader = Loader.IDENTITY, compute = Compute.SYNC, stats = Stats.DISABLED)
+      refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY)
   void doComputeIfAbsent_existingEntry_returnsRefreshedValue(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = requireNonNull(cache.data.get(
