@@ -133,6 +133,8 @@ abstract class Simulate @Inject constructor(
   abstract val theme: Property<String>
   @get:Input @get:Option(option = "title", description = "The chart title")
   abstract val title: Property<String>
+  @get:Input @get:Option(option = "outputDir", description = "The output directory")
+  abstract val outputDir: Property<String>
   @get:OutputDirectory
   val reportDir: Provider<Directory> = projectLayout.buildDirectory.dir("reports/$name")
 
@@ -144,12 +146,13 @@ abstract class Simulate @Inject constructor(
     metric.convention("Hit Rate")
     theme.convention("light")
     title.convention("")
+    outputDir.convention(reportDir.map { it.asFile.path })
     argumentProviders.add {
       buildList {
         if (maximumSize.get().isNotEmpty()) {
           addAll(listOf("--maximumSize", maximumSize.get().joinToString(",")))
         }
-        addAll(listOf("--outputDir", reportDir.get().asFile.path))
+        addAll(listOf("--outputDir", outputDir.get()))
         addAll(listOf("--metric", metric.get()))
         addAll(listOf("--title", title.get()))
         addAll(listOf("--theme", theme.get()))
