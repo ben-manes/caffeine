@@ -148,7 +148,10 @@ public final class Simulate implements Runnable {
   private static final class LongPreprocessor implements IParameterPreprocessor {
     @Override public boolean preprocess(Stack<String> args,
         CommandSpec commandSpec, ArgSpec argSpec, Map<String, Object> info) {
-      args.replaceAll(arg -> arg.replace("_", ""));
+      if (!args.isEmpty()) {
+        var optionValue = args.pop();
+        args.push(optionValue.replace("_", ""));
+      }
       return false;
     }
   }
