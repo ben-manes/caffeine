@@ -175,7 +175,6 @@ enum DisabledScheduler implements Scheduler {
   }
 }
 
-@SuppressWarnings("CheckedExceptionNotThrown")
 enum DisabledFuture implements Future<@Nullable Void> {
   INSTANCE;
 
