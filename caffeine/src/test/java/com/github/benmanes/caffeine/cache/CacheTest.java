@@ -150,9 +150,12 @@ final class CacheTest {
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   void getIfPresent_present(Cache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.getIfPresent(context.firstKey())).isNotNull();
-    assertThat(cache.getIfPresent(context.middleKey())).isNotNull();
-    assertThat(cache.getIfPresent(context.lastKey())).isNotNull();
+    assertThat(cache.getIfPresent(context.firstKey()))
+        .isEqualTo(context.original().get(context.firstKey()));
+    assertThat(cache.getIfPresent(context.middleKey()))
+        .isEqualTo(context.original().get(context.middleKey()));
+    assertThat(cache.getIfPresent(context.lastKey()))
+        .isEqualTo(context.original().get(context.lastKey()));
     assertThat(context).stats().hits(3).misses(0).success(0).failures(0);
   }
 
