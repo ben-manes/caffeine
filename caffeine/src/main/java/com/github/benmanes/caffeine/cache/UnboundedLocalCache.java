@@ -247,7 +247,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     BiFunction<K, @Nullable V, @Nullable V> remappingFunction = (key, oldValue) ->
         (oldValue == null) ? null : requireNonNull(function.apply(key, oldValue));
     for (K key : data.keySet()) {
-      remap(key, remappingFunction);
+      remap(key, remappingFunction, /* hints= */ null);
     }
   }
 
@@ -321,7 +321,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
       boolean recordLoadFailure, @Nullable RemapHints hints) {
     requireNonNull(remappingFunction);
-    return remap(key, statsAware(remappingFunction, recordLoad, recordLoadFailure));
+    return remap(key, statsAware(remappingFunction, recordLoad, recordLoadFailure), hints);
   }
 
   @Override
@@ -331,7 +331,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     requireNonNull(value);
 
     return remap(key, (K k, @Nullable V oldValue) ->
-      (oldValue == null) ? value : statsAware(remappingFunction).apply(oldValue, value));
+      (oldValue == null) ? value : statsAware(remappingFunction).apply(oldValue, value),
+      /* hints= */ null);
   }
 
   /**
@@ -339,10 +340,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
    *
    * @param key key with which the specified value is to be associated
    * @param remappingFunction the function to compute a value
+   * @param hints flags from a query-style caller, or {@code null} if not present
    * @return the new value associated with the specified key, or null if none
    */
   @Nullable V remap(K key,
-      BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction) {
+      BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction,
+      @Nullable RemapHints hints) {
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
     @Nullable V[] oldValue = (@Nullable V[]) new Object[1];
@@ -358,7 +361,13 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         oldValue[0] = value;
       }
 
-      discardRefresh(k);
+      // A query-style caller may flag a same-instance return as a no-op that must leave any
+      // in-flight refresh intact whereas a real mutation discards a racing refresh so that a
+      // stale reload cannot overwrite the new mapping.
+      boolean preserveRefresh = (hints != null) && hints.preserveRefresh && (newValue == value);
+      if (!preserveRefresh) {
+        discardRefresh(k);
+      }
       return newValue;
     });
     if (replaced[0]) {

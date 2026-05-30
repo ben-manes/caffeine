@@ -807,6 +807,58 @@ final class AsyncLoadingCacheTest {
     });
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, loader = Loader.ASYNC_INCOMPLETE)
+  void refresh_preservedBy_noopMutation(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    // A query-style no-op routed through the synchronous view — putIfAbsent on a present key, or a
+    // conditional replace/remove whose expected value does not match — must leave an in-flight
+    // refresh intact
+    var key = context.firstKey();
+    var value = requireNonNull(context.original().get(key));
+
+    cache.synchronous().refresh(key);
+    assertThat(cache.synchronous().policy().refreshes()).containsKey(key);
+    var future = requireNonNull(cache.synchronous().policy().refreshes().get(key));
+
+    assertThat(cache.synchronous().asMap()
+        .putIfAbsent(key, context.absentValue())).isEqualTo(value);
+    assertThat(cache.synchronous().policy().refreshes()).containsKey(key);
+
+    assertThat(cache.synchronous().asMap()
+        .replace(key, context.absentValue(), context.absentValue())).isFalse();
+    assertThat(cache.synchronous().policy().refreshes()).containsKey(key);
+
+    assertThat(cache.synchronous().asMap().remove(key, context.absentValue())).isFalse();
+    assertThat(cache.synchronous().policy().refreshes()).containsKey(key);
+
+    // The preserved refresh is still live: completing it with the current value is a no-op reload
+    // that clears the side mapping without firing a notification.
+    future.complete(value);
+    await().untilAsserted(() ->
+        assertThat(cache.synchronous().policy().refreshes()).doesNotContainKey(key));
+    assertThat(cache).containsEntry(key, value);
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, loader = Loader.ASYNC_INCOMPLETE)
+  void refresh_discardedBy_mutation(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    // The symmetric case: a real mutation through the synchronous view discards a racing refresh
+    // so a stale reload cannot overwrite the new mapping. The over-aggressive discard is
+    // intentional and applies to both the bounded and unbounded implementations.
+    var key = context.firstKey();
+    var value = requireNonNull(context.original().get(key));
+
+    cache.synchronous().refresh(key);
+    assertThat(cache.synchronous().policy().refreshes()).containsKey(key);
+
+    assertThat(cache.synchronous().asMap().replace(key, value, context.absentValue())).isTrue();
+    assertThat(cache.synchronous().policy().refreshes()).doesNotContainKey(key);
+    assertThat(cache).containsEntry(key, context.absentValue());
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(key, value).exclusively();
+  }
+
   /* --------------- AsyncCacheLoader --------------- */
 
   @Test

@@ -88,8 +88,8 @@ so a same-value return is still treated as a write for eviction-policy purposes
 (the entry's age/weight/access are refreshed). The only documented full no-op is
 the explicit `preserveTimestamps` path. A reader expecting
 `compute(k, (k, v) -> v)` to leave eviction ordering undisturbed would be
-surprised, and the source does not call this out — a short comment near the
-`setValue` skip in `remap` would make the intent visible.
+surprised; the source does not call this out, so this entry is the canonical
+place the behavior is documented (preferred over a source comment).
 
 ## References
 
@@ -224,6 +224,15 @@ the same generation. Any refresh in flight was launched against a pre-mutation
 snapshot, so killing it is correct for linearizability even if it happens to be
 a "newer" generation from a later reader.
 
+The one exception is a **query-style no-op**, flagged with `RemapHints.preserveRefresh`:
+`putIfAbsent` on a present key, a non-matching conditional `remove`/`replace`, or a
+same-instance `compute` return routed through the async synchronous view. These don't
+actually mutate the entry, so they leave a racing refresh intact. Both
+`BoundedLocalCache.remap` and `UnboundedLocalCache.remap` honor the hint (a same-instance
+return with `preserveRefresh` set skips `discardRefresh`); a real mutation still discards.
+The unbounded cache used to drop the hint and cancel the reload — the sibling caches must
+stay in sync here.
+
 ## Async Synchronous View
 
 **`AsyncCache.synchronous().asMap()` queries are logical, mutations are
@@ -234,6 +243,13 @@ raw delegate map without blocking on in-flight futures. Blocking everywhere
 would invite deadlock and non-linearizable observations; the split is the
 inherent sync-over-async tradeoff. `keySet().contains(k) != keySet().remove(k)`
 on a loading entry is accepted.
+
+**`size()` and `isEmpty()` are physical**, delegating straight to the backing map
+(`AsMapView` → `delegate.size()` / `delegate.isEmpty()`). They count in-flight
+(still-loading) entries that `containsKey` / `get` / iteration treat as absent, so
+`size()` can disagree with what iteration yields. This is the same logical-query /
+physical-bookkeeping split and matches the documented "`size()` is an estimate" stance —
+they belong on the physical side alongside the mutations above.
 
 ## TimerWheel
 
