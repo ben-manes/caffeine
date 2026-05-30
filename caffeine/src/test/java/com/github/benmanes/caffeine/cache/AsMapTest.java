@@ -704,6 +704,26 @@ final class AsMapTest {
     assertThat(map).doesNotContainKey(context.absentKey());
   }
 
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  void removeConditionally_byEquality(Map<Int, Int> map, CacheContext context) {
+    // Strong values match the expected value of a conditional remove(k, v) / replace(k, old, new)
+    // by Objects.equals, not identity (the *_byIdentity tests cover the weak/soft side). Int
+    // interning makes the populated value identity-shared, so a distinct-but-equal `new Int(...)`
+    // probe is required; otherwise == short-circuits and a regression to identity matching passes
+    // every existing test unnoticed.
+    var key = context.firstKey();
+    var value = requireNonNull(context.original().get(key));
+
+    assertThat(map.replace(key, new Int(value), context.absentValue())).isTrue();
+    assertThat(map).containsEntry(key, context.absentValue());
+
+    assertThat(map.remove(key, new Int(context.absentValue()))).isTrue();
+    assertThat(map).doesNotContainKey(key);
+  }
+
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
