@@ -73,6 +73,8 @@ public final class FrdPolicy implements KeyOnlyPolicy {
     this.data = new Long2ObjectOpenHashMap<>();
     this.headFilter = new Node();
     this.headMain = new Node();
+    checkState(maximumMainResidentSize >= 1,
+        "maximum size %s is too small for the configured percent-main", maximumSize);
   }
 
   @Override

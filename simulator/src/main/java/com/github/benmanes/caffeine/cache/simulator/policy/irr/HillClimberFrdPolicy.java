@@ -57,7 +57,6 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
   private int hitsInSample;
   private int missesInSample;
   private double previousHitRate;
-  private final double tolerance;
   private boolean increaseWindow;
 
   public HillClimberFrdPolicy(Config config) {
@@ -67,12 +66,12 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
     this.maximumFilterSize = maximumSize - maximumMainResidentSize;
     this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
-    this.headFilter = new Node();
-    this.headMain = new Node();
-
     this.pivot = (int) (0.05 * maximumSize);
     this.sampleSize = 10 * maximumSize;
-    this.tolerance = 100d * 0;
+    this.headFilter = new Node();
+    this.headMain = new Node();
+    checkState(maximumMainResidentSize >= 1,
+        "maximum size %s is too small for the configured percent-main", maximumSize);
   }
 
   @Override
@@ -105,7 +104,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
     if (sample >= sampleSize) {
       double hitRate = (100d * hitsInSample) / (hitsInSample + missesInSample);
       if (!Double.isNaN(hitRate) && !Double.isInfinite(hitRate) && (previousHitRate != 0.0)) {
-        if (hitRate < (previousHitRate + tolerance)) {
+        if (hitRate < previousHitRate) {
           increaseWindow = !increaseWindow;
         }
         if (increaseWindow) {

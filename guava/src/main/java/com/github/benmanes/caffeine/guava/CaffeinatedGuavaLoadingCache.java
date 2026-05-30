@@ -30,6 +30,7 @@ import org.jspecify.annotations.Nullable;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.FutureCallback;
@@ -93,12 +94,13 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   @SuppressWarnings({"CatchingUnchecked", "PMD.PreserveStackTrace"})
   public ImmutableMap<K, V> getAll(Iterable<? extends K> keys) throws ExecutionException {
     requireNonNull(keys);
+    var keysToLoad = ImmutableList.copyOf(keys);
     try {
-      Map<K, V> result = cache.getAll(keys);
+      Map<K, V> result = cache.getAll(keysToLoad);
       if (nullBulkLoad.get() != null) {
         throw new InvalidCacheLoadException("null key or value");
       }
-      for (K key : keys) {
+      for (K key : keysToLoad) {
         if (!result.containsKey(key)) {
           throw new InvalidCacheLoadException("loadAll failed to return a value for " + key);
         }

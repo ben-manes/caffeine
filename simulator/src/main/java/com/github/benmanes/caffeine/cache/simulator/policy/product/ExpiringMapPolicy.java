@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
@@ -50,6 +51,7 @@ public final class ExpiringMapPolicy implements Policy {
     policyStats = new PolicyStats(name() + " (%s)", policy);
     maximumSize = Math.toIntExact(settings.maximumSize());
     cache = ExpiringMap.builder()
+        .expiration(365, TimeUnit.DAYS)
         .expirationPolicy(policy.type)
         .maxSize(maximumSize)
         .build();

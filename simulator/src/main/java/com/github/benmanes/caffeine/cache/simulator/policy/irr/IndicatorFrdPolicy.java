@@ -62,9 +62,11 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
     this.maximumFilterSize = maximumSize - maximumMainResidentSize;
     this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
+    this.indicator = new Indicator(config);
     this.headFilter = new Node();
     this.headMain = new Node();
-    this.indicator = new Indicator(config);
+    checkState(maximumMainResidentSize >= 1,
+        "maximum size %s is too small for the configured percent-main", maximumSize);
   }
 
   @Override

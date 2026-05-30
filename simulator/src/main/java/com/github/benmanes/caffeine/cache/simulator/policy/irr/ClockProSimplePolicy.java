@@ -115,6 +115,7 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
     this.headCold = new Node();
     this.headNonResident = new Node();
     this.epoch = Long.MIN_VALUE;
+    checkState(maxSize > 1, "maximum size must be greater than 1, was %s", maxSize);
   }
 
   @Override

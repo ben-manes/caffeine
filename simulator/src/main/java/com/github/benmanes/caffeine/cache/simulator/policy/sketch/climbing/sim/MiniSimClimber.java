@@ -51,7 +51,7 @@ public final class MiniSimClimber implements HillClimber {
   public MiniSimClimber(Config config) {
     var settings = new MiniSimSettings(config);
     this.cacheSize = Math.toIntExact(settings.maximumSize());
-    samplingRate = (cacheSize / 1000) > 100 ? 1000 : (cacheSize / 100);
+    samplingRate = Math.max(1, (cacheSize / 1000) > 100 ? 1000 : (cacheSize / 100));
     var simulationSettings = new WindowTinyLfuSettings(ConfigFactory
         .parseString("maximum-size = " + (cacheSize / samplingRate))
         .withFallback(config));

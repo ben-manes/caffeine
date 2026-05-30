@@ -109,6 +109,6 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
 
   @Override
   public String toString() {
-    return key + "=" + getValue();
+    return key + "=" + value;
   }
 }

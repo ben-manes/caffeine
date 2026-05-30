@@ -23,62 +23,75 @@ import com.typesafe.config.Config;
 
 /**
  * A simulated annealing hill climber.
+ * <p>
+ * This is a faithful, derivative-free Metropolis search (it does not use the hit-rate gradient):
+ * each sample period evaluates the window size reached by the previous random proposal and either
+ * keeps it as the new incumbent (always if it improved the hit rate, otherwise with the Metropolis
+ * probability {@code exp(ΔhitRate / temperature)}) or, if rejected, proposes again from the
+ * incumbent. The proposal is a Gaussian perturbation whose width scales with the temperature, so
+ * the search explores widely when hot and fine-tunes when cool. The temperature follows a geometric
+ * cooling schedule, with an occasional random restart so the search keeps re-adapting on a
+ * non-stationary workload rather than freezing at a stale optimum.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class SimulatedAnnealingClimber extends AbstractClimber {
-  private final double coolDownTolerance;
-  private final double restartTolerance;
+  private final double randomRestart;
   private final double minTemperature;
   private final double coolDownRate;
-  private final int initialStepSize;
+  private final double maxStep;
   private final Random random;
 
-  private boolean increaseWindow;
+  private double incumbentWindowSize;
+  private double incumbentHitRate;
   private double temperature;
-  private int stepSize;
 
   public SimulatedAnnealingClimber(Config config) {
     var settings = new SimulatedAnnealingSettings(config);
     int maximumSize = Math.toIntExact(settings.maximumSize());
-    this.initialStepSize = (int) (settings.percentPivot() * maximumSize);
     this.sampleSize = (int) (settings.percentSample() * maximumSize);
-    this.coolDownTolerance = settings.coolDownTolerance();
-    this.restartTolerance = settings.restartTolerance();
+    this.maxStep = settings.percentPivot() * maximumSize;
+    this.randomRestart = settings.randomRestart();
     this.random = new Random(settings.randomSeed());
     this.minTemperature = settings.minTemperature();
     this.coolDownRate = settings.coolDownRate();
-    restart();
-  }
-
-  private void restart() {
-    stepSize = initialStepSize;
-    temperature = 1.0;
+    this.temperature = 1.0;
   }
 
   @Override
+  @SuppressWarnings("PMD.UnusedAssignment")
   protected double adjust(double hitRate) {
-    if ((previousHitRate - hitRate) >= restartTolerance) {
-      restart();
+    if (firstSample) {
+      // No proposal has been evaluated yet; adopt the starting window as the incumbent
+      incumbentWindowSize = currentWindowSize;
+      incumbentHitRate = hitRate;
+    } else {
+      // Metropolis acceptance of the proposal that was evaluated during this sample period. An
+      // improvement is always kept; a worse result is kept with probability exp(ΔhitRate / T).
+      double energy = hitRate - incumbentHitRate;
+      if ((energy >= 0) || (random.nextDouble() < Math.exp(energy / temperature))) {
+        incumbentWindowSize = currentWindowSize;
+        incumbentHitRate = hitRate;
+      }
+      // Re-anneal occasionally so the search keeps adapting on a non-stationary workload; otherwise
+      // follow the geometric cooling schedule (floored so exp(ΔhitRate / T) stays well defined).
+      if (random.nextDouble() < randomRestart) {
+        // Re-anneal from the current position, discarding the prior regime's stale incumbent so the
+        // search re-baselines against the current workload instead of an old optimum it can't match
+        temperature = 1.0;
+        incumbentHitRate = hitRate;
+        incumbentWindowSize = currentWindowSize;
+      } else {
+        temperature = Math.max(minTemperature, coolDownRate * temperature);
+      }
     }
 
-    if (temperature <= minTemperature) {
-      return 0.0;
-    }
-
-    double criteria = random.nextGaussian();
-    double acceptanceProbability = Math.exp((hitRate - previousHitRate) / temperature);
-    if ((hitRate < previousHitRate) && (acceptanceProbability <= criteria)) {
-      increaseWindow = !increaseWindow;
-      stepSize = Math.max(stepSize - 1, 0);
-    }
-
-    if ((previousHitRate - hitRate) > coolDownTolerance) {
-      temperature = coolDownRate * temperature;
-      stepSize = 1 + (int) (stepSize * temperature);
-    }
-
-    return increaseWindow ? stepSize : -stepSize;
+    // Propose a new neighbor relative to the incumbent: a Gaussian step whose width shrinks with
+    // the temperature. Returning the move relative to the current window implicitly reverts a
+    // rejected proposal (the incumbent is unchanged on a rejection, so the window is steered back
+    // toward it).
+    double proposal = random.nextGaussian() * maxStep * temperature;
+    return (incumbentWindowSize + proposal) - currentWindowSize;
   }
 
   static final class SimulatedAnnealingSettings extends BasicSettings {
@@ -99,11 +112,8 @@ public final class SimulatedAnnealingClimber extends AbstractClimber {
     public double minTemperature() {
       return config().getDouble(BASE_PATH + "min-temperature");
     }
-    public double restartTolerance() {
-      return config().getDouble(BASE_PATH + "restart-tolerance");
-    }
-    public double coolDownTolerance() {
-      return config().getDouble(BASE_PATH + "cool-down-tolerance");
+    public double randomRestart() {
+      return config().getDouble(BASE_PATH + "random-restart");
     }
   }
 }

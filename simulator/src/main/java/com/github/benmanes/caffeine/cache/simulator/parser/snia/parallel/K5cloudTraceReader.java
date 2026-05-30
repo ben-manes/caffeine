@@ -15,10 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel;
 
+import java.math.RoundingMode;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
+import com.google.common.math.IntMath;
 
 /**
  * A reader for the K5cloud trace files provided by
@@ -41,7 +43,7 @@ public final class K5cloudTraceReader extends TextTraceReader implements KeyOnly
         .flatMapToLong(array -> {
           long offset = Long.parseLong(array[3]);
           long startBlock = (offset / BLOCK_SIZE);
-          int sequence = Integer.parseInt(array[4]) / BLOCK_SIZE;
+          int sequence = IntMath.divide(Integer.parseInt(array[4]), BLOCK_SIZE, RoundingMode.UP);
           return LongStream.range(startBlock, startBlock + sequence);
     });
   }

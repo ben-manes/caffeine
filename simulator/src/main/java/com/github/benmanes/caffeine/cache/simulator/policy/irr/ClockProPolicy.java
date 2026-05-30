@@ -114,7 +114,8 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
     coldTarget = minResColdSize;
     listHead = handHot = handCold = handTest = null;
     sizeFree = maxSize;
-    checkState(minResColdSize <= maxResColdSize);
+    checkState((minResColdSize >= 1) && (minResColdSize <= maxResColdSize),
+        "resident cold size must be between 1 and (maximum - resident cold)");
   }
 
   @Override
