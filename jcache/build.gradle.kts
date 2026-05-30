@@ -16,14 +16,14 @@ sourceSets {
   }
 }
 
-val jcacheJavadoc by configurations.registering
-val jcacheTckTests by configurations.registering
-val jcacheTckSources by configurations.registering
-val caffeineOsgiBundle by configurations.registering {
+val jcacheJavadoc = configurations.register("jcacheJavadoc")
+val jcacheTckTests = configurations.register("jcacheTckTests")
+val jcacheTckSources = configurations.register("jcacheTckSources")
+val caffeineOsgiBundle = configurations.register("caffeineOsgiBundle") {
   configureAsRuntimeIncoming()
 }
 
-val testResourcesJar by tasks.registering(Jar::class) {
+val testResourcesJar = tasks.register<Jar>("testResourcesJar") {
   from(sourceSets.named("testResources").map { it.output })
   archiveClassifier = "test-resources"
   outputs.cacheIf { true }
@@ -158,7 +158,7 @@ testing.suites {
   }
 }
 
-val unzipTestKit by tasks.registering(Copy::class) {
+val unzipTestKit = tasks.register<Copy>("unzipTestKit") {
   group = "Build"
   description = "Unzips the JCache TCK"
   from(jcacheTckTests.map { zipTree(it.singleFile) })
@@ -166,7 +166,7 @@ val unzipTestKit by tasks.registering(Copy::class) {
   outputs.cacheIf { true }
 }
 
-val unzipJCacheJavaDoc by tasks.registering(Copy::class) {
+val unzipJCacheJavaDoc = tasks.register<Copy>("unzipJCacheJavaDoc") {
   group = "Build"
   description = "Unzips the JCache JavaDoc"
   from(jcacheJavadoc.map { zipTree(it.singleFile) })

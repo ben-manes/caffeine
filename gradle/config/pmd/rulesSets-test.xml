@@ -56,6 +56,7 @@
     <exclude name="MethodArgumentCouldBeFinal"/>
     <exclude name="CommentDefaultAccessModifier"/>
     <exclude name="UnnecessaryFullyQualifiedName"/>
+    <exclude name="VariableDeclarationUsageDistance"/>
     <exclude name="FieldDeclarationsShouldBeAtStartOfClass"/>
     <exclude name="EmptyMethodInAbstractClassShouldBeAbstract"/>
   </rule>
@@ -80,7 +81,7 @@
       <property name="methodPattern" value="[a-z][a-zA-Z0-9_]*" />
       <property name="junit3TestPattern" value="test[A-Z0-9][a-zA-Z0-9_]*" />
       <property name="junit4TestPattern" value="[a-z][a-zA-Z0-9_]*" />
-      <property name="junit5TestPattern" value="[a-z][a-zA-Z0-9_]*" />
+      <property name="junitJupiterTestPattern" value="[a-z][a-zA-Z0-9_]*" />
     </properties>
   </rule>
 

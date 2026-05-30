@@ -64,9 +64,9 @@ signing {
   // https://github.com/gradle/gradle/issues/11387
   setRequired { false }
 
-  val signingKey: String? by project
-  val signingKeyId: String? by project
-  val signingPassword: String? by project
+  val signingKey = project.findProperty("signingKey") as String?
+  val signingKeyId = project.findProperty("signingKeyId") as String?
+  val signingPassword = project.findProperty("signingPassword") as String?
   useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
   sign(publishing.publications["mavenJava"])
 }

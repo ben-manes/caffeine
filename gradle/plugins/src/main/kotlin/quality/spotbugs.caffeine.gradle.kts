@@ -52,6 +52,8 @@ tasks.withType<SpotBugsTask>().configureEach {
     implementation = java.toolchain.implementation
     nativeImageCapable = java.toolchain.nativeImageCapable
   }
+  jvmArgs.add(javaRuntimeVersion().filter { it.canCompileOrRun(26) }
+    .map { "--enable-final-field-mutation=ALL-UNNAMED" })
 
   val runtimeVersion = javaRuntimeVersion().map { it.asInt() }
   val javaVersion = java.toolchain.languageVersion.map { it.asInt() }

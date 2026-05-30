@@ -6,7 +6,7 @@ plugins {
   eclipse
 }
 
-val eclipsePreferences by tasks.registering {
+val eclipsePreferences = tasks.register("eclipsePreferences") {
   description = "Generates the Eclipse preferences files."
   incompatibleWithConfigurationCache()
   doFirst {

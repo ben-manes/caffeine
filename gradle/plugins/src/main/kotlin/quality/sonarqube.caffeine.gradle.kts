@@ -17,7 +17,7 @@ sonarqube {
   }
 }
 
-val jacocoFullReport by tasks.existing
+val jacocoFullReport = tasks.named("jacocoFullReport")
 tasks.named("sonarqube").configure {
   inputs.files(jacocoFullReport.map { it.outputs.files }).withPathSensitivity(RELATIVE)
 }

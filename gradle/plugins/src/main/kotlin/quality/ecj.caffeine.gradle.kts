@@ -5,7 +5,7 @@ plugins {
   `jvm-ecosystem`
 }
 
-val ecj by configurations.registering
+val ecj = configurations.register("ecj")
 
 dependencies {
   ecj(libs.ecj)

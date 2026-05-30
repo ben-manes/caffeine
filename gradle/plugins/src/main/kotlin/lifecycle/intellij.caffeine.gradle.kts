@@ -13,7 +13,7 @@ plugins {
   id("org.jetbrains.gradle.plugin.idea-ext")
 }
 
-val mockitoAgent by configurations.registering
+val mockitoAgent = configurations.register("mockitoAgent")
 val excludes: Set<File> by lazy {
   val excludedFiles = setOf(".classpath", ".project")
   val excludeDirs = setOf(".gradle", ".kotlin", ".settings", "bin", "build", "test-output", "out")
@@ -38,10 +38,7 @@ allprojects {
   idea.module {
     isDownloadSources = true
     isDownloadJavadoc = true
-  }
-
-  tasks.withType<GenerateIdeaModule>().configureEach {
-    module.excludeDirs = excludes
+    excludeDirs = excludes
   }
 }
 
@@ -73,7 +70,7 @@ idea.project.settings {
   }
 }
 
-val checkNoGeneratedImports by tasks.registering(CheckNoGeneratedImportsTask::class) {
+val checkNoGeneratedImports = tasks.register<CheckNoGeneratedImportsTask>("checkNoGeneratedImports") {
   gradleScripts.from(project.fileTree(project.projectDir) {
     include("**/*.gradle.kts")
     exclude("**/build/**")

@@ -17,7 +17,7 @@ coverallsJacoco {
     "reports/jacoco/jacocoFullReport/jacocoFullReport.xml").get().asFile.path
 }
 
-val jacocoFullReport by tasks.registering(JacocoReport::class) {
+val jacocoFullReport = tasks.register<JacocoReport>("jacocoFullReport") {
   group = "Coverage reports"
   description = "Generates an aggregate report"
 

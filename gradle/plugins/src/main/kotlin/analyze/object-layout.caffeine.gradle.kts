@@ -4,11 +4,11 @@ plugins {
   `java-library`
 }
 
-val compileJava by tasks.existing
-val objectLayout by configurations.registering
+val compileJava = tasks.named("compileJava")
+val objectLayout = configurations.register("objectLayout")
 
 dependencies {
-  objectLayout(project)
+  objectLayout(project(path))
   objectLayout(libs.java.`object`.layout)
 }
 

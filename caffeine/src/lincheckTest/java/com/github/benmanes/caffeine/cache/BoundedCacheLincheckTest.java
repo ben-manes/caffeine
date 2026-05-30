@@ -22,6 +22,7 @@ import java.time.Duration;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.JUnitJupiterTestShouldBePackagePrivate")
 public final class BoundedCacheLincheckTest extends AbstractLincheckCacheTest {
   public BoundedCacheLincheckTest() {
     super(Caffeine.newBuilder()

@@ -28,14 +28,14 @@ sourceSets {
   }
 }
 
-val compileJava by tasks.existing
-val jar by tasks.existing(Jar::class)
-val compileJavaPoetJava by tasks.existing
-val jammAgent by configurations.registering
-val collections4Sources by configurations.registering
-val javaPoetImplementation by configurations.existing
-val javaPoetRuntimeOnly by configurations.existing
-val osgiBundleElements by configurations.registering {
+val jar = tasks.named<Jar>("jar")
+val compileJava = tasks.named("compileJava")
+val compileJavaPoetJava = tasks.named("compileJavaPoetJava")
+val jammAgent = configurations.register("jammAgent")
+val collections4Sources = configurations.register("collections4Sources")
+val javaPoetImplementation = configurations.named("javaPoetImplementation")
+val javaPoetRuntimeOnly = configurations.named("javaPoetRuntimeOnly")
+val osgiBundleElements = configurations.register("osgiBundleElements") {
   configureAsRuntimeOutgoing()
 }
 
@@ -103,7 +103,7 @@ configurations.configureEach {
   }
 }
 
-val compileCodeGenJava by tasks.existing(JavaCompile::class) {
+val compileCodeGenJava = tasks.named<JavaCompile>("compileCodeGenJava") {
   classpath = files(sourceSets.named("main").map { it.runtimeClasspath + it.output })
   inputs.files(compileJava.map { it.outputs.files })
     .withPathSensitivity(RELATIVE)
@@ -123,11 +123,11 @@ val compileCodeGenJava by tasks.existing(JavaCompile::class) {
   }
 }
 
-val generateLocalCaches by tasks.registering(JavaExec::class) {
+val generateLocalCaches = tasks.register<JavaExec>("generateLocalCaches") {
   codeGenerationTask("LocalCache", "local-cache")
 }
 
-val generateNodes by tasks.registering(JavaExec::class) {
+val generateNodes = tasks.register<JavaExec>("generateNodes") {
   codeGenerationTask("Node", "node")
 }
 

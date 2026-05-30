@@ -20,7 +20,7 @@ plugins {
   id("java-library.caffeine")
 }
 
-val asyncProfiler by configurations.registering
+val asyncProfiler = configurations.register("asyncProfiler")
 val asyncProfilerDir = layout.buildDirectory.dir("reports/jmh/async")
 val asyncProfilerExtractionDir = layout.buildDirectory.dir("async-profiler")
 val asyncProfilerLibFile = layout.buildDirectory.file("async-profiler-libPath.txt")
@@ -79,7 +79,7 @@ jmh {
   resultsFile = layout.buildDirectory.file("reports/jmh/results.json")
   resultFormat = "json"
 
-  val includePattern: String? by project
+  val includePattern = project.findProperty("includePattern") as String?
   includePattern?.let {
     includes = listOf(it)
   }

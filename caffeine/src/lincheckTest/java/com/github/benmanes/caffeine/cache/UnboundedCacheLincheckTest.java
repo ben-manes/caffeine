@@ -20,6 +20,7 @@ package com.github.benmanes.caffeine.cache;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.JUnitJupiterTestShouldBePackagePrivate")
 public final class UnboundedCacheLincheckTest extends AbstractLincheckCacheTest {
   public UnboundedCacheLincheckTest() {
     super(Caffeine.newBuilder());

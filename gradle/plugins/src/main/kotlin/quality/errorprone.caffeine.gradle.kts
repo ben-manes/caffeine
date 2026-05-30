@@ -29,7 +29,7 @@ dependencies {
 
 // Gradle rewrites ErrorProne's dependency on Caffeine to a project dependency, which then fails.
 // Instead, we have to download and trick the build to put the jar on the compiler's classpath.
-val downloadCaffeine by tasks.registering {
+val downloadCaffeine = tasks.register("downloadCaffeine") {
   val version = libs.versions.caffeine.get()
   inputs.property("version", version)
 

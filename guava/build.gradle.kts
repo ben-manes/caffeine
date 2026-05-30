@@ -10,7 +10,7 @@ plugins {
   id("revapi.caffeine")
 }
 
-val caffeineOsgiBundle by configurations.registering {
+val caffeineOsgiBundle = configurations.register("caffeineOsgiBundle") {
   configureAsRuntimeIncoming()
 }
 

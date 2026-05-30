@@ -10,9 +10,9 @@ val jcstress = sourceSets.register("jcstress") {
   java.srcDir("src/jcstress/java")
 }
 
-val jcstressImplementation by configurations.existing
-val jcstressRuntimeClasspath by configurations.existing
-val jcstressAnnotationProcessor by configurations.existing
+val jcstressImplementation = configurations.named("jcstressImplementation")
+val jcstressRuntimeClasspath = configurations.named("jcstressRuntimeClasspath")
+val jcstressAnnotationProcessor = configurations.named("jcstressAnnotationProcessor")
 
 dependencies {
   jcstressAnnotationProcessor(libs.jcstress)
@@ -24,7 +24,7 @@ dependencies {
   jcstressImplementation(files(tasks.jar.map { it.archiveFile }))
 }
 
-val compileJcstressJava by tasks.existing(JavaCompile::class) {
+val compileJcstressJava = tasks.named<JavaCompile>("compileJcstressJava") {
   options.apply {
     compilerArgs.add("-Xlint:-processing")
     errorprone.excludedPaths = ".*_jcstress.*"

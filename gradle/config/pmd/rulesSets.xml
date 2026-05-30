@@ -50,6 +50,7 @@
     <exclude name="MethodArgumentCouldBeFinal"/>
     <exclude name="CommentDefaultAccessModifier"/>
     <exclude name="UnnecessaryFullyQualifiedName"/>
+    <exclude name="VariableDeclarationUsageDistance"/>
     <exclude name="FieldDeclarationsShouldBeAtStartOfClass"/>
     <exclude name="EmptyMethodInAbstractClassShouldBeAbstract"/>
   </rule>

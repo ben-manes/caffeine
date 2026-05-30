@@ -11,7 +11,7 @@ plugins {
 }
 
 val javaTestVersion = javaTestVersion().zip(java.toolchain.languageVersion, ::maxOf)
-val mockitoAgent by configurations.registering
+val mockitoAgent = configurations.register("mockitoAgent")
 
 dependencies {
   mockitoAgent(libs.mockito) {

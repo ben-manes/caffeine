@@ -8,7 +8,7 @@ plugins {
   id("com.autonomousapps.dependency-analysis")
 }
 
-val downloadCaffeine by tasks.existing
+val downloadCaffeine = tasks.named("downloadCaffeine")
 
 tasks.withType<FindDeclaredProcsTask>().configureEach {
   inputs.files(downloadCaffeine.map { it.outputs.files }).withPathSensitivity(RELATIVE)
