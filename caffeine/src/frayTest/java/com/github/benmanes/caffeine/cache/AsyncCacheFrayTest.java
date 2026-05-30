@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -291,7 +292,7 @@ final class AsyncCacheFrayTest {
     threadB.join();
     cache.synchronous().cleanUp();
 
-    assertThat(cache.synchronous().estimatedSize()).isEqualTo(cache.synchronous().asMap().size());
+    assertThat(cache).isValid();
   }
 
   /** Async weighted variant — tests AsyncWeigher weight=0 for in-flight combined with eviction. */

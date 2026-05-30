@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -60,7 +61,7 @@ final class RefreshAfterWriteFrayTest {
     assertWithMessage("Key 1 should be 10 or 999, but was %s", value)
         .that(value).isAnyOf(10, 999);
     assertThat(cache.policy().refreshes()).isEmpty();
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   /** Explicit refresh(k) racing a put — exercises the LoadingCache.refresh compute path. */
@@ -90,7 +91,7 @@ final class RefreshAfterWriteFrayTest {
     assertWithMessage("Key 1 should be 10 or 999, but was %s", value)
         .that(value).isAnyOf(10, 999);
     assertThat(cache.policy().refreshes()).isEmpty();
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -120,7 +121,7 @@ final class RefreshAfterWriteFrayTest {
     cache.cleanUp();
 
     assertThat(cache.estimatedSize()).isAtMost(3);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   /** Refresh completes on an entry that is concurrently chosen as the eviction victim. */
@@ -158,7 +159,7 @@ final class RefreshAfterWriteFrayTest {
     cache.cleanUp();
 
     assertThat(cache.estimatedSize()).isAtMost(3);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -235,7 +236,7 @@ final class RefreshAfterWriteFrayTest {
     if (value != null) {
       assertThat(value).isEqualTo(10);
     }
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -259,7 +260,7 @@ final class RefreshAfterWriteFrayTest {
     threadB.join();
     cache.cleanUp();
 
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -287,6 +288,6 @@ final class RefreshAfterWriteFrayTest {
     assertThat(value).isNotNull();
     assertWithMessage("Key 1 should be 10, 110, or 100, but was %s", value)
         .that(value).isAnyOf(10, 110, 100);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 }

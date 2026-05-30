@@ -226,7 +226,7 @@ final class EvictionFrayTest {
     t1.start(); t2.start();
     t1.join(); t2.join();
     cache.cleanUp();
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid(); // CacheSubject / AsyncCacheSubject deep oracle
   }
 }
 ```
@@ -234,7 +234,16 @@ final class EvictionFrayTest {
 - 10,000 iterations with systematic interleaving exploration
 - Direct thread creation (no parameterization framework)
 - `executor(Runnable::run)` for inline execution
-- Always validate `estimatedSize() == asMap().size()` for consistency
+- The `frayTest` source set has no `CacheValidationInterceptor`, so each test must
+  call `assertThat(cache).isValid()` itself (the suite depends on `testFixtures`;
+  use `AsyncCacheSubject.assertThat` for async caches). This is the deep oracle —
+  it drains to quiescence and checks deque↔data consistency, the telescoping weight
+  sum, and node lifecycle.
+- Do NOT use `estimatedSize() == asMap().size()` as the consistency oracle: both
+  read the same `ConcurrentHashMap` (`data.mappingCount()` vs `data.size()`), so the
+  assertion is a tautology that cannot detect a node stranded or duplicated in a
+  deque. Keep specific assertions (exact counts, weight bounds, values) alongside
+  `isValid()`.
 
 ## Test Utilities
 

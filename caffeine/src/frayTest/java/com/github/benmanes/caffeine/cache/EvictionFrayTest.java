@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
@@ -51,7 +52,7 @@ final class EvictionFrayTest {
     threadB.join();
     cache.cleanUp();
 
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -78,7 +79,7 @@ final class EvictionFrayTest {
     threadB.join();
     cache.cleanUp();
 
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
     var value = cache.getIfPresent(1);
     if (value != null) {
       assertThat(value).isEqualTo(999);
@@ -110,7 +111,7 @@ final class EvictionFrayTest {
     cache.cleanUp();
 
     assertThat(cache.getIfPresent(1)).isNull();
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -252,7 +253,7 @@ final class EvictionFrayTest {
     cache.cleanUp();
 
     assertThat(cache.estimatedSize()).isAtMost(5);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   /* --------------- Weighted Variants --------------- */
@@ -336,7 +337,7 @@ final class EvictionFrayTest {
     threadB.join();
     cache.cleanUp();
 
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
     for (var cause : notifications) {
       assertWithMessage("Unexpected removal cause: %s", cause)
           .that(cause).isAnyOf(RemovalCause.SIZE, RemovalCause.EXPLICIT);
@@ -371,7 +372,7 @@ final class EvictionFrayTest {
     threadB.join();
     cache.cleanUp();
 
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   /**
@@ -405,7 +406,7 @@ final class EvictionFrayTest {
     cache.cleanUp();
 
     assertThat(cache.estimatedSize()).isAtMost(5);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   /** Weighted variant of multi-key concurrent eviction. Verifies weight convergence. */

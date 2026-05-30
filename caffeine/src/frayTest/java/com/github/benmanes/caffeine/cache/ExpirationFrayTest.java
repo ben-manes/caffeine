@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
@@ -52,7 +53,7 @@ final class ExpirationFrayTest {
     threadB.join();
     cache.cleanUp();
 
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -80,7 +81,7 @@ final class ExpirationFrayTest {
     if (value != null) {
       assertThat(value).isEqualTo(999);
     }
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -106,7 +107,7 @@ final class ExpirationFrayTest {
     var value = cache.getIfPresent(1);
     assertThat(value).isNotNull();
     assertThat(value).isEqualTo(2);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -134,7 +135,7 @@ final class ExpirationFrayTest {
     assertThat(value).isNotNull();
     assertWithMessage("Key 1 should be 200 or 300, but was %s", value)
         .that(value).isAnyOf(200, 300);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -163,7 +164,7 @@ final class ExpirationFrayTest {
     cache.cleanUp();
 
     assertThat(cache.estimatedSize()).isAtMost(3);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -200,7 +201,7 @@ final class ExpirationFrayTest {
     cache.cleanUp();
 
     assertThat(cache.getIfPresent(1)).isNull();
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -228,7 +229,7 @@ final class ExpirationFrayTest {
 
     assertThat(cache.getIfPresent(1)).isNull();
     assertThat(cache.getIfPresent(2)).isNotNull();
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   /* --------------- Variable Expiry Variants --------------- */
@@ -259,7 +260,7 @@ final class ExpirationFrayTest {
     if (value != null) {
       assertThat(value).isEqualTo(999);
     }
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   /** Weighted + expiration variant — tests weight accounting on expired entry compute. */
@@ -288,6 +289,6 @@ final class ExpirationFrayTest {
     long reportedWeight = cache.policy().eviction().orElseThrow().weightedSize().orElseThrow();
     int actualWeight = cache.asMap().values().stream().mapToInt(Integer::intValue).sum();
     assertThat(reportedWeight).isEqualTo(actualWeight);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 }

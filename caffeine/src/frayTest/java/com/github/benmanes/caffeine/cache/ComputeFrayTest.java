@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -60,7 +61,7 @@ final class ComputeFrayTest {
     threadB.join();
     cache.cleanUp();
 
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -90,7 +91,7 @@ final class ComputeFrayTest {
     threadB.join();
     cache.cleanUp();
 
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -124,7 +125,7 @@ final class ComputeFrayTest {
     threadB.join();
     cache.cleanUp();
 
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -154,7 +155,7 @@ final class ComputeFrayTest {
     cache.cleanUp();
 
     assertThat(cache.getIfPresent(99)).isNull();
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -174,7 +175,7 @@ final class ComputeFrayTest {
     threadB.join();
 
     assertThat(cache.getIfPresent(1)).isEqualTo(100);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -201,7 +202,7 @@ final class ComputeFrayTest {
       assertWithMessage("Key 1 should be absent or have value 200, but was %s", value)
           .that(value).isEqualTo(200);
     }
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -226,7 +227,7 @@ final class ComputeFrayTest {
       assertWithMessage("Key 1 should be absent, 50, or 150, but was %s", value)
           .that(value).isAnyOf(50, 150);
     }
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -252,7 +253,7 @@ final class ComputeFrayTest {
     cache.cleanUp();
 
     assertThat(cache.estimatedSize()).isAtMost(3);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
     var value = cache.getIfPresent(1);
     if (value != null) {
       assertWithMessage("Key 1 should be 1 or 999, but was %s", value).that(value).isAnyOf(1, 999);
@@ -294,7 +295,7 @@ final class ComputeFrayTest {
     long reportedWeight = cache.policy().eviction().orElseThrow().weightedSize().orElseThrow();
     int actualWeight = cache.asMap().values().stream().mapToInt(Integer::intValue).sum();
     assertThat(reportedWeight).isEqualTo(actualWeight);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   /** Eviction listener variant verifying notification consistency on exception. */
@@ -327,7 +328,7 @@ final class ComputeFrayTest {
     threadB.join();
     cache.cleanUp();
 
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
     // The expired entry should produce at most one eviction notification
     assertWithMessage("Expected at most 1 eviction, but was %s", evictions.get())
         .that(evictions.get()).isAtMost(1);
@@ -365,7 +366,7 @@ final class ComputeFrayTest {
     cache.cleanUp();
 
     assertThat(cache.estimatedSize()).isAtMost(3);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 
   /**
@@ -395,6 +396,6 @@ final class ComputeFrayTest {
     long reportedWeight = cache.policy().eviction().orElseThrow().weightedSize().orElseThrow();
     int actualWeight = cache.asMap().values().stream().mapToInt(Integer::intValue).sum();
     assertThat(reportedWeight).isEqualTo(actualWeight);
-    assertThat(cache.estimatedSize()).isEqualTo(cache.asMap().size());
+    assertThat(cache).isValid();
   }
 }

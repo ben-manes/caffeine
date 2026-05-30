@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
@@ -62,7 +63,7 @@ final class BufferDrainFrayTest {
       assertWithMessage("Key %s should be present", i).that(cache.getIfPresent(i)).isNotNull();
     }
     assertThat(cache.estimatedSize()).isEqualTo(30);
-    assertThat(cache.asMap().size()).isEqualTo(cache.estimatedSize());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -89,7 +90,7 @@ final class BufferDrainFrayTest {
 
     assertThat(cache.getIfPresent(5)).isNotNull();
     assertThat(cache.getIfPresent(6)).isNotNull();
-    assertThat(cache.asMap().size()).isEqualTo(cache.estimatedSize());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -117,7 +118,7 @@ final class BufferDrainFrayTest {
     cache.cleanUp();
 
     assertThat(cache.estimatedSize()).isAtMost(5);
-    assertThat(cache.asMap().size()).isEqualTo(cache.estimatedSize());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -140,7 +141,7 @@ final class BufferDrainFrayTest {
     cache.cleanUp();
 
     // Key 1 may be present (if invalidate ran before put) or absent (if invalidate ran after put)
-    assertThat(cache.asMap().size()).isEqualTo(cache.estimatedSize());
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
