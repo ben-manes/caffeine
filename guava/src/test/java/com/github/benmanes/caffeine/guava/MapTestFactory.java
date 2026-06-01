@@ -51,7 +51,7 @@ final class MapTestFactory {
         .withFeatures(
             CollectionSize.ANY,
             MapFeature.GENERAL_PURPOSE,
-            MapFeature.ALLOWS_NULL_ENTRY_QUERIES,
+            MapFeature.ALLOWS_ANY_NULL_QUERIES,
             CollectionFeature.SUPPORTS_ITERATOR_REMOVE)
         .createTestSuite();
   }

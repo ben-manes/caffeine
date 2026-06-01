@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
@@ -91,7 +92,8 @@ public final class Synthetic {
    * @param events the number of events in the distribution
    */
   public static KeyOnlyTraceReader repeating(int items, int events) {
-    return generate(new SequentialGenerator(0, items), events);
+    checkArgument(items > 0, "items must be positive: %s", items);
+    return generate(new SequentialGenerator(0, items - 1), events);
   }
 
   /**

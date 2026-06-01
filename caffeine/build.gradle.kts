@@ -313,6 +313,7 @@ testing.suites {
       implementation(libs.truth)
       implementation(libs.jazzer)
       implementation(libs.mockito)
+      implementation(testFixtures(project()))
       runtimeOnly.bundle(libs.bundles.slf4j.nop)
     }
     targets.configureEach {

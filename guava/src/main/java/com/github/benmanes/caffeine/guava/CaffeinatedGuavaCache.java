@@ -21,6 +21,7 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
@@ -38,6 +39,7 @@ import com.google.common.collect.ForwardingCollection;
 import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.common.collect.ForwardingSet;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
@@ -98,7 +100,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   public ImmutableMap<K, V> getAllPresent(Iterable<?> keys) {
     @SuppressWarnings("unchecked")
     var castedKeys = (Iterable<? extends K>) keys;
-    return ImmutableMap.copyOf(cache.getAllPresent(castedKeys));
+    return ImmutableMap.copyOf(cache.getAllPresent(Iterables.filter(castedKeys, Objects::nonNull)));
   }
 
   @Override
@@ -122,7 +124,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   public void invalidateAll(Iterable<?> keys) {
     @SuppressWarnings("unchecked")
     var castedKeys = (Iterable<? extends K>) keys;
-    cache.invalidateAll(castedKeys);
+    cache.invalidateAll(Iterables.filter(castedKeys, Objects::nonNull));
   }
 
   @Override
@@ -166,6 +168,15 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     @Override public @Nullable V get(@Nullable Object key) {
       return (key == null) ? null : delegate().get(key);
     }
+    @Override public @Nullable V remove(@Nullable Object key) {
+      return (key == null) ? null : delegate().remove(key);
+    }
+    @Override public boolean remove(@Nullable Object key, @Nullable Object value) {
+      return (key != null) && (value != null) && delegate().remove(key, value);
+    }
+    @Override public boolean replace(K key, @Nullable V oldValue, V newValue) {
+      return (oldValue != null) && delegate().replace(key, oldValue, newValue);
+    }
     @Override public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
       delegate().replaceAll(function);
     }
@@ -202,6 +213,12 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     @Override public boolean removeIf(Predicate<? super K> filter) {
       return delegate().removeIf(filter);
     }
+    @Override public boolean contains(@Nullable Object o) {
+      return (o != null) && delegate().contains(o);
+    }
+    @Override public boolean containsAll(Collection<?> c) {
+      return standardContainsAll(c);
+    }
     @Override public boolean remove(@Nullable Object o) {
       return (o != null) && delegate().remove(o);
     }
@@ -213,6 +230,12 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   final class ValuesView extends ForwardingCollection<V> {
     @Override public boolean removeIf(Predicate<? super V> filter) {
       return delegate().removeIf(filter);
+    }
+    @Override public boolean contains(@Nullable Object o) {
+      return (o != null) && delegate().contains(o);
+    }
+    @Override public boolean containsAll(Collection<?> c) {
+      return standardContainsAll(c);
     }
     @Override public boolean remove(@Nullable Object o) {
       return (o != null) && delegate().remove(o);
@@ -227,7 +250,10 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     @Override public boolean add(Entry<K, V> entry) {
       throw new UnsupportedOperationException();
     }
-    @Override public boolean addAll(Collection<? extends Entry<K, V>> entry) {
+    @Override public boolean addAll(Collection<? extends Entry<K, V>> entries) {
+      if (entries.isEmpty()) {
+        return false;
+      }
       throw new UnsupportedOperationException();
     }
     @Override public boolean removeIf(Predicate<? super Entry<K, V>> filter) {

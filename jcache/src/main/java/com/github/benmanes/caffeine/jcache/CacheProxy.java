@@ -527,15 +527,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, value));
       }
 
-      absent[0] = true;
       V copy = copyOf(value);
       long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ true);
       if (expireTimeMillis == 0) {
-        // The TCK asserts that a create is not published in
-        // CacheExpiryTest.expire_whenCreated_CreatedExpiryPolicy()
+        // A zero creation expiry means the entry is already expired and is not added
         dispatcher.publishExpired(this, key, copy);
         return null;
       } else {
+        absent[0] = true;
         dispatcher.publishCreated(this, key, copy);
         return new Expirable<>(copy, expireTimeMillis);
       }
@@ -925,10 +924,17 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         this.publishToCacheWriter(writer::write, () -> entry);
         // fallthrough
       case LOADED: {
-        statistics.recordPuts(1L);
         V value = copyOf(requireNonNull(entry.getValue()));
+        long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ true);
+        if (expireTimeMillis == 0) {
+          // A zero creation expiry means the entry is already expired and is not added, so the
+          // create is neither counted nor published
+          dispatcher.publishExpired(this, entry.getKey(), value);
+          return null;
+        }
+        statistics.recordPuts(1L);
         dispatcher.publishCreated(this, entry.getKey(), value);
-        return new Expirable<>(value, getWriteExpireTimeMillis(/* created= */ true));
+        return new Expirable<>(value, expireTimeMillis);
       }
       case UPDATED: {
         statistics.recordPuts(1L);

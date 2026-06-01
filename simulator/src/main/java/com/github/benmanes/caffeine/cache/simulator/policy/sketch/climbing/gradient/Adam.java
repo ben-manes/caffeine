@@ -44,13 +44,7 @@ public final class Adam extends AbstractClimber {
     epsilon = settings.epsilon();
     beta1 = settings.beta1();
     beta2 = settings.beta2();
-    t = 1;
-  }
-
-  @Override
-  protected void resetSample(double hitRate) {
-    super.resetSample(hitRate);
-    t++;
+    t = 0;
   }
 
   @Override
@@ -60,8 +54,12 @@ public final class Adam extends AbstractClimber {
       // direction so subsequent samples have a Δw to differentiate against.
       return stepSize;
     }
-    double gradient = missRateGradient(hitRate);
 
+    // The timestep counts moment updates (1 on the first), not probe periods, so the bias
+    // correction divisors match Adam's Algorithm 1.
+    t++;
+
+    double gradient = missRateGradient(hitRate);
     moment = (beta1 * moment) + ((1 - beta1) * gradient);
     velocity = (beta2 * velocity) + ((1 - beta2) * (gradient * gradient));
 

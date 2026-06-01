@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -99,6 +100,40 @@ final class CaffeinatedGuavaTest {
     assertThat(cache.asMap().get(null)).isNull();
     assertThat(cache.asMap().containsKey(null)).isFalse();
     assertThat(cache.asMap().containsValue(null)).isFalse();
+    assertThat(cache.asMap().remove(null)).isNull();
+    assertThat(cache.asMap().remove(null, 2)).isFalse();
+    assertThat(cache.asMap().remove(1, null)).isFalse();
+    assertThat(cache.asMap().replace(1, null, 3)).isFalse();
+    assertThat(cache.asMap().keySet().contains(null)).isFalse();
+    assertThat(cache.asMap().values().contains(null)).isFalse();
+    assertThat(cache.asMap()).containsExactly(1, 2);
+  }
+
+  @ParameterizedTest
+  @MethodSource("caches")
+  void getAllPresent_nullKey(Cache<Integer, Integer> cache) {
+    cache.put(1, 2);
+
+    assertThat(cache.getAllPresent(Arrays.asList(1, null, 3))).containsExactly(1, 2);
+  }
+
+  @ParameterizedTest
+  @MethodSource("caches")
+  void invalidateAll_nullKey(Cache<Integer, Integer> cache) {
+    cache.put(1, 2);
+    cache.put(3, 4);
+
+    // A null element is skipped (as in Guava), not an NPE that leaves a partial removal.
+    cache.invalidateAll(Arrays.asList(1, null, 3));
+    assertThat(cache.asMap()).isEmpty();
+  }
+
+  @ParameterizedTest
+  @MethodSource("caches")
+  @SuppressFBWarnings("LUI_VACUOUS_ADDALL")
+  void entrySet_addAll_empty(Cache<Integer, Integer> cache) {
+    // Guava's AbstractCollection.addAll returns false for an empty collection rather than throwing.
+    assertThat(cache.asMap().entrySet().addAll(Set.<Map.Entry<Integer, Integer>>of())).isFalse();
   }
 
   @Test

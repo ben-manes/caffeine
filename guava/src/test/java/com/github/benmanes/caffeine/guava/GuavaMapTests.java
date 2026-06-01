@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.guava.MapTestFactory.generator;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -34,6 +35,10 @@ public final class GuavaMapTests extends TestCase {
   @SuppressWarnings("PMD.JUnit4SuitesShouldUseSuiteAnnotation")
   public static Test suite() {
     var suite = new TestSuite();
+    suite.addTest(MapTestFactory.suite("Guava", generator(() -> {
+      Cache<String, String> cache = CacheBuilder.newBuilder().build();
+      return cache.asMap();
+    })));
     suite.addTest(MapTestFactory.suite("GuavaView", generator(() -> {
       Cache<String, String> cache = CaffeinatedGuava.build(
           Caffeine.newBuilder().maximumSize(Long.MAX_VALUE));

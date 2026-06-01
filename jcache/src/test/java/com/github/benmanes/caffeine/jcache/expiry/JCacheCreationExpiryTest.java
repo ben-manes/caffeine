@@ -21,18 +21,31 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.START_TIME;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
+import javax.cache.Cache;
+import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
+import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
@@ -67,6 +80,71 @@ final class JCacheCreationExpiryTest {
           config.setExecutorFactory(MoreExecutors::directExecutor);
           config.setStatisticsEnabled(true);
         }).build();
+  }
+
+  /**
+   * A fixture whose creation expiry is {@link javax.cache.expiry.Duration#ZERO}. Per
+   * {@link ExpiryPolicy#getExpiryForCreation()}, a zero duration means the new entry "is considered
+   * to be already expired and will not be added to the Cache" — so no entry is stored, no
+   * {@code CREATED} event is published, and no put is recorded.
+   */
+  private static JCacheFixture zeroCreationFixture(AtomicInteger createdEvents) {
+    CacheEntryCreatedListener<Integer, Integer> listener =
+        events -> events.forEach(event -> createdEvents.incrementAndGet());
+    var listenerConfig = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+        /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+    return JCacheFixture.builder()
+        .configure(config -> {
+          config.setExpiryPolicyFactory(
+              () -> new CreatedExpiryPolicy(javax.cache.expiry.Duration.ZERO));
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setStatisticsEnabled(true);
+          config.addCacheEntryListenerConfiguration(listenerConfig);
+        }).build();
+  }
+
+  /**
+   * Every JCache write path must agree under a zero creation expiry: the spec says the entry "will
+   * not be added to the Cache", so none may store it, publish a {@code CREATED} event, or record a
+   * put. The {@code EntryProcessor} create path historically diverged from the put-family siblings.
+   */
+  @ParameterizedTest
+  @MethodSource("zeroCreationWriteOps")
+  void writeOp_absent_zeroCreationExpiry(Consumer<Cache<Integer, Integer>> op) {
+    var createdEvents = new AtomicInteger();
+    try (var fixture = zeroCreationFixture(createdEvents)) {
+      op.accept(fixture.jcache());
+
+      assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+      assertThat(fixture.jcache().containsKey(KEY_1)).isFalse();
+      assertThat(createdEvents.get()).isEqualTo(0);
+      assertThat(getStatistics(fixture.jcache()).getCachePuts()).isEqualTo(0L);
+    }
+  }
+
+  static Stream<Arguments> zeroCreationWriteOps() {
+    return Stream.of(
+        arguments(named("put", (Consumer<Cache<Integer, Integer>>) c -> c.put(KEY_1, VALUE_1))),
+        arguments(named("putAll",
+            (Consumer<Cache<Integer, Integer>>) c -> c.putAll(Map.of(KEY_1, VALUE_1)))),
+        arguments(named("putIfAbsent",
+            (Consumer<Cache<Integer, Integer>>) c -> c.putIfAbsent(KEY_1, VALUE_1))),
+        arguments(named("getAndPut",
+            (Consumer<Cache<Integer, Integer>>) c -> c.getAndPut(KEY_1, VALUE_1))),
+        arguments(named("invoke", (Consumer<Cache<Integer, Integer>>) c -> c.invoke(KEY_1,
+            (entry, args) -> {
+              entry.setValue(VALUE_2);
+              return nullRef();
+            }))));
+  }
+
+  /** No live entry results, so putIfAbsent reports false — matching the RI and put()'s no-put rule. */
+  @Test
+  void putIfAbsent_absent_zeroCreationExpiry_returnsFalse() {
+    try (var fixture = zeroCreationFixture(new AtomicInteger())) {
+      assertThat(fixture.jcache().putIfAbsent(KEY_1, VALUE_1)).isFalse();
+    }
   }
 
   private static JCacheFixture distinctDurationsFixture() {

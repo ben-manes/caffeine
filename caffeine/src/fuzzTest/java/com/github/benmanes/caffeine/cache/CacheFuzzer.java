@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Locale.US;
 
@@ -199,35 +200,7 @@ final class CacheFuzzer {
 
   /** Validates all structural invariants after the operation sequence completes. */
   private static void validate(Cache<Integer, Integer> cache, ErrorTracker errors) {
-    cache.cleanUp();
-    checkSize(cache);
-
-    // Every entry should have non-null key and value (strong references)
-    for (var entry : cache.asMap().entrySet()) {
-      assertWithMessage("key should not be null").that(entry.getKey()).isNotNull();
-      assertWithMessage("value for key %s", entry.getKey()).that(entry.getValue()).isNotNull();
-    }
-
-    // Eviction policy invariants
-    cache.policy().eviction().ifPresent(eviction -> {
-      assertWithMessage("size <= maximum after cleanUp")
-          .that(cache.estimatedSize()).isAtMost(eviction.getMaximum());
-      eviction.weightedSize().ifPresent(weightedSize -> {
-        assertWithMessage("weightedSize should be non-negative")
-            .that(weightedSize).isAtLeast(0L);
-        assertWithMessage("weightedSize <= maximum")
-            .that(weightedSize).isAtMost(eviction.getMaximum());
-      });
-    });
-
-    // If the cache is a BoundedLocalCache, run the deep structural check
-    if (cache.asMap() instanceof BoundedLocalCache<?, ?>) {
-      @SuppressWarnings("unchecked")
-      var bounded = (BoundedLocalCache<Integer, Integer>) cache.asMap();
-      checkBounded(bounded);
-    }
-
-    // Report any unexpected exceptions from operations
+    assertThat(cache).isValid();
     errors.assertEmpty();
   }
 
@@ -237,48 +210,6 @@ final class CacheFuzzer {
     assertWithMessage("estimatedSize should be non-negative").that(size).isAtLeast(0L);
     assertWithMessage("asMap.size should equal estimatedSize")
         .that((long) cache.asMap().size()).isEqualTo(size);
-  }
-
-  /** Checks the internal structure of a bounded cache. */
-  @SuppressWarnings("GuardedBy")
-  private static void checkBounded(BoundedLocalCache<Integer, Integer> bounded) {
-    // Drain pending work
-    for (int i = 0; i < 5; i++) {
-      bounded.cleanUp();
-      if (bounded.writeBuffer.isEmpty()) {
-        break;
-      }
-    }
-
-    // Data map size should match
-    assertWithMessage("data.size == cache.size")
-        .that(bounded.data.size()).isEqualTo((int) bounded.estimatedSize());
-
-    if (bounded.evicts()) {
-      bounded.evictionLock.lock();
-      try {
-        assertWithMessage("weightedSize <= maximum")
-            .that(bounded.weightedSize()).isAtMost(bounded.maximum());
-        assertWithMessage("weightedSize should be non-negative")
-            .that(bounded.weightedSize()).isAtLeast(0);
-        assertWithMessage("windowWeightedSize <= windowMaximum")
-            .that(bounded.windowWeightedSize()).isAtMost(bounded.windowMaximum());
-        assertWithMessage("mainProtectedWeightedSize <= mainProtectedMaximum")
-            .that(bounded.mainProtectedWeightedSize())
-            .isAtMost(bounded.mainProtectedMaximum());
-      } finally {
-        bounded.evictionLock.unlock();
-      }
-    }
-
-    // Each node should have a non-null key and value
-    for (var node : bounded.data.values()) {
-      assertWithMessage("node.key").that(node.getKey()).isNotNull();
-      assertWithMessage("node.value for key %s", node.getKey())
-          .that(node.getValue()).isNotNull();
-      assertWithMessage("node.weight for key %s", node.getKey())
-          .that(node.getWeight()).isAtLeast(0);
-    }
   }
 
   /** Tracks unexpected exceptions from cache operations for deferred assertion. */

@@ -202,6 +202,10 @@ Stop analysis and report partial results if ANY of these occur:
 
 1. **Three unresolvable ambiguities** — cases where correctness cannot be
    determined statically. Flag these for dynamic testing (Fray, LinCheck, JCStress).
+   Before flagging a *race*, confirm the state is genuinely shared-concurrent: if
+   every reader and writer of the field is `@GuardedBy` the same lock (single-writer
+   — e.g. `FrequencySketch` is entirely under `evictionLock`), it cannot race and must
+   NOT be escalated. Escalating a single-writer-under-lock path is a false positive.
 2. **Source code you cannot read** — generated files or build artifacts missing.
 3. **Evaluator challenges requiring information outside the source tree** —
    JDK internals, hardware memory model specifics. Acknowledge the gap rather
@@ -222,6 +226,13 @@ void escalated_findingDescription() {
 
 This bridges static analysis to dynamic testing — the highest-leverage
 path for finding bugs that can't be resolved statically.
+
+A skeleton is a TODO, not a resolution. An escalated concurrency finding is
+**resolved only** when either the underlying fix has shipped, or a runnable test
+exists in the source tree (`caffeine/src/frayTest`, `jcstress`, or `lincheckTest`)
+and passes. Before treating the escalation as closed, port the skeleton into the
+source tree and run it — or reject it with the reason (e.g. single-writer, so not a
+race). Do not consider an escalation addressed merely because a report holds a skeleton.
 
 ### Phase 4: Final Report
 

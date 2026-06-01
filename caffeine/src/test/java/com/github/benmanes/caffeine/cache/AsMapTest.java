@@ -709,18 +709,14 @@ final class AsMapTest {
   @CacheSpec(population = Population.FULL,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   void removeConditionally_byEquality(Map<Int, Int> map, CacheContext context) {
-    // Strong values match the expected value of a conditional remove(k, v) / replace(k, old, new)
-    // by Objects.equals, not identity (the *_byIdentity tests cover the weak/soft side). Int
-    // interning makes the populated value identity-shared, so a distinct-but-equal `new Int(...)`
-    // probe is required; otherwise == short-circuits and a regression to identity matching passes
-    // every existing test unnoticed.
+    // Strong values match the expected value of remove(k, v) by Objects.equals, not identity (the
+    // *_byIdentity tests cover the weak/soft side). Int interning makes the populated value
+    // identity-shared, so a distinct-but-equal `new Int(...)` probe is required; otherwise ==
+    // short-circuits and a regression to identity matching passes every existing test unnoticed.
     var key = context.firstKey();
     var value = requireNonNull(context.original().get(key));
 
-    assertThat(map.replace(key, new Int(value), context.absentValue())).isTrue();
-    assertThat(map).containsEntry(key, context.absentValue());
-
-    assertThat(map.remove(key, new Int(context.absentValue()))).isTrue();
+    assertThat(map.remove(key, new Int(value))).isTrue();
     assertThat(map).doesNotContainKey(key);
   }
 
@@ -976,6 +972,22 @@ final class AsMapTest {
     map.put(context.absentKey(), value);
     assertThat(map.replace(context.absentKey(), value, context.absentValue())).isTrue();
     assertThat(map).containsEntry(context.absentKey(), context.absentValue());
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  void replaceConditionally_byEquality(Map<Int, Int> map, CacheContext context) {
+    // Strong values match the expected old value of replace(k, old, new) by Objects.equals, not
+    // identity (the *_byIdentity tests cover the weak/soft side). Int interning makes the populated
+    // value identity-shared, so a distinct-but-equal `new Int(...)` probe is required; otherwise ==
+    // short-circuits and a regression to identity matching passes every existing test unnoticed.
+    var key = context.firstKey();
+    var value = requireNonNull(context.original().get(key));
+
+    assertThat(map.replace(key, new Int(value), context.absentValue())).isTrue();
+    assertThat(map).containsEntry(key, context.absentValue());
   }
 
   @CheckNoStats

@@ -1,6 +1,6 @@
 ---
 name: audit-sibling-divergence
-description: Differential audit comparing matched code paths that should behave identically. Spawns one auditor per sibling pair (sync/async, bounded/unbounded, view consistency, bulk vs single, generated node variants, read fast vs slow) and requires a concrete witness scenario where the two paths diverge observably.
+description: Differential audit comparing matched code paths that should behave identically. Spawns one auditor per sibling pair (sync/async, bounded/unbounded, view consistency, bulk vs single, generated node variants, read fast vs slow, adapter conformance) and requires a concrete witness scenario where the two paths diverge observably.
 context: fork
 disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, Bash, Agent, Write
@@ -19,6 +19,11 @@ disagreement under contention).
 
 - After significant changes to BoundedLocalCache, LocalAsyncCache, or any
   generator under `caffeine/src/javaPoet/java/`.
+- After changes to the user-facing adapters (`jcache/src/main`, `guava/src/main`):
+  their write/expiry/exception-translation paths are sibling families with each
+  other AND with the external spec/reference they claim to match (Group G). This is
+  where the audit's highest-yield gap was — adapters are user-facing yet were never
+  in any audit's scope.
 - Before a major release as a defense against silent sync/async drift.
 - Once per quarter as a baseline audit.
 
@@ -77,12 +82,36 @@ a new view, a new feature with sync+async variants):
   `RemovedTask`) — weight delta sign convention, telescoping sum
   preservation across task orderings
 
-If a new feature has a sync and async variant not listed above, add it as
-group G before launching.
+**Group G — adapter conformance** (user-facing: `jcache/`, `guava/`)
+- G1: JCache write-path family — every path that builds an `Expirable<V>` and gates on
+  `ExpiryPolicy` must agree on the create/update guard, the put statistic, and the
+  CREATED/UPDATED/EXPIRED events: `put`/`putAll` (`putNoCopyOrAwait`), `putIfAbsent`
+  (`putIfAbsentNoAwait`), `getAndPut`, `replace`, and the `EntryProcessor` `postProcess`
+  CREATED/UPDATED/LOADED cases. (A zero-creation-expiry guard present in the put helpers
+  but missing from `postProcess` was a real bug — a phantom CREATED event + put stat.)
+- G2: JCache adapter vs reference — for each spec-ambiguous edge the TCK does NOT pin
+  (zero/eternal/null creation & update expiry, loader-exception wrapping, read-through
+  statistics), compare the adapter's observable outcome against the JSR-107 RI and ≥3
+  ecosystem impls (Ehcache3, Infinispan, Hazelcast, Coherence, cache2k). The spec is the
+  contract; the RI + majority resolve ambiguity. A green TCK is necessary, not sufficient
+  — it is silent on exactly the paths that drift.
+- G3: Guava facade vs underlying Caffeine — each `CaffeinatedGuavaCache` / facade-view
+  method vs the Caffeine method it delegates to: null-query tolerance, exception
+  translation (`InvalidCacheLoadException` / `ExecutionException` /
+  `UncheckedExecutionException` / `ExecutionError` by checked-ness), bulk partial results.
+- G4: Guava facade vs real Guava — the executable oracle for G3: run the SAME
+  guava-testlib suite (matched feature flags) and operation sequences against the facade
+  and a real Guava `CacheBuilder` cache; any divergence is a drop-in-compatibility bug.
+
+If a new feature has a sync and async variant not listed above, add it as group H
+before launching. When auditing the simulator, add reader-vs-sibling-reader (shared
+binary/text formats, e.g. the libCacheSim family) and climber-vs-climber (shared
+gradient/timestep convention) port pairs as a group — lower priority, since simulator
+divergence yields misleading benchmark numbers rather than user-facing bugs.
 
 ## Step 2: Spawn parallel differential auditors
 
-Launch one subagent per group (six groups → six parallel agents). Each
+Launch one subagent per group (seven groups → seven parallel agents). Each
 agent gets the prompt below, adapted to its group. Run them in a single
 message so they execute in parallel.
 
@@ -97,6 +126,10 @@ The Caffeine source code is at:
 - Generated: caffeine/build/generated/sources/ (run `./gradlew :caffeine:generateNodes
   :caffeine:generateLocalCaches` if empty)
 - Generators: caffeine/src/javaPoet/java/com/github/benmanes/caffeine/cache/
+- Adapters (Group G): guava/src/main/java/com/github/benmanes/caffeine/guava/ and
+  jcache/src/main/java/com/github/benmanes/caffeine/jcache/. For G2/G4 the reference
+  contract is external — the JSR-107 1.1.1 spec/TCK and a real Guava `CacheBuilder`
+  cache; construct the witness as a differential test (run both sides), not a read alone.
 
 # Phase 0: Plan
 For each pair in your group:
@@ -219,6 +252,9 @@ Tag each confirmed finding with the divergence axis:
 - **bulk-vs-single** — aggregate operation diverging from per-element
 - **equivalent-by-construction** — two APIs that should be interchangeable
 - **internal-path** — fast vs slow path or maintenance task variants
+- **adapter-conformance** — an adapter path diverging from a sibling adapter path, the
+  underlying Caffeine method it delegates to, or the external spec/reference it claims
+  to match
 
 Write the full report to `.claude/reports/audit-sibling-divergence.md`.
 

@@ -53,11 +53,11 @@ public final class GLCacheTraceReader extends BinaryTraceReader {
      *   int64_t next_access_vtime;  // -1 if no next access
      * }
      */
-    input.readInt();
-    long key = input.readLong();
-    int weight = input.readInt();
-    input.readLong();
+    input.skipNBytes(4);
+    long key = Long.reverseBytes(input.readLong());
+    int weight = Integer.reverseBytes(input.readInt());
+    input.skipNBytes(8);
 
-    return AccessEvent.forKeyAndWeight(key, weight);
+    return AccessEvent.forKeyAndWeight(key, Math.max(weight, 1));
   }
 }
