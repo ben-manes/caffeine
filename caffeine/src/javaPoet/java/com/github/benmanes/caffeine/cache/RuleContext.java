@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
+import static com.github.benmanes.caffeine.cache.Specifications.METHOD_HANDLES;
+
 import java.lang.invoke.VarHandle;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,14 +27,19 @@ import java.util.function.Consumer;
 
 import javax.lang.model.element.Modifier;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.palantir.javapoet.AnnotationSpec;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.CodeBlock;
 import com.palantir.javapoet.FieldSpec;
 import com.palantir.javapoet.TypeName;
 import com.palantir.javapoet.TypeSpec;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -57,10 +65,6 @@ public class RuleContext {
     this.superClass = superClass;
     this.className = className;
     this.isFinal = isFinal;
-  }
-
-  public List<Consumer<CodeBlock.Builder>> varHandles() {
-    return varHandles;
   }
 
   public TypeSpec build() {
@@ -94,5 +98,53 @@ public class RuleContext {
   /** Returns the name of the VarHandle to this variable. */
   public static String varHandleName(String varName) {
     return CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, varName);
+  }
+
+  /** Returns the class-level javadoc that lists the generated and inherited features. */
+  @SuppressFBWarnings("POTENTIAL_XML_INJECTION")
+  public String classJavadoc(String summary) {
+    var doc = new StringBuilder(200);
+    doc.append("<em>WARNING: GENERATED CODE</em>\n\n").append(summary).append(":\n<ul>");
+    for (Feature feature : generateFeatures) {
+      doc.append("\n  <li>")
+          .append(CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, feature.name()));
+    }
+    for (Feature feature : parentFeatures) {
+      doc.append("\n  <li>")
+          .append(CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, feature.name()))
+          .append(" (inherited)");
+    }
+    doc.append("\n</ul>\n\n@author ben.manes@gmail.com (Ben Manes)\n");
+    return doc.toString();
+  }
+
+  /** Adds the accumulated {@code @SuppressWarnings} annotation to the class, if any. */
+  public void addSuppressedWarnings() {
+    if (!suppressedWarnings.isEmpty()) {
+      var format = (suppressedWarnings.size() == 1)
+          ? "$S"
+          : "{" + StringUtils.repeat("$S", ", ", suppressedWarnings.size()) + "}";
+      classSpec.addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
+          .addMember("value", format, suppressedWarnings.toArray())
+          .build());
+    }
+  }
+
+  /** Adds the static initializer that binds the class's VarHandles, if any. */
+  public void addStaticBlock() {
+    if (varHandles.isEmpty()) {
+      return;
+    }
+    var codeBlock = CodeBlock.builder()
+        .addStatement("$T lookup = $T.lookup()", LOOKUP, METHOD_HANDLES)
+        .beginControlFlow("try");
+    for (var varHandle : varHandles) {
+      varHandle.accept(codeBlock);
+    }
+    codeBlock
+        .nextControlFlow("catch ($T e)", ReflectiveOperationException.class)
+          .addStatement("throw new ExceptionInInitializerError(e)")
+        .endControlFlow();
+    classSpec.addStaticBlock(codeBlock.build());
   }
 }

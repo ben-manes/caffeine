@@ -27,4 +27,10 @@ public interface Rule<T extends RuleContext> {
 
   /** Modifies the context. */
   void execute(T context);
+
+  default void run(T context) {
+    if (applies(context)) {
+      execute(context);
+    }
+  }
 }

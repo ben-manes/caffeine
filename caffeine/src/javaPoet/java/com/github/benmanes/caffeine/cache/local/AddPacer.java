@@ -31,8 +31,8 @@ public final class AddPacer implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
-    return !(Feature.usesExpiration(context.parentFeatures)
-        || !Feature.usesExpiration(context.generateFeatures));
+    return !Feature.usesExpiration(context.parentFeatures)
+        && Feature.usesExpiration(context.generateFeatures);
   }
 
   @Override

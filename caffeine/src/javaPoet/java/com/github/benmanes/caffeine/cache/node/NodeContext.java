@@ -129,8 +129,7 @@ public final class NodeContext extends RuleContext {
 
   /** Creates a mutator to the variable. */
   public MethodSpec newSetter(TypeName varType, String varName, Visibility visibility) {
-    String methodName = "set" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
-    var setter = MethodSpec.methodBuilder(methodName)
+    var setter = MethodSpec.methodBuilder("set" + capitalize(varName))
         .addModifiers(publicFinalModifiers())
         .addParameter(varType, varName);
     switch (visibility) {

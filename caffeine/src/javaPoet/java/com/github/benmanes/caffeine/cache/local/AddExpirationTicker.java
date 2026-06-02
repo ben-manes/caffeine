@@ -31,8 +31,8 @@ public final class AddExpirationTicker implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
-    return !(Feature.usesExpirationTicker(context.parentFeatures)
-        || !Feature.usesExpirationTicker(context.generateFeatures));
+    return !Feature.usesExpirationTicker(context.parentFeatures)
+        && Feature.usesExpirationTicker(context.generateFeatures);
   }
 
   @Override

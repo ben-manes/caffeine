@@ -37,8 +37,8 @@ public final class AddMaximum implements Rule<LocalCacheContext> {
 
   @Override
   public boolean applies(LocalCacheContext context) {
-    return !(Feature.usesMaximum(context.parentFeatures)
-        || !Feature.usesMaximum(context.generateFeatures));
+    return !Feature.usesMaximum(context.parentFeatures)
+        && Feature.usesMaximum(context.generateFeatures);
   }
 
   @Override
@@ -58,8 +58,8 @@ public final class AddMaximum implements Rule<LocalCacheContext> {
   }
 
   private static void addMaximumSize(LocalCacheContext context) {
-    addAcquireReleaseField(context, long.class, "maximum");
-    addAcquireReleaseField(context, long.class, "weightedSize");
+    addPlainAndAcquireField(context, long.class, "maximum");
+    addPlainAndAcquireField(context, long.class, "weightedSize");
 
     addField(context, long.class, "windowMaximum");
     addField(context, long.class, "windowWeightedSize");
@@ -106,7 +106,7 @@ public final class AddMaximum implements Rule<LocalCacheContext> {
         .build());
   }
 
-  private static void addAcquireReleaseField(RuleContext context, Class<?> type, String name) {
+  private static void addPlainAndAcquireField(RuleContext context, Class<?> type, String name) {
     context.addVarHandle(LOCAL_CACHE_FACTORY, name, TypeName.get(type));
     context.classSpec.addField(FieldSpec.builder(type, name, Modifier.VOLATILE).build());
     context.classSpec.addMethod(MethodSpec.methodBuilder(name)
