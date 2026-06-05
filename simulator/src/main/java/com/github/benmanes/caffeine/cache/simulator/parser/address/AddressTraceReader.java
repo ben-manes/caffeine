@@ -37,6 +37,6 @@ public final class AddressTraceReader extends TextTraceReader implements KeyOnly
     return lines()
         .map(line -> line.split(" ", 3)[1])
         .map(address -> address.substring(2))
-        .mapToLong(address -> Long.parseLong(address, 16));
+        .mapToLong(address -> Long.parseUnsignedLong(address, 16));
   }
 }
