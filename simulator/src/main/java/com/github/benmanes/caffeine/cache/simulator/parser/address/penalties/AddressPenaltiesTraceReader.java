@@ -65,7 +65,7 @@ public final class AddressPenaltiesTraceReader extends TextTraceReader {
     return lines()
         .map(line -> line.split(" ", 5))
         .map(split -> AccessEvent.forKeyAndPenalties(
-            Long.parseLong(split[1].substring(2), 16),
+            Long.parseUnsignedLong(split[1].substring(2), 16),
             Double.parseDouble(split[3]),
             Double.parseDouble(split[4])));
   }
