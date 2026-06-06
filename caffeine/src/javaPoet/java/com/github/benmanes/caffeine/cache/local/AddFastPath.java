@@ -39,9 +39,12 @@ public final class AddFastPath implements Rule<LocalCacheContext> {
   public void execute(LocalCacheContext context) {
     boolean fastpath = Feature.usesFastPath(Sets.union(
         context.parentFeatures, context.generateFeatures));
+    var modifiers = fastpath
+        ? new Modifier[] {Modifier.PROTECTED}
+        : context.protectedFinalModifiers();
     context.classSpec.addMethod(MethodSpec.methodBuilder("fastpath")
         .addStatement("return " + fastpath)
-        .addModifiers(Modifier.PROTECTED)
+        .addModifiers(modifiers)
         .returns(boolean.class)
         .build());
   }

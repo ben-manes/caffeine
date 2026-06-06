@@ -213,8 +213,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final int WRITE_BUFFER_MIN = 4;
   /** The maximum capacity of the write buffer. */
   static final int WRITE_BUFFER_MAX = 128 * ceilingPowerOfTwo(NCPU);
-  /** The number of attempts to insert into the write buffer before yielding. */
-  static final int WRITE_BUFFER_RETRIES = 100;
   /** The maximum weighted capacity of the map. */
   static final long MAXIMUM_CAPACITY = Long.MAX_VALUE - Integer.MAX_VALUE;
   /** The initial percent of the maximum weighted capacity dedicated to the main space. */
@@ -1627,13 +1625,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param task the pending operation to be applied
    */
   void afterWrite(Runnable task) {
-    for (int i = 0; i < WRITE_BUFFER_RETRIES; i++) {
-      if (writeBuffer.offer(task)) {
-        scheduleAfterWrite();
-        return;
-      }
-      scheduleDrainBuffers();
-      Thread.onSpinWait();
+    if (writeBuffer.offer(task)) {
+      scheduleAfterWrite();
+      return;
     }
 
     // In scenarios where the writing threads cannot make progress then they attempt to provide
@@ -2938,10 +2932,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     requireNonNull(remappingFunction);
 
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
+    BiFunction<? super V, ? super V, ? extends V> f = statsAware(remappingFunction);
     BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> mergeFunction =
-        (k, oldValue) -> (oldValue == null)
-          ? value
-          : statsAware(remappingFunction).apply(oldValue, value);
+        (k, oldValue) -> (oldValue == null) ? value : f.apply(oldValue, value);
     return remap(key, keyRef, mergeFunction, expiry(),
         new ComputeContext<>(expirationTicker().read()), /* computeIfAbsent= */ true);
   }

@@ -121,11 +121,11 @@ public final class AddValue implements Rule<NodeContext> {
     if (context.isStrongValues()) {
       setter.addStatement("$L.setRelease(this, $N)", varHandleName("value"), "value");
     } else {
-      setter.addStatement("$1T<V> ref = ($1T<V>) $2L.getAcquire(this)",
-          Reference.class, varHandleName("value"));
+      setter.addStatement("$1T ref = ($1T) $2L.getAcquire(this)",
+          context.valueReferenceType(), varHandleName("value"));
       setter.addStatement("$L.setRelease(this, new $T($L, $N, referenceQueue))",
           varHandleName("value"), context.valueReferenceType(),
-          "getKeyReference()", "value");
+          "ref.getKeyReference()", "value");
       setter.addStatement("$T.storeStoreFence()", VarHandle.class);
       setter.addStatement("ref.clear()");
     }

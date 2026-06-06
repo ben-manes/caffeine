@@ -40,16 +40,16 @@ final class Async {
 
   private Async() {}
 
-  /** Returns if the future has successfully completed. */
+  /** Returns if the future has successfully completed with a non-null value. */
   static boolean isReady(@Nullable CompletableFuture<?> future) {
-    return (future != null) && future.isDone()
-        && !future.isCompletedExceptionally()
-        && (future.join() != null);
+    return getIfReady(future) != null;
   }
 
   /** Returns the current value or null if either not done or failed. */
   static <V> @Nullable V getIfReady(@Nullable CompletableFuture<V> future) {
-    return isReady(future) ? requireNonNull(future).join() : null;
+    return ((future != null) && future.isDone() && !future.isCompletedExceptionally())
+        ? future.join()
+        : null;
   }
 
   /** Returns the value when completed successfully or null if failed. */
@@ -154,7 +154,8 @@ final class Async {
 
     @Override
     public int weigh(K key, CompletableFuture<V> future) {
-      return isReady(future) ? delegate.weigh(key, future.join()) : 0;
+      V value = getIfReady(future);
+      return (value == null) ? 0 : delegate.weigh(key, value);
     }
 
     Object writeReplace() {
@@ -180,8 +181,9 @@ final class Async {
 
     @Override
     public long expireAfterCreate(K key, CompletableFuture<V> future, long currentTime) {
-      if (isReady(future)) {
-        long duration = delegate.expireAfterCreate(key, future.join(), currentTime);
+      V value = getIfReady(future);
+      if (value != null) {
+        long duration = delegate.expireAfterCreate(key, value, currentTime);
         return Math.min(duration, MAXIMUM_EXPIRY);
       }
       return ASYNC_EXPIRY;
@@ -190,10 +192,11 @@ final class Async {
     @Override
     public long expireAfterUpdate(K key, CompletableFuture<V> future,
         long currentTime, long currentDuration) {
-      if (isReady(future)) {
+      V value = getIfReady(future);
+      if (value != null) {
         long duration = (currentDuration > MAXIMUM_EXPIRY)
-            ? delegate.expireAfterCreate(key, future.join(), currentTime)
-            : delegate.expireAfterUpdate(key, future.join(), currentTime, currentDuration);
+            ? delegate.expireAfterCreate(key, value, currentTime)
+            : delegate.expireAfterUpdate(key, value, currentTime, currentDuration);
         return Math.min(duration, MAXIMUM_EXPIRY);
       }
       return ASYNC_EXPIRY;
@@ -202,8 +205,9 @@ final class Async {
     @Override
     public long expireAfterRead(K key, CompletableFuture<V> future,
         long currentTime, long currentDuration) {
-      if (isReady(future)) {
-        long duration = delegate.expireAfterRead(key, future.join(), currentTime, currentDuration);
+      V value = getIfReady(future);
+      if (value != null) {
+        long duration = delegate.expireAfterRead(key, value, currentTime, currentDuration);
         return Math.min(duration, MAXIMUM_EXPIRY);
       }
       return ASYNC_EXPIRY;

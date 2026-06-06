@@ -551,6 +551,23 @@ tasks.register<Stress>("stress") {
     sourceSets.named("codeGen").map { it.runtimeClasspath },
     sourceSets.named("test").map { it.runtimeClasspath })
   outputs.upToDateWhen { false }
+
+  // Use -Pjfr to generate a profile
+  if (providers.gradleProperty("jfr").isPresent) {
+    val jfr = layout.buildDirectory.file("jfr/stress.jfr")
+    jvmArgumentProviders.add {
+      val flags = listOf("filename=${jfr.get().asFile.absolutePath}", "settings=profile",
+        "jdk.Deoptimization#enabled=true", "jdk.ObjectAllocationSample#enabled=true",
+        "jdk.Compilation#enabled=true")
+      listOf("-XX:StartFlightRecording=${flags.joinToString(",")}")
+    }
+    doFirst {
+      jfr.get().asFile.parentFile.mkdirs()
+    }
+    doLast {
+      println("Java Flight Recording stored at: ${jfr.get().asFile}")
+    }
+  }
 }
 
 val javaComponent = components["java"] as AdhocComponentWithVariants

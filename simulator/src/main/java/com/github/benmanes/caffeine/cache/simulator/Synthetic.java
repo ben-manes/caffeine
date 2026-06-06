@@ -45,7 +45,7 @@ public final class Synthetic {
 
   /** Returns a sequence of events based on the setting's distribution. */
   public static KeyOnlyTraceReader generate(TraceSettings settings) {
-    int events = settings.synthetic().events();
+    long events = settings.synthetic().events();
     return switch (settings.synthetic().distribution().toLowerCase(US)) {
       case "counter" ->
         counter(settings.synthetic().counter().start(), events);
@@ -81,7 +81,7 @@ public final class Synthetic {
    * @param start the number that the counter starts from
    * @param events the number of events in the distribution
    */
-  public static KeyOnlyTraceReader counter(int start, int events) {
+  public static KeyOnlyTraceReader counter(long start, long events) {
     return generate(new CounterGenerator(start), events);
   }
 
@@ -91,9 +91,9 @@ public final class Synthetic {
    * @param items the number of items in the distribution
    * @param events the number of events in the distribution
    */
-  public static KeyOnlyTraceReader repeating(int items, int events) {
+  public static KeyOnlyTraceReader repeating(long items, long events) {
     checkArgument(items > 0, "items must be positive: %s", items);
-    return generate(new SequentialGenerator(0, items - 1), events);
+    return generate(new SequentialGenerator(0L, items - 1), events);
   }
 
   /**
@@ -105,7 +105,7 @@ public final class Synthetic {
    * @param events the number of events in the distribution
    * @return a stream of cache events
    */
-  public static KeyOnlyTraceReader uniform(int lowerBound, int upperBound, int events) {
+  public static KeyOnlyTraceReader uniform(long lowerBound, long upperBound, long events) {
     return generate(new UniformLongGenerator(lowerBound, upperBound), events);
   }
 
@@ -116,7 +116,7 @@ public final class Synthetic {
    * @param mean mean arrival rate of gamma (a half life of 1/gamma)
    * @param events the number of events in the distribution
    */
-  public static KeyOnlyTraceReader exponential(double mean, int events) {
+  public static KeyOnlyTraceReader exponential(double mean, long events) {
     return generate(new ExponentialGenerator(mean), events);
   }
 
@@ -133,8 +133,8 @@ public final class Synthetic {
    * @param hotOpnFraction percentage of operations accessing the hot set
    * @param events the number of events in the distribution
    */
-  public static KeyOnlyTraceReader hotspot(int lowerBound, int upperBound,
-      double hotsetFraction, double hotOpnFraction, int events) {
+  public static KeyOnlyTraceReader hotspot(long lowerBound, long upperBound,
+      double hotsetFraction, double hotOpnFraction, long events) {
     return generate(new HotspotIntegerGenerator(lowerBound,
         upperBound, hotsetFraction, hotOpnFraction), events);
   }
@@ -149,7 +149,7 @@ public final class Synthetic {
    * @param constant the skew factor for the distribution
    * @param events the number of events in the distribution
    */
-  public static KeyOnlyTraceReader scrambledZipfian(int items, double constant, int events) {
+  public static KeyOnlyTraceReader scrambledZipfian(long items, double constant, long events) {
     return generate(new ScrambledZipfianGenerator(0, items - 1, constant), events);
   }
 
@@ -160,7 +160,7 @@ public final class Synthetic {
    * @param items the number of items in the distribution
    * @param events the number of events in the distribution
    */
-  public static KeyOnlyTraceReader skewedZipfianLatest(int items, int events) {
+  public static KeyOnlyTraceReader skewedZipfianLatest(long items, long events) {
     return generate(new SkewedLatestGenerator(new CounterGenerator(items)), events);
   }
 
@@ -172,7 +172,7 @@ public final class Synthetic {
    * @param constant the skew factor for the distribution
    * @param events the number of events in the distribution
    */
-  public static KeyOnlyTraceReader zipfian(int items, double constant, int events) {
+  public static KeyOnlyTraceReader zipfian(long items, double constant, long events) {
     return generate(new ZipfianGenerator(items, constant), events);
   }
 

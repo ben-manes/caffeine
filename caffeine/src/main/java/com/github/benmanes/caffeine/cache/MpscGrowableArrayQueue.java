@@ -132,7 +132,7 @@ abstract class BaseMpscLinkedArrayQueuePad1<E> extends AbstractQueue<E> {
 }
 
 abstract class BaseMpscLinkedArrayQueueProducerFields<E> extends BaseMpscLinkedArrayQueuePad1<E> {
-  protected long producerIndex;
+  protected volatile long producerIndex;
 }
 
 @SuppressWarnings({"MultiVariableDeclaration", "OvershadowingSubclassFields",
@@ -562,7 +562,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
   @SuppressWarnings("PMD.LooseCoupling")
   static long lvProducerIndex(BaseMpscLinkedArrayQueue<?> self) {
-    return (long) P_INDEX.getVolatile(self);
+    return self.producerIndex;
   }
   @SuppressWarnings("PMD.LooseCoupling")
   static long lvConsumerIndex(BaseMpscLinkedArrayQueue<?> self) {

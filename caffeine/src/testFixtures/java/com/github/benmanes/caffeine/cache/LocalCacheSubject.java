@@ -263,7 +263,6 @@ public final class LocalCacheSubject extends Subject {
 
     var seen = Collections.newSetFromMap(new IdentityHashMap<>(bounded.size()));
     var wheel = bounded.timerWheel().wheel;
-    long nanos = bounded.timerWheel().nanos;
     for (Node<K, V>[] bucket : wheel) {
       for (Node<K, V> sentinel : bucket) {
         check("first").that(sentinel).isInstanceOf(Sentinel.class);
@@ -278,14 +277,16 @@ public final class LocalCacheSubject extends Subject {
         // lossy read buffer, so a dropped reschedule leaves the node in its previous bucket while
         // variableTime moves on. The user's Expiry can return arbitrarily larger or smaller
         // durations, so the bucket can drift to either a higher or lower level than the current
-        // variableTime would imply. The wheel self-corrects on advance(), so neither exact bucket
-        // placement nor the level's upper bound are valid structural invariants here.
+        // variableTime would imply. When a read shortens the duration but its reschedule is
+        // dropped, the node lingers in a higher bucket while time advances past its variableTime,
+        // so it can appear arbitrarily stale until the next read evicts it or the wheel cycles to
+        // its bucket. The wheel self-corrects on advance(), so neither the bucket placement nor how
+        // stale a node appears relative to the current time are valid structural invariants here;
+        // only the linkage and the node count are checked.
         @Var var node = sentinel.getNextInVariableOrder();
         while (node != sentinel) {
           var next = node.getNextInVariableOrder();
           var prev = node.getPreviousInVariableOrder();
-          long duration = node.getVariableTime() - nanos;
-          check("notTooStale").that(duration).isAtLeast(-Pacer.TOLERANCE);
           check("loopDetected").that(seen.add(node)).isTrue();
           check("wrongPrev").that(prev.getNextInVariableOrder()).isSameInstanceAs(node);
           check("wrongNext").that(next.getPreviousInVariableOrder()).isSameInstanceAs(node);

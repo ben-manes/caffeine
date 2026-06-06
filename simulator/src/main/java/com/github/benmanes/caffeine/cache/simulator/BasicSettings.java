@@ -266,8 +266,8 @@ public class BasicSettings {
     public String distribution() {
       return config().getString("synthetic.distribution");
     }
-    public int events() {
-      return config().getInt("synthetic.events");
+    public long events() {
+      return config().getLong("synthetic.events");
     }
     public CounterSettings counter() {
       return new CounterSettings();
@@ -289,21 +289,21 @@ public class BasicSettings {
     }
 
     public final class CounterSettings {
-      public int start() {
-        return config().getInt("synthetic.counter.start");
+      public long start() {
+        return config().getLong("synthetic.counter.start");
       }
     }
     public final class RepeatSettings {
-      public int items() {
-        return config().getInt("synthetic.repeating.items");
+      public long items() {
+        return config().getLong("synthetic.repeating.items");
       }
     }
     public final class UniformSettings {
-      public int lowerBound() {
-        return config().getInt("synthetic.uniform.lower-bound");
+      public long lowerBound() {
+        return config().getLong("synthetic.uniform.lower-bound");
       }
-      public int upperBound() {
-        return config().getInt("synthetic.uniform.upper-bound");
+      public long upperBound() {
+        return config().getLong("synthetic.uniform.upper-bound");
       }
     }
     public final class ExponentialSettings {
@@ -312,11 +312,11 @@ public class BasicSettings {
       }
     }
     public final class HotspotSettings {
-      public int lowerBound() {
-        return config().getInt("synthetic.hotspot.lower-bound");
+      public long lowerBound() {
+        return config().getLong("synthetic.hotspot.lower-bound");
       }
-      public int upperBound() {
-        return config().getInt("synthetic.hotspot.upper-bound");
+      public long upperBound() {
+        return config().getLong("synthetic.hotspot.upper-bound");
       }
       public double hotsetFraction() {
         return config().getDouble("synthetic.hotspot.hotset-fraction");
@@ -326,8 +326,8 @@ public class BasicSettings {
       }
     }
     public final class ZipfianSettings {
-      public int items() {
-        return config().getInt("synthetic.zipfian.items");
+      public long items() {
+        return config().getLong("synthetic.zipfian.items");
       }
       public double constant() {
         return config().getDouble("synthetic.zipfian.constant");

@@ -29,6 +29,7 @@ import java.util.function.ToLongFunction;
 import java.util.stream.IntStream;
 
 import org.github.jamm.MemoryMeter;
+import org.jspecify.annotations.Nullable;
 import org.openjdk.jol.info.GraphLayout;
 
 import com.github.freva.asciitable.AsciiTable;
@@ -219,7 +220,7 @@ public final class MemoryBenchmark {
             .header(header)
             .dataAlign(header.equals("Cache") ? LEFT : RIGHT))
         .toArray(Column[]::new);
-    String result = AsciiTable.getTable(FANCY_ASCII, columns, new String[][] {
+    var result = AsciiTable.getTable(FANCY_ASCII, columns, new @Nullable String[][] {
       formatRow("Caffeine", evaluate(caffeine, meter::measureDeep), evaluate(caffeine, layout)),
       formatRow("Guava", evaluate(guava, meter::measureDeep), evaluate(guava, layout))
     });

@@ -29,12 +29,15 @@ jobs:
             qlty.sh:443
             radarlint-releases.s3.amazonaws.com:443
             release-assets.githubusercontent.com:443
+            tmaproduction.blob.core.windows.net:443
+            tuf-repo-cdn.sigstore.dev:443
+            tuf-repo.github.com:443
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
       - name: Install Qlty
-        uses: qltysh/qlty-action/install@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
+        uses: qltysh/qlty-action/install@fd52dc852530a708d68c3b7342f8d33d1df4cd55 # v2.2.1
       - name: Setup Qlty
         run: |
           qlty init --skip-plugins -n
@@ -55,7 +58,7 @@ jobs:
         with:
           files: results.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.36.0
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: results.sarif
@@ -80,12 +83,15 @@ jobs:
             github.com:443
             qlty-releases.s3.amazonaws.com:443
             qlty.sh:443
+            tmaproduction.blob.core.windows.net:443
+            tuf-repo-cdn.sigstore.dev:443
+            tuf-repo.github.com:443
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
       - name: Install Qlty
-        uses: qltysh/qlty-action/install@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
+        uses: qltysh/qlty-action/install@fd52dc852530a708d68c3b7342f8d33d1df4cd55 # v2.2.1
       - name: Setup Qlty
         run: |
           qlty init --skip-plugins -n
@@ -106,7 +112,7 @@ jobs:
         with:
           files: results.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.36.0
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: results.sarif
