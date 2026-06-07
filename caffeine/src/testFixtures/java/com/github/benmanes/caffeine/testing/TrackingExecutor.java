@@ -91,7 +91,7 @@ public final class TrackingExecutor extends ForwardingExecutorService {
   }
 
   @Override
-  public ExecutorService delegate() {
+  protected ExecutorService delegate() {
     return delegate;
   }
 }

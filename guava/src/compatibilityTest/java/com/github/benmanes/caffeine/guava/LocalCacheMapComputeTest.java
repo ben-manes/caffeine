@@ -22,15 +22,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.IntConsumer;
 import java.util.stream.IntStream;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 import org.jspecify.annotations.NullUnmarked;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.Cache;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import junit.framework.TestCase;
 
 /**
@@ -51,7 +49,7 @@ public class LocalCacheMapComputeTest extends TestCase {
   }
 
   @Override
-  public void setUp() throws Exception {
+  protected void setUp() throws Exception {
     super.setUp();
     this.cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(500000, TimeUnit.MILLISECONDS)

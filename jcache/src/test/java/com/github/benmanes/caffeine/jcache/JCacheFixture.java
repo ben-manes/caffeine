@@ -138,7 +138,7 @@ public final class JCacheFixture implements AutoCloseable {
   }
 
   /** Returns {@code null} for use when testing null checks while satisfying null analysis tools. */
-  @SuppressFBWarnings("AI_ANNOTATION_ISSUES_NEEDS_NULLABLE")
+  @SuppressFBWarnings({"AI_ANNOTATION_ISSUES_NEEDS_NULLABLE", "NP_NONNULL_RETURN_VIOLATION"})
   @SuppressWarnings({ "DataFlowIssue", "NullableProblems",
       "NullAway", "TypeParameterUnusedInFormals" })
   public static <T> @NonNull T nullRef() {

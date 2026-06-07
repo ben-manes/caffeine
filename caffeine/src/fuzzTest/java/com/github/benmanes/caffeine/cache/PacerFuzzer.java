@@ -35,14 +35,14 @@ import com.code_intelligence.jazzer.junit.FuzzTest;
  */
 @SuppressWarnings("PMD.MissingStaticMethodInNonInstantiatableClass")
 final class PacerFuzzer {
+  private static final Operation[] OPERATIONS = Operation.values();
 
   // These tests require the environment variable JAZZER_FUZZ=1 to try new input arguments
 
   private PacerFuzzer() {}
 
   @Nested
-  static final class ScheduleTest {
-    private static final Operation[] OPERATIONS = Operation.values();
+  final class ScheduleTest {
 
     @FuzzTest(maxDuration = "5m")
     void pacer(FuzzedDataProvider data) {
@@ -70,79 +70,10 @@ final class PacerFuzzer {
         }
       }
     }
-
-    /** Schedules a task and validates the pacer's post-conditions. */
-    private static void schedule(FuzzedDataProvider data, Pacer pacer,
-        SchedulerState state, Executor executor, Runnable command) {
-      long now = data.consumeLong();
-      long delay = data.consumeLong(0, Long.MAX_VALUE);
-      int prevCount = state.callCount;
-
-      pacer.schedule(executor, command, now, delay);
-
-      if (state.callCount > prevCount) {
-        // A new schedule was made; verify the minimum delay invariant
-        assertWithMessage("Scheduled delay should be >= TOLERANCE (actual=%s)", state.lastDelay)
-            .that(state.lastDelay).isAtLeast(Pacer.TOLERANCE);
-
-        if (delay <= Pacer.TOLERANCE) {
-          long expected = (now + Pacer.TOLERANCE);
-          assertWithMessage("nextFireTime for small delay")
-              .that(pacer.nextFireTime).isEqualTo((expected == 0L) ? 1L : expected);
-          assertWithMessage("actual delay for small delay")
-              .that(state.lastDelay).isEqualTo(Pacer.TOLERANCE);
-        } else {
-          long expected = (now + delay);
-          assertWithMessage("nextFireTime for large delay")
-              .that(pacer.nextFireTime).isEqualTo((expected == 0L) ? 1L : expected);
-          assertWithMessage("actual delay for large delay")
-              .that(state.lastDelay).isEqualTo(delay);
-        }
-        assertWithMessage("future should be set after schedule")
-            .that(pacer.future).isSameInstanceAs(state.lastFuture);
-      }
-    }
-
-    /** Cancels a pending schedule and verifies the state is fully reset. */
-    private static void cancel(Pacer pacer) {
-      pacer.cancel();
-      assertWithMessage("nextFireTime should be 0 after cancel")
-          .that(pacer.nextFireTime).isEqualTo(0L);
-      assertWithMessage("future should be null after cancel")
-          .that(pacer.future).isNull();
-      assertWithMessage("isScheduled should be false after cancel")
-          .that(pacer.isScheduled()).isFalse();
-    }
-
-    /** Completes the current future, simulating a scheduled task finishing. */
-    @SuppressWarnings("FutureReturnValueIgnored")
-    private static void completeFuture(Pacer pacer) {
-      if (pacer.future instanceof CompletableFuture) {
-        ((CompletableFuture<?>) pacer.future).complete(null);
-      }
-    }
-
-    /** A scheduler implementation that records the last invocation for verification. */
-    private static final class SchedulerState implements Scheduler {
-      @Nullable Future<?> lastFuture;
-      long lastDelay;
-      int callCount;
-
-      @Override
-      public Future<?> schedule(Executor executor, Runnable command,
-          long delay, TimeUnit unit) {
-        lastFuture = new CompletableFuture<>();
-        lastDelay = delay;
-        callCount++;
-        return lastFuture;
-      }
-    }
-
-    private enum Operation { SCHEDULE, CANCEL, COMPLETE_FUTURE }
   }
 
   @Nested
-  static final class MaySkipTest {
+  final class MaySkipTest {
 
     @FuzzTest(maxDuration = "5m")
     void maySkip(FuzzedDataProvider data) {
@@ -165,4 +96,72 @@ final class PacerFuzzer {
           scheduleAt, nextFireTime, delta).that(result).isEqualTo(expected);
     }
   }
+
+  /** Schedules a task and validates the pacer's post-conditions. */
+  private static void schedule(FuzzedDataProvider data, Pacer pacer,
+      SchedulerState state, Executor executor, Runnable command) {
+    long now = data.consumeLong();
+    long delay = data.consumeLong(0, Long.MAX_VALUE);
+    int prevCount = state.callCount;
+
+    pacer.schedule(executor, command, now, delay);
+
+    if (state.callCount > prevCount) {
+      // A new schedule was made; verify the minimum delay invariant
+      assertWithMessage("Scheduled delay should be >= TOLERANCE (actual=%s)", state.lastDelay)
+          .that(state.lastDelay).isAtLeast(Pacer.TOLERANCE);
+
+      if (delay <= Pacer.TOLERANCE) {
+        long expected = (now + Pacer.TOLERANCE);
+        assertWithMessage("nextFireTime for small delay")
+            .that(pacer.nextFireTime).isEqualTo((expected == 0L) ? 1L : expected);
+        assertWithMessage("actual delay for small delay")
+            .that(state.lastDelay).isEqualTo(Pacer.TOLERANCE);
+      } else {
+        long expected = (now + delay);
+        assertWithMessage("nextFireTime for large delay")
+            .that(pacer.nextFireTime).isEqualTo((expected == 0L) ? 1L : expected);
+        assertWithMessage("actual delay for large delay")
+            .that(state.lastDelay).isEqualTo(delay);
+      }
+      assertWithMessage("future should be set after schedule")
+          .that(pacer.future).isSameInstanceAs(state.lastFuture);
+    }
+  }
+
+  /** Cancels a pending schedule and verifies the state is fully reset. */
+  private static void cancel(Pacer pacer) {
+    pacer.cancel();
+    assertWithMessage("nextFireTime should be 0 after cancel")
+        .that(pacer.nextFireTime).isEqualTo(0L);
+    assertWithMessage("future should be null after cancel")
+        .that(pacer.future).isNull();
+    assertWithMessage("isScheduled should be false after cancel")
+        .that(pacer.isScheduled()).isFalse();
+  }
+
+  /** Completes the current future, simulating a scheduled task finishing. */
+  @SuppressWarnings("FutureReturnValueIgnored")
+  private static void completeFuture(Pacer pacer) {
+    if (pacer.future instanceof CompletableFuture) {
+      ((CompletableFuture<?>) pacer.future).complete(null);
+    }
+  }
+
+  /** A scheduler implementation that records the last invocation for verification. */
+  private static final class SchedulerState implements Scheduler {
+    @Nullable Future<?> lastFuture;
+    long lastDelay;
+    int callCount;
+
+    @Override
+    public Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit) {
+      lastFuture = new CompletableFuture<>();
+      lastDelay = delay;
+      callCount++;
+      return lastFuture;
+    }
+  }
+
+  private enum Operation { SCHEDULE, CANCEL, COMPLETE_FUTURE }
 }

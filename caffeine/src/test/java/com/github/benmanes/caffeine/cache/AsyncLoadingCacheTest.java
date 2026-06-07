@@ -781,7 +781,7 @@ final class AsyncLoadingCacheTest {
     // fire a notification — the discard path with newValue == null is silently swallowed.
     var started = new AtomicBoolean();
     var refreshFuture = new CompletableFuture<Int>();
-    var cache = context.<Int, Int>buildAsync(new AsyncCacheLoader<Int, Int>() {
+    var cache = context.buildAsync(new AsyncCacheLoader<Int, Int>() {
       @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
         throw new IllegalStateException();
       }

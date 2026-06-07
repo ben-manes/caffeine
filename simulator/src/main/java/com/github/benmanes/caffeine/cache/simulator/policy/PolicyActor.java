@@ -92,7 +92,7 @@ public final class PolicyActor {
     Execute(List<AccessEvent> events) {
       this.events = requireNonNull(events);
     }
-    @Override public void execute() {
+    @Override void execute() {
       policy.stats().stopwatch().start();
       for (AccessEvent event : events) {
         long priorMisses = policy.stats().missCount();
@@ -111,7 +111,7 @@ public final class PolicyActor {
 
   /** A command to shut down the policy and finalize the statistics. */
   private final class Finish extends Command {
-    @Override public void execute() {
+    @Override void execute() {
       policy.finished();
       completed.complete(null);
     }

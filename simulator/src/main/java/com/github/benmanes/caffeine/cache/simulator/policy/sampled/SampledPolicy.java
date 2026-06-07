@@ -147,7 +147,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   /** The algorithms to choose a random sample with. */
   public enum Sample {
     GUESS {
-      @Override public <E> List<E> sample(@Nullable E[] elements, E candidate,
+      @Override <E> List<E> sample(@Nullable E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
         var sample = new ArrayList<E>(sampleSize);
         policyStats.addOperations(sampleSize);
@@ -161,7 +161,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       }
     },
     RESERVOIR {
-      @Override public <E> List<E> sample(@Nullable E[] elements, E candidate,
+      @Override <E> List<E> sample(@Nullable E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
         var sample = new ArrayList<E>(sampleSize);
         policyStats.addOperations(elements.length);
@@ -186,7 +186,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     },
     SHUFFLE {
       @SuppressWarnings("NullableProblems")
-      @Override public <E> List<E> sample(@Nullable E[] elements, E candidate,
+      @Override <E> List<E> sample(@Nullable E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
         var sample = new ArrayList<>(Arrays.asList(elements));
         policyStats.addOperations(elements.length);

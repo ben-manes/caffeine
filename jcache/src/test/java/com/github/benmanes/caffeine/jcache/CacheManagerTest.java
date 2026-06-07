@@ -35,6 +35,7 @@ import javax.cache.configuration.MutableConfiguration;
 import javax.management.ObjectName;
 import javax.management.OperationsException;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -110,14 +111,15 @@ final class CacheManagerTest {
 
   @Test
   @SuppressLint("THREAD_SAFETY_VIOLATION")
-  void isClosed() throws InterruptedException, ExecutionException {
+  void isClosed() throws IllegalAccessException, InterruptedException, ExecutionException {
     try (var fixture = JCacheFixture.builder().build()) {
       @SuppressWarnings("PMD.CloseResource")
       var manager = (CacheManagerImpl) fixture.cachingProvider().getCacheManager(
           URI.create(getClass().getName()), fixture.cachingProvider().getDefaultClassLoader());
       var task = new FutureTask<>(manager::close, /* result= */ null);
+      var lock = FieldUtils.readField(manager, "lock", /* forceAccess= */ true);
       var thread = new Thread(task);
-      synchronized (manager.lock) {
+      synchronized (lock) {
         thread.start();
         var threadState = EnumSet.of(BLOCKED, WAITING);
         await().until(() -> threadState.contains(thread.getState()));
@@ -216,7 +218,7 @@ final class CacheManagerTest {
 
   @Test
   @SuppressLint("THREAD_SAFETY_VIOLATION")
-  void close_blocksConcurrentCreateCache() throws InterruptedException, ExecutionException {
+  void close_blocksConcurrentCreateCache() throws Exception {
     try (var fixture = JCacheFixture.builder().build()) {
       @SuppressWarnings("PMD.CloseResource")
       var manager = (CacheManagerImpl) fixture.cachingProvider().getCacheManager(
@@ -228,7 +230,8 @@ final class CacheManagerTest {
       var createThread = new Thread(createTask);
 
       var threadState = EnumSet.of(BLOCKED, WAITING);
-      synchronized (manager.lock) {
+      var lock = FieldUtils.readField(manager, "lock", /* forceAccess= */ true);
+      synchronized (lock) {
         closeThread.start();
         await().until(() -> threadState.contains(closeThread.getState()));
         createThread.start();

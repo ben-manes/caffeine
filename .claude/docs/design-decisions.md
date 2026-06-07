@@ -29,6 +29,38 @@ workload transitions; (3) min initial step floor (2 entries) so very small cache
 can move the integer window. The sample-period growth (proportional to step decay,
 capped at 4×) reduces noise when fine-tuning near the optimum.
 
+**Climber `adjustment` is a multi-cycle carry-over, not stale state.** `increaseWindow` /
+`decreaseWindow` transfer at most `QUEUE_TRANSFER_THRESHOLD` (e.g. 1000) nodes per maintenance
+cycle, then store the *unfulfilled* remainder back via `setAdjustment(quota)` /
+`setAdjustment(-quota)` — the leftover, not zero. On a large cache the per-decision step
+(`≈ 0.0625 × maximum`, e.g. 62,500 at a 1M maximum) dwarfs the (e.g 1000) node cap, so a single
+climber decision is deliberately drained across many later cycles. Each of those cycles
+`determineAdjustment` early-returns at `requestCount < effectiveSampleSize` (the sample was
+reset and has not refilled) **without touching `adjustment`**, and `climb` re-applies the
+carried remainder. Once the sample refills, a fresh `determineAdjustment` overwrites
+`adjustment` with a new decision. This looks like "a stale adjustment re-applied without a
+fresh hit-rate sample," but it is the completion mechanism for a work-capped transfer.
+
+The symmetric give-back after the transfer loop (`mainProtectedMaximum += quota;
+windowMaximum -= quota`) keeps the partition sum (`windowMaximum + mainProtectedMaximum +
+implicit-probation == maximum`) constant and the region maxima non-negative on every
+re-application — the maxima track the *partial* transfer that actually happened (added in
+`3a217b22c`, "Fix bugs in adaptive policy"). Two consequences worth not flagging:
+- **Pinned leftover.** If the carried `quota` is smaller than the policy weight of every
+  candidate (e.g. `quota = 1` while all entries weigh 100), the loop moves nothing and
+  re-stores the same value, so the window stays put until a real sample overwrites
+  `adjustment`. The window genuinely cannot grow by a fraction of an indivisible heavy entry.
+- **Probation is the implicit slack region.** The transfer draws from both probation and
+  protected but only decrements `mainProtectedWeightedSize` for protected moves, so probation
+  absorbs the difference between the window-maximum shift and the protected weight moved
+  (`Δ windowMaximum == total weight transferred` holds exactly).
+
+The hardening companion to this: `determineAdjustment` guards the small-cache sample-period
+`ratio` against a `0/0` NaN (when both the maximum and step size are zero). The NaN would
+otherwise zero `effectiveSampleSize`, defeat the sample guard, and poison
+`previousSampleHitRate`. The state is unreachable in practice (the step size never decays to
+exactly `0.0`), so this is defense-in-depth, not a live fix.
+
 **~1% random admission of rejected candidates.** The TinyLFU admission filter
 randomly admits ~1% of candidates that would otherwise be rejected. This provides
 HashDoS protection by making frequency estimation attacks non-deterministic.

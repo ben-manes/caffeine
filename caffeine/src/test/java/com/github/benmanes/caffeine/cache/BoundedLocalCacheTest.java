@@ -2531,6 +2531,31 @@ final class BoundedLocalCacheTest {
     assertThat(cache.missesInSample()).isEqualTo(0);
   }
 
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
+  void adapt_smallCache_zeroMagnitudeDoesNotPoisonHitRate(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    prepareForAdaption(cache, context, /* recencyBias= */ false);
+
+    // A zero maximum and zero step size make the sample-period ratio 0/0. The resulting NaN
+    // must not defeat the sample guard and poison the saved hit rate. The state is unreachable
+    // in practice (the step never decays to exactly 0.0); it is forced here to lock in the guard.
+    cache.setMaximumSize(0);
+    cache.frequencySketch().ensureCapacity(1);
+    cache.setStepSize(0.0);
+    cache.setHitsInSample(0);
+    cache.setMissesInSample(0);
+    cache.setPreviousSampleHitRate(0.80);
+
+    // An uninitialized sketch would short-circuit determineAdjustment before reaching the guard.
+    assertThat(cache.frequencySketch().isNotInitialized()).isFalse();
+    cache.climb();
+
+    assertThat(cache.previousSampleHitRate()).isFinite();
+    assertThat(cache.adjustment()).isEqualTo(0);
+  }
+
   private static void prepareForAdaption(BoundedLocalCache<Int, Int> cache,
       CacheContext context, boolean recencyBias) {
     cache.setStepSize((recencyBias ? 1 : -1) * Math.abs(cache.stepSize()));
@@ -3325,7 +3350,7 @@ final class BoundedLocalCacheTest {
         })
         .executor(Runnable::run)
         .recordStats()
-        .build(new CacheLoader<Int, Int>() {
+        .build(new CacheLoader<>() {
           @Override public Int load(Int key) {
             throw new UnsupportedOperationException();
           }
@@ -5411,7 +5436,6 @@ final class BoundedLocalCacheTest {
   }
 
   @Test
-  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
   void cleanupTask_ignore() {
     BoundedLocalCache<?, ?> cache = nullRef();
     var task = new PerformCleanupTask(cache);

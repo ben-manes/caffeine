@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+import static java.util.Objects.requireNonNull;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.pastalab.fray.junit.junit5.FrayTestExtension;
@@ -165,8 +166,7 @@ final class BufferDrainFrayTest {
     threadC.join();
     cache.cleanUp();
 
-    assertThat(cache.getIfPresent(1)).isNotNull();
-    int actualValue = cache.getIfPresent(1);
+    int actualValue = requireNonNull(cache.getIfPresent(1));
     assertWithMessage("Key 1 value should be 20 or 5, but was %s", actualValue)
         .that(actualValue).isAnyOf(20, 5);
     long weightedSize = cache.policy().eviction().orElseThrow()

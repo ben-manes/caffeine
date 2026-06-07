@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 
+import org.apache.commons.text.TextStringBuilder;
+
 import com.github.benmanes.caffeine.cache.node.AddConstructors;
 import com.github.benmanes.caffeine.cache.node.AddDeques;
 import com.github.benmanes.caffeine.cache.node.AddExpiration;
@@ -86,18 +88,20 @@ public final class NodeFactoryGenerator {
 
   /** Returns an encoded form of the class name for compact use. */
   private static String encode(String className) {
-    return Feature.makeEnumName(className)
-        .replaceFirst("STRONG_KEYS", "P") // puissant
-        .replaceFirst("WEAK_KEYS", "F") // faible
-        .replaceFirst("_STRONG_VALUES", "S")
-        .replaceFirst("_WEAK_VALUES", "W")
-        .replaceFirst("_SOFT_VALUES", "D") // doux
-        .replaceFirst("_EXPIRE_ACCESS", "A")
-        .replaceFirst("_EXPIRE_WRITE", "W")
-        .replaceFirst("_REFRESH_WRITE", "R")
-        .replaceFirst("_MAXIMUM", "M")
-        .replaceFirst("_WEIGHT", "W")
-        .replaceFirst("_SIZE", "S");
+    return new TextStringBuilder(Feature.makeEnumName(className))
+        .replaceFirst("STRONG_KEYS", /* puissant */ "P")
+        .replaceFirst("WEAK_KEYS", /* faible */ "F")
+        .replaceFirst("STRONG_VALUES", "S")
+        .replaceFirst("WEAK_VALUES", "W")
+        .replaceFirst("SOFT_VALUES", /* doux */ "D")
+        .replaceFirst("EXPIRE_ACCESS", "A")
+        .replaceFirst("EXPIRE_WRITE", "W")
+        .replaceFirst("REFRESH_WRITE", "R")
+        .replaceFirst("MAXIMUM", "M")
+        .replaceFirst("WEIGHT", "W")
+        .replaceFirst("SIZE", "S")
+        .deleteAll("_")
+        .toString();
   }
 
   public static void main(String[] args) throws IOException {

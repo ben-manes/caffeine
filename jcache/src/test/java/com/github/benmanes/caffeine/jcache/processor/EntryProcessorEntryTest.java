@@ -59,8 +59,26 @@ final class EntryProcessorEntryTest {
   }
 
   @Test
+  void remove_onPresentEntry_isDeleted() {
+    var entry = new EntryProcessorEntry<>(1, 2, Optional.empty());
+    entry.remove();
+    assertThat(entry.getAction()).isEqualTo(Action.DELETED);
+    assertThat(entry.exists()).isFalse();
+    assertThat(entry.getValue()).isNull();
+  }
+
+  @Test
+  void remove_onMissingEntry_isDeleted() {
+    var entry = new EntryProcessorEntry<Integer, Integer>(1, null, Optional.empty());
+    entry.remove();
+    assertThat(entry.getAction()).isEqualTo(Action.DELETED);
+    assertThat(entry.exists()).isFalse();
+    assertThat(entry.getValue()).isNull();
+  }
+
+  @Test
   void setValue_afterRemove_onPresentEntry_isUpdated() {
-    var entry = new EntryProcessorEntry<Integer, Integer>(1, 2, Optional.empty());
+    var entry = new EntryProcessorEntry<>(1, 2, Optional.empty());
     entry.remove();
     entry.setValue(3);
     assertThat(entry.getAction()).isEqualTo(Action.UPDATED);
@@ -79,7 +97,7 @@ final class EntryProcessorEntryTest {
 
   @Test
   void setValue_onPresentEntry_isUpdated() {
-    var entry = new EntryProcessorEntry<Integer, Integer>(1, 2, Optional.empty());
+    var entry = new EntryProcessorEntry<>(1, 2, Optional.empty());
     entry.setValue(3);
     assertThat(entry.getAction()).isEqualTo(Action.UPDATED);
   }

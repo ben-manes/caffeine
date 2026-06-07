@@ -330,7 +330,7 @@ final class CaffeineSpecTest {
 
     assertThat(spec).isEqualTo(CaffeineSpec.parse(spec.toParsableString()));
     assertThat(spec).isEqualTo(reflectivelyConstruct(spec.toParsableString()));
-    assertThat(spec).isEqualTo(CaffeineSpec.parse(spec.toParsableString().replaceAll(",", ",,")));
+    assertThat(spec).isEqualTo(CaffeineSpec.parse(spec.toParsableString().replace(",", ",,")));
   }
 
   private static CaffeineSpec toSpec(CacheContext context, Function<Duration, String> formatter) {

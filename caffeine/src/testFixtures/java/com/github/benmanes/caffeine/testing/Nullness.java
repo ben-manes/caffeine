@@ -32,7 +32,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressFBWarnings("AI_ANNOTATION_ISSUES_NEEDS_NULLABLE")
+@SuppressFBWarnings({"AI_ANNOTATION_ISSUES_NEEDS_NULLABLE", "NP_NONNULL_RETURN_VIOLATION"})
 public final class Nullness {
 
   private Nullness() {}

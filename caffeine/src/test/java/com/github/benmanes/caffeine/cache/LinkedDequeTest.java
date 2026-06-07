@@ -956,7 +956,7 @@ final class LinkedDequeTest {
   /* --------------- Deque providers --------------- */
 
   static Stream<LinkedDeque<LinkedValue>> empty() {
-    return Stream.of(new AccessOrderDeque<LinkedValue>(), new WriteOrderDeque<LinkedValue>());
+    return Stream.of(new AccessOrderDeque<>(), new WriteOrderDeque<>());
   }
 
   static Stream<LinkedDeque<LinkedValue>> full() {

@@ -65,7 +65,7 @@ public final class LinkedDequeTests extends TestCase {
   private static Test newTestSuite(String name, Supplier<LinkedDeque<LinkedValue>> supplier) {
     return QueueTestSuiteBuilder
         .using(new TestLinkedValueGenerator() {
-          @Override public Queue<LinkedValue> create(LinkedValue[] elements) {
+          @Override protected Queue<LinkedValue> create(LinkedValue[] elements) {
             var deque = useTarget.get() ? supplier.get() : new ArrayDeque<LinkedValue>();
             deque.addAll(MinimalCollection.of(elements));
             useTarget.set(false);
