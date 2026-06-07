@@ -204,7 +204,8 @@ import junit.textui.TestRunner;
     "RethrowReflectiveOperationExceptionAsLinkageError", "serial", "SwitchDefault", "SystemOut",
     "ThreadPriorityCheck", "try", "unchecked", "UndefinedEquals", "UnnecessaryFinal", "unused",
     "Var", "Varifier"})
-@SuppressFBWarnings({"AI_ANNOTATION_ISSUES_NEEDS_NULLABLE", "AT_NONATOMIC_64BIT_PRIMITIVE",
+@SuppressFBWarnings({"AI_ANNOTATION_ISSUES_NEEDS_NULLABLE",
+    "IAOM_DO_NOT_INCREASE_METHOD_ACCESSIBILITY", "AT_NONATOMIC_64BIT_PRIMITIVE",
     "BED_BOGUS_EXCEPTION_DECLARATION", "DCN_NULLPOINTER_EXCEPTION",
     "DM_BOXED_PRIMITIVE_FOR_PARSING", "DM_GC", "FORMAT_STRING_MANIPULATION",
     "HES_EXECUTOR_NEVER_SHUTDOWN", "HES_LOCAL_EXECUTOR_SERVICE",

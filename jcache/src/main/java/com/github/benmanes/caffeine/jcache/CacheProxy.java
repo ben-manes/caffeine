@@ -86,7 +86,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private static final Logger logger = System.getLogger(CacheProxy.class.getName());
 
   protected final com.github.benmanes.caffeine.cache.Cache<K, @Nullable Expirable<V>> cache;
-  protected final CaffeineConfiguration<K, V> configuration;
   protected final Optional<CacheLoader<K, V>> cacheLoader;
   protected final Set<CompletableFuture<?>> inFlight;
   protected final JCacheStatisticsMXBean statistics;
@@ -94,6 +93,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected final Executor executor;
   protected final Ticker ticker;
 
+  private final CaffeineConfiguration<K, V> configuration;
   private final CacheManager cacheManager;
   private final CacheWriter<K, V> writer;
   private final JCacheMXBean cacheMxBean;
@@ -407,15 +407,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if ((expirable != null) && (expireTimeMillis == Long.MIN_VALUE)) {
         expireTimeMillis = expirable.getExpireTimeMillis();
       }
-      if (expireTimeMillis == 0) {
-        // The TCK asserts that expired entry is not counted in the puts stats, despite the javadoc
-        // saying otherwise. See CacheMBStatisticsBeanTest.testExpiryOnCreation()
+      if ((expireTimeMillis == 0) && (expirable == null)) {
         result.written = false;
-
-        // The TCK asserts that a create is not published, so skipping on update for consistency.
-        // See CacheExpiryTest.expire_whenCreated_CreatedExpiryPolicy()
-        result.oldValue = (expirable == null) ? null : expirable.get();
-
         dispatcher.publishExpired(this, key, newValue);
         return null;
       } else if (expirable == null) {

@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 
+import org.apache.commons.text.TextStringBuilder;
+
 import com.github.benmanes.caffeine.cache.local.AddConstructor;
 import com.github.benmanes.caffeine.cache.local.AddDeques;
 import com.github.benmanes.caffeine.cache.local.AddExpirationTicker;
@@ -90,19 +92,21 @@ public final class LocalCacheFactoryGenerator {
 
   /** Returns an encoded form of the class name for compact use. */
   private static String encode(String className) {
-    return Feature.makeEnumName(className)
+    return new TextStringBuilder(Feature.makeEnumName(className))
         .replaceFirst("STRONG_KEYS", "S")
         .replaceFirst("WEAK_KEYS", "W")
-        .replaceFirst("_STRONG_VALUES", "S")
-        .replaceFirst("_INFIRM_VALUES", "I")
-        .replaceFirst("_LISTENING", "L")
-        .replaceFirst("_STATS", "S")
-        .replaceFirst("_MAXIMUM", "M")
-        .replaceFirst("_WEIGHT", "W")
-        .replaceFirst("_SIZE", "S")
-        .replaceFirst("_EXPIRE_ACCESS", "A")
-        .replaceFirst("_EXPIRE_WRITE", "W")
-        .replaceFirst("_REFRESH_WRITE", "R");
+        .replaceFirst("STRONG_VALUES", "S")
+        .replaceFirst("INFIRM_VALUES", "I")
+        .replaceFirst("LISTENING", "L")
+        .replaceFirst("STATS", "S")
+        .replaceFirst("MAXIMUM", "M")
+        .replaceFirst("WEIGHT", "W")
+        .replaceFirst("SIZE", "S")
+        .replaceFirst("EXPIRE_ACCESS", "A")
+        .replaceFirst("EXPIRE_WRITE", "W")
+        .replaceFirst("REFRESH_WRITE", "R")
+        .deleteAll("_")
+        .toString();
   }
 
   public static void main(String[] args) throws IOException {

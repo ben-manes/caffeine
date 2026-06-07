@@ -290,7 +290,7 @@ final class CaffeinatedGuavaTest {
   void getUnchecked_loaderNullPointerException(
       Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
     var npe = new NullPointerException("loader bug");
-    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+    var cache = factory.apply(new CacheLoader<>() {
       @SuppressWarnings("PMD.AvoidThrowingNullPointerException")
       @Override public Integer load(Integer key) {
         throw npe;
@@ -313,7 +313,7 @@ final class CaffeinatedGuavaTest {
   void getAll_loaderNullPointerException(
       Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
     var npe = new NullPointerException("loader bug");
-    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+    var cache = factory.apply(new CacheLoader<>() {
       @SuppressWarnings("PMD.AvoidThrowingNullPointerException")
       @Override public Integer load(Integer key) {
         throw npe;
@@ -329,7 +329,7 @@ final class CaffeinatedGuavaTest {
   void getAll_bulkLoaderNullPointerException(
       Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
     var npe = new NullPointerException("bulk loader bug");
-    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+    var cache = factory.apply(new CacheLoader<>() {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
@@ -356,7 +356,7 @@ final class CaffeinatedGuavaTest {
   void apply_loaderNullPointerException(
       Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
     var npe = new NullPointerException("loader bug");
-    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+    var cache = factory.apply(new CacheLoader<>() {
       @SuppressWarnings("PMD.AvoidThrowingNullPointerException")
       @Override public Integer load(Integer key) {
         throw npe;
@@ -372,7 +372,7 @@ final class CaffeinatedGuavaTest {
   void apply_loaderCheckedException(
       Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
     var error = new IOException("checked");
-    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+    var cache = factory.apply(new CacheLoader<>() {
       @Override public Integer load(Integer key) throws Exception {
         throw error;
       }
@@ -436,7 +436,7 @@ final class CaffeinatedGuavaTest {
   @MethodSource("bulkLoadingCaches")
   void cacheLoader_bulk_nullValue(
       Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
-    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+    var cache = factory.apply(new CacheLoader<>() {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
@@ -455,7 +455,7 @@ final class CaffeinatedGuavaTest {
   @MethodSource("bulkLoadingCaches")
   void cacheLoader_bulk_nullMap(
       Function<CacheLoader<Integer, Integer>, LoadingCache<Integer, Integer>> factory) {
-    var cache = factory.apply(new CacheLoader<Integer, Integer>() {
+    var cache = factory.apply(new CacheLoader<>() {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
@@ -473,8 +473,7 @@ final class CaffeinatedGuavaTest {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override
-      public ListenableFuture<Integer> reload(Integer key, Integer oldValue) {
+      @Override public ListenableFuture<Integer> reload(Integer key, Integer oldValue) {
         return reloader;
       }
     });
@@ -493,8 +492,7 @@ final class CaffeinatedGuavaTest {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override
-      public ListenableFuture<Integer> reload(Integer key, Integer oldValue) {
+      @Override public ListenableFuture<Integer> reload(Integer key, Integer oldValue) {
         return reloader;
       }
     });
@@ -549,7 +547,7 @@ final class CaffeinatedGuavaTest {
   }
 
   /** Returns {@code null} for use when testing null checks while satisfying null analysis tools. */
-  @SuppressFBWarnings("AI_ANNOTATION_ISSUES_NEEDS_NULLABLE")
+  @SuppressFBWarnings({"AI_ANNOTATION_ISSUES_NEEDS_NULLABLE", "NP_NONNULL_RETURN_VIOLATION"})
   @SuppressWarnings({"DataFlowIssue", "NullableProblems",
       "NullAway", "TypeParameterUnusedInFormals"})
   private static <T> @NonNull T nullRef() {

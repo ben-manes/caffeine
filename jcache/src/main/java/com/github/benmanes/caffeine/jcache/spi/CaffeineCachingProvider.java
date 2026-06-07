@@ -61,7 +61,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
       new JCacheClassLoader(Thread.currentThread().getContextClassLoader());
 
   @GuardedBy("itself")
-  final Map<ClassLoader, Map<URI, CacheManager>> cacheManagers;
+  private final Map<ClassLoader, Map<URI, CacheManager>> cacheManagers;
 
   boolean isOsgiComponent;
 

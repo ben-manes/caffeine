@@ -12,6 +12,7 @@ jitwatch.out
 .claude/agent-memory*/
 .claude/worktrees/
 .claude/reports/
+.antigravitycli/
 __pycache__/
 .opencode/
 .agents/

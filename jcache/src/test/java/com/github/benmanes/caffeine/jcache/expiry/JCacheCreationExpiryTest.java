@@ -91,7 +91,7 @@ final class JCacheCreationExpiryTest {
   private static JCacheFixture zeroCreationFixture(AtomicInteger createdEvents) {
     CacheEntryCreatedListener<Integer, Integer> listener =
         events -> events.forEach(event -> createdEvents.incrementAndGet());
-    var listenerConfig = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+    var listenerConfig = new MutableCacheEntryListenerConfiguration<>(
         /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
         /* isOldValueRequired= */ false, /* isSynchronous= */ true);
     return JCacheFixture.builder()

@@ -122,7 +122,7 @@ final class JavaSerializationCopierTest {
   @Test
   void deserializable_classNotFound() {
     var copier = new JavaSerializationCopier() {
-      @Override protected ObjectInputStream newInputStream(
+      @Override ObjectInputStream newInputStream(
           InputStream in, ClassLoader classLoader) throws IOException {
         return new ObjectInputStream(in) {
           @Override protected Class<?> resolveClass(ObjectStreamClass desc)
@@ -151,7 +151,7 @@ final class JavaSerializationCopierTest {
 
   @Test
   void defaultConstructor() {
-    var copier = new AbstractCopier<Object>() {
+    var copier = new AbstractCopier<>() {
       @Override protected Object serialize(Object object) {
         throw new UnsupportedOperationException();
       }

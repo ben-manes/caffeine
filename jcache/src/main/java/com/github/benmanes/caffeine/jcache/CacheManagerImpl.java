@@ -45,11 +45,12 @@ import org.jspecify.annotations.Nullable;
 public final class CacheManagerImpl implements CacheManager {
   private static final Logger logger = System.getLogger(CacheManagerImpl.class.getName());
 
+  private final Object lock;
+
   final WeakReference<ClassLoader> classLoaderReference;
   final Map<String, CacheProxy<?, ?>> caches;
   final CachingProvider cacheProvider;
   final Properties properties;
-  final Object lock;
   final URI uri;
 
   final boolean runsAsAnOsgiBundle;

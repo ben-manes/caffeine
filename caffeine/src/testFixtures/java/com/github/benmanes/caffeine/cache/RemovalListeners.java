@@ -59,7 +59,7 @@ public final class RemovalListeners {
       implements RemovalListener<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
 
-    public AtomicInteger rejected = new AtomicInteger();
+    public final AtomicInteger rejected = new AtomicInteger();
 
     @Override
     public void onRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {

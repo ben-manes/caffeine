@@ -25,6 +25,7 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_3;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -258,7 +259,7 @@ final class JCacheAccessExpiryTest {
   void invoke_existsOnly_doesNotExtendAccessExpiry() {
     try (var fixture = jcacheFixture()) {
       var expirable = getExpirable(fixture.jcache(), KEY_1);
-      assertThat(expirable).isNotNull();
+      requireNonNull(expirable);
       long expireTimeBefore = expirable.getExpireTimeMillis();
 
       // Advance the ticker so any access-expiry update would be observable as a

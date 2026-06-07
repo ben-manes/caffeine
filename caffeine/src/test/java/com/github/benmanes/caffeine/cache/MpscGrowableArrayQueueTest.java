@@ -318,7 +318,7 @@ final class MpscGrowableArrayQueueTest {
   @Test
   void offer_unknownResult() {
     var queue = new MpscGrowableArrayQueue<Integer>(2, 8) {
-      @Override protected int offerSlowPath(long mask, long pIndex, long producerLimit) {
+      @Override int offerSlowPath(long mask, long pIndex, long producerLimit) {
         return -1;
       }
     };
@@ -333,7 +333,7 @@ final class MpscGrowableArrayQueueTest {
       @Override protected long availableInQueue(long pIndex, long cIndex) {
         return -1;
       }
-      @Override protected int offerSlowPath(long mask, long pIndex, long producerLimit) {
+      @Override int offerSlowPath(long mask, long pIndex, long producerLimit) {
         return 3;
       }
     };
@@ -344,7 +344,7 @@ final class MpscGrowableArrayQueueTest {
   @Test
   void offer_resizeOutOfMemory() {
     var failOnAllocate = new AtomicBoolean();
-    var queue = new MpscGrowableArrayQueue<Object>(4, 16) {
+    var queue = new MpscGrowableArrayQueue<>(4, 16) {
       @Override @Nullable Object[] allocate(int capacity) {
         if (failOnAllocate.get()) {
           throw new OutOfMemoryError();
@@ -377,7 +377,7 @@ final class MpscGrowableArrayQueueTest {
     var failOnAllocate = new AtomicBoolean();
     var resizing = new CountDownLatch(1);
     var releaseOome = new CountDownLatch(1);
-    var queue = new MpscGrowableArrayQueue<Object>(4, 16) {
+    var queue = new MpscGrowableArrayQueue<>(4, 16) {
       @Override @Nullable Object[] allocate(int capacity) {
         if (failOnAllocate.compareAndSet(true, false)) {
           resizing.countDown();

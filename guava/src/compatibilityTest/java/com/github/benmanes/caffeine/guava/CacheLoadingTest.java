@@ -42,7 +42,6 @@ import java.util.logging.Logger;
 import org.jspecify.annotations.NullUnmarked;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.github.benmanes.caffeine.guava.TestingCacheLoaders.IdentityLoader;
 import com.github.benmanes.caffeine.guava.TestingRemovalListeners.CountingRemovalListener;
 import com.google.common.cache.CacheLoader;
@@ -84,14 +83,14 @@ public class CacheLoadingTest extends TestCase {
   TestLogHandler logHandler;
 
   @Override
-  public void setUp() throws Exception {
+  protected void setUp() throws Exception {
     super.setUp();
     logHandler = new TestLogHandler();
     logger.addHandler(logHandler);
   }
 
   @Override
-  public void tearDown() throws Exception {
+  protected void tearDown() throws Exception {
     try {
       super.tearDown();
     } finally {

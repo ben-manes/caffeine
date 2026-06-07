@@ -117,6 +117,7 @@ For deep dives, read these on demand (not auto-loaded to save context):
 - `.claude/docs/testing.md` — CacheSpec parameterization, Truth subjects, test utilities
 - `.claude/docs/research-foundations.md` — papers mapped to implementation (TinyLFU, BP-Wrapper, etc.)
 - `.claude/docs/finding-taxonomy.md` — standard severity/category schema for audit and review findings
+- `.claude/docs/jsr107-conformance.md` — JSR-107 (JCache) conformance
 
 When to read which doc:
 - Concurrency or thread-safety work → `synchronization.md`
@@ -124,14 +125,16 @@ When to read which doc:
 - Writing or modifying tests → `testing.md`
 - Understanding algorithm choices → `research-foundations.md`
 - Interpreting or writing audit findings → `finding-taxonomy.md`
+- Auditing JSR-107 conformance of the jcache adapter → `jsr107-conformance.md`
 
 ## Claude Code Extensions
 
 - **Rules** (`.claude/rules/`): project conventions, loaded automatically when relevant
 - **Skills** (`/review-change`): multi-layer parallel code review with blind + design-aware + regression pattern matching
-- **Skills** (`/audit-*`): 21 snapshot-style deep analysis skills for concurrency, correctness, and performance
+- **Skills** (`/audit-*`): 24 snapshot-style deep analysis skills for concurrency, correctness, and performance
 - **Skills** (`/audit-adversarial`): hostile full-codebase review with NO design context — finds bugs domain familiarity masks
 - **Skills** (`/audit-temporal-walk`): heavyweight history-mining audit. Walks every commit oldest-first, forward-tracking issues across the project's full history. Catches bugs snapshot-style audits cannot — half-fixes invisible from current state, latent+trigger pairs across multi-commit interactions. Manually-invoked CLI tool (`walker.py` + `verify.py`), hours-long, rare-run (every several months or before a major release)
+- **Skills** (`/audit-jcache-conformance`): JSR-107 1.1.1 spec-conformance verification for the jcache adapter.
 - **Skills** (`/sim-*`): simulator workflow automation — `/sim-compare` for policy comparison charts, `/sim-analyze` for trace characterization
 - **Auditor agent** (`.claude/agents/`): multi-pass — analysis → reflection → evaluator challenge → targeted re-audit
 
@@ -160,5 +163,8 @@ When to read which doc:
 | Build/CI configuration correctness | `/audit-build-ci` |
 | Documented behavior vs. implementation drift | `/audit-contract-drift` |
 | Divergences between sibling implementations | `/audit-sibling-divergence` |
+| Adaptive hill-climber / window-resize correctness | `/audit-adaptivity` |
+| Drain-status / node-lifecycle / async-value state machines | `/audit-state-machine` |
+| JSR-107 (JCache) spec conformance of the adapter | `/audit-jcache-conformance` |
 
 **Review vs Audit**: `/review-change` is for pre-commit code review — reads design docs and filters known-intentional patterns. `/audit-*` skills are for correctness doubts — independent, no design context filtering. Use review for routine changes, audit when you need fresh-eyes analysis. `/audit-temporal-walk` is a third category (heavyweight, rare-run history-mining) — see its `SKILL.md` for invocation.

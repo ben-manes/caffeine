@@ -133,7 +133,7 @@ final class EventDispatcherTest {
   void deregister_classStrictCustomConfiguration() {
     CacheEntryCreatedListener<Integer, Integer> createdListener = Mockito.mock();
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
-    var configuration = new CustomCacheEntryListenerConfiguration<Integer, Integer>(
+    var configuration = new CustomCacheEntryListenerConfiguration<>(
         () -> createdListener, /* filterFactory= */ null,
         /* isOldValueRequired= */ false, /* isSynchronous= */ false);
     dispatcher.register(configuration);

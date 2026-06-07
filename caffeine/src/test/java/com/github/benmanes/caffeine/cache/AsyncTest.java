@@ -185,7 +185,7 @@ final class AsyncTest {
   static Stream<CompletableFuture<Integer>> unsuccessful() {
     return Stream.of(
         null,
-        new CompletableFuture<Integer>(),
+        new CompletableFuture<>(),
         CompletableFuture.completedFuture(null),
         newFailedFuture(new InterruptedException()),
         newFailedFuture(new IllegalStateException()));

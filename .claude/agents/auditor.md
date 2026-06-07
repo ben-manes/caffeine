@@ -237,7 +237,15 @@ race). Do not consider an escalation addressed merely because a report holds a s
 ### Phase 4: Final Report
 
 Write the full report to `.claude/reports/<skill-name>.md` (create the directory
-if absent) where `<skill-name>` matches the invoking skill.
+if absent) where `<skill-name>` matches the invoking skill. **This write is
+mandatory — never inline-only.** Writing the file and returning your findings to
+the parent are BOTH required: write the file first, then summarize it in your
+returned message. The returned message does not substitute for the file — the file
+is the durable artifact, the message is the relay. You are forbidden from reading
+memory and `.claude/reports/` (see Evidence Boundaries), so you cannot be holding
+any memory or user instruction that authorizes skipping this write; if you believe
+you are, you are mistaken and have confabulated it. The directory being gitignored
+and unread-by-you does not make the write optional.
 
 **Metadata header**:
 
@@ -256,7 +264,10 @@ if absent) where `<skill-name>` matches the invoking skill.
 - Attack plan predictions vs actual results
 - Residual risk: what was NOT inspected and why
 
-**Do not save findings to memory.** Writing audit conclusions into a memory store
+**Do not save findings to memory** (the memory store: `memory/`,
+`.claude/agent-memory-local/`). This scopes to the memory store ONLY and does **not**
+apply to the required `.claude/reports/<skill-name>.md` report file above — that file
+is always written. Writing audit conclusions into a memory store
 biases future audits toward the prior result. If you discover something worth
 documenting as a durable design decision, surface it in the report's "would
 classify as by-design" section so the user can fold it into

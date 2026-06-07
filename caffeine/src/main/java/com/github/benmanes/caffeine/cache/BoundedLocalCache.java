@@ -1200,7 +1200,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       // Grows the sample period as the step size decays to avoid converging near the initial ratio
       double initialStep = HILL_CLIMBER_STEP_PERCENT * maximum();
       double magnitude = Math.max(initialStep / SMALL_CACHE_SAMPLE_RATIO_CAP, Math.abs(stepSize()));
-      double ratio = Math.max(1.0, Math.min(SMALL_CACHE_SAMPLE_RATIO_CAP, initialStep / magnitude));
+      double ratio = (magnitude == 0.0)
+          ? 1.0
+          : Math.max(1.0, Math.min(SMALL_CACHE_SAMPLE_RATIO_CAP, initialStep / magnitude));
       effectiveSampleSize = (long) (effectiveSampleSize * ratio);
       stepDecayRate = SMALL_CACHE_STEP_DECAY_RATE;
     }
@@ -4111,7 +4113,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
-    public boolean exec() {
+    protected boolean exec() {
       try {
         run();
       } catch (Throwable t) {

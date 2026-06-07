@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
@@ -776,7 +777,7 @@ final class TimerWheelTest {
     @Override public Int getKey() { return longToInt(variableTime); }
     @Override public Object getKeyReference() { return null; }
     @Override public Object getKeyReferenceOrNull() { return null; }
-    @Override public Int getValue() { return getKey().negate(); }
+    @Override public Int getValue() { return requireNonNull(getKey()).negate(); }
     @Override public Object getValueReference() { return null; }
     @Override public void setValue(Int value, ReferenceQueue<Int> referenceQueue) {}
     @Override public boolean containsValue(@NonNull Object value) { return false; }
