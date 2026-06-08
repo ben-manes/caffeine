@@ -27,7 +27,6 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTr
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CamelabTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
-  static final long BLOCK_SIZE = 512;
 
   public CamelabTraceReader(String filePath) {
     super(filePath);
@@ -42,13 +41,9 @@ public final class CamelabTraceReader extends TextTraceReader implements KeyOnly
         return LongStream.empty();
       }
 
-      long startAddress = Long.parseLong(array[2]);
-      int requestSize = Integer.parseInt(array[3]);
-      long[] blocks = new long[requestSize];
-      for (int i = 0; i < requestSize; i++) {
-        blocks[i] = startAddress + (i * BLOCK_SIZE);
-      }
-      return LongStream.of(blocks);
+      long startBlock = Long.parseLong(array[2]);
+      int sequence = Integer.parseInt(array[3]);
+      return LongStream.range(startBlock, startBlock + sequence);
     });
   }
 }
