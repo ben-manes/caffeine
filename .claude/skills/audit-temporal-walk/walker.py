@@ -508,6 +508,9 @@ def apply_response(response: dict, state: dict, sha: str, date: str
 # --------------------------------------------------------------------------
 
 def main() -> None:
+    # Line-buffer stdout so progress is visible live when redirected to a file
+    # (block buffering otherwise holds all output until the process exits).
+    sys.stdout.reconfigure(line_buffering=True)
     parser = argparse.ArgumentParser(
         description="Walk git history with Claude to find latent bugs.")
     parser.add_argument("--state", type=Path, default=DEFAULT_STATE)

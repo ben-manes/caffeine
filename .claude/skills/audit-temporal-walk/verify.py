@@ -103,6 +103,43 @@ def extract_balanced_json(text: str, required_keys: tuple[str, ...]) -> dict:
             continue
         if isinstance(obj, dict) and any(k in obj for k in required_keys):
             return obj
+
+    # Repair-fallback for trailing-brace truncation: a complete-looking response
+    # whose tail is missing a closing brace/bracket. Re-walk from the first '{'
+    # tracking the bracket stack; if it ended unbalanced, append the matching
+    # closers and retry once. Mirrors walker.py's extractor.
+    start = text.find("{")
+    if start != -1:
+        stack: list[str] = []
+        in_str = False
+        escape = False
+        for j in range(start, n):
+            ch = text[j]
+            if in_str:
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif ch == '"':
+                    in_str = False
+                continue
+            if ch == '"':
+                in_str = True
+            elif ch in "{[":
+                stack.append(ch)
+            elif ch in "}]":
+                if stack:
+                    stack.pop()
+        if stack:
+            tail = text[start:].rstrip().rstrip(",")
+            repair = "".join("}" if c == "{" else "]" for c in reversed(stack))
+            try:
+                obj = json.loads(tail + repair)
+                if isinstance(obj, dict) and any(k in obj for k in required_keys):
+                    return obj
+            except json.JSONDecodeError:
+                pass
+
     raise ValueError(f"No parseable verdict JSON in: {text[:600]}")
 
 
@@ -362,6 +399,9 @@ def truncate_to(text: str, limit: int, label: str) -> str:
 
 
 def main() -> None:
+    # Line-buffer stdout so progress is visible live when redirected to a file
+    # (block buffering otherwise holds all output until the process exits).
+    sys.stdout.reconfigure(line_buffering=True)
     parser = argparse.ArgumentParser(
         description="Verify temporal-walker findings against current HEAD code.")
     parser.add_argument("--state", type=Path, default=DEFAULT_STATE)
@@ -377,8 +417,13 @@ def main() -> None:
         "--effort", default=None,
         choices=["low", "medium", "high", "xhigh", "max"],
         help="Reasoning effort level for the verifier model.")
-    parser.add_argument("--min-confidence", choices=["high", "med", "low"],
-                        default="med")
+    parser.add_argument(
+        "--min-confidence", choices=["high", "med", "low"], default="low",
+        help="Verify survivors at or above this confidence. Defaults to 'low' "
+             "(verify every survivor): introduction-time confidence is an "
+             "unreliable gate -- real bugs are routinely flagged 'low' while "
+             "resolved/false-positive concerns score 'high' -- and the survivor "
+             "set is small. Raise it only to triage verification cost.")
     parser.add_argument("--max-issues", type=int, default=None)
     parser.add_argument(
         "--design-decisions", type=Path, default=DEFAULT_DESIGN_DECISIONS,
@@ -417,13 +462,25 @@ def main() -> None:
         if args.max_issues and processed >= args.max_issues:
             break
         iid = issue["id"]
-        if iid in verified:
+        # Skip already-verified issues, but retry ones that previously errored:
+        # transient parse/CLI failures are common and usually succeed on retry,
+        # so they must not be permanently skipped on resume.
+        if (iid in verified) and (verified[iid].get("verdict") != "error"):
             continue
-        try:
-            prompt = render_prompt(template, issue, design_excerpt, fps_excerpt)
-            t0 = time.time()
-            result = call_claude(prompt, args.model, args.effort,
-                                 args.log_dir, iid)
+
+        result = last_error = None
+        for attempt in range(2):
+            try:
+                prompt = render_prompt(template, issue, design_excerpt, fps_excerpt)
+                t0 = time.time()
+                result = call_claude(prompt, args.model, args.effort,
+                                     args.log_dir, iid)
+                break
+            except Exception as e:
+                last_error = e
+                print(f"  [{iid}] attempt {attempt + 1} failed: {e}", file=sys.stderr)
+
+        if result is not None:
             elapsed = time.time() - t0
             verified[iid] = result
             save_verified(verified, args.verified)
@@ -431,10 +488,11 @@ def main() -> None:
             desc = issue["description"][:60]
             print(f"  [{iid}] {verdict:<22} ({elapsed:.0f}s) {desc}")
             processed += 1
-        except Exception as e:
-            print(f"  [{iid}] ERROR: {e}", file=sys.stderr)
+        else:
+            print(f"  [{iid}] ERROR after retry: {last_error}", file=sys.stderr)
             verified[iid] = {
-                "verdict": "error", "explanation": str(e), "finding_markdown": "",
+                "verdict": "error", "explanation": str(last_error),
+                "finding_markdown": "",
             }
             save_verified(verified, args.verified)
 

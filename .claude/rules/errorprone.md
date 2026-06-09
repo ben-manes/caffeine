@@ -21,6 +21,7 @@ paths:
 ## Suppressions
 - Suppressions are rare (~9 files in main source) — prefer fixing over suppressing
 - When suppressing, always combine `DataFlowIssue` and `NullAway` if the issue is a deliberate null assignment
+- To intentionally ignore a `@CheckReturnValue` result, annotate the method `@SuppressWarnings("CheckReturnValue")` rather than the `var unused = …` idiom EP suggests — `unused` relies on EP's special-casing of the name, and other static analyzers flag it as a genuine unused variable
 - Code generation (`compileCodeGenJava`) has NullAway disabled entirely
 
 ## Disabled Checks
