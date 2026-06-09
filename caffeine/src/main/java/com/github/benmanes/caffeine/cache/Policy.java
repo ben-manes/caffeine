@@ -80,6 +80,26 @@ public interface Policy<K, V> {
   }
 
   /**
+   * Returns whether the entry associated with {@code key} is logically expired (invisible to all
+   * cache read operations) but has not yet been physically removed from the cache or had its
+   * removal listener notified. This window exists because expiration is evaluated on every read
+   * path, but physical removal and listener notification happen asynchronously in the maintenance
+   * cycle.
+   *
+   * <p>The result is a best-effort snapshot taken without holding the eviction lock. A {@code true}
+   * result means the entry was pending eviction at the moment of the call, but the maintenance task
+   * may concurrently complete the eviction. A {@code false} result means the entry is either
+   * absent, logically alive, or already fully purged.
+   *
+   * @param key the key to inspect
+   * @return {@code true} if the entry is logically expired and awaiting physical removal
+   * @throws NullPointerException if the specified key is null
+   */
+  default boolean isPendingEviction(K key) {
+    return false;
+  }
+
+  /**
    * Returns an unmodifiable snapshot {@link Map} view of the in-flight refresh operations.
    *
    * @return a snapshot view of the in-flight refresh operations

@@ -4250,6 +4250,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
       return (node == null) ? null : cache.nodeToCacheEntry(node, transformer, node.getWeight());
     }
+    @Override public boolean isPendingEviction(K key) {
+      return cache.isPendingEviction(key);
+    }
     @SuppressWarnings("Java9CollectionFactory")
     @Override public Map<K, CompletableFuture<V>> refreshes() {
       var refreshes = cache.refreshes;
