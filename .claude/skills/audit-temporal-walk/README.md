@@ -111,33 +111,17 @@ The biggest knobs:
 - **Design priors** in `per-commit.txt`. Lists intentional patterns the
   walker should NOT flag. When a recurring false positive is identified
   (cross-model entry added to memory), append the rule here.
-- **Confidence threshold** in `verify.py` (`--min-confidence`). Default
-  filter drops `low` confidence (smells) before paying for verification.
-  Use `--min-confidence high` for a tighter triage; `low` for a full sweep.
+- **Confidence threshold** in `verify.py` (`--min-confidence`). Defaults to
+  `low` (verify every survivor). Introduction-time confidence is an unreliable
+  gate — in practice real bugs are routinely flagged `low` while
+  resolved/false-positive concerns score `high`, and the survivor set is small.
+  Raise it only to triage verification cost on an unusually large survivor list.
 - **Module scope** via the `WALKER_SCOPE` env var. Defaults to
   `caffeine/src/main/java/...`. Other modules (simulator, jcache, guava)
   would need their own design priors and pattern catalog.
 - **Model** via `--model` on either driver. Omit to use the `claude` CLI's
   default (the session model). Quality-critical, so prefer running from a
   session on the strongest model available.
-
-## Validation history
-
-The first end-to-end run produced 8 surviving verified findings out of
-72 open issues at walk completion (750 commits walked, 139 issues resolved
-forward, 471 doc-only commits filtered).
-
-After hand-review against design docs and cross-model audit memory:
-- 3 confirmed real bugs worth fixing
-- 1 misunderstanding by the walker (closed)
-- 4 design-intent matches the priors didn't fully cover (added to priors
-  in subsequent revisions)
-
-That's a 37.5% true-positive rate — comparable to detail.dev-style
-snapshot mining but surfacing different bugs (the walker found the
-inverted-comparator bug in `expireAfterAccessOrder`, the iterate-twice
-bug in `getAll`, and the `refreshAll` Javadoc drift, none of which appear
-in detail.dev's caffeine slice).
 
 ## Limitations
 

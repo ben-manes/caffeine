@@ -331,7 +331,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
             cache.remove(key, future);
             if (error == null) {
               error = t;
-            } else {
+            } else if (error != t) {
               error.addSuppressed(t);
             }
           }
@@ -357,7 +357,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
             logger.log(Level.WARNING, "Exception thrown during asynchronous load", t);
             if (error == null) {
               error = t;
-            } else {
+            } else if (error != t) {
               error.addSuppressed(t);
             }
           }
@@ -659,8 +659,14 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public @Nullable V getIfPresent(K key) {
-      CompletableFuture<V> future = asyncCache().cache().getIfPresent(key, /* recordStats= */ true);
-      return Async.getIfReady(future);
+      var future = asyncCache().cache().getIfPresent(key, /* recordStats= */ false);
+      var value = Async.getIfReady(future);
+      if (value == null) {
+        asyncCache().cache().statsCounter().recordMisses(1);
+      } else {
+        asyncCache().cache().statsCounter().recordHits(1);
+      }
+      return value;
     }
 
     @Override

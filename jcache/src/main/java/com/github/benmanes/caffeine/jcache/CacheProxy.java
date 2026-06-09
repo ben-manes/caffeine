@@ -1058,8 +1058,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       } catch (Throwable t) {
         if (outer == null) {
           return t;
+        } else if (outer != t) {
+          outer.addSuppressed(t);
         }
-        outer.addSuppressed(t);
       }
     }
     return outer;

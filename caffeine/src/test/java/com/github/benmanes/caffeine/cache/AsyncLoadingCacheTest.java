@@ -925,6 +925,63 @@ final class AsyncLoadingCacheTest {
     assertThat(loader.asyncLoad(Int.valueOf(1), Runnable::run)).succeedsWith(1);
   }
 
+  @Test
+  @CheckMaxLogLevel(WARN)
+  void getAll_weigherThrowsSharedException() {
+    // A weigher that throws the same instance for every entry must not make the bulk completer
+    // self-suppress: error.addSuppressed(error) throws IllegalArgumentException, masking the real
+    // failure and leaking the proxy futures left unvisited when the exception escapes the loop.
+    var expected = new RuntimeException();
+    Weigher<Int, Int> weigher = (key, value) -> { throw expected; };
+    BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> loader =
+        (keys, executor) -> {
+          ImmutableMap<Int, Int> results = keys.stream()
+              .collect(toImmutableMap(identity(), identity()));
+          return CompletableFuture.completedFuture(results);
+        };
+    AsyncLoadingCache<Int, Int> cache = Caffeine.newBuilder()
+        .weigher(weigher)
+        .maximumWeight(Long.MAX_VALUE)
+        .executor(Runnable::run)
+        .buildAsync(AsyncCacheLoader.bulk(loader));
+
+    var future = cache.getAll(Int.listOf(1, 2, 3));
+
+    var failure = assertThrows(CompletionException.class, future::join);
+    assertThat(failure).hasCauseThat().isSameInstanceAs(expected);
+    assertThat(cache.asMap()).isExhaustivelyEmpty();
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(RuntimeException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(3);
+  }
+
+  @Test
+  void getIfPresent_inFlight_recordsMissConsistentlyWithGetAllPresent() {
+    // An in-flight future is logically absent for a query (getIfReady returns null), so the
+    // synchronous view records a miss — consistent with getAllPresent — rather than a hit.
+    CacheLoader<Int, Int> loader = key -> key;
+    AsyncLoadingCache<Int, Int> cache = Caffeine.newBuilder()
+        .recordStats()
+        .executor(Runnable::run)
+        .buildAsync(loader);
+
+    cache.put(Int.valueOf(1), new CompletableFuture<>());
+    assertThat(cache.synchronous().getIfPresent(Int.valueOf(1))).isNull();
+    assertThat(cache.synchronous().getAllPresent(Int.listOf(1))).isExhaustivelyEmpty();
+    assertThat(cache.synchronous().stats().hitCount()).isEqualTo(0);
+    assertThat(cache.synchronous().stats().missCount()).isEqualTo(2);
+
+    cache.put(Int.valueOf(2), CompletableFuture.completedFuture(Int.valueOf(2)));
+    assertThat(cache.synchronous().getIfPresent(Int.valueOf(2))).isEqualTo(2);
+    assertThat(cache.synchronous().stats().hitCount()).isEqualTo(1);
+
+    assertThat(cache.synchronous().getIfPresent(Int.valueOf(3))).isNull();
+    assertThat(cache.synchronous().stats().missCount()).isEqualTo(3);
+  }
+
   private static final class LoadAllException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 

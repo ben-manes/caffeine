@@ -1166,6 +1166,31 @@ final class CacheProxyTest {
     } catch (IOException expected) { /* ignored */ }
   }
 
+  @Test
+  void close_resourcesThrowSameInstance_doesNotSelfSuppress() throws IOException {
+    var failure = new IOException();
+    try (CloseableCacheLoader loader = Mockito.mock();
+        CloseableCacheWriter writer = Mockito.mock();
+        CloseableExpiryPolicy expiry = Mockito.mock();
+        var fixture = jcacheFixture(loader, writer, expiry)) {
+      // Two resources throw the same Throwable instance on close(). tryClose must guard against
+      // error.addSuppressed(error), which throws IllegalArgumentException ("Self-suppression not
+      // permitted") and would abort close() before the remaining resources are released.
+      doThrow(failure).when(expiry).close();
+      doThrow(failure).when(writer).close();
+
+      fixture.jcacheLoading().close();
+
+      verify(expiry, atLeastOnce()).close();
+      verify(writer, atLeastOnce()).close();
+
+      // Reset so this test's own try-with-resources cleanup does not self-suppress on the shared
+      // instance (the JDK's try-with-resources combines close failures the same way tryClose does).
+      Mockito.doNothing().when(expiry).close();
+      Mockito.doNothing().when(writer).close();
+    }
+  }
+
   static Stream<Arguments> exceptions() {
     return Stream.of(
         arguments(new IllegalStateException(), IllegalStateException.class, false),

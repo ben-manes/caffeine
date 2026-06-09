@@ -1,6 +1,6 @@
 ---
 name: audit-temporal-walk
-description: Heavyweight history-mining bug audit. Walks the caffeine module's git history chronologically (oldest to HEAD), maintains a forward-tracked issue database, and surfaces concerns introduced by past commits that were never resolved. Catches bugs that snapshot mining cannot — half-fixes invisible from current state, latent+trigger pairs across multi-commit interactions, and partial refactors. Slow (~8-14 hours) and rare-run (every several months or before a major release).
+description: Heavyweight history-mining bug audit. Walks the caffeine module's git history chronologically (oldest to HEAD), maintains a forward-tracked issue database, and surfaces concerns introduced by past commits that were never resolved. Catches bugs that snapshot mining cannot — half-fixes invisible from current state, latent+trigger pairs across multi-commit interactions, and partial refactors. Slow (model/effort-dependent; ~24h on Opus + max effort) and rare-run (every several months or before a major release).
 disable-model-invocation: true
 ---
 
@@ -42,15 +42,18 @@ python3 .claude/skills/audit-temporal-walk/walker.py --no-tools
 # Inspect state without running:
 python3 .claude/skills/audit-temporal-walk/walker.py --summary
 
-# After the walk completes, verify surviving issues against HEAD:
-python3 .claude/skills/audit-temporal-walk/verify.py --min-confidence med
+# After the walk completes, verify surviving issues against HEAD
+# (default --min-confidence=low verifies every survivor):
+python3 .claude/skills/audit-temporal-walk/verify.py
 
 # Read the verified findings:
 cat .claude/reports/audit-temporal-walk-<module>/findings.md
 ```
 
-Wall clock is roughly 8-14 hours for the full caffeine module (~750 commits)
-and is dominated by model latency. Tool-enabled mode (default) adds modest
+Wall clock depends on model and effort and is dominated by model latency:
+roughly 8-14 hours on a mid-tier config, and ~24 hours on Opus + max effort
+(the recommended quality-critical config) for the full caffeine module (~760
+commits). Tool-enabled mode (default) adds modest
 overhead from per-commit Read/Grep round-trips. Resumable from checkpoint
 after quota exhaustion or interruption.
 

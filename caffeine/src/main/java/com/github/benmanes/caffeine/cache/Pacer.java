@@ -74,7 +74,8 @@ final class Pacer {
 
   /** Returns if a task is scheduled to run. */
   public boolean isScheduled() {
-    return (future != null) && !future.isDone();
+    var f = future;
+    return (f != null) && !f.isDone();
   }
 
   /**
