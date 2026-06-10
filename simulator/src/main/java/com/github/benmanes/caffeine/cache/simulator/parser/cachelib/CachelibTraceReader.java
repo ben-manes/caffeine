@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.parser.cachelib;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 
+import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -47,7 +48,10 @@ public final class CachelibTraceReader extends TextTraceReader {
     return lines().skip(1)
         .map(line -> line.split(","))
         .filter(array -> array[1].equals("GET"))
-        .map(array -> AccessEvent.forKeyAndWeight(
-            Long.parseLong(array[0]), Integer.parseInt(array[2])));
+        .flatMap(array -> {
+          var event = AccessEvent.forKeyAndWeight(
+              Long.parseLong(array[0]), Integer.parseInt(array[2]));
+          return Collections.nCopies(Integer.parseInt(array[3]), event).stream();
+        });
   }
 }
