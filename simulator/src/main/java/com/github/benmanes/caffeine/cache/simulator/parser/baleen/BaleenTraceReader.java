@@ -40,7 +40,7 @@ public final class BaleenTraceReader extends TextTraceReader implements KeyOnlyT
     return lines()
         .dropWhile(line -> line.startsWith("#"))
         .map(line -> line.split(" ", 6))
-        .filter(line -> isRead(line[4].charAt(0)))
+        .filter(line -> isRead(line[4]))
         .flatMapToLong(line -> {
           long block = Long.parseLong(line[0]);
           long byteOffset = Long.parseLong(line[1]);
@@ -54,7 +54,7 @@ public final class BaleenTraceReader extends TextTraceReader implements KeyOnlyT
         });
   }
 
-  private static boolean isRead(char operation) {
-    return (operation == '1') || (operation == '2') || (operation == '5');
+  private static boolean isRead(String operation) {
+    return operation.equals("1") || operation.equals("2") || operation.equals("5");
   }
 }
