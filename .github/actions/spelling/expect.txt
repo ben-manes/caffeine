@@ -4,6 +4,7 @@ Adoptium
 Ams
 amsgrad
 appname
+asu
 Autobuild
 awaitility
 Azul
