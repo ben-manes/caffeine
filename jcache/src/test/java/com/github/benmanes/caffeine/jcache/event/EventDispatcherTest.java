@@ -47,6 +47,7 @@ import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryListener;
+import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
 
@@ -151,6 +152,30 @@ final class EventDispatcherTest {
     }
     verify(createdListener, times(4)).onCreated(any());
     assertThat(dispatcher.pending.get()).hasSize(2);
+    assertThat(dispatcher.dispatchQueues.values().stream()
+        .flatMap(queue -> queue.entrySet().stream())).isEmpty();
+  }
+
+  @Test
+  void publishCreated_filterThrows() {
+    CacheEntryCreatedListener<Integer, Integer> createdListener = Mockito.mock();
+    CacheEntryEventFilter<Integer, Integer> filter = event -> {
+      throw new CacheEntryListenerException("broken");
+    };
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    try (Cache<Integer, Integer> cache = Mockito.mock()) {
+      dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
+          () -> createdListener, () -> filter,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+      dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
+          () -> createdListener, /* filterFactory= */ null,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+
+      // a filter failure must not abort the caller's cache operation or affect other listeners
+      dispatcher.publishCreated(cache, 1, 2);
+    }
+    verify(createdListener).onCreated(any());
+    assertThat(dispatcher.pending.get()).hasSize(1);
     assertThat(dispatcher.dispatchQueues.values().stream()
         .flatMap(queue -> queue.entrySet().stream())).isEmpty();
   }

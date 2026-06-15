@@ -930,8 +930,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         return new Expirable<>(value, expireTimeMillis);
       }
       case UPDATED: {
-        statistics.recordPuts(1L);
         publishToCacheWriter(writer::write, () -> entry);
+        statistics.recordPuts(1L);
         requireNonNull(expirable, "Expected a previous value but was null");
         V value = copyOf(requireNonNull(entry.getValue(), "Expected a new value but was null"));
         dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), value);

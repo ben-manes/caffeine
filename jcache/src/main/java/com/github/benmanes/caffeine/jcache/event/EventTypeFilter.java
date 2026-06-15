@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.Objects;
 
 import javax.cache.event.CacheEntryCreatedListener;
@@ -24,7 +26,6 @@ import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryListener;
-import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
 
@@ -37,6 +38,8 @@ import org.jspecify.annotations.Nullable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class EventTypeFilter<K, V> implements CacheEntryEventFilter<K, V> {
+  static final Logger logger = System.getLogger(EventTypeFilter.class.getName());
+
   private final CacheEntryEventFilter<? super K, ? super V> filter;
   private final CacheEntryListener<? super K, ? super V> listener;
 
@@ -48,7 +51,15 @@ final class EventTypeFilter<K, V> implements CacheEntryEventFilter<K, V> {
 
   @Override
   public boolean evaluate(CacheEntryEvent<? extends K, ? extends V> event) {
-    return isCompatible(event) && filter.evaluate(event);
+    try {
+      return isCompatible(event) && filter.evaluate(event);
+    } catch (RuntimeException e) {
+      logger.log(Level.WARNING, "", e);
+      return false;
+    } catch (Throwable t) {
+      logger.log(Level.ERROR, "", t);
+      return false;
+    }
   }
 
   @SuppressWarnings("StatementSwitchToExpressionSwitch")
@@ -63,7 +74,9 @@ final class EventTypeFilter<K, V> implements CacheEntryEventFilter<K, V> {
       case EXPIRED:
         return (listener instanceof CacheEntryExpiredListener<?, ?>);
     }
-    throw new CacheEntryListenerException("Unknown event type: " + event.getEventType());
+    logger.log(Level.WARNING, "Unknown event type: {}",
+        event.getEventType(), new IllegalStateException());
+    return false;
   }
 
   @Override

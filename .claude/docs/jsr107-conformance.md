@@ -242,6 +242,100 @@ session memory for the full rationale.
   **`iterator()` silently skipping expired entries** were all **relaxed in 1.1.1**
   — the 1.0 PDF is not authoritative on these. Always cross-check the 1.1.1
   revision history before treating a 1.0 sentence as binding.
+- **`CacheEvictions` includes expirations** (lazy JCache-level expiry on read/write
+  paths and native `RemovalCause.EXPIRED` evictions both call `recordEvictions`).
+  Ecosystem is 4–0 the other way (RI, Ehcache 3, cache2k, Hazelcast all track
+  expiry separately or not at all and exclude it from `CacheEvictions`), but the
+  spec's "removal initiated by the cache itself to free up space" is ambiguous, the
+  MXBean has no expiry counter, and the TCK only asserts evictions in scenarios
+  with no expiry. Intentional — expired entries would otherwise be invisible in
+  JCache statistics. Do not "fix" toward the ecosystem; it would break dashboards.
+- **An expired entry hit by `remove`/`removeAll`/`getAndRemove` counts as an
+  eviction (+`EXPIRED` event), never a removal (+`REMOVED`)**. The RI's
+  `removeAll` counts expired entries as removals, contradicting its own
+  `remove(K)`; the spec's "one removal per entry that is removed" plus "expired
+  entries are not returned from a cache" back Caffeine's gating. TCK-blind.
+- **A `CacheEntryEventFilter` exception must not abort the in-flight operation**
+  (fixed 2026-06-10). Filters are evaluated inside the `compute` that mutates the
+  entry; previously a throwing filter aborted the store *after* `CacheWriter.write`
+  had run and after earlier-iterated registrations had already enqueued the event
+  (phantom events). The RI commits the mutation and only then propagates; Hazelcast
+  and cache2k evaluate filters at delivery time. `EventTypeFilter.evaluate` now logs
+  the filter failure and returns false so the dispatcher skips that listener,
+  matching the listener-exception policy. Pinned by
+  `EventDispatcherTest.publishCreated_filterThrows`.
+- **`invoke`/`invokeAll` UPDATED must record `CachePuts` only after
+  `CacheWriter.write` succeeds** (fixed 2026-06-10). `postProcess` case UPDATED
+  recorded the put before the write-through call, so a writer exception left a
+  phantom put while correctly suppressing the `UPDATED` event and the store — the
+  only path out of step (put/putAll/replace×3/putIfAbsent/invoke-CREATED/-DELETED
+  all suppress). The RI orders writer→count; the TCK never combines a failing
+  writer with `invoke`. Pinned by the parity tests
+  `CacheWriterTest.writeOp_failingWriter_noPutsRecorded` /
+  `writeOp_writerSucceeds_recordsPut` /
+  `removeOp_failingWriter_noRemovalsRecorded` (put / putAll / getAndPut /
+  replace×2 / getAndReplace / invoke; remove / remove(K,V) / getAndRemove /
+  removeAll / invoke-remove / iterator.remove).
+- **Single-key `invoke` surfaces a writer failure as
+  `EntryProcessorException(CacheWriterException)`** (`postProcess` runs inside the
+  processor-exception wrapping). **Spec-mandated, not a divergence**: the *Entry
+  Processors* → "Exceptions in EntryProcessors" section requires any exception
+  "during the invocation of an EntryProcessor, **either by the Caching
+  implementation or the EntryProcessor itself**" to be wrapped as
+  `EntryProcessorException`. The RI propagates raw `CacheWriterException` (its
+  writer runs after the processor try/catch) and is the **outlier**; cache2k
+  wraps like Caffeine; Ehcache 3 leaks its own `CacheWritingException`. The TCK
+  tolerates all of these (`catch (CacheException)`), and `invokeAll` per-key
+  capture is observably RI-equivalent (`result.get()` throws
+  `EntryProcessorException(CacheWriterException)` in both). Do not "fix" toward
+  the RI — the explicit spec section beats the RI here. (An audit initially
+  guessed the RI direction; same inverted-direction trap as zero-update expiry.)
+- **Store-by-value event payloads expose the cache's stored value instance**
+  (`CREATED`/`UPDATED` carry the stored copy; `EXPIRED`/`REMOVED` carry
+  `expirable.get()`), so a listener that mutates `event.getValue()` mutates the
+  cached value. cache2k events carry stored values identically; the RI hands
+  listeners the caller's instance (CREATED/UPDATED) or a fresh deserialized copy
+  (EXPIRED/REMOVED), but only as an artifact of its serialized-bytes store.
+  Spec-silent (store-by-value text addresses caller mutation, not listener
+  mutation); TCK-blind (`StoreByValueTest` asserts nothing about listener
+  payloads); the spec's portability recommendations already discourage
+  listener-side cache interaction. Intentional — a per-event copy would tax
+  every listener-bearing op. Do not change without a driver.
+- **`invoke` `remove()` on an absent entry records no removal and fires no
+  `REMOVED` event** (only `CacheWriter.delete` is called). The RI unconditionally
+  counts a removal and fires REMOVED-with-null-value, contradicting its own
+  `remove(K)` gating and the listener table ("Yes, if remove() did remove an
+  entry"); the stats table's looser "Yes, if remove() was called" is internally
+  inconsistent with its removeAll/remove(K) rows. Caffeine's gating matches the
+  listener table and its own `remove(K)`. TCK only tests remove-on-present.
+- **`putIfAbsent` under zero creation expiry returns false, records a hit, fires
+  `EXPIRED` with the new value, no put** — exact RI parity (RI: `result=false` →
+  `increaseCacheHits(1)`, `processExpiries` with the new value). The
+  hit-for-an-absent-key looks wrong but is the oracle's behavior; do not "fix".
+- **`iterator().remove()` does not gate on expiry**: an entry that expires between
+  `next()` and `remove()` still gets `REMOVED` + a removal count (RI parity — its
+  iterator removes unconditionally, "we simply don't care"). The expired→eviction
+  gating catalogued above applies to `remove`/`removeAll`/`getAndRemove` only.
+- **`JCacheLoaderAdapter.expireTimeMillis` lacks the ±1 sentinel-collision
+  adjustment** that `CacheProxy.getWriteExpireTimeMillis`/`setAccessExpireTime`
+  apply when a finite adjusted time lands exactly on `0` or `Long.MAX_VALUE`
+  (treated as already-expired / eternal). Requires an exact arithmetic collision
+  with the ticker; informational internal-parity nit, not worth the branch until
+  a loader path shares the helper.
+- **Synchronous-listener exceptions are logged and swallowed**, not wrapped in
+  `CacheEntryListenerException` and rethrown to the cache-op caller (the RI
+  rethrows). The TCK's `testBrokenCacheEntryListener` tolerates both behaviors
+  (catch-without-fail), and the queued-dispatch model has no synchronous frame to
+  rethrow from. Intentional; documented in the `EventDispatcher` class javadoc.
+- **Entry-processor `getValue()`-load followed by `remove()` calls
+  `CacheWriter.delete`** (action `LOADED` → `DELETED`). The RI cancels LOAD+remove
+  to a no-op. Spec-silent; Caffeine's behavior is internally consistent with
+  remove-on-absent, where both implementations invoke `delete`. Intentional.
+- **`getExpiryForCreation()` returning `null`** (undefined by the spec — only
+  update/access document null) stores the entry with the `Long.MIN_VALUE`
+  "unchanged" sentinel, which behaves as effectively eternal; `CREATED` is
+  published and the put counted, consistently across all creation paths. The RI
+  would NPE. Implementation-defined input; not a defect.
 
 When auditing JCache, read this list first to avoid re-deriving known
 false-positives, then run the differential on anything new.

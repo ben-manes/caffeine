@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.jcache.event;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -25,19 +24,23 @@ import javax.cache.Cache;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryListener;
-import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.event.EventType;
 
+import org.apache.commons.lang3.concurrent.UncheckedExecutionException;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
+import com.github.valfirst.slf4jtest.TestLoggerFactoryExtension;
 import com.google.common.testing.EqualsTester;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@ExtendWith(TestLoggerFactoryExtension.class)
 final class EventTypeFilterTest {
 
   @Test
@@ -84,8 +87,28 @@ final class EventTypeFilterTest {
           EventType.CREATED, EventType.UPDATED, EventType.REMOVED, EventType.EXPIRED, unknown });
       var event = new JCacheEntryEvent<>(cache, unknown,
           /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2);
-      assertThrows(CacheEntryListenerException.class, () -> filter.evaluate(event));
+
+      assertThat(filter.evaluate(event)).isFalse();
       verifyNoInteractions(cache, listener, underlying);
+      assertThat(TestLoggerFactory.getLoggingEvents()).hasSize(1);
+    }
+  }
+
+  @Test
+  void evaluate_throwsException() {
+    CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
+    CacheEntryCreatedListener<Integer, Integer> listener = Mockito.mock();
+    var filter = new EventTypeFilter<>(listener, underlying);
+    try (Cache<Integer, Integer> cache = Mockito.mock()) {
+      when(underlying.evaluate(any()))
+          .thenThrow(AssertionError.class)
+          .thenThrow(UncheckedExecutionException.class);
+      var event = new JCacheEntryEvent<>(cache, EventType.CREATED,
+          /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2);
+      assertThat(filter.evaluate(event)).isFalse();
+      assertThat(filter.evaluate(event)).isFalse();
+      assertThat(TestLoggerFactory.getLoggingEvents()).hasSize(2);
+      verifyNoInteractions(listener);
     }
   }
 
