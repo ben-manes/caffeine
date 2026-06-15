@@ -1,0 +1,79 @@
+You are auditing a Java caching library's git history, restricted to FIX COMMITS (the
+walk is filtered to commits whose message mentions fix/bug/regression/NPE/race/leak/etc).
+A fix is the highest-signal place to find an unfixed bug: a fix can be incomplete, can
+leave a sibling path broken, or can reveal a root-cause shape that recurs elsewhere.
+"Every fixed bug is a clue to an unfixed one." Your job is to pressure-test THIS fix.
+
+CURRENT FIX COMMIT
+  sha:     $sha
+  date:    $date
+  files in scope changed: $files
+  message (full body — this states the bug being fixed; "fixes #NNN", "passes the X.Y
+  TCK", "matches RI" tell you the intended scope of the fix):
+$message
+
+DIFF (scoped to caffeine/src/main/java/com/github/benmanes/caffeine/cache/):
+$diff
+
+CURRENTLY-OPEN ISSUES TOUCHING FILES THIS COMMIT CHANGES:
+$open_issues
+
+(Issues touching unaffected files exist but are hidden to keep prompt size bounded.)
+
+TOOL ACCESS
+$tool_instructions
+
+THREE HUNTS — run all three against this fix:
+  1. INCOMPLETE FIX. The fix addresses the reported symptom. Is the SAME root cause still
+     reachable by a different input, path, or state? (A null-return guard added to
+     computeIfAbsent but not to the merge path; an operator fixed for one branch of a
+     condition but not the symmetric branch; an off-by-one fixed at the head but not the
+     tail.) Flag the still-reachable path as `new`, with a witness that triggers it.
+  2. UNFIXED SIBLING. The fix corrects path A; does a mirror path have the identical bug,
+     untouched by this diff? Mirror families: sync vs async, bounded vs unbounded, single
+     vs bulk, Function vs BiFunction, put fast vs slow path, the parallel removal-cause /
+     notification paths. Confirm the mirror with a targeted tool call (it may already be
+     correct). Flag a genuinely-unfixed mirror as `new`, naming it.
+  3. RECURRENCE ELSEWHERE. Abstract the root-cause SHAPE of this fix (e.g., "wrote a time
+     field without repositioning the deque", "passed the new value to a REPLACED
+     notification", "computed frequency on a possibly-null key"). With ONE targeted Grep,
+     look for the same shape in unrelated code in scope. Flag a concrete second instance
+     as `new`.
+
+A fix WITHOUT an accompanying regression test is more likely to be incomplete — treat
+absence of a test as a reason to look harder, not as a finding in itself. The finding must
+always be a concrete, still-reachable defect with a witness, never "no test was added".
+
+A later fix commit RESOLVES an open issue when it closes the remaining hole, or MODIFIES
+one when it changes a contract the issue tracks.
+
+If the fix is complete, correctly mirrored, and the shape does not recur — say so by
+outputting {"resolved":[],"modified":[],"new":[]}. A clean fix is the common case; do not
+manufacture a gap.
+
+OUTPUT JSON (and nothing else — no prose, no code fences):
+{
+  "resolved": [{"id": "...", "evidence": "the hunk that closes this issue's remaining hole"}],
+  "modified": [{"id": "...", "update": "contract change in this fix that ripples to the issue"}],
+  "new":      [{"description":"INCOMPLETE / UNFIXED-SIBLING / RECURRENCE: what the fix left broken", "files":["BoundedLocalCache.java", ...], "bug_witness":"public-API sequence reaching the still-broken path", "confidence":"high|med|low", "pattern_match":"P<n>|null"}]
+}
+
+PATTERN CATALOG (set pattern_match, or null for novel): P1 operator-order, P2 sibling-
+divergence, P3 wrong-reference, P4 sentinel-collision, P5 missing-lifecycle-guard,
+P6 snapshot-too-late, P7 int-overflow, P8 identity-vs-equality, P9 iterator-non-progress,
+P10 catch-type-narrowness, P11 wrong-API-call, P12 inverted-boolean/missing-escape.
+
+PRECISION RULES:
+- bug_witness REQUIRED and must trace from a real public API call. A competent developer
+  must be able to write a failing test from it alone.
+- DEFENSIVE-CODING ABSENCE IS NOT A BUG. SPEC JAVADOC IS NOT A WITNESS (a fix citing TCK/RI
+  conformance is intentional; only flag a path it forgot, named by a concrete test).
+- DO NOT flag Caffeine's documented intentional patterns (.claude/docs/design-decisions.md):
+  best-effort lock-free refresh, async-listener resolved-only semantics, amortized
+  expiration, same-instance compute skipping setValue, lossy buffers, weight=0 pinning,
+  state-based removal cause (EXPIRED vs EXPLICIT at removal time).
+- confidence: "high" = reproducible residual failure; "med" = real but uncommon trigger;
+  "low" = smell only.
+
+Output JSON only. Your entire response must be a single JSON object starting with an open
+brace and ending with a close brace.

@@ -1,0 +1,103 @@
+You are auditing a Java caching library's git history by maintaining an INVARIANT LEDGER.
+Unlike a bug hunt, you carry forward a model of the codebase's load-bearing ASSUMPTIONS —
+properties whose violation would be a bug. At each commit you (1) ESTABLISH genuinely new
+load-bearing invariants, (2) check the diff for VIOLATIONS of any already-established
+invariant, and (3) RETIRE invariants this diff deliberately redesigns. The high-value
+catch is a commit that breaks an invariant established far away, in another method or
+file — which a diff-local bug hunt cannot see, because the violating author never knew the
+assumption existed.
+
+CURRENT COMMIT
+  sha:     $sha
+  date:    $date
+  files in scope changed: $files
+  message (full body — a deliberate redesign of a property is a RETIRE; an unrelated
+  change that happens to break a property is a VIOLATE):
+$message
+
+DIFF (scoped to caffeine/src/main/java/com/github/benmanes/caffeine/cache/):
+$diff
+
+INVARIANTS WHOSE HOME FILES THIS COMMIT TOUCHES (full detail):
+$relevant_invariants
+
+WHOLE-LEDGER INDEX (every active invariant — scan this against the diff for a CROSS-FILE
+violation: a change here that breaks a property established elsewhere):
+$invariant_index
+
+OPEN VIOLATION-ISSUES TOUCHING FILES THIS COMMIT CHANGES:
+$open_issues
+
+TOOL ACCESS
+$tool_instructions
+
+(1) ESTABLISH — be PARSIMONIOUS. Register an invariant only if it is:
+  - NON-OBVIOUS (not implied by Java types or trivially local), and
+  - LOAD-BEARING (some other code's correctness depends on it), and
+  - FALSIFIABLE (a concrete future edit could break it).
+  Good shapes (illustrative, not a checklist): "writeTime is stored with its low bit
+  reserved as a lock flag; readers mask with & ~1L"; "a node is published into the hash
+  table only after it is linked under evictionLock"; "writeOrderDeque stays sorted by
+  writeTime, so any writeTime mutation must be paired with a deque reposition";
+  "frequencySketch.frequency(e) requires non-null e"; "every setWeight on a live node is
+  matched by a weightedSize adjustment under evictionLock"; "an async node's weight is
+  recomputed when its future completes". Do NOT establish: obvious facts, restatements of
+  the method's own body, or a property already present in the index above (check first —
+  re-stating creates a duplicate). Most commits establish ZERO or ONE invariant.
+  SELF-VIOLATION CHECK: when you abstract an invariant from a pattern in this
+  diff, scan the diff's OTHER sites for one that already breaks it — a rule
+  stated and broken in the same commit (e.g., one call site uses `data.get(key)`
+  while the rule is `data.get(getKeyRef(key))`) is a classic introduce-and-break
+  bug. You cannot reference the just-established invariant by id in this same
+  response, so report the divergent site as a `new` finding with a witness, not
+  as a `violate`. Flag only a concrete deviation, never the canonical site the
+  rule came from.
+
+(2) VIOLATE — scan BOTH the detailed list and the whole-ledger index against this diff.
+  A violation is a diff that breaks a still-intended property WITHOUT re-establishing it.
+  Reference the invariant by its id. A violation REQUIRES a bug_witness (a public-API
+  sequence that exposes the resulting failure) — it is materialized as a tracked bug. If
+  you cannot write a concrete witness, it is not a violation worth flagging.
+
+(3) RETIRE — if this diff DELIBERATELY changes a property (the message or the breadth of
+  the edit shows the assumption was intentionally redesigned, and dependents are updated
+  accordingly), retire that invariant by id with a reason. Retire is the "this is fine,
+  the rule changed" escape; do not use it to wave away an accidental break (that is a
+  VIOLATE).
+
+VIOLATE vs RETIRE is the core judgment: same broken property, opposite verdict. Ask "did
+the author MEAN to change this rule, and update everything that relied on it?" Yes ->
+retire. No, it looks like collateral damage from an unrelated change -> violate.
+
+A later commit may RESOLVE a violation-issue (it restores the property) or MODIFY it.
+
+If this diff establishes nothing, violates nothing, and retires nothing (docs/style/
+mechanical), output {"establish":[],"violate":[],"retire":[]} and stop.
+
+OUTPUT JSON (and nothing else — no prose, no code fences):
+{
+  "establish": [{"statement":"the property, precisely and falsifiably", "files":["BoundedLocalCache.java", ...], "rationale":"what breaks if this is violated"}],
+  "violate":   [{"id":"inv_xxxx", "evidence":"the hunk that breaks it", "bug_witness":"public-API sequence exposing the failure", "confidence":"high|med|low", "files":["BoundedLocalCache.java", ...]}],
+  "retire":    [{"id":"inv_xxxx", "reason":"how this diff deliberately redesigned the property and updated dependents"}],
+  "resolved":  [{"id":"iss_xxxx", "evidence":"the hunk that restores the violated property"}],
+  "modified":  [{"id":"iss_xxxx", "update":"contract change that ripples to this violation-issue"}],
+  "new":       [{"description":"self-violation: site breaking an invariant established in THIS response", "files":["BoundedLocalCache.java", ...], "bug_witness":"public-API sequence exposing the failure", "confidence":"high|med|low", "pattern_match":"INV"}]
+}
+(resolved/modified act on the violation-issues in the open list above. A "violate" of an
+already-established invariant materializes its issue automatically; use "new" ONLY for a
+self-violation of an invariant you establish in this same response.)
+
+PRECISION RULES:
+- A violation's bug_witness must trace from a real public API call; defensive-coding
+  absence is not a violation.
+- DO NOT establish invariants that merely restate Caffeine's documented intentional
+  patterns (.claude/docs/design-decisions.md), and DO NOT flag a "violation" of one: lossy
+  buffers, best-effort lock-free refresh, async-listener resolved-only semantics, amortized
+  expiration, accessTime opaque writes, FrequencySketch fields guarded by evictionLock,
+  same-instance compute skipping setValue, weight=0 pinning. These are stable by design.
+- Prefer FEW, SHARP invariants over many weak ones. A bloated ledger is a failed ledger.
+- confidence on a violation: "high" = reproducible failure; "med" = real but uncommon
+  trigger; "low" = smell only.
+
+Output JSON only. Your entire response must be a single JSON object starting with an open
+brace and ending with a close brace.

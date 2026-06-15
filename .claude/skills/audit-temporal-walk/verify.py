@@ -24,7 +24,17 @@ DEFAULT_SCOPE = "caffeine/src/main/java/com/github/benmanes/caffeine/cache/"
 SCOPE = os.environ.get("WALKER_SCOPE", DEFAULT_SCOPE)
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[2]
-_MODULE = SCOPE.split("/", 1)[0] if "/" in SCOPE else "default"
+
+
+def derive_module(scope: str) -> str:
+    """Reports-dir suffix for a scope; mirrors walker.py so verify reads the
+    matching tree. First path segment plus a '-test' discriminator so the
+    test-history walk stays disjoint from the main-source walk."""
+    base = scope.split("/", 1)[0] if "/" in scope else "default"
+    return f"{base}-test" if "/src/test/" in scope else base
+
+
+_MODULE = derive_module(SCOPE)
 REPORTS_DIR = REPO_ROOT / ".claude" / "reports" / f"audit-temporal-walk-{_MODULE}"
 DEFAULT_STATE = REPORTS_DIR / "state.json"
 DEFAULT_VERIFIED = REPORTS_DIR / "verified.json"
@@ -359,6 +369,14 @@ def write_findings_markdown(verified: dict, path: Path, state: dict) -> None:
 
     lines = ["# Temporal walker findings (HEAD-verified)\n"]
     total = sum(len(v) for v in by_file.values())
+    errored = sum(1 for v in verified.values() if v.get("verdict") == "error")
+    if errored:
+        lines.append(
+            f"> ⚠️ **PROVISIONAL — {errored} issue(s) still unverified** "
+            f"(verdict=error, from an interrupted run). The surviving-finding "
+            f"count below may be incomplete; re-run verify.py to retry them "
+            f"(errored issues are retried automatically on resume).\n"
+        )
     lines.append(
         f"**{total}** verified surviving findings across "
         f"**{len(by_file)}** file group(s). "
@@ -410,6 +428,12 @@ def main() -> None:
     parser.add_argument("--prompt", type=Path, default=DEFAULT_PROMPT)
     parser.add_argument("--log-dir", type=Path, default=DEFAULT_LOG_DIR)
     parser.add_argument(
+        "--run-name", default=None,
+        help="Verify a walk variant created with walker.py --run-name <name>: "
+             "derives state-<name>.json / verified-<name>.json / "
+             "findings-<name>.md / verify-log-<name>/ inside the module "
+             "reports dir. Explicit path flags still win.")
+    parser.add_argument(
         "--model", default=None,
         help="Claude model alias or full name. If omitted, uses the claude "
              "CLI's default (the session model).")
@@ -434,6 +458,18 @@ def main() -> None:
              "filter). Auto-discovered from Claude Code's per-project memory "
              "directory if available.")
     args = parser.parse_args()
+
+    # Variant isolation: mirror walker.py's --run-name path derivation so a
+    # variant's findings don't overwrite the main walk's. Explicit flags win.
+    if args.run_name:
+        if args.state == DEFAULT_STATE:
+            args.state = REPORTS_DIR / f"state-{args.run_name}.json"
+        if args.verified == DEFAULT_VERIFIED:
+            args.verified = REPORTS_DIR / f"verified-{args.run_name}.json"
+        if args.findings == DEFAULT_FINDINGS_MD:
+            args.findings = REPORTS_DIR / f"findings-{args.run_name}.md"
+        if args.log_dir == DEFAULT_LOG_DIR:
+            args.log_dir = REPORTS_DIR / f"verify-log-{args.run_name}"
 
     if not args.state.exists():
         sys.exit(f"No state file at {args.state}. Run walker.py first.")
@@ -499,8 +535,21 @@ def main() -> None:
     write_findings_markdown(verified, args.findings, state)
     surviving = sum(1 for v in verified.values()
                     if v.get("verdict") == "still_exists")
-    print(f"\nVerification done. {surviving} surviving findings.")
+    errored = sum(1 for v in verified.values()
+                  if v.get("verdict") == "error")
+    if errored:
+        print(f"\n⚠️  INCOMPLETE VERIFY: {errored} of {len(verified)} issues are "
+              f"unverified (verdict=error) — run interrupted (quota/CLI error). "
+              f"The {surviving} surviving-finding count is PROVISIONAL; re-run "
+              f"verify.py to retry the errored issues (retried on resume).")
+    else:
+        print(f"\nVerification done. {surviving} surviving findings.")
     print(f"Markdown report: {args.findings}")
+    if errored:
+        # Exit non-zero so callers (run.py battery, CI) can distinguish a
+        # complete verify from an interrupted one rather than trusting the
+        # printed count. Errored issues are retried on the next resume.
+        sys.exit(3)
 
 
 if __name__ == "__main__":

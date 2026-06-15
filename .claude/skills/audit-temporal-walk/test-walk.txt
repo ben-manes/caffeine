@@ -1,0 +1,86 @@
+You are auditing a Java caching library's TEST history for COVERAGE REGRESSIONS.
+You walk commits to the test tree chronologically. Most test diffs add or strengthen
+coverage — you are hunting the opposite: a commit that silently WEAKENS the safety net,
+so that a future production regression could land undetected. A weakened test is invisible
+to every code audit; only the test history shows it.
+
+CURRENT COMMIT
+  sha:     $sha
+  date:    $date
+  test files changed: $files
+  message (full body — read it; a stated behavior/contract change often JUSTIFIES a test
+  change, making it intentional rather than a regression):
+$message
+
+DIFF (scoped to caffeine/src/test/java/com/github/benmanes/caffeine/cache/):
+$diff
+
+CURRENTLY-OPEN COVERAGE-REGRESSION ISSUES TOUCHING FILES THIS COMMIT CHANGES:
+$open_issues
+
+(Issues touching unaffected files exist but are hidden to keep prompt size bounded.)
+
+TOOL ACCESS
+$tool_instructions
+NOTE: the worktree is a FULL checkout at this commit — you can Read the corresponding
+src/main/.../cache/ production code to check whether a tested behavior actually changed
+(which would justify the test change) or not (which makes the weakening suspicious).
+
+THE COVERAGE-REGRESSION LENS — hunt for, in removed (`-`) test lines:
+  - Assertion LOOSENED: isEqualTo -> isAtLeast/isAtMost/isGreaterThan/contains; an exact
+    count -> a range; containsExactly -> contains; assertThat(...).isTrue() deleted; an
+    equality on a value replaced by a non-null check.
+  - Case DELETED: a @Test method removed; a scenario dropped from a data provider; a
+    branch of a parameterized test removed without an equivalent added elsewhere.
+  - @CacheSpec PARAMETERIZATION NARROWED: a population, maximumSize, expireAfter*,
+    refreshAfter, weigher, or key/value reference combination removed from a @CacheSpec
+    attribute list, shrinking the matrix the case runs under.
+  - Expectation BROADENED: assertThrows widened to a supertype; an expected exception
+    relaxed; a verify(times(n)) count loosened.
+  - Assertion DISABLED: commented out, moved out of the executed path, or guarded so it no
+    longer runs; a meaningful assertion replaced by a no-op.
+
+FOR EACH WEAKENING, decide:
+  - REGRESSION (flag as `new`): the test no longer pins a real behavior, and the message /
+    production code do NOT justify it (the behavior did not change). Describe what is no
+    longer asserted and what production regression could now slip through. The bug_witness
+    is the future failure the test would have caught — concrete enough that a developer
+    could re-add the assertion and a plausible code change would now break undetected.
+  - JUSTIFIED (do NOT flag): the production contract genuinely changed this commit (the
+    message says so, or the src/main code at this commit confirms it); the test was split/
+    moved with equivalent coverage elsewhere; or it is one of the LEGITIMATE relaxations
+    below.
+
+LEGITIMATE — DO NOT FLAG:
+  - Relaxing a GC/timing/async-dependent assertion (isEqualTo -> isAtLeast on a value that
+    depends on GC, eviction timing, or async completion). These tests are inherently flaky
+    and SHOULD use ranges, GcFinalization, and Awaitility.
+  - Increasing an Awaitility / await timeout, or raising a polling deadline — this is
+    flakiness mitigation, not lost coverage.
+  - Renames, formatting, helper extraction, and migrations (e.g., assertion-library swaps)
+    that preserve the asserted condition.
+  - Removing a test for a feature/branch deleted from production this commit.
+
+A later commit RESOLVES a coverage-regression issue when it restores the assertion or
+re-adds the case; it MODIFIES one when it changes the relevant @CacheSpec matrix again.
+
+If this diff only strengthens/adds tests, or is pure rename/format/helper churn, output
+{"resolved":[],"modified":[],"new":[]} and stop.
+
+OUTPUT JSON (and nothing else — no prose, no code fences):
+{
+  "resolved": [{"id": "...", "evidence": "the restored assertion / re-added case"}],
+  "modified": [{"id": "...", "update": "parameterization change that ripples to this gap"}],
+  "new":      [{"description":"what assertion/case/parameter was weakened or removed and what now goes untested", "files":["EvictionTest.java", ...], "bug_witness":"the production regression that would now land undetected, specific enough to re-add the test", "confidence":"high|med|low", "pattern_match":"TEST"}]
+}
+
+PRECISION RULES:
+- A weakening JUSTIFIED by a real production-contract change in the same commit is NOT a
+  finding. When unsure whether behavior changed, make ONE targeted tool call to read the
+  production method before flagging.
+- Set pattern_match to "TEST" for every finding from this lens.
+- confidence: "high" = a clearly load-bearing assertion dropped with no justification;
+  "med" = plausibly load-bearing; "low" = smell only.
+
+Output JSON only. Your entire response must be a single JSON object starting with an open
+brace and ending with a close brace.

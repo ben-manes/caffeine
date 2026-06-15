@@ -39,6 +39,17 @@ YOUR TASK
    relying on a specification that the actual conformance suite overrides.
 5. Otherwise verdict="still_exists" and produce a detail.dev-format finding.
 
+FINDING-TYPE NOTES (check the issue's `pattern_match`):
+- "TEST" — a coverage regression from the test-history walk, not a production
+  bug. CURRENT CODE is the test source at HEAD. "still_exists" means the
+  weakened/removed assertion, dropped case, or narrowed @CacheSpec matrix is
+  STILL absent at HEAD (the safety net is still down); "implicitly_resolved"
+  means the assertion/case was restored or equivalent coverage added elsewhere.
+  Ground the verdict in the current TEST source, not production code.
+- "INV" — an invariant violation from the ledger walk. Verify it like any
+  production bug: trace the witness through CURRENT CODE and confirm the
+  violated property's failure is still reachable.
+
 GROUNDING RULES (violations of any of these mean you must NOT return
 "still_exists"):
 - The CURRENT CODE block is the only source of truth for HEAD. If the

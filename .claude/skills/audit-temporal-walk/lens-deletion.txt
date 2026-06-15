@@ -1,0 +1,86 @@
+You are auditing a Java caching library's git history through ONE lens: DELETIONS.
+This is a "Chesterton's Fence" pass. A guard, branch, check, or precondition that
+a past commit deletes was usually there for a reason. Your job is to ask, for each
+thing this commit REMOVES: what was it protecting against, and is that condition
+now impossible? If the protected-against condition can still arise from the public
+API, the removal is a bug.
+
+CURRENT COMMIT
+  sha:     $sha
+  date:    $date
+  files in scope changed: $files
+  message (full body — read it; "passes the X.Y TCK", "fixes #NNN", "matches RI"
+  signal that a removal is intentional conformance/relocation, not a regression):
+$message
+
+DIFF (scoped to caffeine/src/main/java/com/github/benmanes/caffeine/cache/):
+$diff
+
+CURRENTLY-OPEN ISSUES TOUCHING FILES THIS COMMIT CHANGES:
+$open_issues
+
+(Issues touching unaffected files exist but are hidden to keep prompt size bounded.)
+
+TOOL ACCESS
+$tool_instructions
+
+THE DELETION LENS — look ONLY at removed (`-`) lines. Concretely, hunt for:
+  - A removed null / range / state guard: `if (x == null) return ...`, `requireNonNull`,
+    `isAlive()` / `isComputingAsync()` / `hasExpired()` checks dropped before a write,
+    notify, sketch update, or dereference.
+  - A removed control-flow escape: a `continue` / `return` / `break` / `else` deleted so
+    control now falls through into code that assumed it wouldn't (the classic
+    "collected-entry falls through to frequency(null)" shape).
+  - A removed precondition that was IMPLICIT in structure: an `if (a) {...} else if (b)`
+    refactored to drop the `else`, silently widening when the second branch runs.
+  - A removed synchronized block, volatile, acquire/release, or lock acquisition — a
+    publication/visibility guarantee quietly weakened.
+  - A removed catch clause or narrowed catch type — an exception that used to be handled
+    now escapes (onto the maintenance/executor thread, aborting a drain).
+  - A removed branch of a multi-clause condition, or a defaulted value deleted.
+
+FOR EACH REMOVAL, decide:
+  - BUG (flag as `new`): there is a concrete public-API call sequence that reaches the
+    now-unguarded code and fails (NPE, lost update, stale expiration, visibility race,
+    swallowed exception). Provide that sequence as bug_witness.
+  - SAFE (do NOT flag): the guarded condition is now structurally impossible; the guard
+    was relocated nearby (use a targeted tool call to confirm an equivalent guard exists
+    in the same or sibling method); the check was defensive against an input the public
+    API cannot produce; or the commit message shows the removal is deliberate (TCK
+    conformance, dead-code cleanup, behavior-preserving refactor).
+
+A commit may also RESOLVE an open issue (the removal deletes the very code path the
+issue was about) or MODIFY one (the removal changes a contract the issue depends on).
+
+If this commit removes nothing of consequence (purely additive, or only docs/style/
+imports/renames), output {"resolved":[],"modified":[],"new":[]} and stop.
+
+OUTPUT JSON (and nothing else — no prose, no code fences):
+{
+  "resolved": [{"id": "...", "evidence": "the removal that eliminates this issue's code path"}],
+  "modified": [{"id": "...", "update": "contract this removal changed that ripples to the issue"}],
+  "new":      [{"description":"what was removed and what now fails", "files":["BoundedLocalCache.java", ...], "bug_witness":"public-API sequence that reaches the unguarded code and fails", "confidence":"high|med|low", "pattern_match":"P<n>|null"}]
+}
+
+Relevant pattern codes (set pattern_match, or null): P5 missing-lifecycle-guard,
+P12 inverted-boolean/missing-escape, P10 catch-type-narrowness, P3 wrong-reference.
+
+PRECISION RULES (these keep the lens from crying wolf):
+- bug_witness REQUIRED and must trace from a real public API call. Acceptance test: a
+  competent developer could write a failing unit test from your witness alone, without
+  "and then somehow X happens".
+- DEFENSIVE-CODING ABSENCE IS NOT A BUG. A removed check against an input the public API
+  cannot produce is not a finding. Removing a redundant guarantee is not a finding.
+- SPEC JAVADOC IS NOT A WITNESS. If the message says the removal is TCK/RI conformance
+  and the edit looks coherent, do not flag unless you can name a concrete failing test.
+- DO NOT flag removals that match Caffeine's documented intentional patterns (see
+  .claude/docs/design-decisions.md): lossy read-buffer drops, best-effort lock-free
+  refresh reading writeTime/getKey/isAlive without synchronized(node), async listeners
+  that skip in-flight/exceptional futures, amortized (not instant) expiration,
+  accessTime opaque (non-CAS) writes, FrequencySketch fields guarded by evictionLock
+  rather than volatile.
+- confidence: "high" = reproducible failure; "med" = real but uncommon trigger;
+  "low" = smell only.
+
+Output JSON only. Your entire response must be a single JSON object starting with an
+open brace and ending with a close brace.

@@ -27,10 +27,22 @@ DEFAULT_SCOPE = "caffeine/src/main/java/com/github/benmanes/caffeine/cache/"
 SCOPE = os.environ.get("WALKER_SCOPE", DEFAULT_SCOPE)
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[2]
-# Derive the reports directory from the first segment of the configured SCOPE so
-# audits of different modules (caffeine, jcache, ...) write to disjoint trees and
-# don't clobber each other's state.json / log / worktree.
-_MODULE = SCOPE.split("/", 1)[0] if "/" in SCOPE else "default"
+
+
+def derive_module(scope: str) -> str:
+    """Reports-dir suffix for a scope. The first path segment (caffeine,
+    jcache, ...) keeps different modules disjoint; a '-test' discriminator
+    keeps a test-history walk (caffeine/src/test/...) from clobbering the
+    main-source walk (caffeine/src/main/...), since both share the leading
+    'caffeine' segment."""
+    base = scope.split("/", 1)[0] if "/" in scope else "default"
+    return f"{base}-test" if "/src/test/" in scope else base
+
+
+# Derive the reports directory from the configured SCOPE so audits of different
+# modules (and the main-vs-test split) write to disjoint trees and don't clobber
+# each other's state.json / log / worktree.
+_MODULE = derive_module(SCOPE)
 REPORTS_DIR = REPO_ROOT / ".claude" / "reports" / f"audit-temporal-walk-{_MODULE}"
 DEFAULT_STATE = REPORTS_DIR / "state.json"
 DEFAULT_PROMPT = SCRIPT_DIR / "per-commit.txt"
@@ -167,29 +179,40 @@ def run_git(*args: str) -> str:
     ).stdout
 
 
-def list_commits() -> list[str]:
-    out = run_git("log", "--reverse", "--format=%H", "--", SCOPE)
+def list_commits(grep: str | None = None) -> list[str]:
+    """Scope-touching commits oldest-first. With `grep`, restrict to commits
+    whose message matches the (case-insensitive, extended-regex) pattern —
+    used by the fix-commit walk to visit only fix/bug/regression commits. The
+    same `grep` MUST be passed on every resume: the checkpoint is an index
+    into this list, so changing the filter shifts the index space."""
+    args = ["log", "--reverse", "--format=%H"]
+    if grep:
+        args += ["-i", "--extended-regexp", f"--grep={grep}"]
+    args += ["--", SCOPE]
+    out = run_git(*args)
     return [s for s in out.strip().split("\n") if s]
 
 
-def ensure_worktree() -> Path:
+def ensure_worktree(worktree_dir: Path) -> Path:
     """Create or reuse a detached worktree under .claude/reports/.
 
     Used to materialize per-commit code so the inner model can Read/Glob/Grep
     at that commit's state without seeing newer code from the main worktree.
     Survives across runs — re-using avoids the per-run worktree-add cost.
+    Each walk variant uses its own worktree dir (see --run-name) so variants
+    can run concurrently without racing on the same checkout.
     """
-    if WORKTREE_DIR.exists() and (WORKTREE_DIR / ".git").exists():
-        return WORKTREE_DIR
-    if WORKTREE_DIR.exists():
+    if worktree_dir.exists() and (worktree_dir / ".git").exists():
+        return worktree_dir
+    if worktree_dir.exists():
         # Stale dir without a worktree linkage — clear and re-create.
-        shutil.rmtree(WORKTREE_DIR)
+        shutil.rmtree(worktree_dir)
     # Prune unconditionally: handles both "stale dir" and "dir gone but
     # registration survives" cases. No-op if nothing to prune.
     run_git("worktree", "prune")
-    WORKTREE_DIR.parent.mkdir(parents=True, exist_ok=True)
-    run_git("worktree", "add", "--detach", str(WORKTREE_DIR), "HEAD")
-    return WORKTREE_DIR
+    worktree_dir.parent.mkdir(parents=True, exist_ok=True)
+    run_git("worktree", "add", "--detach", str(worktree_dir), "HEAD")
+    return worktree_dir
 
 
 def checkout_at(worktree: Path, sha: str) -> None:
@@ -247,6 +270,11 @@ def issue_id(description: str, first_seen: str) -> str:
     return f"iss_{h}"
 
 
+def inv_id(statement: str, first_seen: str) -> str:
+    h = hashlib.sha256(f"INV|{statement}|{first_seen}".encode()).hexdigest()[:8]
+    return f"inv_{h}"
+
+
 def normalize_files(files: list[str]) -> list[str]:
     """Strip the configured SCOPE prefix from issue file paths and remove any
     leading slash. The model is asked to emit scope-relative names but
@@ -269,11 +297,12 @@ def normalize_files(files: list[str]) -> list[str]:
     return out
 
 
-def init_state(state_path: Path, commits: list[str]) -> dict:
+def init_state(state_path: Path, commits: list[str], grep: str | None = None) -> dict:
     state = {
         "schema_version": 1,
         "scope": {
             "module_path": SCOPE,
+            "grep": grep,
             "start_commit": commits[0],
             "end_commit": commits[-1],
             "total_commits": len(commits),
@@ -283,12 +312,18 @@ def init_state(state_path: Path, commits: list[str]) -> dict:
             "last_processed_index": -1,
         },
         "issues": {},
+        # Invariant ledger (populated only by the invariant-ledger prompt; an
+        # empty dict for every other walk variant). Carries load-bearing
+        # assumptions forward so a distant commit that violates one is caught.
+        "invariants": {},
         "stats": {
             "commits_processed": 0,
             "commits_skipped_no_scope": 0,
             "commits_no_changes": 0,
             "issues_open": 0,
             "issues_resolved": 0,
+            "invariants_active": 0,
+            "invariants_violated": 0,
             "ai_calls": 0,
             "errors": 0,
         },
@@ -306,13 +341,17 @@ def save_state(state: dict, state_path: Path) -> None:
 
 EXPECTED_STAT_KEYS = (
     "commits_processed", "commits_skipped_no_scope", "commits_no_changes",
-    "issues_open", "issues_resolved", "ai_calls", "errors",
+    "issues_open", "issues_resolved", "invariants_active", "invariants_violated",
+    "ai_calls", "errors",
 )
 
 
 def load_state(state_path: Path) -> dict:
     """Load state and migrate older schemas in-place (no save until next write)."""
     state = json.loads(state_path.read_text())
+
+    # Backfill the invariant ledger on states written before it existed.
+    state.setdefault("invariants", {})
 
     # Backfill `times_touched` on issues created before that field existed.
     for issue in state.get("issues", {}).values():
@@ -369,6 +408,11 @@ def print_summary(state: dict) -> None:
         print(f"Open by confidence: {dict(by_conf)}")
         print(f"Open by pattern: {dict(by_pat.most_common())}")
 
+    invariants = state.get("invariants", {})
+    if invariants:
+        by_inv = Counter(v.get("status", "?") for v in invariants.values())
+        print(f"Invariants by status: {dict(by_inv)}")
+
 
 # --------------------------------------------------------------------------
 # Prompt
@@ -389,6 +433,23 @@ def render_prompt(template: string.Template, sha: str, date: str, message: str,
         )
     else:
         tool_instructions = TOOL_INSTRUCTIONS_NONE
+    # Invariant-ledger context. Only the invariant-ledger prompt references
+    # these ($relevant_invariants / $invariant_index); for every other prompt
+    # string.Template ignores the unused keys. `relevant` is the detail view
+    # (invariants whose home files this commit touches); the index is the
+    # compact whole-ledger list so a cross-file violation is still visible —
+    # the high-value catch is a diff that breaks an invariant established far
+    # away, which file-scoped filtering alone would hide.
+    active = [v for v in state.get("invariants", {}).values()
+              if v.get("status") == "active"]
+    relevant = [v for v in active if any(f in files for f in v.get("files", []))]
+    relevant_invariants = json.dumps(
+        [{"id": v["id"], "statement": v["statement"], "files": v["files"]}
+         for v in relevant], indent=2,
+    )
+    invariant_index = "\n".join(
+        f"- {v['id']} [{', '.join(v['files'])}]: {v['statement']}" for v in active
+    ) or "(no invariants established yet)"
     return template.substitute(
         sha=sha,
         date=date,
@@ -396,6 +457,8 @@ def render_prompt(template: string.Template, sha: str, date: str, message: str,
         files=", ".join(files) if files else "(none in scope)",
         diff=commit_diff(sha),
         open_issues=json.dumps(open_in_scope, indent=2),
+        relevant_invariants=relevant_invariants,
+        invariant_index=invariant_index,
         tool_instructions=tool_instructions,
     )
 
@@ -431,7 +494,8 @@ def call_claude(prompt: str, model: str | None, effort: str | None,
         raise RuntimeError(f"claude error: {envelope.get('result', '')[:500]}")
     return extract_balanced_json(
         envelope.get("result", ""),
-        required_keys=("resolved", "modified", "new"),
+        required_keys=("resolved", "modified", "new",
+                       "establish", "violate", "retire"),
     )
 
 
@@ -494,13 +558,94 @@ def apply_response(response: dict, state: dict, sha: str, date: str
         }
         new_count += 1
 
+    # Invariant-ledger deltas (only the invariant-ledger prompt emits these;
+    # the .get() defaults make this a no-op for every other walk variant).
+    new_count += apply_invariants(response, state, sha, date)
+
     state["stats"]["issues_open"] = sum(
         1 for i in issues.values() if i["status"] == "open"
     )
     state["stats"]["issues_resolved"] = sum(
         1 for i in issues.values() if i["status"] == "resolved"
     )
+    invariants = state.get("invariants", {})
+    state["stats"]["invariants_active"] = sum(
+        1 for v in invariants.values() if v.get("status") == "active"
+    )
+    state["stats"]["invariants_violated"] = sum(
+        1 for v in invariants.values() if v.get("status") == "violated"
+    )
     return new_count, resolved_count, modified_count
+
+
+def apply_invariants(response: dict, state: dict, sha: str, date: str) -> int:
+    """Apply establish/violate/retire deltas to the invariant ledger. A
+    violation is also materialized as a tracked issue so it flows through the
+    same verify.py / findings.md pipeline as any other finding. Returns the
+    number of issues newly materialized from violations."""
+    invariants = state.setdefault("invariants", {})
+    issues = state["issues"]
+    materialized = 0
+
+    for e in response.get("establish", []):
+        stmt = (e.get("statement") or "").strip()
+        if not stmt:
+            continue
+        vid = inv_id(stmt, sha)
+        if vid in invariants:
+            continue
+        invariants[vid] = {
+            "id": vid,
+            "statement": stmt,
+            "files": normalize_files(e.get("files", [])),
+            "established_commit": sha,
+            "established_date": date,
+            "last_updated_commit": sha,
+            "status": "active",
+            "history": [{"commit": sha, "action": "established",
+                         "note": (e.get("rationale", "") or "")[:500]}],
+        }
+
+    for v in response.get("violate", []):
+        inv = invariants.get(v.get("id"))
+        if inv is None or inv["status"] != "active" or not v.get("bug_witness"):
+            continue
+        inv["status"] = "violated"
+        inv["last_updated_commit"] = sha
+        inv["history"].append({"commit": sha, "action": "violated",
+                               "note": (v.get("evidence", "") or "")[:500]})
+        desc = (f"Invariant violated — {inv['statement']} "
+                f"Broken here: {v.get('evidence', '')}").strip()
+        iid = issue_id(desc, sha)
+        if iid in issues:
+            continue
+        issues[iid] = {
+            "id": iid,
+            "description": desc,
+            "files": normalize_files(v.get("files") or inv["files"]),
+            "first_seen_commit": sha,
+            "first_seen_date": date,
+            "last_updated_commit": sha,
+            "status": "open",
+            "confidence": v.get("confidence", "med"),
+            "pattern_match": "INV",
+            "bug_witness": v.get("bug_witness", ""),
+            "times_touched": 0,
+            "history": [{"commit": sha, "action": "introduced",
+                         "note": f"violates {inv['id']}"}],
+        }
+        materialized += 1
+
+    for r in response.get("retire", []):
+        inv = invariants.get(r.get("id"))
+        if inv is None or inv["status"] != "active":
+            continue
+        inv["status"] = "retired"
+        inv["last_updated_commit"] = sha
+        inv["history"].append({"commit": sha, "action": "retired",
+                               "note": (r.get("reason", "") or "")[:500]})
+
+    return materialized
 
 
 # --------------------------------------------------------------------------
@@ -534,6 +679,20 @@ def main() -> None:
         help="Disable inner-model tool access. Skips worktree setup and "
              "feeds only the diff and open issues. Faster but less accurate "
              "— the model can't verify hypotheses against surrounding code.")
+    parser.add_argument(
+        "--grep", default=None,
+        help="Restrict the walk to commits whose message matches this "
+             "case-insensitive extended-regex (the fix-commit walk uses "
+             "e.g. 'fix|bug|regression|NPE|race|leak'). Pass the SAME value "
+             "on every resume — the checkpoint indexes the filtered list.")
+    parser.add_argument(
+        "--run-name", default=None,
+        help="Logical name for a walk variant (e.g. 'lens-deletion', "
+             "'fix-audit', 'invariants'). Derives disjoint "
+             "state-<name>.json / log-<name>/ / worktree-<name>/ paths "
+             "inside the module reports dir so a variant walk doesn't clobber "
+             "the main walk and can run concurrently. Explicit "
+             "--state/--log-dir still win.")
     parser.add_argument("--init", action="store_true",
                         help="Initialize state and exit.")
     parser.add_argument("--reset", action="store_true",
@@ -541,6 +700,18 @@ def main() -> None:
     parser.add_argument("--summary", action="store_true",
                         help="Print state summary and exit (no AI calls).")
     args = parser.parse_args()
+
+    # Variant isolation: --run-name derives disjoint state/log/worktree paths
+    # so a lens/fix/ledger walk neither clobbers the main walk nor races it on
+    # the shared worktree. Explicit --state/--log-dir override the derived ones.
+    if args.run_name:
+        if args.state == DEFAULT_STATE:
+            args.state = REPORTS_DIR / f"state-{args.run_name}.json"
+        if args.log_dir == DEFAULT_LOG_DIR:
+            args.log_dir = REPORTS_DIR / f"log-{args.run_name}"
+        worktree_dir = REPORTS_DIR / f"worktree-{args.run_name}"
+    else:
+        worktree_dir = WORKTREE_DIR
 
     if args.summary:
         if not args.state.exists():
@@ -554,18 +725,26 @@ def main() -> None:
         args.state.unlink()
         print(f"Reset. Previous state backed up at {backup}")
 
-    commits = list_commits()
+    commits = list_commits(args.grep)
     if not commits:
-        sys.exit(f"No commits found in scope: {SCOPE}")
+        sys.exit(f"No commits found in scope: {SCOPE}"
+                 + (f" matching --grep={args.grep!r}" if args.grep else ""))
 
     if not args.state.exists():
-        state = init_state(args.state, commits)
+        state = init_state(args.state, commits, args.grep)
         print(f"Initialized state at {args.state}. "
-              f"Total commits in scope: {len(commits)}")
+              f"Total commits in scope: {len(commits)}"
+              + (f" (--grep={args.grep!r})" if args.grep else ""))
         if args.init:
             return
     else:
         state = load_state(args.state)
+        stored_grep = state.get("scope", {}).get("grep")
+        if stored_grep != args.grep:
+            print(f"WARNING: --grep changed (stored={stored_grep!r}, "
+                  f"now={args.grep!r}); index-based resume assumes a stable "
+                  f"commit list. Reuse the original value or --reset.",
+                  file=sys.stderr)
         last_idx = state["checkpoint"]["last_processed_index"]
         print(f"Resuming: {last_idx + 1} of {len(commits)} commits processed")
 
@@ -579,7 +758,7 @@ def main() -> None:
         tools = ""
         print("Tools disabled (--no-tools): inner model sees only diff + open issues.")
     else:
-        worktree = ensure_worktree()
+        worktree = ensure_worktree(worktree_dir)
         tools = SNAPSHOT_TOOLS
         print(f"Snapshot worktree: {worktree} (tools: {tools})")
 

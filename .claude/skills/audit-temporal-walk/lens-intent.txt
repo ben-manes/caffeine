@@ -1,0 +1,76 @@
+You are auditing a Java caching library's git history through ONE lens: INTENT vs EFFECT.
+The commit MESSAGE states what the change is supposed to do. Your job is to compare the
+stated intent against what the diff ACTUALLY does, in two directions:
+  (A) INCOMPLETE — the diff only partially achieves the stated intent (the fix covers
+      some paths/cases but leaves a sibling path, an edge case, or a follow-on step
+      unhandled).
+  (B) OVERREACH — the diff changes behavior BEYOND the stated intent (an accidental
+      semantic change rides along with the intended one: a "cleanup"/"refactor"/"polish"
+      that silently drops a precondition, flips a branch, or alters a contract).
+
+CURRENT COMMIT
+  sha:     $sha
+  date:    $date
+  files in scope changed: $files
+  message (full body — THIS IS THE INTENT you are checking the diff against):
+$message
+
+DIFF (scoped to caffeine/src/main/java/com/github/benmanes/caffeine/cache/):
+$diff
+
+CURRENTLY-OPEN ISSUES TOUCHING FILES THIS COMMIT CHANGES:
+$open_issues
+
+(Issues touching unaffected files exist but are hidden to keep prompt size bounded.)
+
+TOOL ACCESS
+$tool_instructions
+
+THE INTENT-vs-EFFECT LENS:
+  1. State the intent in one sentence (from the message). If the message is empty or pure
+     mechanics ("bump version", "reformat"), there is no intent to check — output empty.
+  2. (A) INCOMPLETE check: if the intent implies an invariant I ("weigh computing entries
+     as 0", "reset write time on update", "restore interrupt status", "log reload
+     failures"), does the diff establish I on EVERY path the intent covers? Find the path
+     the fix forgot. A fix applied to put() but not to compute()/merge(); a value reset on
+     creation but not on overwrite; a guard added to the sync path but not async; a
+     completion step (reweigh, reposition, notify) the intent implies but the diff omits.
+     Flag the uncovered path as `new` with a witness reaching it.
+  3. (B) OVERREACH check: does the diff do something the message does NOT mention that
+     changes observable behavior? A refactor that removes an implicit `newValue != null`
+     precondition; a "simplify" that turns if/else-if/else into a chain dropping a case; a
+     rename that also reorders two writes; a "cleanup" that swaps a method call for a
+     subtly different one (size() vs estimatedSize(), getKey() vs getKeyReference()). Flag
+     the unstated behavior change as `new` with a witness.
+
+Vague messages ("cleanup", "refactor", "minor", "polish") paired with a real behavior
+change are the highest-yield OVERREACH cases — scrutinize them hardest. Conversely, a
+message that precisely describes a coherent behavior change matching the diff is NOT a
+finding, however large.
+
+A commit may also RESOLVE an open issue (it completes an intent a prior commit left
+half-done) or MODIFY one (its contract change makes a tracked issue more dangerous).
+
+OUTPUT JSON (and nothing else — no prose, no code fences):
+{
+  "resolved": [{"id": "...", "evidence": "the part of the diff that completes the prior intent"}],
+  "modified": [{"id": "...", "update": "unstated contract change that ripples to the issue"}],
+  "new":      [{"description":"INCOMPLETE: intent X but path Y unhandled — or — OVERREACH: message says X but diff also does Y", "files":["BoundedLocalCache.java", ...], "bug_witness":"public-API sequence reaching the uncovered path / exposing the unstated change", "confidence":"high|med|low", "pattern_match":"P<n>|null"}]
+}
+
+PRECISION RULES:
+- bug_witness REQUIRED and must trace from a real public API call.
+- An intent the message states AND the diff fully delivers is NOT a finding — completeness
+  is the default; only flag a concrete gap or a concrete extra.
+- SPEC JAVADOC IS NOT A WITNESS. "passes the X.Y TCK" / "matches the RI" is intentional
+  conformance: do not flag the conformance edit itself; only flag a path it forgot, named
+  by a concrete failing scenario.
+- DEFENSIVE-CODING ABSENCE IS NOT A BUG. DO NOT flag changes matching Caffeine's
+  documented intentional patterns (.claude/docs/design-decisions.md): best-effort refresh,
+  async-listener resolved-only semantics, amortized expiration, same-instance compute
+  skipping setValue, lossy buffers.
+- confidence: "high" = reproducible gap/extra; "med" = real but uncommon trigger;
+  "low" = smell only.
+
+Output JSON only. Your entire response must be a single JSON object starting with an
+open brace and ending with a close brace.

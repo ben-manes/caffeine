@@ -6,11 +6,30 @@ disable-model-invocation: true
 
 # Audit: Temporal Walk
 
-This is a long-running CLI tool, not an interactive workflow. It walks every
-commit affecting the caffeine module from project inception to HEAD, asking
-Claude per commit to flag/resolve/modify a forward-tracked issue database.
-Issues that survive to HEAD are verified against current code and emitted as
-detail.dev-format findings.
+This is a long-running CLI tool. It walks every commit affecting the caffeine
+module from project inception to HEAD, asking Claude per commit to
+flag/resolve/modify a forward-tracked issue database. Issues that survive to
+HEAD are verified against current code and emitted as detail.dev-format
+findings.
+
+The default walk is one of several **variants** (see "Variant walks" below).
+The variants are not run automatically by the default walk — so they are easy
+to forget. The orchestrator (`run.py`) exists to make that impossible.
+
+## When invoked interactively
+
+When the user runs `/audit-temporal-walk`, do NOT silently start the default
+walk. Instead, present the full battery so nothing is forgotten, then launch
+the orchestrator:
+
+1. Run `python3 .claude/skills/audit-temporal-walk/run.py --list` and show the
+   variants with `AskUserQuestion` (multi-select; default to **all**). This
+   menu is the reminder — the user consciously picks the battery each time.
+2. Create one tracked task per selected variant so progress is visible.
+3. Launch `run.py --variants <chosen>` (or `--all`) under `nohup`/`tmux` — the
+   battery is multi-hour and must survive the session. Suggest the strongest
+   model and `--effort max` for a quality-critical run.
+4. Point the user at the live logs and the combined `findings-ALL.md`.
 
 ## When to run
 
@@ -57,6 +76,79 @@ commits). Tool-enabled mode (default) adds modest
 overhead from per-commit Read/Grep round-trips. Resumable from checkpoint
 after quota exhaustion or interruption.
 
+## Variant walks
+
+The default run is a broad bug hunt over `caffeine/src/main`. The same engine
+drives several focused variants — each is a *separate* full (or filtered) walk
+with its own multi-hour cost, not an addition to the main run. `--run-name`
+gives each one a disjoint `state-<name>.json` / `log-<name>/` / `worktree-<name>/`
+so they don't clobber the main walk and can run concurrently. Verify a variant
+with the matching `--run-name` (and `WALKER_SCOPE` for the test walk).
+
+### Orchestrated battery (recommended — the don't-forget path)
+
+`run.py` runs a selected set of variants **sequentially** (walk + verify each),
+then aggregates every `findings-<name>.md` into one `findings-ALL.md` with a
+summary table. It is resumable: each variant is checkpointed independently, so
+re-running picks up where it stopped and skips finished variants cheaply. This
+is the entry point to prefer — one command runs everything and reports on it.
+
+```bash
+R=.claude/skills/audit-temporal-walk/run.py
+python3 $R --list                       # show the battery
+nohup python3 $R --all --effort max \   # whole battery, quality config, in tmux/nohup
+  > .claude/reports/audit-temporal-walk-caffeine/battery.log 2>&1 &
+python3 $R --variants fix-audit,lens-sibling   # a chosen subset
+python3 $R --all --report-only          # just rebuild findings-ALL.md
+```
+
+Sequential is deliberate: the variants are independent and `--run-name` makes
+them parallel-safe, but running one at a time matches the one-active-script
+discipline and avoids hammering quota — there is no quality gain from
+parallelism (sharpness is per-prompt, not per-schedule).
+
+### Individual variants (focused one-offs)
+
+To run or resume a single variant directly:
+
+```bash
+W=.claude/skills/audit-temporal-walk
+SCOPE_TEST=caffeine/src/test/java/com/github/benmanes/caffeine/cache/
+
+# (#2) Diff-shape lenses — main scope, one concentrated question each.
+#      Run individually; sharpness is the point. Three separate walks.
+python3 $W/walker.py --prompt $W/lens-deletion.txt --run-name lens-deletion
+python3 $W/walker.py --prompt $W/lens-sibling.txt  --run-name lens-sibling
+python3 $W/walker.py --prompt $W/lens-intent.txt   --run-name lens-intent
+python3 $W/verify.py --run-name lens-deletion        # etc. per lens
+
+# (#4) Fix-commit walk — only commits whose message looks like a fix
+#      (~39% of history). Pass the SAME --grep on every resume.
+python3 $W/walker.py --prompt $W/fix-audit.txt --run-name fix-audit \
+  --grep 'fix|bug|regression|NPE|race|leak|incorrect|wrong|revert'
+python3 $W/verify.py --run-name fix-audit
+
+# (#1) Test-history walk — coverage-regression hunt over the TEST tree.
+#      The test scope routes to a disjoint  ...-caffeine-test/  reports dir.
+#      Pass WALKER_SCOPE to verify.py too.
+WALKER_SCOPE=$SCOPE_TEST python3 $W/walker.py \
+  --prompt $W/test-walk.txt --run-name coverage
+WALKER_SCOPE=$SCOPE_TEST python3 $W/verify.py --run-name coverage
+
+# (#3) Invariant ledger — carries load-bearing assumptions forward and flags a
+#      distant commit that violates one. Violations materialize as issues, so
+#      verify/findings work unchanged. Full re-walk (the ledger builds from
+#      genesis; it can't be backfilled onto the main run).
+python3 $W/walker.py --prompt $W/invariant-ledger.txt --run-name invariants
+python3 $W/verify.py --run-name invariants
+```
+
+All variants share the `resolved/modified/new` finding schema and emit
+`findings-<name>.md`. The invariant ledger additionally tracks
+`establish/violate/retire` in `state-<name>.json` (see `--summary`'s
+"Invariants by status" line); a violation is also written as a normal issue so
+it flows through verification like any other finding.
+
 ## What the walker does
 
 For each substantive commit (skipping doc/style/dep-bump only), the walker:
@@ -91,23 +183,37 @@ whether the bug witness still applies. Verdicts: `still_exists`,
 `.claude/docs/design-decisions.md` and `cross_model_audit_results.md` as
 filter sources.
 
+An interrupted verify (quota/CLI error) records the unreached issues as
+`error` and **retries them on the next resume** — `verify.py` skips
+non-error verdicts but re-attempts errored ones. When any `error` remains,
+verify.py prints an "INCOMPLETE VERIFY" warning, marks the finding count
+PROVISIONAL in `findings-<name>.md` (and `⚠️+N?` in `findings-ALL.md`), and
+**exits 3** so a partial verify isn't mistaken for a complete one. A verify
+is only truly done when its `verified-<name>.json` has zero `error` verdicts.
+
 Output is a detail.dev-format markdown report with full commit lineage
 already attached to each finding.
 
 ## Output
 
-The reports directory is auto-derived from the first segment of `WALKER_SCOPE`
-(the module name): caffeine runs write to `.claude/reports/audit-temporal-walk-caffeine/`,
-jcache runs to `audit-temporal-walk-jcache/`, etc. All outputs are gitignored
-via `.claude/reports/`:
+The reports directory is auto-derived from `WALKER_SCOPE`: the first path
+segment (the module name) plus a `-test` discriminator when the scope is a
+test tree. So `caffeine/src/main/...` writes to
+`.claude/reports/audit-temporal-walk-caffeine/`, `caffeine/src/test/...` to
+`audit-temporal-walk-caffeine-test/`, jcache to `audit-temporal-walk-jcache/`,
+etc. All outputs are gitignored via `.claude/reports/`:
 
-- `state.json` — walker's issue database
+- `state.json` — walker's issue database (and the invariant ledger, when used)
 - `verified.json` — per-issue verdicts
 - `findings.md` — detail.dev-format report
 - `worktree/` — managed detached worktree used for per-commit snapshots
   (deleting it is safe; the next walk re-creates it)
 - `log/<sha>.raw.json` — per-commit raw responses
 - `verify-log/<id>.raw.json` — per-issue verifier responses
+
+A `--run-name <name>` variant writes the same set under `<name>`-suffixed
+paths in the same module dir: `state-<name>.json`, `verified-<name>.json`,
+`findings-<name>.md`, `log-<name>/`, `verify-log-<name>/`, `worktree-<name>/`.
 
 After running, the walker's findings should still be reviewed by hand —
 expect ~30-40% true-positive rate among surviving findings, with the rest

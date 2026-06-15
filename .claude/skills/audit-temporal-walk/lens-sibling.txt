@@ -1,0 +1,91 @@
+You are auditing a Java caching library's git history through ONE lens: SIBLING PARITY.
+Caffeine maintains many near-identical code paths that must change in lockstep. When a
+commit fixes a bug, tightens a guard, fixes an operator, or changes a contract in ONE
+path but leaves a mirror path untouched, the mirror is left broken. Your job: for every
+behavioral change in this diff, enumerate the mirror paths and confirm whether the same
+change applies to them — and whether this diff actually made it there.
+
+CURRENT COMMIT
+  sha:     $sha
+  date:    $date
+  files in scope changed: $files
+  message (full body — read it; "passes the X.Y TCK", "fixes #NNN", "matches RI"):
+$message
+
+DIFF (scoped to caffeine/src/main/java/com/github/benmanes/caffeine/cache/):
+$diff
+
+CURRENTLY-OPEN ISSUES TOUCHING FILES THIS COMMIT CHANGES:
+$open_issues
+
+(Issues touching unaffected files exist but are hidden to keep prompt size bounded.)
+
+TOOL ACCESS
+$tool_instructions
+
+THE SIBLING-PARITY LENS — Caffeine's mirror-path families (a change in one usually
+implies the same change in the others):
+  - sync vs async: BoundedLocalCache / UnboundedLocalCache method vs the LocalAsyncCache /
+    LocalAsyncLoadingCache equivalent.
+  - bounded vs unbounded: BoundedLocalCache vs UnboundedLocalCache for the same operation.
+  - single-key vs bulk: get / getAll, put / putAll, compute / computeAll, the single-key
+    completion callback vs AsyncBulkCompleter.
+  - Function vs BiFunction: computeIfAbsent vs compute / merge / remap.
+  - put fast/slow paths: the singleton-weigher path vs the custom-weigher path.
+  - removal causes / notifications: EXPLICIT / REPLACED / EXPIRED / COLLECTED / SIZE
+    handled in one removal path but not the parallel one.
+  - reference strategies: strong vs weak/soft value handling where hand-written (NOT the
+    code-generated PS/PW/FS/FW Node classes — those come from javaPoet and are out of
+    scope here).
+
+FOR THE CHANGE(S) IN THIS DIFF:
+  1. Identify what behavioral edit the diff makes in path A (guard added, operator fixed,
+     setWriteTime/setAccessTime added, interrupt restored, idempotency flag added,
+     notification value corrected, etc.).
+  2. Name the mirror path(s) B/C/D from the families above.
+  3. Use a targeted tool call to inspect each mirror AT THIS COMMIT. Decide:
+     - BUG (flag as `new`): the mirror genuinely LACKS the edit and the asymmetry is a
+       real defect reachable from the public API. Witness must name the mirror method and
+       the input that exposes its divergence from the fixed path.
+     - SAFE (do NOT flag): the mirror already had the edit (or never needed it); the
+       divergence is one of Caffeine's INTENTIONAL ones (below); or the mirror is the
+       code-generated Node family.
+
+Do not infer "the mirror lacks it" merely because the diff didn't show the mirror — the
+mirror may already be correct. Confirm against the snapshot before flagging.
+
+A commit may also RESOLVE an open issue (it restores symmetry a prior commit broke) or
+MODIFY one (it changes a sibling contract the issue tracks).
+
+If this diff makes no behavioral change with a mirror (pure docs/style/refactor with no
+sibling, or a self-contained data-structure edit), output
+{"resolved":[],"modified":[],"new":[]} and stop.
+
+OUTPUT JSON (and nothing else — no prose, no code fences):
+{
+  "resolved": [{"id": "...", "evidence": "the edit that restores sibling symmetry"}],
+  "modified": [{"id": "...", "update": "sibling contract change that ripples to the issue"}],
+  "new":      [{"description":"edit applied to path A but not mirror B", "files":["BoundedLocalCache.java", ...], "bug_witness":"input reaching mirror B that exposes its divergence from the fixed path A", "confidence":"high|med|low", "pattern_match":"P2"}]
+}
+
+This lens's home pattern is P2 (sibling divergence); P3 (wrong reference picked) and
+P10 (catch-type narrowness) also recur across siblings.
+
+PRECISION RULES:
+- bug_witness REQUIRED and must trace from a real public API call, naming the specific
+  unfixed mirror method.
+- DO NOT flag Caffeine's INTENTIONAL sibling divergences (.claude/docs/design-decisions.md):
+  async listeners fire only on resolved values (AsyncRemovalListener uses thenAccept and
+  drops exceptional/cancelled; AsyncEvictionListener uses getIfReady and skips in-flight);
+  the AsyncCache.synchronous().asMap() query-vs-mutation split (containsKey/get/iteration
+  treat in-flight as absent, while KeySet.remove / EntryIterator.remove act physically);
+  same-instance return from compute/merge skips setValue but still updates weight/times;
+  refresh-rejection's REPLACED notifies the discarded computed value by design.
+- DEFENSIVE-CODING ABSENCE IS NOT A BUG. SPEC JAVADOC IS NOT A WITNESS (a message citing
+  TCK/RI conformance plus a coherent edit is intentional; don't flag without a concrete
+  failing test).
+- confidence: "high" = reproducible divergence; "med" = real but uncommon trigger;
+  "low" = smell only.
+
+Output JSON only. Your entire response must be a single JSON object starting with an
+open brace and ending with a close brace.
