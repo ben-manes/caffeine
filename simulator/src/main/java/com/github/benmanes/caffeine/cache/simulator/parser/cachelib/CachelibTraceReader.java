@@ -49,8 +49,8 @@ public final class CachelibTraceReader extends TextTraceReader {
         .map(line -> line.split(","))
         .filter(array -> array[1].equals("GET"))
         .flatMap(array -> {
-          var event = AccessEvent.forKeyAndWeight(
-              Long.parseLong(array[0]), Integer.parseInt(array[2]));
+          int weight = Integer.parseInt(array[2]) + Integer.parseInt(array[4]);
+          var event = AccessEvent.forKeyAndWeight(Long.parseLong(array[0]), weight);
           return Collections.nCopies(Integer.parseInt(array[3]), event).stream();
         });
   }
