@@ -88,6 +88,16 @@ tasks.named<Jar>("jar").configure {
     "Automatic-Module-Name" to "com.github.benmanes.caffeine.simulator"))
 }
 
+listOf("jar", "sourcesJar").forEach { taskName ->
+  tasks.named<Jar>(taskName).configure {
+    exclude {
+      !it.isDirectory
+        && it.path.startsWith("com/github/benmanes/caffeine/cache/simulator/parser/")
+        && it.name.substringAfterLast('.', "") !in setOf("class", "java")
+    }
+  }
+}
+
 tasks.withType<Javadoc>().configureEach {
   javadocOptions {
     addBooleanOption("Xdoclint:all,-missing", true)

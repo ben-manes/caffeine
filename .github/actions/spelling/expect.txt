@@ -1,4 +1,3 @@
-acer
 actionlint
 Adoptium
 Ams
@@ -24,6 +23,7 @@ CDDL
 CDPATH
 CHECKPOINTNUM
 classloader
+claude
 clockpro
 clockproplus
 coalescer
