@@ -51,9 +51,12 @@ public final class TencentPhotoTraceReader extends TextTraceReader {
         .map(line -> line.split(" "))
         .filter(array -> array[2].equals(JPEG_FORMAT) || array[2].equals(WEBP_FORMAT))
         .map(array -> {
-          long key = Hashing.murmur3_128().hashBytes(
-              BaseEncoding.base16().lowerCase().decode(array[1])).asLong();
-          return AccessEvent.forKeyAndWeight(key, Integer.parseInt(array[4]));
+          int weight = Integer.parseInt(array[4]);
+          long key = Hashing.murmur3_128().newHasher()
+              .putBytes(BaseEncoding.base16().lowerCase().decode(array[1]))
+              .putInt(weight)
+              .hash().asLong();
+          return AccessEvent.forKeyAndWeight(key, weight);
         });
   }
 }
