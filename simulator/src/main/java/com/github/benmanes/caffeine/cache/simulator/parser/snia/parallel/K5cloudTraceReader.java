@@ -41,10 +41,12 @@ public final class K5cloudTraceReader extends TextTraceReader implements KeyOnly
         .map(line -> line.split(","))
         .filter(array -> array[2].charAt(0) == 'R')
         .flatMapToLong(array -> {
+          int volumeId = Integer.parseInt(array[0]);
           long offset = Long.parseLong(array[3]);
           long startBlock = (offset / BLOCK_SIZE);
           int sequence = IntMath.divide(Integer.parseInt(array[4]), BLOCK_SIZE, RoundingMode.UP);
-          return LongStream.range(startBlock, startBlock + sequence);
+          long key = (((long) volumeId) << 40) | (startBlock & 0xFFFFFFFFFFL);
+          return LongStream.range(key, key + sequence);
     });
   }
 }
