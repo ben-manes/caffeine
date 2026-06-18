@@ -54,8 +54,8 @@ public final class SystorTraceReader extends TextTraceReader {
         .flatMap(array -> {
           int size = Integer.parseInt(array[5]);
           long startBlock = Long.parseLong(array[4]) / BLOCK_SIZE;
-          double responseTime = 1000 * Double.parseDouble(array[1]);
           int sequence = IntMath.divide(size, BLOCK_SIZE, RoundingMode.UP);
+          double responseTime = (1000 * Double.parseDouble(array[1])) / sequence;
           return LongStream.range(startBlock, startBlock + sequence)
               .mapToObj(key -> AccessEvent.forKeyAndPenalties(key, 0, responseTime));
         });
