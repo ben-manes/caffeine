@@ -103,7 +103,7 @@ public final class WikipediaTraceReader extends TextTraceReader implements KeyOn
 
   /** Returns the path segment of the URL. */
   private static String getPath(String url) {
-    int index = url.indexOf('/', 7);
+    int index = url.indexOf('/', url.indexOf("//") + 2);
     if (index == -1) {
       return url;
     }
