@@ -51,8 +51,8 @@ public final class EnterpriseTraceReader
 
           long startBlock = byteOffset / BLOCK_SIZE;
           int sequence = IntMath.divide(size, BLOCK_SIZE, RoundingMode.UP);
-          long key = (((long) diskNum) << 40) | (startBlock & 0xFFFFFFFFFFL);
-          return LongStream.range(key, key + sequence);
+          return LongStream.range(0, sequence)
+              .map(i -> (((long) diskNum) << 40) | ((startBlock + i) & 0xFFFFFFFFFFL));
         });
   }
 

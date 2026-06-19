@@ -50,8 +50,8 @@ public final class StorageTraceReader extends TextTraceReader implements KeyOnly
       long startBlock = Long.parseLong(array[1]);
       int size = Integer.parseInt(array[2]);
       int sequence = IntMath.divide(size, BLOCK_SIZE, RoundingMode.UP);
-      long key = (asu << 40) | (startBlock & 0xFFFFFFFFFFL);
-      return LongStream.range(key, key + sequence);
+      return LongStream.range(0, sequence)
+          .map(i -> (asu << 40) | ((startBlock + i) & 0xFFFFFFFFFFL));
     });
   }
 }
