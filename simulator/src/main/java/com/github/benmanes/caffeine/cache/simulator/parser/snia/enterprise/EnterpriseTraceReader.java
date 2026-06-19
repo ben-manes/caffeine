@@ -43,14 +43,16 @@ public final class EnterpriseTraceReader
     return lines()
         .dropWhile(new SkipHeader())
         .filter(line -> line.stripLeading().startsWith("DiskRead,"))
-        .map(line -> line.split(",", 8))
+        .map(line -> line.split(",", 10))
         .flatMapToLong(line -> {
           long byteOffset = Long.parseLong(line[5].strip().substring(2), 16);
           int size = Integer.parseInt(line[6].strip().substring(2), 16);
+          int diskNum = Integer.parseInt(line[8].strip());
 
           long startBlock = byteOffset / BLOCK_SIZE;
           int sequence = IntMath.divide(size, BLOCK_SIZE, RoundingMode.UP);
-          return LongStream.range(startBlock, startBlock + sequence);
+          long key = (((long) diskNum) << 40) | (startBlock & 0xFFFFFFFFFFL);
+          return LongStream.range(key, key + sequence);
         });
   }
 
