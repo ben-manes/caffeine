@@ -42,8 +42,8 @@ public final class TencentBlockTraceReader extends TextTraceReader implements Ke
           long offset = Long.parseLong(array[1]);
           int sequence = Integer.parseInt(array[2]);
           int volumeId = Integer.parseInt(array[4]);
-          long key = (((long) volumeId) << 40) | (offset & 0xFFFFFFFFFFL);
-          return LongStream.range(key, key + sequence);
+          return LongStream.range(0, sequence)
+              .map(i -> (((long) volumeId) << 40) | ((offset + i) & 0xFFFFFFFFFFL));
         });
   }
 }
