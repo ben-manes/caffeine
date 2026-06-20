@@ -24,6 +24,7 @@ import java.util.Set;
 import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
+import com.google.common.primitives.Ints;
 
 /**
  * A reader for the OracleGeneral binary trace format used by
@@ -52,8 +53,8 @@ public final class OracleGeneralTraceReader extends BinaryTraceReader {
 
     input.skipNBytes(4);
     long objId = Long.reverseBytes(input.readLong());
-    int objSize = Integer.reverseBytes(input.readInt());
+    long objSize = Integer.toUnsignedLong(Integer.reverseBytes(input.readInt()));
     input.skipNBytes(8);
-    return AccessEvent.forKeyAndWeight(objId, Math.max(objSize, 1));
+    return AccessEvent.forKeyAndWeight(objId, Math.max(Ints.saturatedCast(objSize), 1));
   }
 }
