@@ -24,6 +24,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.google.common.hash.Hashing;
+import com.google.common.primitives.Ints;
 
 /**
  * A reader for the trace files provided by the authors of the AdaptSize algorithm. See
@@ -52,7 +53,7 @@ public final class AdaptSizeTraceReader extends TextTraceReader {
         .map(line -> line.split(" ", 3))
         .map(array -> {
           long key = Long.parseLong(array[1]);
-          int weight = Integer.parseInt(array[2]);
+          int weight = Ints.saturatedCast(Long.parseLong(array[2]));
           long hashKey = Hashing.murmur3_128().newHasher()
               .putLong(key).putInt(weight).hash().asLong();
           return AccessEvent.forKeyAndWeight(hashKey, weight);
