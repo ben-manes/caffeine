@@ -24,6 +24,7 @@ import java.util.Set;
 import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
+import com.google.common.primitives.Ints;
 
 /**
  * A reader for the trace files provided by the author of GL-Cache. See
@@ -55,9 +56,9 @@ public final class GLCacheTraceReader extends BinaryTraceReader {
      */
     input.skipNBytes(4);
     long key = Long.reverseBytes(input.readLong());
-    int weight = Integer.reverseBytes(input.readInt());
+    long weight = Integer.toUnsignedLong(Integer.reverseBytes(input.readInt()));
     input.skipNBytes(8);
 
-    return AccessEvent.forKeyAndWeight(key, Math.max(weight, 1));
+    return AccessEvent.forKeyAndWeight(key, Math.max(Ints.saturatedCast(weight), 1));
   }
 }
