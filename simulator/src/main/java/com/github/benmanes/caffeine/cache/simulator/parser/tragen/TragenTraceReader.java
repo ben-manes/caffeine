@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
+import com.google.common.primitives.Ints;
 
 /**
  * A reader for the trace files provided by the authors of the
@@ -46,6 +47,6 @@ public final class TragenTraceReader extends TextTraceReader {
     return lines()
         .map(line -> line.split(","))
         .map(array -> AccessEvent.forKeyAndWeight(
-            Long.parseLong(array[1]), Integer.parseInt(array[2])));
+            Long.parseLong(array[1]), Ints.saturatedCast(Long.parseLong(array[2]))));
   }
 }
