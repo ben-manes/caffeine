@@ -108,4 +108,21 @@ final class UnboundedLocalCacheTest {
     assertThat(result).isNull();
     assertThat(cache.refreshes()).doesNotContainKey(key);
   }
+
+  @Test
+  void remap_preserveRefresh_discardsOnValueChange() {
+    var cache = new UnboundedLocalCache<Integer, Integer>(
+        Caffeine.newBuilder(), /* isAsync= */ false);
+    Integer key = 1;
+    cache.refreshes().put(key, new CompletableFuture<>());
+
+    // The hint asks to preserve the refresh, but the remapping is not a no-op (newValue != value),
+    // so the refresh is still discarded; a stale reload cannot overwrite the new mapping
+    var hints = new LocalCache.RemapHints();
+    hints.preserveRefresh = true;
+    var result = cache.remap(key, (k, value) -> 2, hints);
+
+    assertThat(result).isEqualTo(2);
+    assertThat(cache.refreshes()).doesNotContainKey(key);
+  }
 }

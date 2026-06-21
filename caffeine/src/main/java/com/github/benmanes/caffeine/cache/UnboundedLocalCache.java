@@ -353,6 +353,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     V nv = data.compute(key, (K k, V value) -> {
       V newValue = remappingFunction.apply(k, value);
       if ((value == null) && (newValue == null)) {
+        discardRefresh(k);
         return null;
       }
 

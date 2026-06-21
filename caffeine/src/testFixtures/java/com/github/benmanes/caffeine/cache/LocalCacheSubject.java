@@ -195,6 +195,10 @@ public final class LocalCacheSubject extends Subject {
 
     check("size").withMessage("cache.size() equal to data.size()")
         .that(bounded).hasSize(bounded.data.size());
+    if (bounded.refreshes != null) {
+      check("refreshes").withMessage("refresh tokens not cleaned up after completion")
+          .that(bounded.refreshes).isEmpty();
+    }
     if (bounded.evicts()) {
       bounded.evictionLock.lock();
       try {
@@ -516,6 +520,10 @@ public final class LocalCacheSubject extends Subject {
   private void checkUnbounded(UnboundedLocalCache<?, ?> unbounded) {
     check("size").withMessage("cache.size() equal to data.size()")
         .that(unbounded.size()).isEqualTo(unbounded.data.size());
+    if (unbounded.refreshes != null) {
+      check("refreshes").withMessage("refresh tokens not cleaned up after completion")
+          .that(unbounded.refreshes).isEmpty();
+    }
     if (unbounded.isEmpty()) {
       check("unbounded").about(map()).that(unbounded).isExhaustivelyEmpty();
     }

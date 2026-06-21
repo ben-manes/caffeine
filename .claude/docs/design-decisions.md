@@ -247,8 +247,26 @@ readers of `schedule()`'s recursion check.
 `getValue`, `getKeyReference`, `isAlive`, and the CAS of `writeTime` happen
 without `synchronized(node)`. A stale observation could let `asyncReload` fire
 on a just-retired node, but the completion-path ABA guards (`currentValue ==
-oldValue` + `node.getWriteTime() == writeTime`) discard the result. Cost of the
-rare spurious loader call is accepted to keep the refresh fast path lock-free.
+oldValue` + `(node.getWriteTime() & ~1L) == writeTime`) discard the result. Cost
+of the rare spurious loader call is accepted to keep the refresh fast path lock-free.
+
+**The low bit of `writeTime` is a soft-lock marker, and the completion ABA check
+must mask it.** A reader probing for a refresh CASes `writeTime → writeTime | 1`
+while it registers the token in `refreshes`, then resets it; it starts no load if
+the token already exists, so its transient marker is invisible to any stampede check.
+The completion compares the *base* write time (`& ~1L`), not the raw value — a
+concurrent reader's transient soft-lock is not a modification, and comparing the raw
+value discards a perfectly good reload (issue #1970). The completion also keeps the
+token registered in `refreshes` across the value swap: it reads the token to confirm
+ownership rather than removing it, and the compute machinery's `discardRefresh` clears
+it *after* `setWriteTime`. Holding it for the swap keeps concurrent reads debounced so
+none can trigger a stampede in the remove-then-refresh window. Finally, the
+`computeIfAbsent` lambda re-validates the marker under its per-key atomicity and aborts
+when a concurrent refresh already completed (its `setWriteTime` cleared our marker),
+so a delayed reader that passed the `containsKey` gate does not launch a duplicate,
+stale reload from the same prior value. On the absent-create path the token clear runs
+in a `finally`, so a `weigher` or `expiry` callback that throws while creating the entry
+cannot orphan the token (#1970).
 
 **`discardRefresh` is deliberately over-aggressive.** A mutation that races a
 refresh discards whatever token is in `refreshes` without trying to prove it's

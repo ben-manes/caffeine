@@ -98,6 +98,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -107,6 +108,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -4463,12 +4465,53 @@ final class BoundedLocalCacheTest {
     assertThat(signal.join()).isNull();
   }
 
+  @Test
+  @SuppressFBWarnings("SIC_INNER_SHOULD_BE_STATIC_ANON")
+  void refreshIfNeeded_straggler_abortsWithoutReload() {
+    var ticker = new FakeTicker();
+    var loadCount = new AtomicInteger();
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .build(key -> {
+          loadCount.incrementAndGet();
+          return key + 100;
+        });
+    cache.put(1, 1);
+    var localCache = asBoundedLocalCache(cache);
+    var lookupKey = localCache.nodeFactory.newLookupKey(1);
+    var node = requireNonNull(localCache.data.get(lookupKey));
+    var intercepted = new AtomicBoolean();
+    long bumpedWriteTime = node.getWriteTime() + 2;
+
+    // Simulate the straggler race: between the reader's write-time CAS and the body of its
+    // refreshes.computeIfAbsent, a concurrent refresh advances the entry's write time. The
+    // re-validation guard must observe the change and abort rather than launch a stale reload.
+    localCache.refreshes = new ConcurrentHashMap<Object, CompletableFuture<?>>() {
+      private static final long serialVersionUID = 1L;
+      @Override public CompletableFuture<?> computeIfAbsent(Object key,
+          Function<? super Object, ? extends CompletableFuture<?>> mappingFunction) {
+        intercepted.set(true);
+        node.setWriteTime(bumpedWriteTime);
+        return super.computeIfAbsent(key, mappingFunction);
+      }
+    };
+
+    ticker.advance(Duration.ofMinutes(2));
+    assertThat(cache.get(1)).isEqualTo(1);
+    assertThat(intercepted.get()).isTrue();
+    assertThat(loadCount.get()).isEqualTo(0);
+    assertThat(cache.policy().refreshes()).isEmpty();
+  }
+
   @ParameterizedTest
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   void refresh_collected(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var key = cache.nodeFactory.newReferenceKey(nullKey(), nullReferenceQueue());
     cache.refreshes().put(key, context.absentValue().toFuture());
     assertThat(context.cache().policy().refreshes()).isEmpty();
+    cache.refreshes().remove(key);
   }
 
   @CheckNoEvictions
@@ -4882,6 +4925,7 @@ final class BoundedLocalCacheTest {
 
     assertThat(result).isEqualTo(oldValue);
     assertThat(cache.refreshes()).containsEntry(keyRef, pendingRefresh);
+    cache.refreshes().remove(keyRef, pendingRefresh);
   }
 
   @CheckNoEvictions
@@ -4958,6 +5002,7 @@ final class BoundedLocalCacheTest {
       assertThat(refreshes).isNotEmpty();
       assertThat(node.getWriteTime() & 1L).isEqualTo(0);
 
+      localCache.refreshes = refreshes;
       future.complete(newValue);
       await().untilAsserted(() -> assertThat(refreshes).isEmpty());
       await().untilAsserted(() -> assertThat(cache).containsEntry(context.absentKey(), newValue));

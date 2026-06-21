@@ -58,11 +58,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
@@ -396,8 +398,9 @@ final class RefreshAfterWriteTest {
       loader = Loader.ASYNC_INCOMPLETE)
   void refreshIfNeeded_writeTimeABA(LoadingCache<Int, Int> cache, CacheContext context) {
     // When a refresh is in-flight and a put replaces the value with the SAME instance,
-    // currentValue == oldValue is true but writeTime changed. The ABA check at
-    // node.getWriteTime() != writeTime should detect this and discard the refresh.
+    // currentValue == oldValue is true but the write time changed. The completion's ABA check
+    // compares the base write time (masking off the soft-lock marker bit) and so still detects
+    // this and discards the refresh.
     var originalValue = requireNonNull(context.original().get(context.firstKey()));
 
     context.ticker().advance(Duration.ofMinutes(2));
@@ -417,6 +420,31 @@ final class RefreshAfterWriteTest {
     // Only the discarded refresh produces a REPLACED notification
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(context.firstKey(), context.absentKey().negate())
+        .exclusively();
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
+      loader = Loader.ASYNC_INCOMPLETE)
+  void refreshIfNeeded_completed_appliesAndClearsToken(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(2));
+    var value = cache.get(context.firstKey());
+    assertThat(value).isNotNull();
+
+    assertThat(cache.policy().refreshes()).isNotEmpty();
+    var future = requireNonNull(cache.policy().refreshes().get(context.firstKey()));
+
+    // No mutation races the reload: the completion must apply it (the marker-aware write-time check
+    // must not mistake a transient soft-lock for a write) and clear the token once the swap is done
+    future.complete(context.absentKey().negate());
+
+    assertThat(cache).containsEntry(context.firstKey(), context.absentKey().negate());
+    assertThat(cache.policy().refreshes()).doesNotContainKey(context.firstKey());
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.firstKey(), context.original().get(context.firstKey()))
         .exclusively();
   }
 
@@ -600,6 +628,25 @@ final class RefreshAfterWriteTest {
         .withLevel(WARN)
         .exclusively())
         .hasSize(1);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  void refreshIfNeeded_weigherThrows_clearsToken(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    when(context.weigher().weigh(any(), any())).thenReturn(1);
+    cache.put(context.absentKey(), context.absentValue());
+    context.ticker().advance(Duration.ofMinutes(2));
+    when(context.weigher().weigh(any(), any())).thenThrow(ExpectedError.INSTANCE);
+
+    // The reload's weigh throws inside the refresh completion; the failure is swallowed, but the
+    // entry's refresh token must still be cleared rather than orphaned in refreshes() (#1970).
+    assertThat(cache.getIfPresent(context.absentKey())).isNotNull();
+    assertThat(cache.policy().refreshes()).isEmpty();
   }
 
   @CheckNoEvictions

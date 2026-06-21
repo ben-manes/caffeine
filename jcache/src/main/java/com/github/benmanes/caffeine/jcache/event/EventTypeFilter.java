@@ -74,7 +74,7 @@ final class EventTypeFilter<K, V> implements CacheEntryEventFilter<K, V> {
       case EXPIRED:
         return (listener instanceof CacheEntryExpiredListener<?, ?>);
     }
-    logger.log(Level.WARNING, "Unknown event type: {}",
+    logger.log(Level.WARNING, "Unknown event type: {0}",
         event.getEventType(), new IllegalStateException());
     return false;
   }

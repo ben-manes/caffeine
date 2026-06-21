@@ -297,7 +297,9 @@ abstract class LocalAsyncLoadingCache<K, V>
                 return currentValue;
               }
 
-              var successful = asyncCache.cache().refreshes().remove(keyReference, castedFuture);
+              // Keep the refresh registered until the write clears it to avoid refreshAfterWrite
+              // readers from prematurely scheduling another reload
+              var successful = (asyncCache.cache().refreshes().get(keyReference) == castedFuture);
               if (successful && (currentValue == oldValueFuture[0])) {
                 return (newValue == null) ? null : castedFuture;
               }

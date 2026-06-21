@@ -1390,6 +1390,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @Nullable CompletableFuture<? extends @Nullable V>[] refreshFuture = new CompletableFuture[1];
       try {
         refreshes.computeIfAbsent(keyReference, k -> {
+          if (node.getWriteTime() != refreshWriteTime) {
+            return null;
+          }
           try {
             startTime[0] = statsTicker().read();
             if (isAsync) {
@@ -1439,13 +1442,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
         @SuppressWarnings("unchecked")
         V value = (isAsync && (newValue != null)) ? (V) refreshFuture[0] : newValue;
-
         @Nullable RemovalCause[] cause = new RemovalCause[1];
         var hints = new RemapHints();
         @Nullable V result;
         try {
           result = compute(key, (K k, @Nullable V currentValue) -> {
-            boolean removed = refreshes.remove(keyReference, refreshFuture[0]);
+            // Keep the refresh registered until the write clears it to avoid readers from
+            // prematurely scheduling another reload
             if (currentValue == null) {
               // If the entry is absent then discard the refresh and maybe notify the listener
               if (value != null) {
@@ -1459,8 +1462,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
                 (newValue == Async.getIfReady((CompletableFuture<?>) currentValue))) {
               // If the completed futures hold the same value instance then no-op
               return currentValue;
-            } else if (removed && (currentValue == oldValue)
-                && (node.getWriteTime() == writeTime)) {
+            } else if ((currentValue == oldValue) && ((node.getWriteTime() & ~1L) == writeTime)
+                && (refreshes.get(keyReference) == refreshFuture[0])) {
               // If the entry was not modified while in-flight (no ABA) then replace
               return value;
             }
@@ -1471,7 +1474,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             if (value != null) {
               cause[0] = RemovalCause.REPLACED;
             }
-            if ((currentValue != oldValue) || (node.getWriteTime() != writeTime)) {
+            if ((currentValue != oldValue) || ((node.getWriteTime() & ~1L) != writeTime)) {
               hints.preserveTimestamps = true;
             }
             return currentValue;
@@ -2970,22 +2973,26 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
         ctx.newValue = remappingFunction.apply(key, null);
         if (ctx.newValue == null) {
+          discardRefresh(kr);
           return null;
         }
-        ctx.now = expirationTicker().read();
-        ctx.newWeight = weigher.weigh(key, ctx.newValue);
-        long varTime = expireAfterCreate(key, ctx.newValue, expiry, ctx.now);
-        var created = nodeFactory.newNode(keyRef, ctx.newValue,
-            valueReferenceQueue(), ctx.newWeight, ctx.now);
+        try {
+          ctx.now = expirationTicker().read();
+          ctx.newWeight = weigher.weigh(key, ctx.newValue);
+          long varTime = expireAfterCreate(key, ctx.newValue, expiry, ctx.now);
+          var created = nodeFactory.newNode(keyRef, ctx.newValue,
+              valueReferenceQueue(), ctx.newWeight, ctx.now);
 
-        long expirationTime = isComputingAsync(ctx.newValue)
-            ? ctx.now + ASYNC_EXPIRY
-            : ctx.now;
-        setAccessTime(created, expirationTime);
-        setWriteTime(created, expirationTime);
-        setVariableTime(created, varTime);
-        discardRefresh(kr);
-        return created;
+          long expirationTime = isComputingAsync(ctx.newValue)
+              ? ctx.now + ASYNC_EXPIRY
+              : ctx.now;
+          setAccessTime(created, expirationTime);
+          setWriteTime(created, expirationTime);
+          setVariableTime(created, varTime);
+          return created;
+        } finally {
+          discardRefresh(kr);
+        }
       }
 
       synchronized (n) {
@@ -3063,11 +3070,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           discardRefresh(kr);
           return n;
         } catch (Throwable e) {
+          discardRefresh(kr);
           if (!wasEvicted) {
             throw e;
           }
           ctx.newValue = null;
-          discardRefresh(kr);
           ctx.exception = e;
           ctx.removed = n;
           n.retire();

@@ -39,6 +39,8 @@ import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
@@ -65,11 +67,14 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.LocalAsyncCache.AsyncBulkCompleter.NullMapCompletionException;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableMap;
@@ -85,6 +90,31 @@ import com.google.common.primitives.Ints;
  */
 @CheckNoEvictions @CheckMaxLogLevel(TRACE)
 final class AsyncLoadingCacheTest {
+
+  /* --------------- getIfPresent --------------- */
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, loader = Loader.IDENTITY, stats = Stats.ENABLED)
+  void getIfPresent_inFlight_recordsMissConsistentlyWithGetAllPresent(
+      AsyncLoadingCache<Int, Int> cache) {
+    // An in-flight future is logically absent for a query (getIfReady returns null), so the
+    // synchronous view records a miss — consistent with getAllPresent — rather than a hit.
+    var future = new CompletableFuture<Int>();
+    cache.put(Int.valueOf(1), future);
+
+    assertThat(cache.synchronous().getIfPresent(Int.valueOf(1))).isNull();
+    assertThat(cache.synchronous().getAllPresent(Int.listOf(1))).isExhaustivelyEmpty();
+    assertThat(cache.synchronous().stats().hitCount()).isEqualTo(0);
+    assertThat(cache.synchronous().stats().missCount()).isEqualTo(2);
+    future.complete(null);
+
+    cache.put(Int.valueOf(2), Int.futureOf(2));
+    assertThat(cache.synchronous().getIfPresent(Int.valueOf(2))).isEqualTo(2);
+    assertThat(cache.synchronous().stats().hitCount()).isEqualTo(1);
+
+    assertThat(cache.synchronous().getIfPresent(Int.valueOf(3))).isNull();
+    assertThat(cache.synchronous().stats().missCount()).isEqualTo(3);
+  }
 
   /* --------------- get --------------- */
 
@@ -583,6 +613,34 @@ final class AsyncLoadingCacheTest {
     assertThat(cache).isEmpty();
   }
 
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(population = Population.EMPTY,
+      loader = {Loader.BULK_NEGATIVE, Loader.BULK_EXCEEDS_NEGATIVE},
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.MOCKITO)
+  void getAll_weigherThrowsSharedException(
+      AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    // A weigher that throws the same instance for every entry must not make the bulk completer
+    // self-suppress: error.addSuppressed(error) throws IllegalArgumentException, masking the real
+    // failure and leaking the proxy futures left unvisited when the exception escapes the loop.
+    var expected = new LoadAllException();
+    when(context.weigher().weigh(any(), any())).thenThrow(expected);
+    int count = (context.loader() == Loader.BULK_EXCEEDS_NEGATIVE)
+        ? 10 + context.absentKeys().size()
+        : context.absentKeys().size();
+
+    var future = cache.getAll(context.absentKeys());
+    assertThat(future).failsWith(CompletionException.class)
+        .hasCauseThat().isSameInstanceAs(expected);
+    assertThat(cache.asMap()).isExhaustivelyEmpty();
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(expected)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(count);
+  }
+
   /* --------------- put --------------- */
 
   @ParameterizedTest
@@ -923,63 +981,6 @@ final class AsyncLoadingCacheTest {
     assertThat(loader.asyncLoadAll(Int.setOf(1, 2), Runnable::run))
         .succeedsWith(Int.mapOf(1, 1, 2, 2));
     assertThat(loader.asyncLoad(Int.valueOf(1), Runnable::run)).succeedsWith(1);
-  }
-
-  @Test
-  @CheckMaxLogLevel(WARN)
-  void getAll_weigherThrowsSharedException() {
-    // A weigher that throws the same instance for every entry must not make the bulk completer
-    // self-suppress: error.addSuppressed(error) throws IllegalArgumentException, masking the real
-    // failure and leaking the proxy futures left unvisited when the exception escapes the loop.
-    var expected = new RuntimeException();
-    Weigher<Int, Int> weigher = (key, value) -> { throw expected; };
-    BiFunction<Set<? extends Int>, Executor, CompletableFuture<Map<Int, Int>>> loader =
-        (keys, executor) -> {
-          ImmutableMap<Int, Int> results = keys.stream()
-              .collect(toImmutableMap(identity(), identity()));
-          return CompletableFuture.completedFuture(results);
-        };
-    AsyncLoadingCache<Int, Int> cache = Caffeine.newBuilder()
-        .weigher(weigher)
-        .maximumWeight(Long.MAX_VALUE)
-        .executor(Runnable::run)
-        .buildAsync(AsyncCacheLoader.bulk(loader));
-
-    var future = cache.getAll(Int.listOf(1, 2, 3));
-
-    var failure = assertThrows(CompletionException.class, future::join);
-    assertThat(failure).hasCauseThat().isSameInstanceAs(expected);
-    assertThat(cache.asMap()).isExhaustivelyEmpty();
-    assertThat(logEvents()
-        .withMessage("Exception thrown during asynchronous load")
-        .withThrowable(RuntimeException.class)
-        .withLevel(WARN)
-        .exclusively())
-        .hasSize(3);
-  }
-
-  @Test
-  void getIfPresent_inFlight_recordsMissConsistentlyWithGetAllPresent() {
-    // An in-flight future is logically absent for a query (getIfReady returns null), so the
-    // synchronous view records a miss — consistent with getAllPresent — rather than a hit.
-    CacheLoader<Int, Int> loader = key -> key;
-    AsyncLoadingCache<Int, Int> cache = Caffeine.newBuilder()
-        .recordStats()
-        .executor(Runnable::run)
-        .buildAsync(loader);
-
-    cache.put(Int.valueOf(1), new CompletableFuture<>());
-    assertThat(cache.synchronous().getIfPresent(Int.valueOf(1))).isNull();
-    assertThat(cache.synchronous().getAllPresent(Int.listOf(1))).isExhaustivelyEmpty();
-    assertThat(cache.synchronous().stats().hitCount()).isEqualTo(0);
-    assertThat(cache.synchronous().stats().missCount()).isEqualTo(2);
-
-    cache.put(Int.valueOf(2), CompletableFuture.completedFuture(Int.valueOf(2)));
-    assertThat(cache.synchronous().getIfPresent(Int.valueOf(2))).isEqualTo(2);
-    assertThat(cache.synchronous().stats().hitCount()).isEqualTo(1);
-
-    assertThat(cache.synchronous().getIfPresent(Int.valueOf(3))).isNull();
-    assertThat(cache.synchronous().stats().missCount()).isEqualTo(3);
   }
 
   private static final class LoadAllException extends RuntimeException {

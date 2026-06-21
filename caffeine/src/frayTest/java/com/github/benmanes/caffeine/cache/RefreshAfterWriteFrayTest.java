@@ -94,6 +94,41 @@ final class RefreshAfterWriteFrayTest {
     assertThat(cache).isValid();
   }
 
+  /**
+   * Explicit {@code refresh(k)} on an async cache racing a put — exercises the
+   * {@code LocalAsyncLoadingCache} reload-completion path, which holds the token across the value
+   * swap (rather than removing it up front) so the completion cannot leave a leaked token or stomp
+   * the concurrent write.
+   */
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void asyncExplicitRefresh_concurrentPut() throws InterruptedException {
+    var ticker = new FakeTicker();
+    AsyncLoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(10)
+        .buildAsync(key -> key * 10);
+    cache.synchronous().get(1);
+    ticker.advance(Duration.ofMinutes(2));
+
+    var threadA = new Thread(() -> cache.synchronous().refresh(1));
+    var threadB = new Thread(() -> cache.synchronous().put(1, 999));
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+    cache.synchronous().cleanUp();
+
+    var value = cache.synchronous().getIfPresent(1);
+    assertThat(value).isNotNull();
+    assertWithMessage("Key 1 should be 10 or 999, but was %s", value)
+        .that(value).isAnyOf(10, 999);
+    assertThat(cache.synchronous().policy().refreshes()).isEmpty();
+    assertThat(cache.synchronous()).isValid();
+  }
+
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
   void completion_concurrentEviction() throws InterruptedException {
     var ticker = new FakeTicker();
@@ -121,6 +156,7 @@ final class RefreshAfterWriteFrayTest {
     cache.cleanUp();
 
     assertThat(cache.estimatedSize()).isAtMost(3);
+    assertThat(cache.policy().refreshes()).isEmpty();
     assertThat(cache).isValid();
   }
 
@@ -159,6 +195,50 @@ final class RefreshAfterWriteFrayTest {
     cache.cleanUp();
 
     assertThat(cache.estimatedSize()).isAtMost(3);
+    assertThat(cache.policy().refreshes()).isEmpty();
+    assertThat(cache).isValid();
+  }
+
+  /**
+   * Two reads race the refresh of a due entry (issue #1970). With an incrementing loader the
+   * applied value equals the number of loads, so a discarded reload (value lags loadCount) or a
+   * stampede (a second reload) is caught deterministically. The completion's write-time check must
+   * ignore the transient soft-lock marker a concurrent reader sets while probing, and the entry's
+   * token must stay registered across the swap so the second reader cannot start a duplicate load.
+   * <p>
+   * Randomized scheduling reaches both the completion-side stampede and the deeper entry-path
+   * straggler (a reader descheduled across an entire concurrent refresh completion before its
+   * {@code computeIfAbsent} re-validates the soft-lock). The latter is beyond the bounded search of
+   * the {@code RefreshAfterWriteLincheckTest} mirror, so this test is its reliable guard.
+   */
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void completion_notDiscardedNorStampeded() throws InterruptedException {
+    var ticker = new FakeTicker();
+    var loadCount = new AtomicInteger();
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(10)
+        .build(key -> loadCount.incrementAndGet());
+    assertThat(cache.get(1)).isEqualTo(1);
+    ticker.advance(Duration.ofMinutes(2));
+
+    var threadA = new Thread(() -> cache.get(1));
+    var threadB = new Thread(() -> cache.get(1));
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+    cache.cleanUp();
+
+    var value = cache.getIfPresent(1);
+    assertWithMessage("at most one refresh should run (no stampede), but loadCount=%s",
+        loadCount.get()).that(loadCount.get()).isAtMost(2);
+    assertWithMessage("a completed reload must be applied, not discarded (value=%s, loadCount=%s)",
+        value, loadCount.get()).that(value).isEqualTo(loadCount.get());
+    assertThat(cache.policy().refreshes()).isEmpty();
     assertThat(cache).isValid();
   }
 
@@ -190,8 +270,10 @@ final class RefreshAfterWriteFrayTest {
     assertThat(value).isNotNull();
     assertThat(value).isEqualTo(10);
     assertWithMessage(
-        "Expected at most 3 loads (initial + at most 2 refreshes), but was %s", loadCount.get())
-            .that(loadCount.get()).isAtMost(3);
+        "Expected at most 2 loads (initial + at most 1 refresh), but was %s", loadCount.get())
+            .that(loadCount.get()).isAtMost(2);
+    assertThat(cache.policy().refreshes()).isEmpty();
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)

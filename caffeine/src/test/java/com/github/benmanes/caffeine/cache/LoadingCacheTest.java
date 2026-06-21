@@ -43,6 +43,8 @@ import static java.util.Map.entry;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
@@ -502,6 +504,43 @@ final class LoadingCacheTest {
 
   @CheckNoEvictions
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE)
+  void refresh_completed_clearsToken(LoadingCache<Int, Int> cache, CacheContext context) {
+    var key = context.original().isEmpty() ? context.absentKey() : context.firstKey();
+    var future = cache.refresh(key);
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    // A clean completion (no racing mutation) applies the reload and clears its token, rather than
+    // removing the token up front; the completion holds it across the value swap so a concurrent
+    // refreshAfterWrite read cannot stampede, then the compute machinery discards it.
+    future.complete(context.absentValue());
+
+    assertThat(cache).containsEntry(key, context.absentValue());
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO, loader = Loader.ASYNC_INCOMPLETE)
+  void refresh_absentCreate_weigherThrows_clearsToken(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
+    var key = context.absentKey();
+    var future = cache.refresh(key);
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    // The completion creates the absent entry, but the weigher throws while weighing it; the failure
+    // is swallowed yet the refresh token must not be orphaned in refreshes() (#1970).
+    future.complete(context.absentValue());
+
+    assertThat(cache).doesNotContainKey(key);
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       removalListener = Listener.CONSUMING, loader = Loader.ASYNC_INCOMPLETE)
   void refresh_replaced_sameValue(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -654,6 +693,7 @@ final class LoadingCacheTest {
     var future = cache.refresh(context.absentKey());
     assertThat(future).succeedsWithNull();
     assertThat(cache).hasSize(context.initialSize());
+    assertThat(cache.policy().refreshes()).isEmpty();
   }
 
   @CheckNoEvictions
