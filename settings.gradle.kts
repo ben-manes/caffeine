@@ -10,6 +10,13 @@ plugins {
 
 dependencyResolutionManagement {
   repositories {
+    if (providers.environmentVariable("CI").isPresent) {
+      maven {
+        name = "googleMavenCentralMirror"
+        url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+        mavenContent { releasesOnly() }
+      }
+    }
     mavenCentral()
   }
 }

@@ -25,6 +25,7 @@ jobs:
             cdp.customer.io:443
             github-proxy.qlty.sh:443
             github.com:443
+            maven-central.storage-download.googleapis.com:443
             qlty-releases.s3.amazonaws.com:443
             qlty.sh:443
             radarlint-releases.s3.amazonaws.com:443

@@ -8,6 +8,13 @@ plugins {
 dependencyResolutionManagement {
   repositories {
     gradlePluginPortal()
+    if (providers.environmentVariable("CI").isPresent) {
+      maven {
+        name = "googleMavenCentralMirror"
+        url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+        mavenContent { releasesOnly() }
+      }
+    }
     mavenCentral()
   }
   versionCatalogs {

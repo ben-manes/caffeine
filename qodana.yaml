@@ -1,5 +1,5 @@
 version: "1.0"
-projectJDK: "corretto-25"
+projectJDK: "corretto-26"
 linter: jetbrains/qodana-jvm-community:2026.1
 profile:
   name: qodana.recommended

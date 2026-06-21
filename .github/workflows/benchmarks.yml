@@ -20,6 +20,7 @@ env:
     downloads.gradle-dn.com:443
     gds.oracle.com:443
     github.com:443
+    maven-central.storage-download.googleapis.com:443
     objects.githubusercontent.com:443
     plugins.gradle.org:443
     plugins-artifacts.gradle.org:443

@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-  JAVA_VERSION: 25
+  JAVA_VERSION: 26
 
 jobs:
   dependency-check:
@@ -42,6 +42,7 @@ jobs:
             downloads.gradle-dn.com:443
             github.com:443
             jeremylong.github.io:443
+            maven-central.storage-download.googleapis.com:443
             nvd.nist.gov:443
             objects.githubusercontent.com:443
             ossindex.sonatype.org:443

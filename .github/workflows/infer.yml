@@ -20,6 +20,7 @@ env:
     downloads.gradle.org:443
     downloads.gradle-dn.com:443
     github.com:443
+    maven-central.storage-download.googleapis.com:443
     objects.githubusercontent.com:443
     plugins.gradle.org:443
     plugins-artifacts.gradle.org:443
@@ -38,7 +39,7 @@ jobs:
       actions: read # Needed for uploading security scan results
       security-events: write # Needed for uploading security scan results
     env:
-      JAVA_VERSION: 25
+      JAVA_VERSION: 26
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4

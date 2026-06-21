@@ -96,6 +96,21 @@ runs:
       with:
         path: ~/.gradle/caches/build-cache-*
         key: gradle-build-cache-${{ runner.os }}-jdk${{ inputs.java }}-${{ inputs.arguments }}
+    - name: Read Fray version
+      id: fray_version
+      if: ${{ contains(inputs.arguments, 'frayTest') }}
+      shell: bash
+      run: |
+        version=$(grep -oP '(?<=^fray = ")[^"]+' gradle/libs.versions.toml)
+        echo "version=${version}" >> $GITHUB_OUTPUT
+    - name: Cache Fray instrumented JDK
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      if: ${{ contains(inputs.arguments, 'frayTest') }}
+      with:
+        path: |
+          build/fray/fray-java
+          build/fray/fray-jvmti
+        key: fray-jdk-${{ runner.os }}-${{ steps.fray_version.outputs.version }}
     - name: Run ${{ inputs.arguments }}
       if: ${{ inputs.arguments != '' }}
       env:

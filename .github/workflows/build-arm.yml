@@ -24,6 +24,7 @@ env:
     ghcr.io:443
     github.com:443
     jdk.java.net:443
+    maven-central.storage-download.googleapis.com:443
     objects.githubusercontent.com:443
     oss.sonatype.org:443
     plugins.gradle.org:443
@@ -81,7 +82,7 @@ jobs:
       matrix:
         suite: ${{ fromJson(needs.setup.outputs.suites) }}
     env:
-      JAVA_VERSION: 25
+      JAVA_VERSION: 26
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4

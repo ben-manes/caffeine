@@ -108,6 +108,7 @@ jni
 jre
 jspecify
 JVMs
+jvmti
 kaggle
 klazz
 kotlin

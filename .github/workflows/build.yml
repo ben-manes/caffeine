@@ -29,6 +29,7 @@ env:
     ghcr.io:443
     github.com:443
     jdk.java.net:443
+    maven-central.storage-download.googleapis.com:443
     objects.githubusercontent.com:443
     oss.sonatype.org:443
     plugins.gradle.org:443
@@ -43,7 +44,7 @@ env:
     schemastore.org:443
     www.graalvm.org:443
   MINIMUM_JDK: 11
-  LATEST_JDK: 25
+  LATEST_JDK: 26
 
 jobs:
   compile:
@@ -54,7 +55,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 25, 27-ea ]
+        java: [ 11, 26, 27-ea ]
     env:
       JAVA_VERSION: ${{ matrix.java }}
     steps:

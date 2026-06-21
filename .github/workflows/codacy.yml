@@ -27,6 +27,7 @@ jobs:
             auth.docker.io:443
             github.com:443
             golang.org:443
+            maven-central.storage-download.googleapis.com:443
             objects.githubusercontent.com:443
             production.cloudflare.docker.com:443
             raw.githubusercontent.com:443
