@@ -55,7 +55,7 @@ public final class GDWheelPolicy implements Policy {
   private final int[] clockHand;
   private final double[] cost;
 
-  private int size;
+  private long size;
 
   public GDWheelPolicy(Config config) {
     var settings = new GDWheelSettings(config);
@@ -202,7 +202,7 @@ public final class GDWheelPolicy implements Policy {
 
   @Override
   public void finished() {
-    int expectedSize = data.values().stream().mapToInt(node -> node.weight).sum();
+    long expectedSize = data.values().stream().mapToLong(node -> node.weight).sum();
     checkState(data.size() <= maximumSize, "%s > %s", data.size(), maximumSize);
     checkState(size == expectedSize, "%s != %s", size, expectedSize);
 
