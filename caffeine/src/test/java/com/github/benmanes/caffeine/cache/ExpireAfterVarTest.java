@@ -80,6 +80,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
@@ -423,6 +424,42 @@ final class ExpireAfterVarTest {
     verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
     verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
     verifyNoMoreInteractions(context.expiry());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.DISCARDING,
+      expiry = CacheExpiry.CREATE, expiryTime = Expire.IMMEDIATELY)
+  void put_staleExpiryClock(Cache<Int, Int> cache, CacheContext context) {
+    // re-read the clock under the lock so it reports no live previous value (null) for an entry
+    // that expired while it blocked on the entry lock
+    var key = context.absentKey();
+    var inserterInLambda = new AtomicBoolean();
+    var releaseInserter = new AtomicBoolean();
+    var inserter = CompletableFuture.runAsync(() -> cache.asMap().compute(key, (k, v) -> {
+      inserterInLambda.set(true);
+      await().untilTrue(releaseInserter);
+      return key;
+    }), executor);
+    await().untilTrue(inserterInLambda);
+
+    var writerStarted = new AtomicBoolean();
+    var writerThread = new AtomicReference<@Nullable Thread>();
+    var result = new AtomicReference<@Nullable Int>();
+    var writer = CompletableFuture.runAsync(() -> {
+      writerThread.set(Thread.currentThread());
+      writerStarted.set(true);
+      result.set(cache.asMap().put(key, context.absentValue()));
+    }, executor);
+    await().untilTrue(writerStarted);
+    var thread = requireNonNull(writerThread.get());
+    await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
+
+    context.ticker().advance(Duration.ofHours(1));
+    releaseInserter.set(true);
+    inserter.join();
+    writer.join();
+
+    assertThat(result.get()).isNull();
   }
 
   @ParameterizedTest
@@ -931,6 +968,42 @@ final class ExpireAfterVarTest {
         .withLevel(WARN)
         .exclusively())
         .hasSize(1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.DISCARDING,
+      expiry = CacheExpiry.CREATE, expiryTime = Expire.IMMEDIATELY)
+  void computeIfAbsent_staleExpiryClock(Cache<Int, Int> cache, CacheContext context) {
+    // re-read the clock for its existing-entry expiry check so it never returns an entry that
+    // expired while it was blocked on the entry lock
+    var key = context.absentKey();
+    var inserterInLambda = new AtomicBoolean();
+    var releaseInserter = new AtomicBoolean();
+    var inserter = CompletableFuture.runAsync(() -> cache.asMap().compute(key, (k, v) -> {
+      inserterInLambda.set(true);
+      await().untilTrue(releaseInserter);
+      return key;
+    }), executor);
+    await().untilTrue(inserterInLambda);
+
+    var readerStarted = new AtomicBoolean();
+    var readerThread = new AtomicReference<@Nullable Thread>();
+    var result = new AtomicReference<@Nullable Int>();
+    var reader = CompletableFuture.runAsync(() -> {
+      readerThread.set(Thread.currentThread());
+      readerStarted.set(true);
+      result.set(cache.asMap().computeIfAbsent(key, k -> context.absentValue()));
+    }, executor);
+    await().untilTrue(readerStarted);
+    var thread = requireNonNull(readerThread.get());
+    await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
+
+    context.ticker().advance(Duration.ofHours(1));
+    releaseInserter.set(true);
+    inserter.join();
+    reader.join();
+
+    assertThat(result.get()).isEqualTo(context.absentValue());
   }
 
   @ParameterizedTest
@@ -2448,6 +2521,47 @@ final class ExpireAfterVarTest {
     future.completeExceptionally(new Exception());
     assertThat(compute).succeedsWith(context.absentValue());
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.DISCARDING,
+      expiry = CacheExpiry.CREATE, expiryTime = Expire.IMMEDIATELY)
+  void compute_staleExpiryClock(Cache<Int, Int> cache, CacheContext context) {
+    // re-read the clock for remap's existing-entry expiry check so the remapping function sees no
+    // value (null) for an entry that expired while it was blocked on the entry lock
+    var key = context.absentKey();
+    var inserterInLambda = new AtomicBoolean();
+    var releaseInserter = new AtomicBoolean();
+    var inserter = CompletableFuture.runAsync(() -> cache.asMap().compute(key, (k, v) -> {
+      inserterInLambda.set(true);
+      await().untilTrue(releaseInserter);
+      return key;
+    }), executor);
+    await().untilTrue(inserterInLambda);
+
+    var readerStarted = new AtomicBoolean();
+    var readerThread = new AtomicReference<@Nullable Thread>();
+    var observed = new AtomicReference<@Nullable Int>();
+    var result = new AtomicReference<@Nullable Int>();
+    var reader = CompletableFuture.runAsync(() -> {
+      readerThread.set(Thread.currentThread());
+      readerStarted.set(true);
+      result.set(cache.asMap().compute(key, (k, v) -> {
+        observed.set(v);
+        return context.absentValue();
+      }));
+    }, executor);
+    await().untilTrue(readerStarted);
+    var thread = requireNonNull(readerThread.get());
+    await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
+
+    context.ticker().advance(Duration.ofHours(1));
+    releaseInserter.set(true);
+    inserter.join();
+    reader.join();
+
+    assertThat(observed.get()).isNull();
+    assertThat(result.get()).isEqualTo(context.absentValue());
   }
 
   /* --------------- Policy: oldest --------------- */

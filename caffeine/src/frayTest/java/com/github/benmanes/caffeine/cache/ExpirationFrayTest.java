@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.pastalab.fray.junit.junit5.FrayTestExtension;
@@ -260,6 +261,39 @@ final class ExpirationFrayTest {
     if (value != null) {
       assertThat(value).isEqualTo(999);
     }
+    assertThat(cache).isValid();
+  }
+
+  /**
+   * computeIfAbsent must never return an entry that is already expired. Every value is born expired
+   * (expireAfterCreate = 0), so the only correct result is the freshly computed 999 — returning the
+   * 100 inserted by the other thread means the existing-entry expiry check used a stale clock that
+   * predated the insertion (see doComputeIfAbsent, which must re-read now like remap does).
+   */
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void computeIfAbsent_concurrentInsert_staleExpiryClock() throws InterruptedException {
+    var ticker = new FakeTicker();
+    Cache<Integer, Integer> cache = Caffeine.newBuilder()
+        .expireAfter(Expiry.creating((k, v) -> Duration.ZERO))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(10)
+        .build();
+
+    var result = new AtomicReference<Integer>();
+    var threadA = new Thread(() -> result.set(cache.asMap().computeIfAbsent(1, k -> 999)));
+    var threadB = new Thread(() -> {
+      ticker.advance(Duration.ofMinutes(1));
+      cache.put(1, 100);
+    });
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+
+    assertWithMessage("computeIfAbsent returned an expired value")
+        .that(result.get()).isEqualTo(999);
     assertThat(cache).isValid();
   }
 
