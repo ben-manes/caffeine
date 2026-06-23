@@ -124,6 +124,7 @@ linearizability
 lirs
 Llirs
 lrb
+lun
 maxcount
 mbean
 MEMSIZE
