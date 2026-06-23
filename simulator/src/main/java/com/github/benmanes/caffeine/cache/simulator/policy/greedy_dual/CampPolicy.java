@@ -61,7 +61,7 @@ public final class CampPolicy implements Policy {
   private final int bitMask;
 
   private long requestCount;
-  private int size;
+  private long size;
 
   public CampPolicy(Config config) {
     var settings = new CampSettings(config);
