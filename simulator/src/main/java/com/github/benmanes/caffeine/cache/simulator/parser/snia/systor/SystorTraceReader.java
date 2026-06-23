@@ -52,12 +52,14 @@ public final class SystorTraceReader extends TextTraceReader {
         .filter(array -> !array[1].isEmpty())
         .filter(array -> array[2].equals("R"))
         .flatMap(array -> {
+          long lun = Long.parseLong(array[3]);
           int size = Integer.parseInt(array[5]);
           long startBlock = Long.parseLong(array[4]) / BLOCK_SIZE;
           int sequence = IntMath.divide(size, BLOCK_SIZE, RoundingMode.UP);
           double responseTime = (1000 * Double.parseDouble(array[1])) / sequence;
           return LongStream.range(startBlock, startBlock + sequence)
-              .mapToObj(key -> AccessEvent.forKeyAndPenalties(key, 0, responseTime));
+              .mapToObj(block -> AccessEvent.forKeyAndPenalties(
+                  (lun << 40) | (block & 0xFFFFFFFFFFL), 0, responseTime));
         });
   }
 }
