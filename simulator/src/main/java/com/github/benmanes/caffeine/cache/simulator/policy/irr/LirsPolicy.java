@@ -77,6 +77,12 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   int sizeHot;
   int residentSize;
 
+  // Skips consecutive duplicate accesses to a block. The stack pruning and LIR/HIR role swap are
+  // not idempotent, so counting "key, key" as two events diverges from Song Jiang's reference,
+  // which collapses such correlated references to a single access.
+  long lastKey = Long.MIN_VALUE;
+  boolean hasLastKey;
+
   public LirsPolicy(Config config) {
     var settings = new LirsSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
@@ -92,6 +98,12 @@ public final class LirsPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
+    if (hasLastKey && (key == lastKey)) {
+      return;
+    }
+    lastKey = key;
+    hasLastKey = true;
+
     @Var @Nullable Node node = data.get(key);
     policyStats.recordOperation();
     if (node == null) {
