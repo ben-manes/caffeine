@@ -95,9 +95,9 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
   private final int minResColdSize;
   private final int maxResColdSize;
 
-  // Skips consecutive duplicate accesses to a page. The reference bit is idempotent on a hit, but
-  // the C reference's `last_ref_pg` check and CLOCK-Pro's per-period coldTarget accounting both
-  // treat consecutive duplicates as a single event.
+  // Collapses a correlated reference (the same page twice in a row), as the C reference's
+  // `last_ref_pg` check does. The reference bit is idempotent on a hit, but the per-period
+  // coldTarget accounting is not, so the repeat is scored as a hit rather than replayed.
   private long lastKey = Long.MIN_VALUE;
   private boolean hasLastKey;
 
@@ -139,6 +139,9 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
   @Override
   public void record(long key) {
     if (hasLastKey && (key == lastKey)) {
+      // Correlated reference: count it as a hit without re-running the coldTarget accounting.
+      policyStats.recordOperation();
+      policyStats.recordHit();
       return;
     }
     lastKey = key;

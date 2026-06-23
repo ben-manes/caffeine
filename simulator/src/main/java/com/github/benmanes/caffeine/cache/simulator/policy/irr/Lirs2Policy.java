@@ -42,7 +42,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * Algorithm</a>. A reference C++ implementation is available at
  * <a href="https://github.com/zhongch4g/LIRS2">github.com/zhongch4g/LIRS2</a>.
  * <p>
- * This port departs from the reference in three places, each chosen for memory or readability
+ * This port departs from the reference in two places, each chosen for memory or readability
  * without measurably affecting hit rates:
  * <ul>
  *   <li>Non-resident shadows are bounded by {@code lirs2.non-resident-multiplier} so memory cannot
@@ -50,10 +50,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *   <li>The CoRe queue always holds the block's current instance-1 slot. The reference uses
  *   instance-1 for fresh HIR misses but instance-2 (the demoted Rmax2 slot) on demotion from LIR;
  *   the unified convention lets {@link Block#instanceInQ()} just return {@link Block#instanceOne()}.
- *   <li>Consecutive duplicate accesses to the same key are skipped. LIRS2's role swap is not
- *   idempotent (unlike LIRS), so treating {@code key, key} as two distinct events would diverge
- *   from the published trace conventions.
  * </ul>
+ * As in Zhong's implementation, a correlated reference — the same key accessed twice in a row — is
+ * collapsed; LIRS2's role swap is not idempotent, so the repeat is scored as a hit, not replayed.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -87,9 +86,9 @@ public final class Lirs2Policy implements KeyOnlyPolicy {
   // This is the threshold input to {@link #pruneStack}
   int stackLength;
 
-  // Skips consecutive duplicate accesses to a block. LIRS2's role swap is not idempotent, so
-  // counting "key, key" as two distinct events diverges from the reference, and the original LIRS
-  // conventions, which collapse such pairs to a single access.
+  // Tracks the previous key to collapse correlated references (the same key twice in a row).
+  // LIRS2's role swap is not idempotent, so a repeat is scored as a hit rather than replayed.
+  // LirsPolicy needs no such guard: its transition is idempotent on a re-access.
   long lastKey = Long.MIN_VALUE;
   boolean hasLastKey;
 
@@ -109,6 +108,10 @@ public final class Lirs2Policy implements KeyOnlyPolicy {
   @Override
   public void record(long key) {
     if (hasLastKey && (key == lastKey)) {
+      // Correlated reference: count it as a hit (a non-miss in the denominator) without replaying
+      // the non-idempotent role swap, as the reference implementation's read-loop does.
+      policyStats.recordOperation();
+      policyStats.recordHit();
       return;
     }
     lastKey = key;
