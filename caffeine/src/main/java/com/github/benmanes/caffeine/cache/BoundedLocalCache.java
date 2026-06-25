@@ -1809,11 +1809,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     setDrainStatusRelease(PROCESSING_TO_IDLE);
 
     try {
-      drainReadBuffer();
-
-      drainWriteBuffer();
-      if (task != null) {
-        task.run();
+      try {
+        drainReadBuffer();
+        drainWriteBuffer();
+      } finally {
+        if (task != null) {
+          task.run();
+        }
       }
 
       drainKeyReferences();

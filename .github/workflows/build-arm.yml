@@ -100,5 +100,5 @@ jobs:
           attempt-limit: 2
           attempt-delay: 30
           java: ${{ env.JAVA_VERSION }}
-          arguments: ${{ matrix.suite }} --rerun
+          arguments: ${{ matrix.suite }} --rerun-tasks
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}

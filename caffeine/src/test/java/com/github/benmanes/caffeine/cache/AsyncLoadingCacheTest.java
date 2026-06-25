@@ -791,6 +791,8 @@ final class AsyncLoadingCacheTest {
     cache.put(context.absentKey(), future);
     cache.synchronous().refresh(context.absentKey());
     assertThat(context).notifications().isEmpty();
+    await().untilAsserted(() ->
+        assertThat(cache.synchronous().policy().refreshes()).isEmpty());
   }
 
   @CacheSpec

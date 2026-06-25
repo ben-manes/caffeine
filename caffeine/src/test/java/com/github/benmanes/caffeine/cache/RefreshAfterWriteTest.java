@@ -87,8 +87,7 @@ final class RefreshAfterWriteTest {
 
   @CheckNoEvictions
   @ParameterizedTest
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED)
+  @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
   void refreshIfNeeded_nonblocking(CacheContext context) {
     Int key = context.absentKey();
     Int original = intern(Int.valueOf(1));
@@ -131,9 +130,39 @@ final class RefreshAfterWriteTest {
 
   @CheckNoEvictions
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
+  void refreshIfNeeded_sameInstance_doesNotSuppressLaterRefresh(CacheContext context) {
+    // a same-instance reload must still clear the refresh token, else a leaked token would gate
+    // refreshIfNeeded and suppress every later refresh for the key
+    Int key = context.absentKey();
+    Int value = intern(Int.valueOf(1));
+    var reloads = new AtomicInteger();
+    var cache = context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) {
+        reloads.incrementAndGet();
+        return oldValue.toFuture();
+      }
+    });
+    cache.put(key, value);
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.get(key)).isEqualTo(value);
+    await().untilAsserted(() -> assertThat(reloads.get()).isEqualTo(1));
+    await().untilAsserted(() -> assertThat(cache.policy().refreshes()).isEmpty());
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.get(key)).isEqualTo(value);
+    await().untilAsserted(() -> assertThat(reloads.get()).isEqualTo(2));
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
   @CheckMaxLogLevel(WARN)
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED)
+  @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
   void refreshIfNeeded_failure(CacheContext context) {
     Int key = context.absentKey();
     var reloads = new AtomicInteger();
@@ -162,7 +191,7 @@ final class RefreshAfterWriteTest {
   @CheckNoEvictions
   @ParameterizedTest
   @CheckMaxLogLevel(WARN)
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+  @CacheSpec(population = Population.FULL,
       loader = Loader.REFRESH_INTERRUPTED, refreshAfterWrite = Expire.ONE_MINUTE)
   void refreshIfNeeded_interrupted(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofMinutes(2));

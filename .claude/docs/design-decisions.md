@@ -91,6 +91,19 @@ storms on hot entries. Backward movement only causes benign early expiration, wh
 is acceptable. Variable time CAS (`casVariableTime`) is justified because
 `expireAfterRead` can change duration arbitrarily.
 
+**Read-path expiry extension can briefly resurrect a just-expired entry — accepted.**
+A reader that observed an entry live and then extends it (`tryExpireAfterRead`'s
+`casVariableTime` for variable expiry, or `setAccessTime` for `expireAfterAccess`) can land
+the extension just after the entry crossed its boundary, leaving it visible slightly later than
+expiry. This is inherent to lock-free read-extension over lazy expiration: the expired entry
+keeps its timestamp until maintenance removes it, so the CAS — which only checks the field is
+unchanged — cannot reject an expired entry, and any fresh-clock guard before the write still
+races a context switch between the read and the write; only a read-path lock (rejected) would
+close it. The window is a few instructions for a normal `Expiry` callback; a wide one requires a
+slow `expireAfterRead` (callback misuse, like a slow `Weigher`). So "never visible later than
+expiry" is best-effort for read-extension — the over-stay is bounded by one duration and
+self-heals on the next maintenance. Don't add a re-check guard.
+
 **writeTime uses plain write** (not opaque like accessTime). It's always written
 under `synchronized(node)`, which provides stronger guarantees than opaque.
 

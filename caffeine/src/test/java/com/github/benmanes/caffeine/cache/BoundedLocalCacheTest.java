@@ -665,6 +665,28 @@ final class BoundedLocalCacheTest {
         .hasSize(1);
   }
 
+  @Test @CheckMaxLogLevel(ERROR)
+  void afterWrite_drainThrows_runsInlineTask() {
+    // A drain that throws (e.g. a broken key hashCode) must not drop the writer's assisting task.
+    var cache = new BoundedLocalCache<>(
+        Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {
+      @Override void drainReadBuffer() {
+        throw new IllegalStateException();
+      }
+    };
+    cache.drainStatus = PROCESSING_TO_IDLE;
+
+    Runnable pendingTask = () -> {};
+    for (int i = 0; i < WRITE_BUFFER_MAX; i++) {
+      cache.afterWrite(pendingTask);
+    }
+    assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_REQUIRED);
+
+    var ran = new AtomicBoolean();
+    cache.afterWrite(() -> ran.set(true));
+    assertThat(ran.get()).isTrue();
+  }
+
   @ParameterizedTest
   @CacheSpec(maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
   void weightedSize_noMaintenance(
