@@ -174,10 +174,20 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
     policyStats.recordMiss();
     epoch++;
     var node = new Node(key, epoch);
-    node.status = Status.COLD;
-    node.link(headCold);
+    // While the clock is not full, entries accessed for the first time are given HOT status until
+    // the resident set reaches maxSize - minColdSize; only after that are they inserted as cold in
+    // their test period. Without this warm-up the hot list never fills, so the policy degenerates
+    // to Clock and discards the entries it is meant to retain.
+    if ((sizeHot + sizeCold) < (maxSize - minColdSize)) {
+      node.status = Status.HOT;
+      node.link(headHot);
+      sizeHot++;
+    } else {
+      node.status = Status.COLD;
+      node.link(headCold);
+      sizeCold++;
+    }
     data.put(key, node);
-    sizeCold++;
     evict();
   }
 
