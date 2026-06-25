@@ -69,7 +69,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   long tick;
 
   public SampledPolicy(Admission admission, EvictionPolicy policy, Config config) {
-    this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()));
+    this.policyStats = new PolicyStats(admission.format(policy.label()));
     this.admitter = admission.from(config, policyStats);
 
     var settings = new SampledSettings(config);
