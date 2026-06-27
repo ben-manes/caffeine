@@ -802,6 +802,29 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, keys = ReferenceType.STRONG,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
+      loader = Loader.IDENTITY, refreshAfterWrite = Expire.ONE_MINUTE)
+  void refreshIfNeeded_retiredAfterSnapshot(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Mock a node alive for the gate's isAlive() snapshot but retired by the inner re-check,
+    // simulating a concurrent retire between the two. Exercises the !isAlive() branch of the
+    // refresh-registration guard, so a doomed reload is not launched for a retired node.
+    var calls = new MutableInt();
+    Node<Int, Int> node = Mockito.mock();
+    when(node.getWriteTime()).thenReturn(0L);
+    when(node.getKey()).thenReturn(context.absentKey());
+    when(node.getValue()).thenReturn(context.absentValue());
+    when(node.getKeyReference()).thenReturn(context.absentKey());
+    when(node.casWriteTime(anyLong(), anyLong())).thenReturn(true);
+    when(node.isAlive()).thenAnswer(invocation -> calls.getAndIncrement() == 0);
+
+    assertThat(cache.refreshIfNeeded(node, TimeUnit.MINUTES.toNanos(2))).isNull();
+    assertThat(cache.refreshes()).isEmpty();
+    assertThat(calls.get()).isEqualTo(2);
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.FULL)
   void equals_notAlive(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (var node : cache.data.values()) {

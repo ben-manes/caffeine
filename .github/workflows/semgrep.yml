@@ -21,7 +21,7 @@ jobs:
       security-events: write # Needed for uploading security scan results
     container:
       # Incompatible with Harden Runner
-      image: returntocorp/semgrep
+      image: semgrep/semgrep
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

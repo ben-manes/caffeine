@@ -13,6 +13,16 @@ synchronized(node). synchronized(node) is acquired in various contexts: inside
 CHM compute lambdas, under evictionLock outside compute (makeDead, AddTask),
 or standalone (put fast path, Policy API methods).
 
+**Never hold `synchronized(node)` across a CHM mutating call** (`data.putIfAbsent`/
+`compute`/`computeIfPresent`/`merge`). CHM takes bin-head locks internally not just to
+link the entry but also for a follow-on table resize (`addCount`→`transfer`, which runs
+*after* the node is already visible). Holding a node monitor across the call is therefore a
+`node`→bin acquisition that deadlocks against a concurrent `remove`/`compute`'s standard
+bin→node order (a real `put`-insert vs `computeIfPresent`-remove deadlock was shipped and
+reverted this way). To mutate the map and node-scoped state together, do it *inside* the CHM
+lambda — which holds only the bin lock, no node monitor — e.g.
+`data.computeIfAbsent(ref, k -> { discardRefresh(k); return node; })`.
+
 ## What Each Lock Protects
 
 ### evictionLock

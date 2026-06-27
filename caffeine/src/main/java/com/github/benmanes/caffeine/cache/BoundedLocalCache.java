@@ -1390,7 +1390,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @Nullable CompletableFuture<? extends @Nullable V>[] refreshFuture = new CompletableFuture[1];
       try {
         refreshes.computeIfAbsent(keyReference, k -> {
-          if (node.getWriteTime() != refreshWriteTime) {
+          if (!node.isAlive() || (node.getWriteTime() != refreshWriteTime)) {
             return null;
           }
           try {
@@ -2395,6 +2395,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     requireNonNull(value);
 
     @Var int newWeight = -1;
+    @Var Object keyRef = null;
     @Var Node<K, V> node = null;
     Object lookupKey = nodeFactory.newLookupKey(key);
     for (int attempts = 1; ; attempts++) {
@@ -2405,15 +2406,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             newWeight = weigher.weigh(key, value);
           }
           long now = expirationTicker().read();
-          node = nodeFactory.newNode(key, keyReferenceQueue(),
-              value, valueReferenceQueue(), newWeight, now);
+          keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
+          node = nodeFactory.newNode(keyRef, value, valueReferenceQueue(), newWeight, now);
           long expirationTime = isComputingAsync(value) ? (now + ASYNC_EXPIRY) : now;
           setVariableTime(node, expireAfterCreate(key, value, expiry, now));
           setAccessTime(node, expirationTime);
           setWriteTime(node, expirationTime);
         }
-        prior = data.putIfAbsent(node.getKeyReference(), node);
-        if (prior == null) {
+        var newNode = node;
+        prior = requireNonNull(data.computeIfAbsent(keyRef, k -> {
+          discardRefresh(k);
+          return newNode;
+        }));
+        if (prior == node) {
           afterWrite(new AddTask(node, newWeight));
           return null;
         } else if (onlyIfAbsent) {

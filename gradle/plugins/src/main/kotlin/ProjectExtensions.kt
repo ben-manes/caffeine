@@ -45,7 +45,9 @@ fun Project.javaVersion(): Provider<JavaLanguageVersion> =
     .orElse(providers.environmentVariable("JAVA_VERSION"))
     .map { it.toIntOrNull() }.orElse(11).map(JavaLanguageVersion::of)
 fun Project.javaRuntimeVersion(): Provider<JavaLanguageVersion> =
-  javaVersion().map { maxOf(it, JavaLanguageVersion.of(26)) }
+  isGraalVM().zip(javaVersion()) { graalvm, version ->
+    if (graalvm) version else maxOf(version, JavaLanguageVersion.of(26))
+  }
 fun Project.javaTestVersion(): Provider<JavaLanguageVersion> =
   javaVersion().flatMap {
     providers.gradleProperty("javaTestVersion").map(JavaLanguageVersion::of).orElse(it)

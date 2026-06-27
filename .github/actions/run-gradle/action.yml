@@ -91,7 +91,7 @@ runs:
         cache-read-only: ${{ inputs.local-cache-read-only }}
         cache-encryption-key: ${{ inputs.cache-encryption-key }}
     - name: Restore local build cache
-      uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       if: ${{ inputs.local-build-cache == 'true' }}
       with:
         path: ~/.gradle/caches/build-cache-*
@@ -104,7 +104,7 @@ runs:
         version=$(grep -oP '(?<=^fray = ")[^"]+' gradle/libs.versions.toml)
         echo "version=${version}" >> $GITHUB_OUTPUT
     - name: Cache Fray instrumented JDK
-      uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       if: ${{ contains(inputs.arguments, 'frayTest') }}
       with:
         path: |

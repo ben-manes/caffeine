@@ -1185,6 +1185,30 @@ final class RefreshAfterWriteTest {
         .exclusively();
   }
 
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
+      loader = Loader.ASYNC_INCOMPLETE)
+  void put_insert_discardsRefresh(LoadingCache<Int, Int> cache, CacheContext context) {
+    // An explicit refresh on an absent key registers an in-flight reload; the put that inserts the
+    // key must discard that refresh (so it cannot suppress later refreshes), and the stale reload
+    // must not overwrite the inserted value when it completes.
+    Int key = context.absentKey();
+    var future = cache.refresh(key);
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    cache.put(key, context.absentValue());
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+
+    future.complete(context.absentKey().negate());
+    assertThat(cache).containsEntry(key, context.absentValue());
+    assertThat(cache.policy().refreshes()).isEmpty();
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(context.absentKey(), context.absentKey().negate())
+        .exclusively();
+  }
+
   /* --------------- invalidate --------------- */
 
   @CheckNoEvictions
