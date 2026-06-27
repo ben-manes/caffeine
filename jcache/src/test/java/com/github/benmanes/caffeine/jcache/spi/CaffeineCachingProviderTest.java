@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache.spi;
 
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -25,11 +26,16 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URL;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
+import javax.cache.Cache;
 import javax.cache.configuration.OptionalFeature;
+import javax.cache.integration.CacheWriter;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -38,6 +44,7 @@ import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider.JCacheClassLoader;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -423,6 +430,40 @@ final class CaffeineCachingProviderTest {
     }
   }
 
+  /* --------------- close --------------- */
+
+  @Test
+  void close_concurrentProviderAndManager_noDeadlock() throws InterruptedException {
+    var inWriterClose = new CountDownLatch(1);
+    var releaseWriterClose = new CountDownLatch(1);
+    try (var provider = new CaffeineCachingProvider();
+         var cacheManager = provider.getCacheManager(
+             provider.getDefaultURI(), provider.getDefaultClassLoader());
+         var writer = new BlockingCacheWriter<>(inWriterClose, releaseWriterClose)) {
+      cacheManager.createCache("blocking",
+          new CaffeineConfiguration<>().setCacheWriterFactory(() -> writer));
+
+      // Holds the manager lock (closing the cache) while parked in writer.close().
+      var managerClose = new Thread(cacheManager::close, "manager-close");
+      managerClose.setDaemon(true);
+      managerClose.start();
+      assertThat(inWriterClose.await(10, TimeUnit.SECONDS)).isTrue();
+
+      // Holds the registry, then blocks acquiring the manager lock held above.
+      var providerClose = new Thread(provider::close, "provider-close");
+      providerClose.setDaemon(true);
+      providerClose.start();
+      await().until(() -> providerClose.getState() == Thread.State.BLOCKED);
+
+      releaseWriterClose.countDown();
+
+      managerClose.join(TimeUnit.SECONDS.toMillis(10));
+      providerClose.join(TimeUnit.SECONDS.toMillis(10));
+      assertThat(managerClose.isAlive()).isFalse();
+      assertThat(providerClose.isAlive()).isFalse();
+    }
+  }
+
   private static void runWithClassloader(ThrowingConsumer<ClassLoader> consumer) {
     var classLoader = Thread.currentThread().getContextClassLoader();
     Thread.currentThread().setContextClassLoader(new ClassLoader() {});
@@ -431,6 +472,32 @@ final class CaffeineCachingProviderTest {
           consumer.accept(Thread.currentThread().getContextClassLoader()));
     } finally {
       Thread.currentThread().setContextClassLoader(classLoader);
+    }
+  }
+
+  private static final class BlockingCacheWriter<K, V> implements CacheWriter<K, V>, AutoCloseable {
+    final CountDownLatch entered;
+    final CountDownLatch release;
+
+    BlockingCacheWriter(CountDownLatch entered, CountDownLatch release) {
+      this.entered = entered;
+      this.release = release;
+    }
+    @Override public void write(Cache.Entry<? extends K, ? extends V> entry) {
+      throw new UnsupportedOperationException();
+    }
+    @Override public void writeAll(Collection<Cache.Entry<? extends K, ? extends V>> entries) {
+      throw new UnsupportedOperationException();
+    }
+    @Override public void delete(Object key) {
+      throw new UnsupportedOperationException();
+    }
+    @Override public void deleteAll(Collection<?> keys) {
+      throw new UnsupportedOperationException();
+    }
+    @Override public void close() {
+      entered.countDown();
+      Uninterruptibles.awaitUninterruptibly(release);
     }
   }
 }

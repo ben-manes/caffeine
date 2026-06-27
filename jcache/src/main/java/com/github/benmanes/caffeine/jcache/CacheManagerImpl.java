@@ -232,20 +232,21 @@ public final class CacheManagerImpl implements CacheManager {
       return;
     }
     synchronized (lock) {
-      if (!isClosed()) {
-        for (Cache<?, ?> cache : caches.values()) {
-          try {
-            cache.close();
-          } catch (RuntimeException e) {
-            logger.log(Level.WARNING, "Exception thrown when closing cache " + cache.getName(), e);
-          }
-        }
-        closed = true;
-        ClassLoader classLoader = classLoaderReference.get();
-        if (classLoader != null) {
-          cacheProvider.close(uri, classLoader);
+      if (isClosed()) {
+        return;
+      }
+      for (Cache<?, ?> cache : caches.values()) {
+        try {
+          cache.close();
+        } catch (RuntimeException e) {
+          logger.log(Level.WARNING, "Exception thrown when closing cache " + cache.getName(), e);
         }
       }
+      closed = true;
+    }
+    ClassLoader classLoader = classLoaderReference.get();
+    if (classLoader != null) {
+      cacheProvider.close(uri, classLoader);
     }
   }
 
