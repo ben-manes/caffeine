@@ -46,9 +46,13 @@ abstract class EclipseJavaCompile @Inject constructor(
     group = "ECJ"
     onlyIf { !javaSources.isEmpty }
     mainClass = "org.eclipse.jdt.internal.compiler.batch.Main"
-    argumentProviders.add {
-      val sources = javaSources.filter { it.name != "module-info.java" }.map { it.absolutePath }
-      buildList {
+    argumentProviders.add(object : CommandLineArgumentProvider {
+      @get:Internal val compileClasspath = this@EclipseJavaCompile.compileClasspath
+      @get:Internal val javaSources = this@EclipseJavaCompile.javaSources
+      @get:Internal val properties = this@EclipseJavaCompile.properties
+      @get:Internal val report = this@EclipseJavaCompile.report
+      override fun asArguments(): Iterable<String> = buildList {
+        val sources = javaSources.filter { it.name != "module-info.java" }.map { it.absolutePath }
         addAll(listOf(
           "-classpath", compileClasspath.get().filter { it.exists() }.asPath,
           "-properties", properties.absolutePath().get(),
@@ -61,7 +65,7 @@ abstract class EclipseJavaCompile @Inject constructor(
           "-d", "none"))
         addAll(sources)
       }
-    }
+    })
     doLast {
       report.get().asFile.useLines { lines ->
         lines.filter { it.isNotBlank() && !it.trimStart().startsWith("#") }.forEach { println(it) }

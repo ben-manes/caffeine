@@ -47,13 +47,18 @@ tasks.check.configure {
 tasks.withType<Test>().configureEach {
   inputs.property("javaDistribution", javaDistribution()).optional(true)
   inputs.property("javaVendor", java.toolchain.vendor.map { it.toString() })
+  systemProperty("junit.platform.execution.memory.cleanup.enabled", "true")
+  systemProperty("junit.platform.execution.memory.cleanup.engines.excluded", "junit-vintage")
 
   // Use --debug-jvm to remotely attach to the test task
-  val defaultJvmArguments = defaultJvmArgs()
-  val javaAgent = mockitoAgent.map { it.asPath }
-  val javaVersion = javaTestVersion.map { it.asInt() }
-  jvmArgumentProviders.add {
-    buildList {
+  val extraJvmArguments = defaultJvmArgs()
+  val mockitoAgentPath = mockitoAgent.map { it.asPath }
+  val testJavaVersion = javaTestVersion.map { it.asInt() }
+  jvmArgumentProviders.add(object : CommandLineArgumentProvider {
+    @get:Input val javaVersion = testJavaVersion
+    @get:Internal val javaAgent = mockitoAgentPath
+    @get:Input val defaultJvmArguments = extraJvmArguments
+    override fun asArguments(): Iterable<String> = buildList {
       addAll(listOf("-XX:+EnableDynamicAgentLoading", "-javaagent:${javaAgent.get()}",
         "-XX:SoftRefLRUPolicyMSPerMB=0", "-XX:+UnlockDiagnosticVMOptions", "-Xshare:off",
         "-Djunit.jupiter.extensions.autodetection.enabled=true"))
@@ -74,7 +79,7 @@ tasks.withType<Test>().configureEach {
 
       addAll(defaultJvmArguments.get())
     }
-  }
+  })
 
   // Use -Pjfr to generate a profile
   if (providers.gradleProperty("jfr").isPresent) {

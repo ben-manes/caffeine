@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.node;
 
 import static com.github.benmanes.caffeine.cache.RuleContext.varHandleName;
-import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 
@@ -37,21 +36,9 @@ public final class AddConstructors implements Rule<NodeContext> {
 
   @Override
   public void execute(NodeContext context) {
-    addConstructorByKey(context);
     addConstructorByKeyRef(context);
     if (context.isBaseClass()) {
       context.suppressedWarnings.add("unchecked");
-    }
-  }
-
-  /** Adds the constructor by key to the node type. */
-  private static void addConstructorByKey(NodeContext context) {
-    context.constructorByKey.addParameter(keyRefQueueSpec);
-    addCommonParameters(context.constructorByKey);
-    if (context.isBaseClass()) {
-      callSiblingConstructor(context);
-    } else {
-      callParentByKey(context);
     }
   }
 
@@ -72,16 +59,6 @@ public final class AddConstructors implements Rule<NodeContext> {
     constructor.addParameter(long.class, "now");
   }
 
-  private static void callSiblingConstructor(NodeContext context) {
-    if (context.isStrongKeys()) {
-      context.constructorByKey.addStatement("this(key, value, valueReferenceQueue, weight, now)");
-    } else {
-      context.constructorByKey.addStatement(
-          "this(new $T($N, $N), value, valueReferenceQueue, weight, now)",
-          context.keyReferenceType(), "key", "keyReferenceQueue");
-    }
-  }
-
   private static void assignKeyRefAndValue(NodeContext context) {
     if (context.isStrongValues()) {
       context.constructorByKeyRef.addStatement("$L.set(this, $N)",
@@ -93,11 +70,6 @@ public final class AddConstructors implements Rule<NodeContext> {
           varHandleName("value"), context.valueReferenceType(),
           "keyReference", "value", "valueReferenceQueue");
     }
-  }
-
-  private static void callParentByKey(NodeContext context) {
-    context.constructorByKey.addStatement(
-        "super(key, keyReferenceQueue, value, valueReferenceQueue, weight, now)");
   }
 
   private static void callParentByKeyRef(NodeContext context) {

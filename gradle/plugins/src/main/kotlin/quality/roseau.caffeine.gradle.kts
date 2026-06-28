@@ -41,21 +41,22 @@ abstract class Roseau @Inject constructor(@Internal val projectLayout: ProjectLa
   val report: Provider<RegularFile> = projectLayout.buildDirectory.file("reports/$name/report.html")
 
   init {
-    mainClass = "io.github.alien.roseau.cli.RoseauCLI"
     isIgnoreExitValue = true
-    argumentProviders.add {
-      buildList {
-        addAll(listOf(
-          "--diff",
-          "--fail-on-bc",
-          "--v1", previous.get(),
-          "--v2", currentJar.absolutePath().get(),
-          "--config", config.absolutePath().get(),
-          "--classpath", compileClasspath.asPath,
-          "--report", "HTML=${report.absolutePath().get()}",
-        ))
-      }
-    }
+    mainClass = "io.github.alien.roseau.cli.RoseauCLI"
+    argumentProviders.add(object : CommandLineArgumentProvider {
+      @get:Internal val compileClasspath = this@Roseau.compileClasspath
+      @get:Internal val currentJar = this@Roseau.currentJar
+      @get:Internal val config = this@Roseau.config
+      @get:Internal val report = this@Roseau.report
+      override fun asArguments(): Iterable<String> = listOf(
+        "--diff",
+        "--fail-on-bc",
+        "--v1", previous.get(),
+        "--v2", currentJar.absolutePath().get(),
+        "--config", config.absolutePath().get(),
+        "--classpath", compileClasspath.asPath,
+        "--report", "HTML=${report.absolutePath().get()}")
+    })
     doLast {
       val result = executionResult.get()
       if (result.exitValue != 0) {

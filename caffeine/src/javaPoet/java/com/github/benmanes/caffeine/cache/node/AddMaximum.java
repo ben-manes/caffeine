@@ -62,7 +62,6 @@ public final class AddMaximum implements Rule<NodeContext> {
         .addMethod(context.newGetter(Strength.STRONG,
             TypeName.INT, "weight", Visibility.VOLATILE))
         .addMethod(context.newSetter(TypeName.INT, "weight", Visibility.VOLATILE));
-    context.constructorByKey.addStatement("this.$N = $N", "weight", "weight");
     context.constructorByKeyRef.addStatement("this.$N = $N", "weight", "weight");
 
     context.classSpec.addField(int.class, "policyWeight")

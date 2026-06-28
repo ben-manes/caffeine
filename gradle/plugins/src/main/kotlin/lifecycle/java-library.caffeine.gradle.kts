@@ -130,8 +130,9 @@ tasks.withType<Javadoc>().configureEach {
     }
   }
   doFirst {
-    (options as StandardJavadocDocletOptions)
-      .addStringOption("-snippet-path", snippetPath.asFile.absolutePath)
+    javadocOptions {
+      addStringOption("-snippet-path", snippetPath.asFile.absolutePath)
+    }
   }
   javadocTool = javaToolchains.javadocToolFor {
     vendor = java.toolchain.vendor

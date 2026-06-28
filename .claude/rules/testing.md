@@ -1,6 +1,6 @@
 # Testing Conventions
 
-- Run individual tests with `--tests`, never the full suite during development
+- Run a single test method with `--tests 'Class.method'` — fine even if it sweeps the full `@CacheSpec` matrix. Don't run a whole `@CacheSpec` class or the full suite locally; avoid them, or narrow with `-P` flags when you must (CI runs the full matrix, sharded across 40 workers)
 - Tests use JUnit Jupiter with Truth assertions and Awaitility for async
 - Test classes are parameterized via `@CacheSpec` + `CacheProvider` — use `-P` flags to filter
 - New tests should follow the `@CacheSpec` parameterization pattern, not create caches manually
@@ -47,10 +47,12 @@ it as a static contract.
 - Cross-feature stress — `MultiThreadedTest`
 - Concurrency interleavings — specialized suites (`frayTest`, `lincheckTest`, `jcstress`)
 
-### Narrowing parameterized runs
-When running a parameterized test class, combine `--tests` with `-P` flags
-(e.g., `-Pcompute=sync -Pkeys=strong -Pvalues=strong -Pstats=disabled`) to avoid
-exploding the Cartesian product.
+### Narrowing a class or suite run
+A single method runs as-is (`--tests 'Class.method'`) — sweeping its matrix is fine.
+It's whole classes and the full suite that must be avoided, or narrowed with `-P`
+flags (e.g., `-Pcompute=sync -Pkeys=strong -Pvalues=strong -Pstats=disabled`) when
+you can't. Over-pinning can empty a method's matrix (JUnit `initializationError`) —
+e.g., `ReferenceTest` needs `values=weak/soft`.
 
 ## Fuzz Testing (Jazzer)
 

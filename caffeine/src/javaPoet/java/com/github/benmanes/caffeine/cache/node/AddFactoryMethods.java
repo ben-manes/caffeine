@@ -16,9 +16,7 @@ package com.github.benmanes.caffeine.cache.node;
 import static com.github.benmanes.caffeine.cache.Specifications.NODE;
 import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
-import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
-import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
 import static com.github.benmanes.caffeine.cache.Specifications.lookupKeyType;
 import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType;
 import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
@@ -57,11 +55,6 @@ public final class AddFactoryMethods implements Rule<NodeContext> {
   }
 
   private static void addFactories(NodeContext context) {
-    context.classSpec.addMethod(
-        newNode(keySpec, keyRefQueueSpec)
-            .addStatement("return new $N<>(key, keyReferenceQueue, value, "
-                + "valueReferenceQueue, weight, now)", context.className)
-            .build());
     context.classSpec.addMethod(
         newNode(keyRefSpec)
             .addStatement("return new $N<>(keyReference, value, valueReferenceQueue, weight, now)",

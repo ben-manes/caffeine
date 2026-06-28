@@ -32,6 +32,7 @@ import com.google.errorprone.annotations.Var;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@FunctionalInterface
 interface NodeFactory<K, V> {
   MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
   MethodType FACTORY = MethodType.methodType(void.class);
@@ -55,10 +56,6 @@ interface NodeFactory<K, V> {
   default boolean softValues() {
     return false;
   }
-
-  /** Returns a node optimized for the specified features. */
-  Node<K, V> newNode(K key, @Nullable ReferenceQueue<K> keyReferenceQueue, V value,
-      @Nullable ReferenceQueue<V> valueReferenceQueue, int weight, long now);
 
   /** Returns a node optimized for the specified features. */
   Node<K, V> newNode(Object keyReference, V value,

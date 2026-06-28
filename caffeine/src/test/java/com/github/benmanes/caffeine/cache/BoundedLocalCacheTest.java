@@ -2081,8 +2081,9 @@ final class BoundedLocalCacheTest {
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
   void evictEntry_absent(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var absent = cache.nodeFactory.newNode(context.absentKey(), cache.keyReferenceQueue(),
-        context.absentValue(), cache.valueReferenceQueue(), 0, context.ticker().read());
+    var keyRef = cache.nodeFactory.newReferenceKey(context.absentKey(), cache.keyReferenceQueue());
+    var absent = cache.nodeFactory.newNode(keyRef, context.absentValue(),
+        cache.valueReferenceQueue(), 0, context.ticker().read());
 
     // This can occur due to a node being concurrently removed, but the operation is pending in the
     // write buffer. The stale node is unlinked and treated as if evicted to allow further
@@ -2102,8 +2103,9 @@ final class BoundedLocalCacheTest {
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
   void evictEntry_replaced(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var replaced = cache.nodeFactory.newNode(context.firstKey(), cache.keyReferenceQueue(),
-        context.absentValue(), cache.valueReferenceQueue(), 0, context.ticker().read());
+    var keyRef = cache.nodeFactory.newReferenceKey(context.absentKey(), cache.keyReferenceQueue());
+    var replaced = cache.nodeFactory.newNode(keyRef, context.absentValue(),
+        cache.valueReferenceQueue(), 0, context.ticker().read());
 
     // This can occur due to a node being concurrently removed, but the operation is pending in the
     // write buffer. The stale node is unlinked and treated as if evicted to allow further
@@ -2122,8 +2124,9 @@ final class BoundedLocalCacheTest {
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
   void evictEntry_dead(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var dead = cache.nodeFactory.newNode(context.firstKey(), cache.keyReferenceQueue(),
-        context.absentValue(), cache.valueReferenceQueue(), 0, context.ticker().read());
+    var keyRef = cache.nodeFactory.newReferenceKey(context.absentKey(), cache.keyReferenceQueue());
+    var dead = cache.nodeFactory.newNode(keyRef, context.absentValue(),
+        cache.valueReferenceQueue(), 0, context.ticker().read());
     dead.die();
 
     // This can occur due to a node being concurrently removed, but the operation is pending in the

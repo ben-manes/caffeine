@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -308,17 +309,26 @@ final class CacheManagerTest {
 
   @Test
   @SuppressWarnings("try")
-  void close_shutsDownExecutorWithoutClosingIt() {
-    // The executor is owned by shutdownExecutor() (orderly shutdown + bounded inFlight wait); pre-fix
-    // tryClose(executor) additionally called AutoCloseable.close(), which on JDK 19+ awaits
-    // termination for up to a day. close() must shut the executor down but never close it.
+  void close_executor_shutdown() {
     try (var fixture = JCacheFixture.builder().build();
          var executor = new TrackingExecutorService();
-         var cache = fixture.cacheManager().createCache("executor",
+         var cache = fixture.cacheManager().createCache("shutdownExecutor",
              new CaffeineConfiguration<>().setExecutorFactory(() -> executor))) {
       cache.close();
       assertThat(executor.shutdown.get()).isTrue();
       assertThat(executor.closed.get()).isFalse();
+    }
+  }
+
+  @Test
+  @SuppressWarnings("try")
+  void close_executor_closeable() {
+    try (var fixture = JCacheFixture.builder().build();
+         var executor = new TrackingExecutor();
+         var cache = fixture.cacheManager().createCache("closeExecutor",
+             new CaffeineConfiguration<>().setExecutorFactory(() -> executor))) {
+      cache.close();
+      assertThat(executor.closed.get()).isTrue();
     }
   }
 
@@ -332,11 +342,17 @@ final class CacheManagerTest {
             cache.getName(), cache.getCacheManager().getCachingProvider().getClass().getName())));
   }
 
-  /**
-   * An executor that is explicitly {@link AutoCloseable} so {@code tryClose} exercises {@code close}
-   * on any JDK ({@link java.util.concurrent.ExecutorService} only became {@code AutoCloseable} in
-   * JDK 19), recording whether it was shut down and/or closed.
-   */
+  private static final class TrackingExecutor implements Executor, AutoCloseable {
+    final AtomicBoolean closed = new AtomicBoolean();
+
+    @Override public void execute(Runnable command) {
+      command.run();
+    }
+    @Override public void close() {
+      closed.set(true);
+    }
+  }
+
   @SuppressFBWarnings("RI_REDUNDANT_INTERFACES")
   @SuppressWarnings({"PMD.UnnecessaryInterfaceDeclaration", "unused"})
   private static final class TrackingExecutorService

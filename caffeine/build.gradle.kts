@@ -238,7 +238,6 @@ testing.suites {
           testClassesDirs = files(sourceSets.named("test").map { it.output.classesDirs })
           jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
             "--add-opens", "java.base/java.lang=ALL-UNNAMED")
-          systemProperty("junit.platform.execution.memory.cleanup.enabled", "true")
 
           val testOptions = listOf("implementation", "compute", "keys", "values", "stats")
             .associateWith { providers.gradleProperty(it) }

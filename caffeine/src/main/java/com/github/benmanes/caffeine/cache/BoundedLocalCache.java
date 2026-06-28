@@ -2414,11 +2414,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           setWriteTime(node, expirationTime);
         }
         var newNode = node;
-        prior = requireNonNull(data.computeIfAbsent(keyRef, k -> {
-          discardRefresh(k);
-          return newNode;
-        }));
-        if (prior == node) {
+        prior = (cacheLoader == null)
+            ? data.putIfAbsent(keyRef, newNode)
+            : data.computeIfAbsent(keyRef, k -> {
+                discardRefresh(k);
+                return newNode;
+              });
+        if ((prior == null) || (prior == node)) {
           afterWrite(new AddTask(node, newWeight));
           return null;
         } else if (onlyIfAbsent) {

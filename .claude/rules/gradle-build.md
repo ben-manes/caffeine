@@ -15,8 +15,11 @@ Without it, absolute paths leak into cache keys, breaking cache reuse across mac
 
 Common patterns that break relocatability:
 - `inputs.files(otherTask.outputs.files)` — add `.withPathSensitivity(RELATIVE)`
-- Lambda-based `argumentProviders.add { listOf(outputDir.toString()) }` — use a typed
-  `CommandLineArgumentProvider` with `@Internal` on output directory properties instead
+- Lambda `argumentProviders.add { ... }` / `jvmArgumentProviders.add { ... }` (incl. `Test`
+  tasks) embedding an absolute path — Gradle fingerprints `asArguments()` opaquely, baking the
+  path into the key. Use a typed `CommandLineArgumentProvider`: `@get:Internal` on the path
+  property (its content is tracked elsewhere — `outputs.dir()` or an input `@Classpath`), value
+  args stay `@get:Input`
 - Resolving file paths at configuration time (e.g., in Javadoc options) — defer to
   `doFirst` blocks so paths are only resolved at execution time
 - `inputs.files(downloadTask.map { it.outputs.files })` — add `.withPathSensitivity(RELATIVE)`

@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache.node;
 import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
-import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Locale.US;
@@ -40,13 +39,11 @@ import com.palantir.javapoet.TypeName;
 public final class NodeContext extends RuleContext {
   final MethodSpec.Builder constructorByKeyRef;
   final MethodSpec.Builder constructorDefault;
-  final MethodSpec.Builder constructorByKey;
 
   public NodeContext(TypeName superClass, String className, boolean isFinal,
       Set<Feature> parentFeatures, Set<Feature> generateFeatures) {
     super(superClass, className, isFinal, parentFeatures, generateFeatures);
     this.constructorByKeyRef = MethodSpec.constructorBuilder().addParameter(keyRefSpec);
-    this.constructorByKey = MethodSpec.constructorBuilder().addParameter(keySpec);
     this.constructorDefault = MethodSpec.constructorBuilder();
   }
 

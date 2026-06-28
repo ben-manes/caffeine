@@ -33,7 +33,6 @@ public final class Finalize implements Rule<NodeContext> {
   public void execute(NodeContext context) {
     context.classSpec
         .addMethod(context.constructorDefault.build())
-        .addMethod(context.constructorByKey.build())
         .addMethod(context.constructorByKeyRef.build());
     context.addSuppressedWarnings();
     context.addStaticBlock();

@@ -1025,6 +1025,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       thrown = e;
     }
     inFlight.clear();
+
+    if (!(executor instanceof ExecutorService)) {
+      thrown = tryClose(executor, thrown);
+    }
     return thrown;
   }
 

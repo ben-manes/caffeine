@@ -81,8 +81,7 @@ abstract class JCStress : JavaExec() {
     workingDir(outputDir.map { it.asFile })
     mainClass = "org.openjdk.jcstress.Main"
     argumentProviders.add(object : CommandLineArgumentProvider {
-      @get:Internal
-      val resultsDir: Provider<Directory> = outputDir
+      @get:Internal val resultsDir: Provider<Directory> = outputDir
       override fun asArguments(): Iterable<String> = buildList {
         if (iterations.isPresent) {
           addAll(listOf("-iters", iterations.get().replace("[_,]".toRegex(), "")))

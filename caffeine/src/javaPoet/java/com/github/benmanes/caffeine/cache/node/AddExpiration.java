@@ -120,7 +120,6 @@ public final class AddExpiration implements Rule<NodeContext> {
             TypeName.LONG, "accessTime", Visibility.OPAQUE))
         .addMethod(context.newSetter(TypeName.LONG, "accessTime", Visibility.OPAQUE));
     context.addVarHandle(NODE_FACTORY.rawType(), "accessTime", TypeName.get(long.class));
-    addTimeConstructorAssignment(context.constructorByKey, "accessTime", "now");
     addTimeConstructorAssignment(context.constructorByKeyRef, "accessTime", "now");
   }
 
@@ -133,7 +132,6 @@ public final class AddExpiration implements Rule<NodeContext> {
               TypeName.LONG, "writeTime", Visibility.OPAQUE))
           .addMethod(context.newSetter(TypeName.LONG, "writeTime", Visibility.PLAIN));
       context.addVarHandle(NODE_FACTORY.rawType(), "writeTime", TypeName.get(long.class));
-      addTimeConstructorAssignment(context.constructorByKey, "writeTime", "now & ~1L");
       addTimeConstructorAssignment(context.constructorByKeyRef, "writeTime", "now & ~1L");
     }
   }
