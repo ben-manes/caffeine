@@ -7,7 +7,7 @@ import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
 plugins {
   id("java-library.caffeine")
-  id("revapi.caffeine")
+  id("roseau.caffeine")
 }
 
 val caffeineOsgiBundle = configurations.register("caffeineOsgiBundle") {

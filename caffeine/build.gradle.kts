@@ -14,7 +14,7 @@ plugins {
   id("java-library.caffeine")
   id("java-test-fixtures")
   id("jcstress.caffeine")
-  id("revapi.caffeine")
+  id("roseau.caffeine")
   id("jmh.caffeine")
 }
 

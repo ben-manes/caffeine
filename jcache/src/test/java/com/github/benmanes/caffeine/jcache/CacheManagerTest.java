@@ -20,14 +20,19 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.management.ManagementFactory;
 import java.net.URI;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.OptionalLong;
+import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.cache.Cache;
 import javax.cache.configuration.CompleteConfiguration;
@@ -36,6 +41,7 @@ import javax.management.ObjectName;
 import javax.management.OperationsException;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -43,6 +49,8 @@ import com.facebook.infer.annotation.SuppressLint;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
 import com.typesafe.config.ConfigFactory;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * @author eiden (Christoffer Eide)
@@ -61,14 +69,14 @@ final class CacheManagerTest {
   @Test
   void jmxBeanIsRegistered_getCache() throws OperationsException {
     try (var fixture = JCacheFixture.builder().build()) {
-      checkConfigurationJmx(fixture.cacheManager().getCache("test-cache"));
+      checkConfigurationJmx(requireNonNull(fixture.cacheManager().getCache("test-cache")));
     }
   }
 
   @Test
   void enableManagement_absent() {
     try (var fixture = JCacheFixture.builder().build()) {
-      fixture.cacheManager().enableManagement("absent", true);
+      fixture.cacheManager().enableManagement("absent", /* enabled= */ true);
       assertThat(fixture.cacheManager().getCache("absent")).isNull();
     }
   }
@@ -76,7 +84,7 @@ final class CacheManagerTest {
   @Test
   void enableStatistics_absent() {
     try (var fixture = JCacheFixture.builder().build()) {
-      fixture.cacheManager().enableStatistics("absent", true);
+      fixture.cacheManager().enableStatistics("absent", /* enabled= */ true);
       assertThat(fixture.cacheManager().getCache("absent")).isNull();
     }
   }
@@ -251,6 +259,69 @@ final class CacheManagerTest {
     }
   }
 
+  @Test
+  @SuppressWarnings("try")
+  void close_doesNotEvictSameNamedReplacement() {
+    var configuration = new MutableConfiguration<>();
+    try (var fixture = JCacheFixture.builder().build();
+         var manager = (CacheManagerImpl) fixture.cachingProvider().getCacheManager(
+            URI.create(getClass().getName()), fixture.cachingProvider().getDefaultClassLoader());
+         var stale = (CacheProxy<?, ?>) manager.createCache("cache", configuration);
+         var replacement = (CacheProxy<?, ?>) manager.createCache("spare", configuration)) {
+      // A same-named replacement took over "cache" (the close/createCache race outcome); the stale
+      // proxy closing itself must deregister by identity and leave the replacement intact.
+      manager.caches.put("cache", replacement);
+      stale.close();
+
+      assertThat(stale.isClosed()).isTrue();
+      assertThat(replacement.isClosed()).isFalse();
+      assertThat(manager.caches).containsEntry("cache", replacement);
+    }
+  }
+
+  @Test
+  @SuppressLint("THREAD_SAFETY_VIOLATION")
+  void enableManagement_concurrentClose_doesNotReregister() throws Exception {
+    try (var fixture = JCacheFixture.builder().build();
+         var cache = (CacheProxy<?, ?>) fixture.cacheManager()
+             .createCache("jmx-race", new MutableConfiguration<>())) {
+      var configuration = FieldUtils.readField(cache, "configuration", /* forceAccess= */ true);
+      var task = new FutureTask<@Nullable Void>(() -> {
+        cache.enableManagement(true);
+        return null;
+      });
+      var blocked = EnumSet.of(BLOCKED, WAITING);
+      var thread = new Thread(task);
+
+      // Park enableManagement past its (now in-lock) close check, then close the cache underneath.
+      synchronized (configuration) {
+        thread.start();
+        await().until(() -> blocked.contains(thread.getState()));
+        FieldUtils.writeField(cache, "closed", true, /* forceAccess= */ true);
+      }
+
+      // The re-check inside the lock must observe the close and refuse to (re)register the MBean.
+      var failure = assertThrows(ExecutionException.class, task::get);
+      assertThat(failure).hasCauseThat().isInstanceOf(IllegalStateException.class);
+    }
+  }
+
+  @Test
+  @SuppressWarnings("try")
+  void close_shutsDownExecutorWithoutClosingIt() {
+    // The executor is owned by shutdownExecutor() (orderly shutdown + bounded inFlight wait); pre-fix
+    // tryClose(executor) additionally called AutoCloseable.close(), which on JDK 19+ awaits
+    // termination for up to a day. close() must shut the executor down but never close it.
+    try (var fixture = JCacheFixture.builder().build();
+         var executor = new TrackingExecutorService();
+         var cache = fixture.cacheManager().createCache("executor",
+             new CaffeineConfiguration<>().setExecutorFactory(() -> executor))) {
+      cache.close();
+      assertThat(executor.shutdown.get()).isTrue();
+      assertThat(executor.closed.get()).isFalse();
+    }
+  }
+
   private static void checkConfigurationJmx(Cache<?, ?> cache) throws OperationsException {
     @SuppressWarnings("unchecked")
     CompleteConfiguration<?, ?> configuration = cache.getConfiguration(CompleteConfiguration.class);
@@ -259,5 +330,41 @@ final class CacheManagerTest {
     ManagementFactory.getPlatformMBeanServer().getObjectInstance( new ObjectName(
         String.format(US, "javax.cache:Cache=%s,CacheManager=%s,type=CacheStatistics",
             cache.getName(), cache.getCacheManager().getCachingProvider().getClass().getName())));
+  }
+
+  /**
+   * An executor that is explicitly {@link AutoCloseable} so {@code tryClose} exercises {@code close}
+   * on any JDK ({@link java.util.concurrent.ExecutorService} only became {@code AutoCloseable} in
+   * JDK 19), recording whether it was shut down and/or closed.
+   */
+  @SuppressFBWarnings("RI_REDUNDANT_INTERFACES")
+  @SuppressWarnings({"PMD.UnnecessaryInterfaceDeclaration", "unused"})
+  private static final class TrackingExecutorService
+      extends AbstractExecutorService implements AutoCloseable {
+    final AtomicBoolean shutdown = new AtomicBoolean();
+    final AtomicBoolean closed = new AtomicBoolean();
+
+    @Override public void execute(Runnable command) {
+      command.run();
+    }
+    @Override public void shutdown() {
+      shutdown.set(true);
+    }
+    @Override public List<Runnable> shutdownNow() {
+      shutdown.set(true);
+      return List.of();
+    }
+    @Override public boolean isShutdown() {
+      return shutdown.get();
+    }
+    @Override public boolean isTerminated() {
+      return shutdown.get();
+    }
+    @Override public boolean awaitTermination(long timeout, TimeUnit unit) {
+      return true;
+    }
+    @Override public void close() {
+      closed.set(true);
+    }
   }
 }

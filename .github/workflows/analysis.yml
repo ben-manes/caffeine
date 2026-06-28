@@ -131,8 +131,8 @@ jobs:
           sarif_file: pmd-combined.sarif
           category: pmd
 
-  revapi:
-    name: Revapi
+  roseau:
+    name: Roseau
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -149,11 +149,11 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - name: Revapi
+      - name: Roseau
         uses: ./.github/actions/run-gradle
         with:
+          arguments: roseau
           java: ${{ env.JAVA_VERSION }}
-          arguments: revapi -Prevapi --no-configuration-cache
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
   spotbugs:

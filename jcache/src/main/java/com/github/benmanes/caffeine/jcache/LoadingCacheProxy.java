@@ -25,7 +25,6 @@ import java.util.concurrent.Executor;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
-import javax.cache.CacheManager;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 
@@ -48,7 +47,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   private final LoadingCache<K, @Nullable Expirable<V>> cache;
 
   @SuppressWarnings({"PMD.ExcessiveParameterList", "TooManyParameters"})
-  public LoadingCacheProxy(String name, Executor executor, CacheManager cacheManager,
+  public LoadingCacheProxy(String name, Executor executor, CacheManagerImpl cacheManager,
       CaffeineConfiguration<K, V> configuration, LoadingCache<K, @Nullable Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader, ExpiryPolicy expiry,
       Ticker ticker, JCacheStatisticsMXBean statistics) {

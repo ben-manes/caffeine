@@ -94,7 +94,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected final Ticker ticker;
 
   private final CaffeineConfiguration<K, V> configuration;
-  private final CacheManager cacheManager;
+  private final CacheManagerImpl cacheManager;
   private final CacheWriter<K, V> writer;
   private final JCacheMXBean cacheMxBean;
   private final ExpiryPolicy expiry;
@@ -104,7 +104,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private volatile boolean closed;
 
   @SuppressWarnings({"PMD.ExcessiveParameterList", "this-escape", "TooManyParameters"})
-  public CacheProxy(String name, Executor executor, CacheManager cacheManager,
+  public CacheProxy(String name, Executor executor, CacheManagerImpl cacheManager,
       CaffeineConfiguration<K, V> configuration,
       com.github.benmanes.caffeine.cache.Cache<K, @Nullable Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, Optional<CacheLoader<K, V>> cacheLoader,
@@ -213,20 +213,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     } finally {
       dispatcher.awaitSynchronous();
     }
-  }
-
-  /**
-   * Returns all of the mappings present, expiring as required, and updates their access expiry
-   * time.
-   *
-   * @deprecated The {@code updateAccessTime} parameter is ignored — access expiry is always
-   *     updated. Use {@link #getAndFilterExpiredEntries(Set)} instead.
-   */
-  @Deprecated(since = "3.2.5", forRemoval = true)
-  @SuppressWarnings({"DeprecatedIsStillUsed", "InlineMeSuggester", "unused"})
-  protected Map<K, Expirable<V>> getAndFilterExpiredEntries(
-      Set<? extends K> keys, boolean updateAccessTime) {
-    return getAndFilterExpiredEntries(keys);
   }
 
   /**
@@ -1001,13 +987,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         enableStatistics(false);
         closed = true;
         try {
-          cacheManager.destroyCache(name);
+          cacheManager.destroyCache(name, this);
         } catch (IllegalStateException ignored) { /* manager already closed */ }
 
         @Var var thrown = shutdownExecutor();
         thrown = tryClose(expiry, thrown);
         thrown = tryClose(writer, thrown);
-        thrown = tryClose(executor, thrown);
         thrown = tryClose(cacheLoader.orElse(null), thrown);
         for (Registration<K, V> registration : dispatcher.registrations()) {
           thrown = tryClose(registration.getCacheEntryListener(), thrown);
@@ -1080,8 +1065,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public void registerCacheEntryListener(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
-    requireNotClosed();
     synchronized (configuration) {
+      requireNotClosed();
       configuration.addCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
       dispatcher.register(cacheEntryListenerConfiguration);
     }
@@ -1090,8 +1075,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public void deregisterCacheEntryListener(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
-    requireNotClosed();
     synchronized (configuration) {
+      requireNotClosed();
       configuration.removeCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
       dispatcher.deregister(cacheEntryListenerConfiguration);
     }
@@ -1105,9 +1090,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   /** Enables or disables the configuration management JMX bean. */
   void enableManagement(boolean enabled) {
-    requireNotClosed();
-
     synchronized (configuration) {
+      requireNotClosed();
       if (enabled) {
         JmxRegistration.registerMxBean(this, cacheMxBean, MBeanType.CONFIGURATION);
       } else {
@@ -1119,9 +1103,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   /** Enables or disables the statistics JMX bean. */
   void enableStatistics(boolean enabled) {
-    requireNotClosed();
-
     synchronized (configuration) {
+      requireNotClosed();
       if (enabled) {
         JmxRegistration.registerMxBean(this, statistics, MBeanType.STATISTICS);
       } else {
@@ -1165,7 +1148,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     if (object == null) {
       return null;
     }
-    T copy = copier.copy(object, cacheManager.getClassLoader());
+    T copy = copier.copy(object, requireNonNull(cacheManager.getClassLoader()));
     return requireNonNull(copy);
   }
 
@@ -1180,7 +1163,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     if (expirable == null) {
       return null;
     }
-    V copy = copier.copy(expirable.get(), cacheManager.getClassLoader());
+    V copy = copier.copy(expirable.get(), requireNonNull(cacheManager.getClassLoader()));
     return requireNonNull(copy);
   }
 
@@ -1192,7 +1175,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    */
   @SuppressWarnings("CollectorMutability")
   protected final Map<K, V> copyMap(Map<K, Expirable<V>> map) {
-    ClassLoader classLoader = cacheManager.getClassLoader();
+    var classLoader = requireNonNull(cacheManager.getClassLoader());
     return map.entrySet().stream().collect(toMap(
         entry -> copier.copy(entry.getKey(), classLoader),
         entry -> copier.copy(entry.getValue().get(), classLoader)));

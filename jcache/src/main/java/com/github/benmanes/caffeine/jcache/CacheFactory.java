@@ -77,7 +77,7 @@ final class CacheFactory {
    */
   @SuppressWarnings("resource")
   public static <K, V> @Nullable CacheProxy<K, V> tryToCreateFromExternalSettings(
-      CacheManager cacheManager, String cacheName) {
+      CacheManagerImpl cacheManager, String cacheName) {
     return TypesafeConfigurator.<K, V>from(rootConfig(cacheManager), cacheName)
         .map(configuration -> createCache(cacheManager, cacheName, configuration))
         .orElse(null);
@@ -91,7 +91,7 @@ final class CacheFactory {
    * @param configuration the full cache definition
    * @return a newly constructed cache instance
    */
-  public static <K, V> CacheProxy<K, V> createCache(CacheManager cacheManager,
+  public static <K, V> CacheProxy<K, V> createCache(CacheManagerImpl cacheManager,
       String cacheName, Configuration<K, V> configuration) {
     CaffeineConfiguration<K, V> config = resolveConfigurationFor(cacheManager, configuration);
     return new Builder<>(cacheManager, cacheName, config).build();
@@ -138,14 +138,14 @@ final class CacheFactory {
     final String cacheName;
     final Executor executor;
     final Scheduler scheduler;
-    final CacheManager cacheManager;
     final ExpiryPolicy expiryPolicy;
+    final CacheManagerImpl cacheManager;
     final EventDispatcher<K, V> dispatcher;
     final JCacheStatisticsMXBean statistics;
     final Caffeine<Object, Object> caffeine;
     final CaffeineConfiguration<K, V> config;
 
-    Builder(CacheManager cacheManager, String cacheName, CaffeineConfiguration<K, V> config) {
+    Builder(CacheManagerImpl cacheManager, String cacheName, CaffeineConfiguration<K, V> config) {
       this.config = config;
       this.cacheName = cacheName;
       this.cacheManager = cacheManager;

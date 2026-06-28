@@ -272,7 +272,8 @@ final class CacheProxyTest {
         .configure(config -> config.setExecutorFactory(MoreExecutors::directExecutor))
         .build()) {
       fixture.jcacheLoading().put(KEY_1, VALUE_1);
-      fixture.cacheManager().enableStatistics(fixture.jcacheLoading().getName(), true);
+      fixture.cacheManager().enableStatistics(
+          fixture.jcacheLoading().getName(), /* enabled = */ true);
 
       var stats = JCacheFixture.getStatistics(fixture.jcacheLoading());
       long hitsBefore = stats.getCacheHits();
@@ -304,19 +305,6 @@ final class CacheProxyTest {
       int size = Iterators.size(fixture.jcache().iterator());
       assertThat(size).isEqualTo(3);
       assertThat(stats.getCacheHits() - hitsBefore).isEqualTo(3);
-    }
-  }
-
-  @Test
-  @SuppressWarnings({"deprecation", "removal"})
-  void getAndFilterExpiredEntries_deprecatedTwoArg_delegates() {
-    // Cover the deprecated 2-arg protected delegator retained for binary
-    // compatibility with the 3.2.4 baseline. The boolean is ignored.
-    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
-      fixture.jcache().put(KEY_1, VALUE_1);
-      var result = fixture.jcache().getAndFilterExpiredEntries(
-          Set.of(KEY_1), /* updateAccessTime= */ false);
-      assertThat(result).containsKey(KEY_1);
     }
   }
 

@@ -35,7 +35,6 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import javax.cache.Cache;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
@@ -334,12 +333,9 @@ final class TypesafeConfigurationTest {
   @Test
   void getCache() {
     try (var fixture = JCacheFixture.builder().build();
-        Cache<Integer, Integer> cache = fixture.cacheManager().getCache("test-cache")) {
-      assertThat(cache).isNotNull();
-
+         var cache = requireNonNull(fixture.cacheManager().getCache("test-cache"))) {
       @SuppressWarnings("unchecked")
-      CaffeineConfiguration<Integer, Integer> config =
-          cache.getConfiguration(CaffeineConfiguration.class);
+      var config = cache.getConfiguration(CaffeineConfiguration.class);
       checkTestCache(config);
     }
   }

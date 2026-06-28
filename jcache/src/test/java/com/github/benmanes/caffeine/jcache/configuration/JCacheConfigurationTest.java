@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache.configuration;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Duration;
@@ -145,8 +146,8 @@ final class JCacheConfigurationTest {
           .setStatisticsEnabled(true);
       checkConfiguration(fixture.cacheManager().createCache(
           "cache-not-in-config-file", cacheConfig), 500L);
-      checkConfiguration(fixture.cacheManager().getCache(
-          "cache-not-in-config-file", String.class, String.class), 500L);
+      checkConfiguration(requireNonNull(fixture.cacheManager()
+          .getCache("cache-not-in-config-file", String.class, String.class)), 500L);
     }
   }
 
@@ -158,8 +159,8 @@ final class JCacheConfigurationTest {
           .setStatisticsEnabled(true);
       assertThrows(CacheException.class, () ->
           fixture.cacheManager().createCache("test-cache-2", cacheConfig));
-      checkConfiguration(fixture.cacheManager()
-          .getCache("test-cache-2", String.class, Integer.class), 1000L);
+      checkConfiguration(requireNonNull(fixture.cacheManager()
+          .getCache("test-cache-2", String.class, Integer.class)), 1000L);
     }
   }
 

@@ -163,8 +163,8 @@ refaulting
 reserializable
 reserialize
 reserialized
-revapi
 rmax
+roseau
 rsd
 scorecards
 sdkman

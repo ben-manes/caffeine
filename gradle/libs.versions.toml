@@ -89,7 +89,7 @@ pitest-junit5 = "1.2.3"
 pitest-plugin = "1.19.0"
 pmd = "7.25.0"
 protobuf = "4.35.1"
-revapi = "1.8.0"
+roseau = "0.6.0"
 slf4j = "2.0.18"
 slf4j-test = "3.0.3"
 sigstore = "2.2.0"
@@ -200,6 +200,7 @@ pmd = { module = "net.sourceforge.pmd:pmd", version.ref = "pmd" }
 pmd-ant = { module = "net.sourceforge.pmd:pmd-ant", version.ref = "pmd" }
 pmd-java = { module = "net.sourceforge.pmd:pmd-java", version.ref = "pmd" }
 protobuf = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
+roseau =  { module = "io.github.alien-tools:roseau-cli", version.ref = "roseau" }
 slf4j-bom = { module = "org.slf4j:slf4j-bom", version.ref = "slf4j" }
 slf4j-jdk-platform-logging = { module = "org.slf4j:slf4j-jdk-platform-logging", version.ref = "slf4j" }
 slf4j-jdk14 = { module = "org.slf4j:slf4j-jdk14", version.ref = "slf4j" }
@@ -248,7 +249,6 @@ jvm-dependency-conflict-resolution = { id = "org.gradlex.jvm-dependency-conflict
 nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
 nullaway = { id = "net.ltgt.nullaway", version.ref = "nullaway-plugin" }
 pitest = { id = "info.solidsoft.pitest", version.ref = "pitest-plugin" }
-revapi = { id = "org.revapi.revapi-gradle-plugin", version.ref = "revapi" }
 sigstore = { id = "dev.sigstore.sign", version.ref = "sigstore" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
 spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs-plugin" }

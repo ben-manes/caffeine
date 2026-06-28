@@ -214,7 +214,8 @@ final class JCacheCreationExpiryTest {
   @Test
   void get_loading_expired_lazy() {
     try (var fixture = jcacheFixture()) {
-      fixture.cacheManager().enableStatistics(fixture.jcacheLoading().getName(), false);
+      fixture.cacheManager().enableStatistics(
+          fixture.jcacheLoading().getName(), /* enabled = */ false);
 
       fixture.jcacheLoading().put(KEY_1, VALUE_1);
       fixture.ticker().setAutoIncrementStep(

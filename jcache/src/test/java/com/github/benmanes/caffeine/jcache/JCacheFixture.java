@@ -19,7 +19,6 @@ import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
-import javax.cache.CacheManager;
 import javax.cache.integration.CacheLoader;
 import javax.cache.spi.CachingProvider;
 
@@ -65,12 +64,12 @@ public final class JCacheFixture implements AutoCloseable {
   private final LoadingCacheProxy<Integer, Integer> jcacheLoading;
   private final CacheProxy<Integer, Integer> jcache;
   private final CachingProvider cachingProvider;
-  private final CacheManager cacheManager;
+  private final CacheManagerImpl cacheManager;
   private final FakeTicker ticker;
 
   private JCacheFixture(Builder builder) {
     cachingProvider = new CaffeineCachingProvider();
-    cacheManager = cachingProvider.getCacheManager(
+    cacheManager = (CacheManagerImpl) cachingProvider.getCacheManager(
         cachingProvider.getDefaultURI(), cachingProvider.getDefaultClassLoader());
     cacheManager.getCacheNames().forEach(cacheManager::destroyCache);
     ticker = builder.ticker;
@@ -101,7 +100,7 @@ public final class JCacheFixture implements AutoCloseable {
     return jcache;
   }
 
-  public CacheManager cacheManager() {
+  public CacheManagerImpl cacheManager() {
     return cacheManager;
   }
 

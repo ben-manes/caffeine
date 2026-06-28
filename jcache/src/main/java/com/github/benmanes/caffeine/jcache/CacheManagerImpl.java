@@ -204,6 +204,12 @@ public final class CacheManagerImpl implements CacheManager {
     }
   }
 
+  /** Removes the cache from the registry if it is still the registered instance. */
+  void destroyCache(String cacheName, CacheProxy<?, ?> cache) {
+    requireNotClosed();
+    caches.remove(cacheName, cache);
+  }
+
   @Override
   public void enableManagement(String cacheName, boolean enabled) {
     requireNotClosed();

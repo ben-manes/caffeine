@@ -1,0 +1,4 @@
+common:
+  excludes:
+    names:
+      - 'com\.github\.benmanes\.caffeine\.jcache\.(?!configuration\.|copy\.|spi\.).*'
