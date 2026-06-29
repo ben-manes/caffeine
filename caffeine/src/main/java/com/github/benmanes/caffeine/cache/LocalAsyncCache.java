@@ -910,11 +910,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       var castedKey = (K) key;
       boolean[] done = { false };
       boolean[] removed = { false };
-      @Var CompletableFuture<V> future = null;
       for (;;) {
-        future = (future == null)
-            ? delegate.get(castedKey)
-            : delegate.getIfPresentQuietly(castedKey);
+        CompletableFuture<V> future = delegate.getIfPresentQuietly(castedKey);
         if ((future == null) || future.isCompletedExceptionally()) {
           return false;
         }
@@ -1556,7 +1553,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         if ((key == null) || (value == null)) {
           return false;
         }
-        V cachedValue = AsMapView.this.get(key);
+        V cachedValue = Async.getIfReady(delegate.getIfPresentQuietly(key));
         return (cachedValue != null) && cachedValue.equals(value);
       }
 

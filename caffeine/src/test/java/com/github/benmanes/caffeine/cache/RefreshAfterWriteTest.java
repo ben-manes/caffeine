@@ -845,6 +845,60 @@ final class RefreshAfterWriteTest {
         .exclusively();
   }
 
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
+  void entrySetContains_doesNotRefresh(CacheContext context) {
+    var reloads = new AtomicInteger();
+    var loader = countingReloader(reloads);
+    LoadingCache<Int, Int> cache = context.isAsync()
+        ? context.buildAsync(loader).synchronous()
+        : context.build(loader);
+    Int key = context.absentKey();
+    Int value = context.absentValue();
+    cache.put(key, value);
+    context.ticker().advance(Duration.ofMinutes(2));
+
+    // A membership test must be quiet: contains() must not launch a refresh.
+    assertThat(cache.asMap().entrySet().contains(Map.entry(key, value))).isTrue();
+    assertThat(reloads.get()).isEqualTo(0);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
+  void removeConditionally_doesNotRefresh(CacheContext context) {
+    var reloads = new AtomicInteger();
+    var loader = countingReloader(reloads);
+    LoadingCache<Int, Int> cache = context.isAsync()
+        ? context.buildAsync(loader).synchronous()
+        : context.build(loader);
+    Int key = context.absentKey();
+    Int value = context.absentValue();
+    cache.put(key, value);
+    context.ticker().advance(Duration.ofMinutes(2));
+
+    // A non-matching conditional remove must be quiet: it inspects but must not refresh.
+    assertThat(cache.asMap().remove(key, value.add(1))).isFalse();
+    assertThat(reloads.get()).isEqualTo(0);
+    assertThat(cache).containsEntry(key, value);
+  }
+
+  private static CacheLoader<Int, Int> countingReloader(AtomicInteger reloads) {
+    return new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new AssertionError();
+      }
+      @Override public CompletableFuture<Int> asyncReload(
+          Int key, Int oldValue, Executor executor) {
+        reloads.incrementAndGet();
+        return oldValue.toFuture();
+      }
+    };
+  }
+
   /* --------------- getAllPresent --------------- */
 
   @CheckNoEvictions

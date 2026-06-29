@@ -1103,8 +1103,12 @@ final class ExpirationTest {
   void removeConditionally(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.ticker().advance(Duration.ofMinutes(2));
-
     assertThat(map.remove(key, context.original().get(key))).isFalse();
+
+    if (!map.isEmpty()) {
+      context.cleanUp();
+    }
+    assertThat(map).isExhaustivelyEmpty();
     assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
   }

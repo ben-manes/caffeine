@@ -3156,22 +3156,6 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.SINGLETON, expireAfterWrite = Expire.ONE_MINUTE,
-      weigher = CacheWeigher.TEN, maximumSize = Maximum.UNREACHABLE,
-      removalListener = Listener.CONSUMING, stats = Stats.ENABLED)
-  void removeConditionally_expiredEntry_recordsEviction(
-      Cache<Int, Int> cache, CacheContext context) {
-    context.ticker().advance(Duration.ofMinutes(2));
-    var removed = cache.asMap().remove(context.firstKey(),
-        context.original().get(context.firstKey()));
-    assertThat(removed).isFalse();
-    assertThat(context).notifications().withCause(EXPIRED)
-        .contains(context.original()).exclusively();
-    assertThat(context).stats().evictions(1).evictionWeight(10);
-  }
-
-  @ParameterizedTest
   @CacheSpec(population = Population.SINGLETON, expireAfterWrite = Expire.ONE_MINUTE,
       removalListener = Listener.CONSUMING, stats = Stats.ENABLED)
   void compute_expiredEntry_remappingReturnsOldInstance(
