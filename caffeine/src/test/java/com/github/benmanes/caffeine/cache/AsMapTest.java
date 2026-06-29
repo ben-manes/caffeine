@@ -742,6 +742,34 @@ final class AsMapTest {
     assertThat(cache).doesNotContainKey(key);
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY)
+  void removeConditionally_async_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    Int key = context.absentKey();
+    Int value = context.absentValue();
+    var future = new CompletableFuture<Int>();
+
+    cache.put(key, future);
+    var writer = new AtomicReference<@Nullable Thread>();
+    var removal = CompletableFuture.supplyAsync(() -> {
+      writer.set(Thread.currentThread());
+      return cache.synchronous().asMap().remove(key, value);
+    }, executor);
+
+    // The conditional remove must block on the in-flight future (like replace), not short-circuit.
+    var threadState = EnumSet.of(BLOCKED, WAITING);
+    await().until(() -> {
+      var thread = writer.get();
+      return (thread != null) && threadState.contains(thread.getState());
+    });
+    future.complete(value);
+
+    assertThat(removal).succeedsWith(true);
+    assertThat(cache).doesNotContainKey(key);
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(key, value).exclusively();
+  }
+
   /* --------------- replace --------------- */
 
   @CheckNoStats
@@ -3508,10 +3536,16 @@ final class AsMapTest {
   void entrySet_removeAll_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
-    assertThat(cache.synchronous().asMap().entrySet()
-        .removeAll(context.absent().entrySet())).isFalse();
+    var start = new AtomicBoolean();
+    var writer = CompletableFuture.supplyAsync(() -> {
+      start.set(true);
+      return cache.synchronous().asMap().entrySet().removeAll(context.absent().entrySet());
+    }, executor);
+
+    await().untilTrue(start);
     future.complete(null);
 
+    assertThat(writer).succeedsWith(false);
     assertThat(cache).containsExactlyEntriesIn(context.original());
     assertThat(context).removalNotifications().isEmpty();
   }

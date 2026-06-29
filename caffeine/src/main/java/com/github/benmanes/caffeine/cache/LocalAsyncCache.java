@@ -915,7 +915,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         future = (future == null)
             ? delegate.get(castedKey)
             : delegate.getIfPresentQuietly(castedKey);
-        if (!Async.isReady(future)) {
+        if ((future == null) || future.isCompletedExceptionally()) {
           return false;
         }
 

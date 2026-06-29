@@ -1,6 +1,5 @@
 @file:Suppress("PackageDirectoryMismatch", "UnstableApiUsage")
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
-import org.gradle.external.javadoc.StandardJavadocDocletOptions
 
 plugins {
   `java-library`
