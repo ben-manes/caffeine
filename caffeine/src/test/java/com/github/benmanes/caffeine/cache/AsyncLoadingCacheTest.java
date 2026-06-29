@@ -58,6 +58,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
@@ -562,6 +563,30 @@ final class AsyncLoadingCacheTest {
         assertThat(cache).containsKey(key);
       }
     });
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.ASYNC, removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void getAll_lazyResult_evaluatesEachValueOnce(CacheContext context) {
+    var transforms = new AtomicInteger();
+    var loader = new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override public Map<? extends Int, Int> loadAll(Set<? extends Int> keys) {
+        // A lazy view re-applies the transform on every value access; the bulk completer must
+        // evaluate each requested value once (fillProxies), not again in addNewEntries.
+        return Maps.transformValues(Maps.toMap(keys, Int::negate), value -> {
+          transforms.incrementAndGet();
+          return value;
+        });
+      }
+    };
+    var cache = context.buildAsync(loader);
+    var keys = context.absentKeys();
+    cache.getAll(keys).join();
+
+    assertThat(transforms.get()).isEqualTo(keys.size());
   }
 
   @ParameterizedTest

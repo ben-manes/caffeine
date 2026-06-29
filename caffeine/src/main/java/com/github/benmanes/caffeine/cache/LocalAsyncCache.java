@@ -346,8 +346,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Var Throwable error = failure;
       for (Map.Entry<? extends K, ? extends @Nullable V> entry : result.entrySet()) {
         var key = entry.getKey();
-        @Nullable V value = entry.getValue();
         if (!proxies.containsKey(key)) {
+          @Nullable V value = entry.getValue();
           if (value == null) {
             continue;
           }

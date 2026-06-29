@@ -117,6 +117,7 @@
     <exclude name="EqualsNull"/>
     <exclude name="NullAssignment"/>
     <exclude name="AssignmentInOperand"/>
+    <exclude name="WrongTestAnnotation"/>
     <exclude name="UseProperClassLoader"/>
     <exclude name="UselessPureMethodCall"/>
     <exclude name="AvoidCatchingThrowable"/>

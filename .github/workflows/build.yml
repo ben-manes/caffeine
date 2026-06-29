@@ -21,14 +21,19 @@ env:
     cloudflare.com:443
     corretto.aws:443
     docker.io:443
+    docs.oracle.com:443
     download.java.net:443
     download.oracle.com:443
     downloads.gradle.org:443
     downloads.gradle-dn.com:443
+    errorprone.info:443
     gds.oracle.com:443
     ghcr.io:443
     github.com:443
+    guava.dev:443
     jdk.java.net:443
+    jspecify.dev:443
+    lightbend.github.io:443
     maven-central.storage-download.googleapis.com:443
     objects.githubusercontent.com:443
     oss.sonatype.org:443
@@ -36,6 +41,7 @@ env:
     plugins-artifacts.gradle.org:443
     raw.githubusercontent.com:443
     registry.npmjs.org:443
+    release-assets.githubusercontent.com:443
     repo.gradle.org:443
     repo.maven.apache.org:443
     repo1.maven.org:443
@@ -222,9 +228,13 @@ jobs:
             ${{ env.ALLOWED_ENDPOINTS }}
             artifacts.codacy.com:443
             api.codacy.com:443
+            api.sonarcloud.io:443
+            cli.codecov.io:443
             codecov.io:443
             coveralls.io:443
             fastly.com:443
+            keybase.io:443
+            ingest.codecov.io:443
             nodejs.org:443
             sonarcloud.io:443
             scanner.sonarcloud.io:443
@@ -328,8 +338,11 @@ jobs:
           egress-policy: block
           allowed-endpoints: >
             ${{ env.ALLOWED_ENDPOINTS }}
+            cli.codecov.io:443
             codecov.io:443
             img.shields.io:443
+            ingest.codecov.io:443
+            keybase.io:443
             uploader.codecov.io:443
       - name: Download Tests
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -427,14 +440,12 @@ jobs:
           egress-policy: block
           allowed-endpoints: >
             ${{ env.ALLOWED_ENDPOINTS }}
+            fulcio.sigstore.dev:443
             central.sonatype.com:443
-            docs.oracle.com:443
-            errorprone.info:443
-            guava.dev:443
-            jspecify.dev:443
-            lightbend.github.io:443
             oauth2.sigstore.dev:443
             ossrh-staging-api.central.sonatype.com:443
+            rekor.sigstore.dev:443
+            tuf-repo-cdn.sigstore.dev:443
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
