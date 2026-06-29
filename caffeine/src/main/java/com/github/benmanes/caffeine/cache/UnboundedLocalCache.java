@@ -489,7 +489,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Nullable V[] oldValue = (V[]) new Object[1];
 
     data.computeIfPresent(castKey, (k, v) -> {
-      if (Objects.equals(v, value)) {
+      if (Objects.equals(value, v)) {
         discardRefresh(k);
         oldValue[0] = v;
         return null;
@@ -535,7 +535,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
     @Nullable V[] prev = (V[]) new Object[1];
     data.computeIfPresent(key, (k, v) -> {
-      if (Objects.equals(v, oldValue)) {
+      if (Objects.equals(oldValue, v)) {
         if (shouldDiscardRefresh) {
           discardRefresh(k);
         }

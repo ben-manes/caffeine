@@ -721,6 +721,16 @@ final class AsMapTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, values = ReferenceType.STRONG)
+  void removeConditionally_brokenCachedEquality(Map<Int, Object> map, CacheContext context) {
+    // The expected value is the equals receiver (CHM/bounded/async alignment); the cached value's
+    // equals is never invoked — here it throws to catch a reversed receiver.
+    map.put(context.absentKey(), new ThrowingEquality());
+    assertThat(map.remove(context.absentKey(), Int.valueOf(0))).isFalse();
+    assertThat(map).containsKey(context.absentKey());
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
   void removeConditionally_async_null(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -1000,6 +1010,16 @@ final class AsMapTest {
     map.put(context.absentKey(), value);
     assertThat(map.replace(context.absentKey(), value, context.absentValue())).isTrue();
     assertThat(map).containsEntry(context.absentKey(), context.absentValue());
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, values = ReferenceType.STRONG)
+  void replaceConditionally_brokenCachedEquality(Map<Int, Object> map, CacheContext context) {
+    // The expected old value is the equals receiver; the cached value's equals is never invoked.
+    map.put(context.absentKey(), new ThrowingEquality());
+    assertThat(map.replace(context.absentKey(), Int.valueOf(0), new Int(1))).isFalse();
+    assertThat(map).containsKey(context.absentKey());
   }
 
   @CheckNoStats
@@ -4114,6 +4134,11 @@ final class AsMapTest {
     assertThat(entry.toString()).isNotEqualTo(other.toString());
   }
 
+  @SuppressWarnings({"TypeParameterUnusedInFormals", "unchecked"})
+  private static <E extends Throwable> E uncheckedThrow(Throwable throwable) throws E {
+    throw (E) throwable;
+  }
+
   private static final class BrokenEquality {
     @SuppressFBWarnings("EQ_ALWAYS_FALSE")
     @Override public boolean equals(Object o) {
@@ -4124,8 +4149,13 @@ final class AsMapTest {
     }
   }
 
-  @SuppressWarnings({"TypeParameterUnusedInFormals", "unchecked"})
-  private static <E extends Throwable> E uncheckedThrow(Throwable throwable) throws E {
-    throw (E) throwable;
+  private static final class ThrowingEquality {
+    @SuppressFBWarnings("EQ_UNUSUAL")
+    @Override public boolean equals(Object o) {
+      throw new AssertionError("the cached value's equals must not be invoked");
+    }
+    @Override public int hashCode() {
+      return System.identityHashCode(this);
+    }
   }
 }
