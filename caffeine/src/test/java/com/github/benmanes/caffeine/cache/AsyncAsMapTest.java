@@ -1182,12 +1182,12 @@ final class AsyncAsMapTest {
         cache.asMap().computeIfAbsent(context.absentKey(), nullFunction()));
   }
 
-  @CheckNoStats
   @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void computeIfAbsent_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().computeIfAbsent(context.absentKey(), key -> null)).isNull();
     assertThat(cache).hasSize(context.initialSize());
+    assertThat(context).stats().hits(0).misses(1).success(0).failures(0);
   }
 
   @CacheSpec
@@ -1225,7 +1225,7 @@ final class AsyncAsMapTest {
 
     assertThat(actual).isSameInstanceAs(expected);
     assertThat(cache).containsExactlyEntriesIn(context.original());
-    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
+    assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
     var future = cache.asMap().computeIfAbsent(context.absentKey(), Int::toFuture);
     assertThat(future).succeedsWith(context.absentKey());
   }
@@ -1261,7 +1261,7 @@ final class AsyncAsMapTest {
     cache.put(context.absentKey(), future);
     assertThat(cache.asMap().computeIfAbsent(context.absentKey(), key -> null)).isEqualTo(future);
     future.completeExceptionally(new IllegalStateException());
-    assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
+    assertThat(context).stats().hits(1).misses(0).success(0).failures(1);
   }
 
   @ParameterizedTest

@@ -27,4 +27,4 @@ paths:
 - Null values are never cached — null or failed futures remove the entry
 - In-flight futures report weight=0 (re-inserted post-completion to update)
 - Weak/soft value references are incompatible with AsyncCache (references would track the future, not the value)
-- CancellationException and TimeoutException are suppressed in handleCompletion logging
+- CancellationException and TimeoutException are suppressed in handleCompletion logging — only when the future completes with them *directly* (bare). A `CompletionException`-wrapped timeout/cancel arriving through a user dependent stage (e.g. `orTimeout().thenApply(...)`) is intentionally NOT unwrapped: it's indistinguishable from a timeout thrown by loader code, so unwrapping would silently swallow a real failure (provenance boundary — direct completion is ours to suppress, a wrapped cause is the user's pipeline)

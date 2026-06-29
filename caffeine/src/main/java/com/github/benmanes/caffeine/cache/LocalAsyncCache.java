@@ -440,7 +440,6 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override public boolean remove(Object key, Object value) {
       return asyncCache.cache().remove(key, value);
     }
-    @SuppressWarnings("FutureReturnValueIgnored")
     @Override public @Nullable CompletableFuture<V> computeIfAbsent(K key,
         Function<? super K, ? extends @Nullable CompletableFuture<V>> mappingFunction) {
       requireNonNull(mappingFunction);
@@ -452,18 +451,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         return result[0];
       };
       @Nullable CompletableFuture<V> future = asyncCache.cache().computeIfAbsent(
-          key, function, /* recordStats= */ false, /* recordLoad= */ false);
-
-      if (result[0] == null) {
-        if ((future != null) && asyncCache.cache().isRecordingStats()) {
-          future.whenComplete((r, e) -> {
-            if ((r != null) || (e == null)) {
-              asyncCache.cache().statsCounter().recordHits(1);
-            }
-          });
-        }
-      } else {
-        asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss= */ true);
+          key, function, /* recordStats= */ true, /* recordLoad= */ false);
+      if (result[0] != null) {
+        asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss= */ false);
       }
       return future;
     }
