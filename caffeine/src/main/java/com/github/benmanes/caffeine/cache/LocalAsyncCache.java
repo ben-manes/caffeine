@@ -567,6 +567,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Override public boolean retainAll(Collection<?> collection) {
         return asyncCache.cache().entrySet().retainAll(collection);
       }
+      @Override public boolean removeIf(Predicate<? super Entry<K, CompletableFuture<V>>> filter) {
+        return asyncCache.cache().entrySet().removeIf(filter);
+      }
       @Override public Iterator<Entry<K, CompletableFuture<V>>> iterator() {
         return new AsyncEntryIterator();
       }
@@ -1589,13 +1592,10 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Override
       public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
         requireNonNull(filter);
-        @Var boolean modified = false;
-        for (Entry<K, V> entry : this) {
-          if (filter.test(entry)) {
-            modified |= AsMapView.this.remove(entry.getKey(), entry.getValue());
-          }
-        }
-        return modified;
+        return delegate.entrySet().removeIf(entry -> {
+          V value = Async.getIfReady(entry.getValue());
+          return (value != null) && filter.test(Map.entry(entry.getKey(), value));
+        });
       }
 
       @Override

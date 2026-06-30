@@ -23,10 +23,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Spliterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -195,6 +198,9 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
         BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
       return delegate().merge(key, value, remappingFunction);
     }
+    @Override public void forEach(BiConsumer<? super K, ? super V> action) {
+      delegate().forEach(action);
+    }
     @Override public Set<K> keySet() {
       return (keySet == null) ? (keySet = new KeySetView()) : keySet;
     }
@@ -210,9 +216,6 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   }
 
   final class KeySetView extends ForwardingSet<K> {
-    @Override public boolean removeIf(Predicate<? super K> filter) {
-      return delegate().removeIf(filter);
-    }
     @Override public boolean contains(@Nullable Object o) {
       return (o != null) && delegate().contains(o);
     }
@@ -221,6 +224,15 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     }
     @Override public boolean remove(@Nullable Object o) {
       return (o != null) && delegate().remove(o);
+    }
+    @Override public boolean removeIf(Predicate<? super K> filter) {
+      return delegate().removeIf(filter);
+    }
+    @Override public void forEach(Consumer<? super K> action) {
+      delegate().forEach(action);
+    }
+    @Override public Spliterator<K> spliterator() {
+      return delegate().spliterator();
     }
     @Override protected Set<K> delegate() {
       return cache.asMap().keySet();
@@ -228,9 +240,6 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   }
 
   final class ValuesView extends ForwardingCollection<V> {
-    @Override public boolean removeIf(Predicate<? super V> filter) {
-      return delegate().removeIf(filter);
-    }
     @Override public boolean contains(@Nullable Object o) {
       return (o != null) && delegate().contains(o);
     }
@@ -239,6 +248,15 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     }
     @Override public boolean remove(@Nullable Object o) {
       return (o != null) && delegate().remove(o);
+    }
+    @Override public boolean removeIf(Predicate<? super V> filter) {
+      return delegate().removeIf(filter);
+    }
+    @Override public void forEach(Consumer<? super V> action) {
+      delegate().forEach(action);
+    }
+    @Override public Spliterator<V> spliterator() {
+      return delegate().spliterator();
     }
     @Override protected Collection<V> delegate() {
       return cache.asMap().values();
@@ -258,6 +276,12 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     }
     @Override public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
       return delegate().removeIf(filter);
+    }
+    @Override public void forEach(Consumer<? super Entry<K, V>> action) {
+      delegate().forEach(action);
+    }
+    @Override public Spliterator<Entry<K, V>> spliterator() {
+      return delegate().spliterator();
     }
     @Override protected Set<Entry<K, V>> delegate() {
       return cache.asMap().entrySet();

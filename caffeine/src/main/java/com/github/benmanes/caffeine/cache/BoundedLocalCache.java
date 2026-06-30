@@ -3935,10 +3935,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
       requireNonNull(filter);
       @Var boolean modified = false;
-      for (Entry<K, V> entry : this) {
-        if (filter.test(entry)) {
-          modified |= cache.remove(entry.getKey(), entry.getValue());
+      for (var iterator = new EntryIterator<>(cache); iterator.hasNext();) {
+        var key = requireNonNull(iterator.key);
+        var value = requireNonNull(iterator.value);
+        if (filter.test(Map.entry(key, value))) {
+          modified |= cache.remove(key, value);
         }
+        iterator.advance();
       }
       return modified;
     }

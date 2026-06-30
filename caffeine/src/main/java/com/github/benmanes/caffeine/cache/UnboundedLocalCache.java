@@ -1024,8 +1024,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       requireNonNull(filter);
       @Var boolean removed = false;
       for (var entry : cache.data.entrySet()) {
-        if (filter.test(entry)) {
-          removed |= cache.remove(entry.getKey(), entry.getValue());
+        var key = entry.getKey();
+        var value = entry.getValue();
+        if (filter.test(Map.entry(key, value))) {
+          removed |= cache.remove(key, value);
         }
       }
       return removed;

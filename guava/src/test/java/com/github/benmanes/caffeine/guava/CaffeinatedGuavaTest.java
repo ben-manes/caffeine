@@ -17,6 +17,9 @@ package com.github.benmanes.caffeine.guava;
 
 import static com.github.benmanes.caffeine.guava.CaffeinatedGuava.caffeinate;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Spliterator.CONCURRENT;
+import static java.util.Spliterator.DISTINCT;
+import static java.util.Spliterator.NONNULL;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -107,6 +110,36 @@ final class CaffeinatedGuavaTest {
     assertThat(cache.asMap().keySet().contains(null)).isFalse();
     assertThat(cache.asMap().values().contains(null)).isFalse();
     assertThat(cache.asMap()).containsExactly(1, 2);
+  }
+
+  @ParameterizedTest
+  @MethodSource("caches")
+  void asMap_entrySet_removeIf_setValue(Cache<String, String> cache) {
+    cache.put("a", "1");
+
+    // The view delegates to the cache's removeIf, which (like ConcurrentHashMap and Guava,
+    // JDK-8078726) passes the predicate an immutable snapshot, so setValue is unsupported.
+    assertThrows(UnsupportedOperationException.class, () ->
+        cache.asMap().entrySet().removeIf(entry -> {
+          entry.setValue("2");
+          return false;
+        }));
+    assertThat(cache.asMap()).containsExactly("a", "1");
+  }
+
+  @Test
+  void asMap_spliterator_concurrent() {
+    // The views delegate to the cache so the spliterators report CONCURRENT rather than the
+    // SIZED default that the forwarding views would otherwise inherit.
+    Cache<String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder());
+    cache.put("a", "1");
+
+    assertThat(cache.asMap().keySet().spliterator().characteristics())
+        .isEqualTo(DISTINCT | NONNULL | CONCURRENT);
+    assertThat(cache.asMap().values().spliterator().characteristics())
+        .isEqualTo(NONNULL | CONCURRENT);
+    assertThat(cache.asMap().entrySet().spliterator().characteristics())
+        .isEqualTo(DISTINCT | NONNULL | CONCURRENT);
   }
 
   @ParameterizedTest

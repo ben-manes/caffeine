@@ -3348,6 +3348,18 @@ final class AsyncAsMapTest {
     }
   }
 
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  void entrySet_removeIf_setValue(AsyncCache<Int, Int> cache, CacheContext context) {
+    // The predicate receives an immutable snapshot; setValue is unsupported in ConcurrentHashMap
+    assertThrows(UnsupportedOperationException.class, () ->
+        cache.asMap().entrySet().removeIf(entry -> {
+          entry.setValue(context.absentValue().toFuture());
+          return false;
+        }));
+  }
+
   @CacheSpec
   @CheckNoStats
   @ParameterizedTest
