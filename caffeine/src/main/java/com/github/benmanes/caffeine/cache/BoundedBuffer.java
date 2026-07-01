@@ -42,8 +42,10 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
    * publishes the element. The producer does not retry or block when unsuccessful due to a failed
    * CAS or the buffer being full.
    *
-   * The consumer reads the counts and takes the available elements. The clearing of the elements
-   * and the next read count are lazily set.
+   * The consumer reads the counts and takes the available elements, clearing each slot with a
+   * release store. The read count is advanced with a release store too, so that a producer which
+   * observes the advanced count also observes the cleared slots; otherwise a late clear could
+   * overwrite a reused slot and strand the ring buffer.
    *
    * This implementation is striped to further increase concurrency by rehashing and dynamically
    * adding new buffers when contention is detected, up to an internal maximum. When rehashing in
@@ -109,7 +111,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
         consumer.accept(e);
         head++;
       } while (head != tail);
-      setReadCounterOpaque(head);
+      setReadCounterRelease(head);
     }
 
     @Override
@@ -182,8 +184,8 @@ final class BBHeader {
 
     volatile long writeCounter;
 
-    void setReadCounterOpaque(long count) {
-      READ.setOpaque(this, count);
+    void setReadCounterRelease(long count) {
+      READ.setRelease(this, count);
     }
 
     long writeCounterOpaque() {
