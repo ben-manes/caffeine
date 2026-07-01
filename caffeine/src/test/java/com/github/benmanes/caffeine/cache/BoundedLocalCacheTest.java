@@ -3875,6 +3875,53 @@ final class BoundedLocalCacheTest {
     });
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, expireAfterWrite = Expire.ONE_MINUTE)
+  void expireAfterWriteEntries_stalePosition_wraparound(BoundedLocalCache<Int, Int> cache) {
+    // The stale-position check compares two absolute timestamps, so it must use the (a - b) < 0
+    // form: nanoTime has a random origin, so two write times can straddle the signed-long wrap
+    // within a real JVM. Here the oldest (expired) entry sits behind an out-of-order newest entry;
+    // a direct a < b would stop the scan and strand it.
+    var newest = Int.valueOf(1);
+    var oldest = Int.valueOf(2);
+    assertThat(cache.put(newest, newest)).isNull();
+    assertThat(cache.put(oldest, oldest)).isNull();
+    cache.cleanUp();
+
+    long duration = TimeUnit.MINUTES.toNanos(1);
+    long now = Long.MIN_VALUE + duration;
+    var newestNode = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(newest)));
+    var oldestNode = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(oldest)));
+    newestNode.setWriteTime((Long.MIN_VALUE + (duration / 2)) & ~1L);
+    oldestNode.setWriteTime((Long.MAX_VALUE - (duration / 2)) & ~1L);
+
+    cache.expireAfterWriteEntries(now);
+    assertThat(cache.data.get(cache.nodeFactory.newLookupKey(oldest))).isNull();
+    assertThat(cache.data.get(cache.nodeFactory.newLookupKey(newest))).isNotNull();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE)
+  void expireAfterAccessEntries_stalePosition_wraparound(BoundedLocalCache<Int, Int> cache) {
+    // Access-order sibling of expireAfterWriteEntries_stalePosition_wraparound.
+    var newest = Int.valueOf(1);
+    var oldest = Int.valueOf(2);
+    assertThat(cache.put(newest, newest)).isNull();
+    assertThat(cache.put(oldest, oldest)).isNull();
+    cache.cleanUp();
+
+    long duration = TimeUnit.MINUTES.toNanos(1);
+    long now = Long.MIN_VALUE + duration;
+    var newestNode = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(newest)));
+    var oldestNode = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(oldest)));
+    newestNode.setAccessTime(Long.MIN_VALUE + (duration / 2));
+    oldestNode.setAccessTime(Long.MAX_VALUE - (duration / 2));
+
+    cache.expireAfterAccessEntries(now);
+    assertThat(cache.data.get(cache.nodeFactory.newLookupKey(oldest))).isNull();
+    assertThat(cache.data.get(cache.nodeFactory.newLookupKey(newest))).isNotNull();
+  }
+
   private static void checkExpireAfterWriteTolerance(BoundedLocalCache<Int, Int> cache,
       CacheContext context, BiFunction<Int, Int, @Nullable Int> write) {
     boolean mayCheckReads = context.isStrongKeys() && context.isStrongValues()

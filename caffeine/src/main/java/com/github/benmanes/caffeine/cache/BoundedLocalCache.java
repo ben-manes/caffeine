@@ -956,7 +956,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     for (var node = head; node != null;) {
       var next = (node == last) ? null : node.getNextInAccessOrder();
       if ((now - node.getAccessTime()) < duration) {
-        var stalePosition = (last.getAccessTime() < node.getAccessTime());
+        var stalePosition = ((last.getAccessTime() - node.getAccessTime()) < 0);
         if (stalePosition || isComputingAsync(node.getValue())) {
           accessOrderDeque.moveToBack(node);
           node = next;
@@ -985,7 +985,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     for (var node = head; node != null;) {
       var next = (node == last) ? null : node.getNextInWriteOrder();
       if ((now - node.getWriteTime()) < duration) {
-        var stalePosition = (last.getWriteTime() < node.getWriteTime());
+        var stalePosition = ((last.getWriteTime() - node.getWriteTime()) < 0);
         if (stalePosition || isComputingAsync(node.getValue())) {
           writeOrderDeque().moveToBack(node);
           node = next;
