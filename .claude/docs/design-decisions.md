@@ -314,6 +314,22 @@ on a loading entry is accepted.
 physical-bookkeeping split and matches the documented "`size()` is an estimate" stance —
 they belong on the physical side alongside the mutations above.
 
+## Async Put Re-registration
+
+**`AsyncCache.put(k, future)` re-registers a completion handler whenever the prior
+mapping differs by identity, so re-inserting an already-registered future
+double-fires `handleCompletion`.** The dedup in `LocalAsyncCache.put` only skips a
+*consecutive* same-instance put (`prior == castedFuture`), so `put(k, f1);
+put(k, f2); put(k, f1)` leaves two `whenComplete` handlers on `f1`. A single
+completion then replays `replace` + `recordLoadSuccess` (and re-invokes
+`Expiry.expireAfterUpdate`) once per handler. Accepted — there is no correct dedup:
+we cannot inspect a future's already-registered dependent actions, and tracking our
+own registration history would be wrong (unbounded, and stale the moment the entry
+is replaced). It is benign regardless — re-inserting a specific future instance
+after replacing it is unusual, and the second `replace(k, f1, f1)` is idempotent
+(no state corruption; `notifyOnReplace` suppresses on identity). Pinned by
+`AsyncCacheTest.put_reregisteredInstance_completionRecordedTwice`.
+
 ## TimerWheel
 
 **Sub-tick advances correctly produce `delta = 0`.** Advancing `nanos` by less

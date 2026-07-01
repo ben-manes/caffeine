@@ -1415,6 +1415,7 @@ final class AsMapTest {
     for (Int key : context.firstMiddleLastKeys()) {
       assertThat(map).containsEntry(key, key);
     }
+    assertThat(map).hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(replaced).exclusively();
   }
@@ -1443,6 +1444,7 @@ final class AsMapTest {
 
   /* --------------- compute --------------- */
 
+  @CheckNoStats
   @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void compute_nullKey(Map<Int, Int> map) {
@@ -1500,8 +1502,8 @@ final class AsMapTest {
     assertThat(error.getClass()).isAnyOf(StackOverflowError.class, IllegalStateException.class);
   }
 
-  @CacheSpec
   @ParameterizedTest
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void compute_error(Map<Int, Int> map, CacheContext context) {
     assertThrows(IllegalStateException.class, () ->
         map.compute(context.absentKey(), (key, value) -> { throw new IllegalStateException(); }));
@@ -1511,9 +1513,9 @@ final class AsMapTest {
         .isEqualTo(context.absentKey().negate());
   }
 
-  @CacheSpec
   @ParameterizedTest
   @CheckMaxLogLevel(WARN)
+  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void compute_throwsCheckedException(Map<Int, Int> map, CacheContext context) {
     assertThrows(IOException.class, () -> map.compute(context.absentKey(),
         (key, value) -> { throw uncheckedThrow(new IOException()); }));
@@ -1590,6 +1592,7 @@ final class AsMapTest {
     for (Int key : context.firstMiddleLastKeys()) {
       assertThat(map).containsEntry(key, key);
     }
+    assertThat(map).hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(replaced).exclusively();
   }
@@ -1779,6 +1782,7 @@ final class AsMapTest {
     for (Int key : context.firstMiddleLastKeys()) {
       assertThat(map).containsEntry(key, Int.valueOf(0));
     }
+    assertThat(map).hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(replaced).exclusively();
   }

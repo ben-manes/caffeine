@@ -1338,6 +1338,27 @@ final class AsyncCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY)
+  void put_reregisteredInstance_completionRecordedTwice(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var f1 = new CompletableFuture<Int>();
+    var f2 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f1);
+    cache.put(context.absentKey(), f2);
+    cache.put(context.absentKey(), f1);
+    assertThat(cache).hasSize(context.initialSize() + 1);
+    assertThat(cache.getIfPresent(context.absentKey())).isSameInstanceAs(f1);
+
+    // Re-inserting a previously registered instance re-registers its completion handler, as the
+    // identity dedup only skips consecutive same-instance puts. A single completion then runs
+    // handleCompletion twice (each replays replace + recordLoadSuccess, re-invoking
+    // expireAfterUpdate).
+    f1.complete(context.absentValue());
+    assertThat(context).stats().hits(1).misses(0).success(2).failures(0);
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.FULL })
   void put_replace_failure_before(AsyncCache<Int, Int> cache, CacheContext context) {
     var failedFuture = CompletableFuture.completedFuture((Int) null);

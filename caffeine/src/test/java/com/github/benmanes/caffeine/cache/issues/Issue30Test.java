@@ -40,6 +40,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Isolated;
 
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
+import com.github.benmanes.caffeine.cache.AsyncCacheSubject;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.CacheValidationInterceptor;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -92,6 +93,7 @@ final class Issue30Test {
     initialValues(cache, source, lastLoad);
     firstUpdate(cache, source);
     secondUpdate(cache, source);
+    AsyncCacheSubject.assertThat(cache).isValid();
   }
 
   private static void initialValues(AsyncLoadingCache<String, String> cache,

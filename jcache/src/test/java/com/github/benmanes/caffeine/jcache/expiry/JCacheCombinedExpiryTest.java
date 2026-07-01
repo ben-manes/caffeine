@@ -144,8 +144,13 @@ final class JCacheCombinedExpiryTest {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
 
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long removalsBefore = stats.getCacheRemovals();
+      long evictionsBefore = stats.getCacheEvictions();
       assertThat(fixture.jcache().remove(KEY_1)).isFalse();
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+      assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore);
+      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
     }
   }
 
@@ -155,8 +160,13 @@ final class JCacheCombinedExpiryTest {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
 
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long removalsBefore = stats.getCacheRemovals();
+      long evictionsBefore = stats.getCacheEvictions();
       assertThat(fixture.jcache().remove(KEY_1, VALUE_1)).isFalse();
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+      assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore);
+      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
     }
   }
 

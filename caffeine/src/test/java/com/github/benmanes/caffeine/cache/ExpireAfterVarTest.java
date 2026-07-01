@@ -640,6 +640,18 @@ final class ExpireAfterVarTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
+  void putIfAbsent_expiryFails(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(Duration.ofHours(1));
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenThrow(ExpirationException.class);
+    assertThrows(ExpirationException.class, () ->
+        map.putIfAbsent(context.firstKey(), context.absentValue()));
+    context.ticker().advance(Duration.ofHours(-1));
+    assertThat(map).containsExactlyEntriesIn(context.original());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   void get_expiryFails_create(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofHours(1));
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))

@@ -44,6 +44,7 @@ import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -58,6 +59,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.InitialCapacity;
@@ -874,6 +876,23 @@ final class EvictionTest {
     assertThat(eviction.weightOf(context.firstKey()))
         .hasValue(Math.abs(context.absentValue().intValue()));
     assertThat(context).hasWeightedSize(weightedSize);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, compute = Compute.SYNC,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.COLLECTION)
+  void compute_sameInstance_changeWeight(Cache<String, List<Int>> cache,
+      CacheContext context, Eviction<String, List<Int>> eviction) {
+    var value = new ArrayList<>(Int.listOf(1));
+    cache.put("a", value);
+    assertThat(context).hasWeightedSize(1);
+
+    // Mutating the value in place then returning it re-weighs even though the instance is unchanged
+    value.addAll(Int.listOf(2, 3));
+    assertThat(cache.asMap().compute("a", (key, oldValue) -> oldValue)).isSameInstanceAs(value);
+    assertThat(eviction.weightOf("a")).hasValue(3);
+    assertThat(context).hasWeightedSize(3);
+    assertThat(cache).hasSize(1);
   }
 
   @ParameterizedTest

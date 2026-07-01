@@ -44,6 +44,7 @@ import java.util.function.Function;
 import org.junit.jupiter.params.ParameterizedTest;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
@@ -224,6 +225,22 @@ final class ExpireAfterWriteTest {
     assertThat(map).hasSize(1);
     assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON, compute = Compute.SYNC,
+      mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE }, expireAfterWrite = Expire.ONE_MINUTE,
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE)
+  void compute_sameInstance(Map<Int, Int> map, CacheContext context) {
+    Int value = context.original().get(context.firstKey());
+    context.ticker().advance(Duration.ofSeconds(30));
+    assertThat(map.compute(context.firstKey(), (key, oldValue) -> value)).isSameInstanceAs(value);
+
+    // The same-instance return still resets the write time, so the entry has not expired.
+    context.ticker().advance(Duration.ofSeconds(45));
+    assertThat(map).containsEntry(context.firstKey(), value);
+    assertThat(map).hasSize(1);
+    assertThat(context).removalNotifications().isEmpty();
   }
 
   /* --------------- Policy --------------- */

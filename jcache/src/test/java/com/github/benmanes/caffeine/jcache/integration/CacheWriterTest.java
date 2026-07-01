@@ -244,6 +244,24 @@ final class CacheWriterTest {
   }
 
   @Test
+  void invoke_loadThenRemove_writesDelete() {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer)) {
+      // getValue() reads through the loader for the absent key; the subsequent remove() makes the
+      // dominant action DELETED, so the loaded entry is written through as a delete and discarded
+      var result = fixture.jcacheLoading().invoke(KEY_1, (entry, args) -> {
+        entry.getValue();
+        entry.remove();
+        return nullRef();
+      });
+      assertThat(result).isNull();
+      assertThat(fixture.jcacheLoading().containsKey(KEY_1)).isFalse();
+      verify(writer).delete(KEY_1);
+      verifyNoMoreInteractions(writer);
+    }
+  }
+
+  @Test
   void removeAll() {
     CloseableCacheWriter writer = Mockito.mock();
     try (var fixture = jcacheFixture(writer)) {
