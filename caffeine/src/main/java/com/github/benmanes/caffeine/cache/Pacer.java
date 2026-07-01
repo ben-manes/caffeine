@@ -16,8 +16,11 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
+import static java.lang.invoke.ConstantBootstraps.fieldVarHandle;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +36,8 @@ import org.jspecify.annotations.Nullable;
  */
 final class Pacer {
   static final long TOLERANCE = ceilingPowerOfTwo(TimeUnit.SECONDS.toNanos(1)); // 1.07s
+  static final VarHandle FUTURE = fieldVarHandle(MethodHandles.lookup(),
+      "future", VarHandle.class, Pacer.class, Future.class);
 
   final Scheduler scheduler;
 
@@ -60,7 +65,8 @@ final class Pacer {
       future.cancel(/* mayInterruptIfRunning= */ false);
     }
     long actualDelay = calculateSchedule(now, delay, scheduleAt);
-    future = scheduler.schedule(executor, command, actualDelay, TimeUnit.NANOSECONDS);
+    var f = scheduler.schedule(executor, command, actualDelay, TimeUnit.NANOSECONDS);
+    FUTURE.setRelease(this, f);
   }
 
   /** Attempts to cancel execution of the scheduled task, if present. */
@@ -68,13 +74,13 @@ final class Pacer {
     if (future != null) {
       future.cancel(/* mayInterruptIfRunning= */ false);
       nextFireTime = 0L;
-      future = null;
+      FUTURE.setRelease(this, null);
     }
   }
 
   /** Returns if a task is scheduled to run. */
   public boolean isScheduled() {
-    var f = future;
+    var f = (Future<?>) FUTURE.getAcquire(this);
     return (f != null) && !f.isDone();
   }
 
