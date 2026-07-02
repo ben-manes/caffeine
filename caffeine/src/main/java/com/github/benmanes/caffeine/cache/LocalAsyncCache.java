@@ -91,6 +91,14 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
   default CompletableFuture<V> get(K key, BiFunction<? super K, ? super Executor,
       ? extends CompletableFuture<? extends V>> mappingFunction, boolean recordStats) {
+    CompletableFuture<V> present = cache().getIfPresent(key, /* recordStats= */ false);
+    if (present != null) {
+      if (recordStats) {
+        cache().statsCounter().recordHits(1);
+      }
+      return present;
+    }
+
     long startTime = cache().statsTicker().read();
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Nullable CompletableFuture<? extends V>[] result = new CompletableFuture[1];
