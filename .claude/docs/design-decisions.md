@@ -231,6 +231,22 @@ shortest remaining duration wins. Prefer `expireAfter(Expiry)` for custom logic.
 frequency counters. This prevents iteration from polluting the eviction policy.
 Expired entries are skipped during iteration.
 
+## Read-path maintenance nudges
+
+**Read paths nudge `scheduleDrainBuffers()` when they observe an expired/collected
+entry** (`getIfPresent`, `containsKey`, `containsValue`, `getAllPresent`, the iterator,
+and the key/value/entry spliterators), so lazily-detected garbage is reclaimed promptly;
+the nudge is skipped on a plain miss and is a cheap flag check when maintenance is
+already running. On a caller-runs executor the nudge runs maintenance **inline**, so an
+in-progress scan of `data.values()` can have a node reaped underneath it — e.g.
+`containsValue` is an O(n) scan and the internal `LocalCacheSubject` validator calls it
+*per node* while iterating `data.values()`; a weak key collected mid-scan is then
+drained, correctly removing and killing a node the weakly-consistent iterator still
+yields. Production readers tolerate a dead node (they check `isAlive`/`getValue`), and
+the validator was made robust to it: it iterates `data.entrySet()` and validates a node
+only if it is still mapped under its key, so a node reaped mid-scan is skipped while a
+node genuinely stuck in the map (a leak) stays mapped and is still caught.
+
 ## Known JDK Interactions
 
 **StackOverflowError can leak the eviction lock.** If user code causes a

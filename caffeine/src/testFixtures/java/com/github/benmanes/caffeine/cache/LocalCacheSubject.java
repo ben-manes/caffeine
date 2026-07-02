@@ -218,8 +218,14 @@ public final class LocalCacheSubject extends Subject {
       check("bounded").about(map()).that(bounded).isExhaustivelyEmpty();
     }
 
-    for (var node : bounded.data.values()) {
-      checkNode(bounded, node);
+    // Validate each node still mapped in the data store. A weakly-consistent view may yield a node
+    // that inline maintenance reaped mid-scan (e.g. a weak key collected during validation drains a
+    // node); its mapping is gone, so skip it. A node genuinely stuck in the map (a leak) stays
+    // mapped under its key reference and is still checked, so a real zombie is not masked.
+    for (var entry : bounded.data.entrySet()) {
+      if (bounded.data.get(entry.getKey()) == entry.getValue()) {
+        checkNode(bounded, entry.getValue());
+      }
     }
   }
 
