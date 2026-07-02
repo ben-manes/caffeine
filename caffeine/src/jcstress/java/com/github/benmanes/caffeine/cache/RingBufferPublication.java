@@ -36,12 +36,12 @@ import com.google.errorprone.annotations.Var;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
- * A stress test for {@link BoundedBuffer.RingBuffer}'s read-counter publication. The consumer
- * (drain) clears each slot with a release store and then advances the read count; a lock-free
- * producer (offer) volatile-reads the read count and, seeing space, republishes a slot. If the read
- * count is published with a weaker-than-release store then a producer that observes the advance has
- * no happens-before edge to the preceding slot clears: a clear can land after the producer's write
- * and strand the slot, since the drain treats the resulting null as an unpublished entry and never
+ * A stress test for BoundedBuffer.RingBuffer's read-counter publication. The consumer (drain)
+ * clears each slot with a release store and then advances the read count; a lock-free producer
+ * (offer) volatile-reads the read count and, seeing space, republishes a slot. If the read count is
+ * published with a weaker-than-release store then a producer that observes the advance has no
+ * happens-before edge to the preceding slot clears: a clear can land after the producer's write and
+ * strand the slot, since the drain treats the resulting null as an unpublished entry and never
  * advances past it (a permanently full stripe).
  * <p>
  * This is a formal hole in the Java and aarch64 memory models: {@code setOpaque} is not a release,

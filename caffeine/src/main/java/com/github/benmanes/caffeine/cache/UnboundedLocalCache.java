@@ -96,6 +96,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
+  public @Nullable RemovalListener<K, V> removalListener() {
+    return removalListener;
+  }
+
+  @Override
   public @Nullable Expiry<K, V> expiry() {
     return null;
   }

@@ -419,7 +419,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /* --------------- Removal Listener Support --------------- */
 
-  protected @Nullable RemovalListener<K, V> removalListener() {
+  @Override
+  public @Nullable RemovalListener<K, V> removalListener() {
     return null;
   }
 
@@ -2401,6 +2402,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param onlyIfAbsent a write is performed only if the key is not already associated with a value
    * @return the prior value in or null if no mapping was found
    */
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   @Nullable V put(K key, V value, Expiry<K, V> expiry, boolean onlyIfAbsent) {
     requireNonNull(key);
     requireNonNull(value);

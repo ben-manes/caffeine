@@ -47,6 +47,9 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
   /** Asynchronously sends a removal notification to the listener. */
   void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause);
 
+  /** Returns the removal listener, or {@code null} if none is configured. */
+  @Nullable RemovalListener<K, V> removalListener();
+
   /** Returns the {@link Executor} used by this cache. */
   Executor executor();
 
@@ -153,7 +156,7 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
   /** Notify the removal listener of a replacement if the value reference was changed. */
   @SuppressWarnings({"FutureReturnValueIgnored", "UnnecessaryReturnStatement"})
   default void notifyOnReplace(K key, @Nullable V oldValue, @NonNull V newValue) {
-    if ((oldValue == null) || (oldValue == newValue)) {
+    if ((oldValue == null) || (oldValue == newValue) || (removalListener() == null)) {
       return;
     } else if (isAsync()) {
       var oldFuture = (CompletableFuture<?>) oldValue;

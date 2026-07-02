@@ -653,8 +653,10 @@ final class AsyncAsMapTest {
       });
       future1.complete(null);
 
-      // LocalAsyncCache, LocalCache, and RemovalListener
-      await().until(() -> future2.getNumberOfDependents() >= 2);
+      // LocalAsyncCache attaches handleCompletion; LocalCache's notifyOnReplace attaches only when
+      // a removal listener is present, so its dependent is absent when the listener is disabled.
+      int minDependents = (context.removalListenerType() == Listener.DISABLED) ? 1 : 2;
+      await().until(() -> future2.getNumberOfDependents() >= minDependents);
 
       future2.complete(null);
       await().untilTrue(endPutIfAbsent);
@@ -1315,8 +1317,10 @@ final class AsyncAsMapTest {
       });
       future1.complete(null);
 
-      // LocalAsyncCache, LocalCache, and RemovalListener
-      await().until(() -> future2.getNumberOfDependents() >= 2);
+      // LocalAsyncCache attaches handleCompletion; LocalCache's notifyOnReplace attaches only when
+      // a removal listener is present, so its dependent is absent when the listener is disabled.
+      int minDependents = (context.removalListenerType() == Listener.DISABLED) ? 1 : 2;
+      await().until(() -> future2.getNumberOfDependents() >= minDependents);
 
       future2.complete(null);
       await().untilTrue(endComputeIfAbsent);
