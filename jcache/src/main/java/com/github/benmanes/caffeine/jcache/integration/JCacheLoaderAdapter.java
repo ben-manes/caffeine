@@ -157,7 +157,8 @@ public final class JCacheLoaderAdapter<K, V>
         return Long.MAX_VALUE;
       }
       long millis = TimeUnit.NANOSECONDS.toMillis(ticker.read());
-      return duration.getAdjustedTime(millis);
+      long expireTime = duration.getAdjustedTime(millis);
+      return ((expireTime == 0L) || (expireTime == Long.MAX_VALUE)) ? (expireTime - 1) : expireTime;
     } catch (RuntimeException e) {
       // Per JSR-107 1.1.1 p.55: if the expiry policy throws, an implementation
       // specific default Duration will be used. We treat as eternal so the

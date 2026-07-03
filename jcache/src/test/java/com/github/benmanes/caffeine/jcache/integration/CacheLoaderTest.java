@@ -15,11 +15,14 @@
  */
 package com.github.benmanes.caffeine.jcache.integration;
 
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,6 +30,7 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
@@ -128,6 +132,25 @@ final class CacheLoaderTest {
       when(expiry.getExpiryForCreation()).thenThrow(IllegalStateException.class);
       when(cacheLoader.load(any())).thenReturn(-1);
       assertThat(fixture.jcacheLoading().get(1)).isEqualTo(-1);
+    }
+  }
+
+  @Test
+  void load_adjustedTimeSentinelZero() {
+    // A computed creation expiry that collides with the ZERO ("already expired") sentinel is
+    // clamped (like the put path, CacheProxy.getWriteExpireTimeMillis) so the loaded entry is
+    // stored as immediately expired rather than mistaken for the not-added sentinel and dropped.
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    var duration = Mockito.spy(new Duration(TimeUnit.MILLISECONDS, 1));
+    when(duration.getAdjustedTime(anyLong())).thenReturn(0L);
+    when(expiry.getExpiryForCreation()).thenReturn(duration);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    try (var fixture = jcacheFixture(expiry, cacheLoader)) {
+      when(cacheLoader.load(any())).thenReturn(-1);
+      assertThat(fixture.jcacheLoading().get(1)).isEqualTo(-1);
+
+      var expirable = requireNonNull(getExpirable(fixture.jcacheLoading(), 1));
+      assertThat(expirable.getExpireTimeMillis()).isEqualTo(-1L);
     }
   }
 
