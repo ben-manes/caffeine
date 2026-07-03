@@ -21,6 +21,27 @@ core fields are declared in the generators, not in `BoundedLocalCache`.
 Run `./gradlew :caffeine:generateNodes :caffeine:generateLocalCaches`
 if `caffeine/build/generated/` is empty.
 
+## Module Map
+
+Audits are repository-wide unless the invoking skill or argument narrows them.
+The adapters, simulator, and examples hold the same quality bar as the core.
+When scoped outside the core, swap in that module's context — the core frame
+(lock hierarchy, node lifecycle, historical patterns below) does not transfer.
+
+| Module | Source | Context to load | False-positive filter (Phase 1.5) |
+|---|---|---|---|
+| core | `caffeine/src/main/java/` | `.claude/rules/concurrency.md`, `docs/synchronization.md` | `docs/design-decisions.md` |
+| jcache | `jcache/src/main/java/` | `.claude/rules/jcache-adapter.md` | `docs/jsr107-conformance.md` divergence catalogue |
+| guava | `guava/src/main/java/` | `.claude/rules/guava-adapter.md` | — |
+| simulator | `simulator/src/main/java/` | `.claude/rules/simulator.md` | lossy/approximate policies are intentional |
+| examples | `examples/*/src/main/java/` | upstream library docs for the third-party APIs used | — |
+
+The non-core bug surface differs from the core's: obligation pairing (e.g.
+jcache's EventDispatcher requires every publishing thread to drain via
+awaitSynchronous/ignoreSynchronous), setup/teardown symmetry, event and
+statistics semantics, and third-party API contract misuse (error paths,
+duplicate/empty inputs, cancellation, disposal).
+
 ## Evidence Boundaries
 
 Calibrate to source evidence, not to prior audit history. Prior-result anchoring is
@@ -201,7 +222,10 @@ After receiving the evaluator's challenges, address each one:
 Stop analysis and report partial results if ANY of these occur:
 
 1. **Three unresolvable ambiguities** — cases where correctness cannot be
-   determined statically. Flag these for dynamic testing (Fray, LinCheck, JCStress).
+   determined statically. Flag these for dynamic testing, selecting the tool per
+   `.claude/docs/testing.md` ("Choosing the Dynamic Tool"): Fray for sync-point
+   interleavings, LinCheck model checking for plain-field races, jcstress for
+   weak-memory publication.
    Before flagging a *race*, confirm the state is genuinely shared-concurrent: if
    every reader and writer of the field is `@GuardedBy` the same lock (single-writer
    — e.g. `FrequencySketch` is entirely under `evictionLock`), it cannot race and must
@@ -333,6 +357,11 @@ These subsystems have had confirmed bugs — focus interleavings here:
    swallowed on async completion
 4. **Write buffer / sketch**: producerLimit race during resize, FrequencySketch
    table field race during ensureCapacity
+5. **Adapter obligations (jcache)**: events published on executor threads without
+   draining the EventDispatcher's synchronous-listener futures (refresh-after-write
+   leak); write-through bulk ops iterating a live view instead of the snapshot
+   handed to the CacheWriter; lazily-expired entries treated as present by raw
+   containsKey checks
 
 For full details with issue numbers, see `.claude/docs/design-decisions.md` and
 search GitHub issues with `gh issue view <number> --repo ben-manes/caffeine`.

@@ -187,8 +187,12 @@ The field is plain (not volatile), guarded by evictionLock.
 ## ConcurrentHashMap Constraints
 
 **No recursive computations.** Writing to the cache from inside an atomic
-compute/computeIfAbsent/merge callback throws `IllegalStateException`. This is a
-ConcurrentHashMap contract constraint, not a Caffeine bug.
+compute/computeIfAbsent/merge callback violates ConcurrentHashMap's contract; this is
+not a Caffeine bug. Detection is best-effort, not guaranteed: only recursion that lands
+on an empty bin's ReservationNode reliably throws `IllegalStateException("Recursive
+update")` (surfaced raw, unwrapped). Recursion into a populated or treeified bin is
+undetected and can silently corrupt (lost inserts, double count updates, clobbered
+writes). Never rely on the ISE as a safety net.
 
 **CHM bin blocking is not a Caffeine bug.** `compute()` locks the hash bin. If the
 mapping function (cache loader) is slow, all other operations on keys in the same
@@ -363,3 +367,22 @@ are both cleared and aliased via `WeakKeyEqualsReference.equals` (which becomes
 `null.equals(null) == true` post-clear), both queue polls still complete and
 both nodes still evict — only the attribution is swapped, which is unobservable
 (uniform `Boolean.TRUE` values, no listener on the interner).
+
+## Serialization
+
+**The `SerializationProxy` captures configuration only, and intentionally drops
+`executor`, `scheduler`, and custom `StatsCounter` suppliers.** Threads and
+executors are runtime state, not serializable configuration; the deserialized
+cache uses the defaults (common pool, disabled scheduler, default counter),
+matching Guava's proxy behavior. Don't propose capturing them — the actionable
+gap is only the `Caffeine` class javadoc, which overstates "retain all the
+configuration properties."
+
+**Proxy field names and sentinel values are wire format.** Two changes broke
+cross-version streams: the `loader` → `cacheLoader` rename (3.0.4) and the
+`0` → `UNSET_INT` sentinel change for the three duration fields (3.2.4, the
+zero-duration fix). When touching proxy fields, remember that streams from
+≤ 3.2.3 carry literal `0` for unset durations, and that a field *absent* from an
+old stream deserializes to the JVM default (`0`/`null`) — field initializers do
+not run during deserialization. Golden streams written by real released jars
+live under `.claude/reports/audit-serialization-repro/`.

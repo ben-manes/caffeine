@@ -16,11 +16,16 @@ and a hostile mindset.
 
 $ARGUMENTS
 
-If no argument, review all source files in `caffeine/src/main/java/`.
+If no argument, review all source files in `caffeine/src/main/java/`,
+`guava/src/main/java/`, `jcache/src/main/java/`, `simulator/src/main/java/`,
+and `examples/*/src/main/java/`. The adapters and examples hold the same
+quality bar as the core.
 
 ## Step 1: Inventory source files
 
-List all Java source files in scope. Group into 4-6 subsystems for parallel review.
+List all Java source files in scope. Group into 6-8 subsystems for parallel
+review — core subsystems plus one group per non-core module (examples reviewed
+against the contracts of the third-party libraries they compose).
 
 ## Step 2: Launch parallel hostile reviewers
 
@@ -62,6 +67,8 @@ Attack surfaces:
 8. Validation gaps — inputs accepted at parse time but rejected later
 9. API surprises — public methods returning nonsensical values
 10. Notification asymmetries — some paths notify, equivalent paths don't
+11. Third-party API contract misuse — error/dispose paths, duplicate keys,
+    empty batches, cancellation semantics assumed rather than verified
 
 Rate each finding: critical/high/medium/low
 Format: numbered list with file:method, description, evidence

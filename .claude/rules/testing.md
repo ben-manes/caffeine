@@ -9,6 +9,9 @@
 - Notification assertions: cast to `ConsumingRemovalListener`, check `listener.removed()`
 - Fray tests use direct thread creation with `@FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)`, no parameterization
 - Tests: `caffeine/src/test/java/`, fixtures: `testFixtures/`
+- `examples/` hold the same quality bar as the library: their tests must cover
+  unhappy paths (duplicate keys, a failing write/load, empty batches) —
+  happy-path-only tests are where example bugs have hidden
 - For full test infrastructure details, see `.claude/docs/testing.md`
 
 ## Test Discovery Guide

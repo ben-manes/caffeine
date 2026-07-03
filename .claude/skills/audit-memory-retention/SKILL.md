@@ -28,6 +28,11 @@ Trace what happens to references after removal in each data structure:
    After WeakValueReference is enqueued, is the key still reachable?
 7. **Async values**: Can removed-but-incomplete futures be pinned via whenComplete?
 8. **Cache views/iterators**: Can long-lived iterators pin removed entries?
+9. **jcache EventDispatcher**: per-thread pending synchronous-listener futures —
+   is every publish on a thread paired with awaitSynchronous()/ignoreSynchronous()
+   (or a Quietly variant), including loads running on executor/refresh threads?
+10. **jcache in-flight futures**: does every async path remove its future from
+    the in-flight set on all completion paths, including exceptional ones?
 
 For each retention path:
 - State the reference chain from GC root to retained object

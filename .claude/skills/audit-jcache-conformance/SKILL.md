@@ -39,6 +39,11 @@ already-resolved divergences (do not re-flag those).
 - Once per quarter as a conformance baseline.
 - When a `/audit-sibling-divergence` run raises a Group G2 finding — use this to
   resolve the *direction* (the static audit cannot, and has guessed wrong before).
+- Not for adapter concurrency: this audit is a single-threaded spec differential.
+  Concurrency windows (live-view vs snapshot races, obligation pairing on
+  executor threads, close/destroy symmetry) belong to `/audit-subsystem-safety`,
+  `/audit-memory-retention`, `/audit-lifecycle`, and `/audit-contract-drift`'s
+  obligation sweep.
 
 Heavyweight (fetches the spec, clones/fetches the ecosystem, may spawn
 sub-auditors). Not for routine pre-commit review.

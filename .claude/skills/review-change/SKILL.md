@@ -72,6 +72,10 @@ read these files to understand intentional design decisions:
 - .claude/docs/design-decisions.md
 - .claude/docs/synchronization.md
 - .claude/rules/design-decisions.md
+If the diff touches jcache/, also read .claude/rules/jcache-adapter.md and the
+divergence catalogue in .claude/docs/jsr107-conformance.md; guava/ →
+.claude/rules/guava-adapter.md; simulator/ → .claude/rules/simulator.md;
+examples/ → verify third-party API usage against the upstream contract.
 
 Now review this diff. For each change:
 1. Is it consistent with the documented invariants?
@@ -126,6 +130,11 @@ Then check the diff against these known bug patterns:
 
 7. BUILD CACHE RELOCATABILITY: Does the change add inputs.files() without
    .withPathSensitivity(PathSensitivity.RELATIVE)?
+
+8. OBLIGATION PAIRING (jcache): Does the change publish events via the
+   EventDispatcher? Every publishing thread must drain via awaitSynchronous()/
+   ignoreSynchronous() or use the Quietly variants — otherwise pending
+   synchronous-listener futures accumulate in the ThreadLocal.
 
 For each match, explain which historical bug it resembles and why.
 

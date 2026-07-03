@@ -18,10 +18,6 @@ inputs:
     default: 'false'
     required: false
     description: Existing entries will be read from the local cache but none will be written
-  local-build-cache:
-    default: 'false'
-    required: false
-    description: Whether to use Gradle's local build cache
   attempt-limit:
     default: '1'
     required: false
@@ -90,12 +86,6 @@ runs:
         add-job-summary: on-failure
         cache-read-only: ${{ inputs.local-cache-read-only }}
         cache-encryption-key: ${{ inputs.cache-encryption-key }}
-    - name: Restore local build cache
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      if: ${{ inputs.local-build-cache == 'true' }}
-      with:
-        path: ~/.gradle/caches/build-cache-*
-        key: gradle-build-cache-${{ runner.os }}-jdk${{ inputs.java }}-${{ inputs.arguments }}
     - name: Read Fray version
       id: fray_version
       if: ${{ contains(inputs.arguments, 'frayTest') }}
@@ -119,7 +109,6 @@ runs:
         INPUTS_ATTEMPT_LIMIT: ${{ inputs.attempt-limit }}
         DAEMON_JDK: ${{ steps.gradle_jdk.outputs.path }}
         JDK_CI: ${{ steps.java_toolchain.outputs.java_home }}
-        LOCAL_BUILD_CACHE_CI: ${{ inputs.local-build-cache }}
         GRAALVM_HOME: ${{ steps.java_toolchain.outputs.graalvm_home }}
         ORG_GRADLE_PROJECT_graalvm: ${{ steps.java_toolchain.outputs.graalvm }}
         ORG_GRADLE_PROJECT_javaVendor: ${{ steps.java_toolchain.outputs.vendor }}

@@ -16,6 +16,8 @@ User-provided callbacks:
 5. RemovalListener.onRemoval(key, value, cause)
 6. EvictionListener (synchronous variant)
 7. Mapping functions passed to compute, computeIfAbsent, merge
+8. jcache: synchronous CacheEntryListener (historically caused double refresh),
+   CacheWriter, EntryProcessor.process, ExpiryPolicy
 
 For each callback:
 1. List every lock held at the point the callback is invoked.

@@ -30,6 +30,13 @@ Sources of contracts to enumerate:
 - `Policy.java` — every method's documented behavior.
 - `Weigher.java`, `Expiry.java`, `RemovalListener.java`, `RemovalCause.java`
   — user-facing contracts referenced by the cache.
+- **Internal obligations** — "callers must" contracts stated in
+  `.claude/rules/*.md` and in internal-class javadoc across all modules (e.g.
+  jcache's EventDispatcher requires every publishing thread to drain via
+  awaitSynchronous/ignoreSynchronous; async operations must register with the
+  in-flight set). Enumerate each obligation, then verify every call site honors
+  it — including executor-thread and refresh paths that don't flow through the
+  obvious entry points.
 
 For each contract, record the exact wording, the configurations that activate
 it, and the set of operations affected.

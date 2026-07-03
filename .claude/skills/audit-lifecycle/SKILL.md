@@ -35,5 +35,10 @@ during close — explain specifically why no race is possible.
 7. **Finalizer / Cleaner interactions**: Reference queues outliving the cache?
    Reference queue processing accessing dead cache?
 
+8. **jcache manager/cache close**: Is teardown symmetric with setup — the OSGi
+   context-classloader swap applied on destroy/close as on create/get; in-flight
+   futures awaited; user Closeables (writer, loader, listeners, expiry) closed
+   exactly once under the right classloader?
+
 For each defect: state the lifecycle transition, provide a concrete scenario,
 state the observable incorrect behavior.

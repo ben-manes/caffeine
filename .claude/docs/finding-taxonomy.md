@@ -24,6 +24,8 @@ auditor agent and all `/audit-*` and `/review-change` skills.
 | exception-safety | Incomplete cleanup on exception paths, phantom state |
 | api-surprise | Public method returning nonsensical values for valid inputs |
 | performance | O(n) on O(1) path, unnecessary allocation on hot path |
+| liveness | Progress/termination failure without corruption: stranded drain status, lost wakeup, unbounded stall |
+| external-contract | Misuse of a third-party or JDK API contract (dispose-on-error, merge-less collectors, live-view iteration) |
 
 ## Confidence
 

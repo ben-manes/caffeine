@@ -210,6 +210,25 @@ Tests in `issues/` use different interleaving techniques:
 - **Solr10141Test** (eviction+update race): 64 threads x 156K reads each with
   `AtomicBoolean` per-value liveness flag to detect double-removal.
 
+## Choosing the Dynamic Tool for an Escalated Finding
+
+Static analysis escalates interleavings it cannot adjudicate. Pick the tool by
+what the hypothesis needs, then port the skeleton into the source tree and run
+it — an unported skeleton is a TODO, not a resolution.
+
+| Hypothesis | Tool | Why |
+|---|---|---|
+| Interleaving of operations at synchronization points | Fray (`caffeine/src/frayTest/`) | Systematic scheduler exploration; cannot see plain-field data races (sync-point granularity) |
+| Plain/opaque-field data race, SC-reachable | LinCheck model checking (`caffeine/src/lincheckTest/`) | Field-access granularity catches races Fray cannot |
+| Weak-memory publication/reordering (store-buffer etc.) | jcstress (`caffeine/src/jcstress/`) | The only tool that exercises the hardware memory model |
+
+jcstress caveat: model the real structure, not an isolated primitive — isolated
+shapes over-state reachability (a single-slot repro can be unreachable once the
+real ring buffer's wrap gap is modeled). A reproduced result on a simplified
+shape justifies a fix only if the real structure also reproduces or the fix is
+free. For suspected JIT-dependent interleavings a single run is not evidence of
+absence — vary seeds across many short launches instead of one long run.
+
 ## Fray Concurrency Tests
 
 Location: `caffeine/src/frayTest/`

@@ -216,6 +216,7 @@ jobs:
     name: Coverage
     runs-on: ubuntu-latest
     needs: tests-minimum
+    if: ${{ !cancelled() }}
     permissions:
       contents: read
     steps:
@@ -327,6 +328,7 @@ jobs:
     name: Test Results
     runs-on: ubuntu-latest
     needs: tests-minimum
+    if: ${{ !cancelled() }}
     permissions:
       contents: read
       checks: write # Needed to annotate commit

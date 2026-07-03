@@ -30,6 +30,10 @@ Runtime exceptions:
 7. StackOverflowError from deep re-entrancy
 8. RejectedExecutionException from executor
 
+In the jcache adapter, also trace: CacheWriter.write/writeAll/delete/deleteAll
+(the spec requires partial-failure bookkeeping), EntryProcessor.process,
+ExpiryPolicy methods, and Copier/serialization failures in store-by-value mode.
+
 For each throw site:
 
 1. List every mutation already committed before the throw point.
