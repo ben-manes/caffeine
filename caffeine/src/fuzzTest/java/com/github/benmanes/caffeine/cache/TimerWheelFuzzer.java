@@ -99,7 +99,7 @@ final class TimerWheelFuzzer {
     // needs a full rotation to cascade and expire all levels.
     if (!inWheel.isEmpty() && (maxSafeOffset(clock) >= MAX_SPAN)) {
       expired.clear();
-      timerWheel.advance(cache, clock + MAX_SPAN);
+      timerWheel.advance(cache, clock + MAX_SPAN, Integer.MAX_VALUE);
 
       for (var node : expired) {
         inWheel.remove(node);
@@ -119,7 +119,7 @@ final class TimerWheelFuzzer {
     long newClock = clock + advance;
 
     expired.clear();
-    timerWheel.advance(cache, newClock);
+    timerWheel.advance(cache, newClock, Integer.MAX_VALUE);
 
     // Validate that every expired entry must have variableTime <= newClock (no premature eviction)
     for (var node : expired) {

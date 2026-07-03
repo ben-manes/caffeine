@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRATION_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.TimerWheel.SHIFT;
 import static com.github.benmanes.caffeine.cache.TimerWheel.SPANS;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -86,7 +87,7 @@ final class TimerWheelTest {
     for (int timeout : new int[] { 25, 90, 240 }) {
       timerWheel.schedule(new Timer(clock + TimeUnit.SECONDS.toNanos(timeout)));
     }
-    timerWheel.advance(cache, clock + duration);
+    timerWheel.advance(cache, clock + duration, Integer.MAX_VALUE);
     verify(cache, times(expired)).evictEntry(any(), any(), anyLong());
     verify(cache, times(expired)).evictEntry(captor.capture(), any(), anyLong());
 
@@ -111,7 +112,7 @@ final class TimerWheelTest {
       }
       timerWheel.schedule(new Timer(timeout));
     }
-    timerWheel.advance(cache, duration);
+    timerWheel.advance(cache, duration, Integer.MAX_VALUE);
     verify(cache, times(expired)).evictEntry(any(), any(), anyLong());
     verify(cache, times(expired)).evictEntry(captor.capture(), any(), anyLong());
 
@@ -150,7 +151,7 @@ final class TimerWheelTest {
     timerWheel.schedule(new Timer(10 * SPANS[0]));
 
     // Advance by less than the timer's duration — nothing should be evicted
-    timerWheel.advance(cache, SPANS[0]);
+    timerWheel.advance(cache, SPANS[0], Integer.MAX_VALUE);
     verifyNoInteractions(cache);
   }
 
@@ -164,7 +165,7 @@ final class TimerWheelTest {
     timerWheel.nanos = clock;
     timerWheel.schedule(new Timer(timerWheel.nanos + SPANS[0]));
 
-    timerWheel.advance(cache, clock + 13 * SPANS[0]);
+    timerWheel.advance(cache, clock + 13 * SPANS[0], Integer.MAX_VALUE);
     verify(cache).evictEntry(any(), any(), anyLong());
   }
 
@@ -178,7 +179,7 @@ final class TimerWheelTest {
     timerWheel.nanos = -TimeUnit.DAYS.toNanos(365) / 2;
     timerWheel.schedule(new Timer(timerWheel.nanos + SPANS[0]));
 
-    timerWheel.advance(cache, timerWheel.nanos + TimeUnit.DAYS.toNanos(365));
+    timerWheel.advance(cache, timerWheel.nanos + TimeUnit.DAYS.toNanos(365), Integer.MAX_VALUE);
     verify(cache).evictEntry(any(), any(), anyLong());
   }
 
@@ -195,7 +196,7 @@ final class TimerWheelTest {
     timerWheel.nanos = -SPANS[0];
     timerWheel.schedule(new Timer(0));
 
-    timerWheel.advance(cache, SPANS[0]);
+    timerWheel.advance(cache, SPANS[0], Integer.MAX_VALUE);
     verify(cache).evictEntry(any(), any(), anyLong());
   }
 
@@ -210,7 +211,7 @@ final class TimerWheelTest {
     timerWheel.nanos = -SPANS[0];
     timerWheel.schedule(new Timer(0));
 
-    timerWheel.advance(cache, 0);
+    timerWheel.advance(cache, 0, Integer.MAX_VALUE);
     verify(cache).evictEntry(any(), any(), anyLong());
   }
 
@@ -225,7 +226,7 @@ final class TimerWheelTest {
     timerWheel.nanos = 0;
     timerWheel.schedule(new Timer(SPANS[0]));
 
-    timerWheel.advance(cache, Long.MAX_VALUE);
+    timerWheel.advance(cache, Long.MAX_VALUE, Integer.MAX_VALUE);
     verify(cache).evictEntry(any(), any(), anyLong());
   }
 
@@ -240,7 +241,7 @@ final class TimerWheelTest {
       timerWheel.schedule(new Timer(clock + duration));
     }
     for (int i = 0; i < TimerWheel.BUCKETS.length; i++) {
-      timerWheel.advance(cache, clock - 3 * SPANS[i]);
+      timerWheel.advance(cache, clock - 3 * SPANS[i], Integer.MAX_VALUE);
     }
 
     verifyNoInteractions(cache);
@@ -260,18 +261,18 @@ final class TimerWheelTest {
     timerWheel.schedule(t80);
 
     // discard T15, T80 in wheel[1]
-    timerWheel.advance(cache, clock + TimeUnit.SECONDS.toNanos(45));
+    timerWheel.advance(cache, clock + TimeUnit.SECONDS.toNanos(45), Integer.MAX_VALUE);
     ArgumentCaptor<Node<Int, Int>> captor1 = ArgumentCaptor.captor();
     verify(cache).evictEntry(captor1.capture(), any(), anyLong());
     assertThat(captor1.getAllValues()).containsExactly(t15);
     assertThat(timerWheel).hasSize(1);
 
     // verify not discarded, T80 in wheel[0]
-    timerWheel.advance(cache, clock + TimeUnit.SECONDS.toNanos(70));
+    timerWheel.advance(cache, clock + TimeUnit.SECONDS.toNanos(70), Integer.MAX_VALUE);
     assertThat(timerWheel).hasSize(1);
 
     // verify discarded T80
-    timerWheel.advance(cache, clock + TimeUnit.SECONDS.toNanos(90));
+    timerWheel.advance(cache, clock + TimeUnit.SECONDS.toNanos(90), Integer.MAX_VALUE);
     ArgumentCaptor<Node<Int, Int>> captor2 = ArgumentCaptor.captor();
     verify(cache, times(2)).evictEntry(captor2.capture(), any(), anyLong());
     assertThat(captor2.getAllValues()).containsExactly(t15, t80);
@@ -290,9 +291,71 @@ final class TimerWheelTest {
 
     timerWheel.nanos = 0L;
     timerWheel.schedule(timer);
-    assertThrows(IllegalArgumentException.class, () -> timerWheel.advance(cache, Long.MAX_VALUE));
+    assertThrows(IllegalArgumentException.class,
+        () -> timerWheel.advance(cache, Long.MAX_VALUE, Integer.MAX_VALUE));
     assertThat(timerWheel.wheel[1][1].getNextInVariableOrder()).isSameInstanceAs(timer);
     assertThat(timerWheel.nanos).isEqualTo(0);
+  }
+
+  @Test
+  void advance_boundedPerCycle() {
+    BoundedLocalCache<Int, Int> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Int, Int>();
+    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
+
+    timerWheel.nanos = 0L;
+    int count = (2 * EXPIRATION_THRESHOLD) + 1;
+    for (int i = 0; i < count; i++) {
+      timerWheel.schedule(new Timer(SPANS[0]));
+    }
+
+    // The limit caps evictions per advance and rewinds so the next advance reprocesses the rest.
+    long advanceTo = 13 * SPANS[0];
+    assertThat(timerWheel.advance(cache, advanceTo, EXPIRATION_THRESHOLD)).isEqualTo(0);
+    assertThat(timerWheel.nanos).isEqualTo(0L);
+    verify(cache, times(EXPIRATION_THRESHOLD)).evictEntry(any(), any(), anyLong());
+
+    assertThat(timerWheel.advance(cache, advanceTo, EXPIRATION_THRESHOLD)).isEqualTo(0);
+    verify(cache, times(2 * EXPIRATION_THRESHOLD)).evictEntry(any(), any(), anyLong());
+
+    // The final advance drains the remainder and fully advances the clock with budget to spare.
+    assertThat(timerWheel.advance(cache, advanceTo, EXPIRATION_THRESHOLD)).isGreaterThan(0);
+    assertThat(timerWheel.nanos).isEqualTo(advanceTo);
+    verify(cache, times(count)).evictEntry(any(), any(), anyLong());
+    checkTimerWheel(timerWheel, advanceTo);
+  }
+
+  @Test
+  void advance_boundedPerCycle_acrossBuckets() {
+    BoundedLocalCache<Int, Int> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Int, Int>();
+    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
+
+    // Spread the backlog across three finest-wheel buckets so a capped advance threads the budget
+    // across buckets, exhausts it exactly at a bucket boundary (next == sentinel), and rewinds
+    timerWheel.nanos = 0L;
+    int first = (3 * EXPIRATION_THRESHOLD) / 10;
+    int second = EXPIRATION_THRESHOLD - first;
+    int third = EXPIRATION_THRESHOLD / 2;
+    int[] perBucket = { first, second, third };
+    int count = first + second + third;
+    for (int b = 0; b < perBucket.length; b++) {
+      for (int i = 0; i < perBucket[b]; i++) {
+        timerWheel.schedule(new Timer((b + 1) * SPANS[0]));
+      }
+    }
+
+    // The first cycle drains buckets 1 and 2 (first + second == limit) and rewinds; bucket 3 waits.
+    long advanceTo = 13 * SPANS[0];
+    assertThat(timerWheel.advance(cache, advanceTo, EXPIRATION_THRESHOLD)).isEqualTo(0);
+    assertThat(timerWheel.nanos).isEqualTo(0L);
+    verify(cache, times(EXPIRATION_THRESHOLD)).evictEntry(any(), any(), anyLong());
+
+    // The second cycle drains bucket 3 with budget to spare.
+    assertThat(timerWheel.advance(cache, advanceTo, EXPIRATION_THRESHOLD)).isGreaterThan(0);
+    assertThat(timerWheel.nanos).isEqualTo(advanceTo);
+    verify(cache, times(count)).evictEntry(any(), any(), anyLong());
+    checkTimerWheel(timerWheel, advanceTo);
   }
 
   @ParameterizedTest @MethodSource("clock")
@@ -361,7 +424,7 @@ final class TimerWheelTest {
     timerWheel.schedule(new Timer(t80));
 
     long t45 = clock + Duration.ofSeconds(45).toNanos(); // discard T15, T80 in wheel[1]
-    timerWheel.advance(cache, t45);
+    timerWheel.advance(cache, t45, Integer.MAX_VALUE);
 
     long t95 = clock + Duration.ofSeconds(95).toNanos(); // in wheel[0], but expires after T80
     timerWheel.schedule(new Timer(t95));
@@ -381,7 +444,7 @@ final class TimerWheelTest {
     for (long timeout : times) {
       timerWheel.schedule(new Timer(timeout));
     }
-    timerWheel.advance(cache, duration);
+    timerWheel.advance(cache, duration, Integer.MAX_VALUE);
 
     @Var long minDelay = Long.MAX_VALUE;
     @Var int minSpan = Integer.MAX_VALUE;
@@ -478,7 +541,7 @@ final class TimerWheelTest {
     timerWheel.reschedule(timer);
     assertThat(timer.getNextInVariableOrder()).isNotSameInstanceAs(startBucket);
 
-    timerWheel.advance(cache, clock + TimeUnit.DAYS.toNanos(1));
+    timerWheel.advance(cache, clock + TimeUnit.DAYS.toNanos(1), Integer.MAX_VALUE);
     checkEmpty(timerWheel);
   }
 
@@ -545,7 +608,7 @@ final class TimerWheelTest {
 
     timerWheel.nanos = clock;
     timerWheel.schedule(new Timer(clock + 100));
-    timerWheel.advance(cache, clock + SPANS[0]);
+    timerWheel.advance(cache, clock + SPANS[0], Integer.MAX_VALUE);
 
     verify(cache).evictEntry(captor.capture(), any(), anyLong());
     assertThat(captor.getValue().getNextInVariableOrder()).isNotNull();
@@ -559,7 +622,7 @@ final class TimerWheelTest {
 
     timerWheel.nanos = clock;
     timerWheel.schedule(new Timer(clock + timeout));
-    timerWheel.advance(cache, clock + duration);
+    timerWheel.advance(cache, clock + duration, Integer.MAX_VALUE);
 
     @Var int count = 0;
     for (int i = 0; i <= span; i++) {

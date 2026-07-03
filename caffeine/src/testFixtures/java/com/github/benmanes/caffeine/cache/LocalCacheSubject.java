@@ -153,6 +153,8 @@ public final class LocalCacheSubject extends Subject {
       } else if (bounded.evicts() && (bounded.adjustment() != adjustment)) {
         adjustment = bounded.adjustment();
         continue; // finish climbing
+      } else if (bounded.drainStatusOpaque() != IDLE) {
+        continue; // finish a re-armed cycle, e.g. a capped expiration backlog
       }
       break;
     }

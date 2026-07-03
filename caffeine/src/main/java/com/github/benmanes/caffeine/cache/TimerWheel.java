@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.jspecify.annotations.Nullable;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.Var;
 
 /**
@@ -83,12 +84,18 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
   }
 
   /**
-   * Advances the timer and evicts entries that have expired.
+   * Advances the timer and evicts entries that have expired, up to the {@code limit} number of
+   * evictions, and returns the unused budget. When the limit is reached the timer is rewound so
+   * that the next advance processes the remaining backlog.
    *
    * @param cache the instance that the entries belong to
    * @param currentTimeNanos the current time, in nanoseconds
+   * @param limit the maximum number of entries to evict
+   * @return the unused portion of the eviction budget; zero if the limit was reached
    */
-  public void advance(BoundedLocalCache<K, V> cache, long currentTimeNanos) {
+  @CanIgnoreReturnValue
+  @SuppressWarnings("PMD.UnusedAssignment")
+  public int advance(BoundedLocalCache<K, V> cache, long currentTimeNanos, @Var int limit) {
     long previousTimeNanos = nanos;
     nanos = currentTimeNanos;
 
@@ -109,12 +116,18 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
           break;
         }
         long previousTicks = (previousTimeNanos >>> SHIFT[i]);
-        expire(cache, i, previousTicks, delta);
+        limit = expire(cache, i, previousTicks, delta, limit);
+        if (limit == 0) {
+          // The backlog was not fully drained, so rewind to process it on the next advance
+          nanos = previousTimeNanos;
+          break;
+        }
       }
     } catch (Throwable t) {
       nanos = previousTimeNanos;
       throw t;
     }
+    return limit;
   }
 
   /**
@@ -126,7 +139,8 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
    * @param delta the number of additional ticks
    */
   @SuppressWarnings("Varifier")
-  void expire(BoundedLocalCache<K, V> cache, int index, long previousTicks, long delta) {
+  int expire(BoundedLocalCache<K, V> cache, int index,
+      long previousTicks, long delta, @Var int limit) {
     Node<K, V>[] timerWheel = wheel[index];
     int mask = timerWheel.length - 1;
 
@@ -147,8 +161,19 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
         node.setNextInVariableOrder(null);
 
         try {
-          if (((node.getVariableTime() - nanos) > 0)
-              || !cache.evictEntry(node, RemovalCause.EXPIRED, nanos)) {
+          if ((node.getVariableTime() - nanos) > 0) {
+            schedule(node);
+          } else if (cache.evictEntry(node, RemovalCause.EXPIRED, nanos)) {
+            if (--limit == 0) {
+              // Leave the unprocessed remainder in the bucket for the next advance to process
+              if (next != sentinel) {
+                next.setPreviousInVariableOrder(sentinel.getPreviousInVariableOrder());
+                sentinel.getPreviousInVariableOrder().setNextInVariableOrder(next);
+                sentinel.setPreviousInVariableOrder(prev);
+              }
+              return 0;
+            }
+          } else {
             schedule(node);
           }
           node = next;
@@ -161,6 +186,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
         }
       }
     }
+    return limit;
   }
 
   /**

@@ -107,6 +107,55 @@ self-heals on the next maintenance. Don't add a re-check guard.
 **writeTime uses plain write** (not opaque like accessTime). It's always written
 under `synchronized(node)`, which provides stronger guarantees than opaque.
 
+**Expiration eviction is capped at `EXPIRATION_THRESHOLD` (1000) entries per maintenance
+cycle.** `expireAfterAccessEntries` (shared across its window/probation/protected deques),
+`expireAfterWriteEntries`, and the variable `TimerWheel.advance` each evict at most this
+many entries, then set `PROCESSING_TO_REQUIRED` so `rescheduleCleanUpIfIncomplete` re-arms
+and the backlog drains across subsequent cycles — mirroring `drainWriteBuffer`'s cap and the
+climber's `QUEUE_TRANSFER_THRESHOLD`. The cap is high enough that normal traffic never
+reaches it; it only bounds the abnormal spike where a cache with no `Scheduler` goes idle,
+lets a large population expire logically, then returns to traffic — one maintenance cycle
+would otherwise evict the whole backlog under `evictionLock`, stalling any writer that
+overflows the write buffer and assists (post-`b52a3d5df`). The work isn't reduced, only
+sliced, and since eviction runs async by default the slicing keeps a single cycle from
+blocking a thread too long. The **timer wheel** rewinds `nanos` to `previousTimeNanos` when
+its budget is exhausted (reusing the exception-rewind path) and re-links the unprocessed
+bucket remainder in place (mirroring the catch block, but from `next` since the evicted node
+is gone), so the next advance reprocesses the backlog — already-drained buckets rescan
+cheaply, and the eviction check keeps non-expired nodes from being evicted early. A capped
+cycle can briefly leave expired entries counting toward `weightedSize`, so a same-cycle
+`evictEntries` could pick a live victim over an expired one; negligible — frequency-based
+selection favors the cold expired entries and it self-corrects next cycle. Don't flag the
+cap as under-expiring, and don't remove the `PROCESSING_TO_REQUIRED` re-arm.
+
+The wheel budget counts **only evictions**, never the cascade (rescheduling a non-expired
+node to a finer level) — mirroring the deque caps, which count `evictEntry` but not the
+`moveToBack` reorder. Cascading a densely-populated coarse bucket is O(n) and *not* sliced,
+but it's accepted: an O(1) pointer splice with no CHM write or listener (~1–2% of an
+eviction), done at most once per node per advance, and a given coarse bucket cascades only
+~once per its multi-day span. The only trigger is a whole cache landing in one coarse bucket
+— entries scheduled past the ~6.5-day overflow span (a JVM won't outlive it) or bulk-loaded
+at startup with periodic reload (a cache anti-pattern). Debated and declined (2026-07-03):
+capping it bounds a lock-hold no worse than one already-accepted post-cap eviction cycle
+(the equivalent threshold is ~50–100K), for the cost of new concurrently-mutated state in
+the wheel. **Critically, a cascade cap must never reuse the eviction rewind:** the rewound
+re-advance re-scans the finer levels the cascaded nodes moved to and re-cascades them,
+starving the eviction drain (or livelocking). Evictions can rewind only because an evicted
+node is gone, so the re-traversal skips it. Don't cap cascades via the rewind.
+
+*If ever revisited (needs a repro — a coarse bucket with ~10^6 live entries pinning
+`evictionLock` past the eviction cap while a writer-assist blocks):* a safe cascade cap needs
+a **forward-carried backlog**, not a rewind — the wheel's analog of the climber's `adjustment`
+carry-over. On hitting the budget, stitch the unprocessed remainder (the current bucket's tail
+plus the un-visited buckets/levels, reusing the nodes' existing variable-order links) into a
+backlog list held on the wheel, and let `nanos` advance **normally**. The next advance flushes
+that backlog first (evict the due, reschedule the rest), then resumes the level walk — forward
+progress, nothing re-scanned. The hard part is lifecycle reconciliation between advances: a
+backlogged node that gets `deschedule`d unlinks transparently (same links), but `reschedule`
+must move it out of the backlog and back into a wheel bucket, and the flush must tolerate the
+list shrinking under it. That concurrent-mutation surface in the codebase's most intricate
+structure is why it's deferred, not the mechanism itself.
+
 ## Exception Handling
 
 **Catch-commit-rethrow pattern** in `doComputeIfAbsent` and `remap`. Both catch

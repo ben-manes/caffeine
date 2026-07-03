@@ -22,6 +22,7 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCES
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_REQUIRED;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.ADMIT_HASHDOS_THRESHOLD;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRATION_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_TOLERANCE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.HILL_CLIMBER_STEP_PERCENT;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.MAXIMUM_EXPIRY;
@@ -3920,6 +3921,75 @@ final class BoundedLocalCacheTest {
     cache.expireAfterAccessEntries(now);
     assertThat(cache.data.get(cache.nodeFactory.newLookupKey(oldest))).isNull();
     assertThat(cache.data.get(cache.nodeFactory.newLookupKey(newest))).isNotNull();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, expireAfterWrite = Expire.ONE_MINUTE)
+  void expireAfterWriteEntries_boundedPerCycle(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (int i = 0; i < (2 * EXPIRATION_THRESHOLD); i++) {
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(i))).isNull();
+    }
+    cache.cleanUp();
+    assertThat(cache.estimatedSize()).isEqualTo(2 * EXPIRATION_THRESHOLD);
+
+    // A large expired backlog is drained in a bounded batch, re-arming to finish the remainder.
+    context.ticker().advance(Duration.ofHours(1));
+    cache.expireAfterWriteEntries(cache.expirationTicker().read());
+    assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_REQUIRED);
+    assertThat(cache.estimatedSize()).isEqualTo(EXPIRATION_THRESHOLD);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE)
+  void expireAfterAccessEntries_boundedPerCycle(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (int i = 0; i < (2 * EXPIRATION_THRESHOLD); i++) {
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(i))).isNull();
+    }
+    cache.cleanUp();
+    assertThat(cache.estimatedSize()).isEqualTo(2 * EXPIRATION_THRESHOLD);
+
+    // A large expired backlog is drained in a bounded batch, re-arming to finish the remainder.
+    context.ticker().advance(Duration.ofHours(1));
+    cache.expireAfterAccessEntries(cache.expirationTicker().read());
+    assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_REQUIRED);
+    assertThat(cache.estimatedSize()).isEqualTo(EXPIRATION_THRESHOLD);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, expireAfterWrite = Expire.ONE_MINUTE)
+  void expireAfterWriteEntries_belowThreshold_doesNotReArm(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (int i = 0; i < 10; i++) {
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(i))).isNull();
+    }
+    cache.cleanUp();
+    assertThat(cache.drainStatus).isEqualTo(IDLE);
+
+    // A backlog below the per-cycle cap is fully drained without re-arming maintenance.
+    context.ticker().advance(Duration.ofHours(1));
+    cache.expireAfterWriteEntries(cache.expirationTicker().read());
+    assertThat(cache.estimatedSize()).isEqualTo(0);
+    assertThat(cache.drainStatus).isEqualTo(IDLE);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      expiry = CacheExpiry.CREATE, expiryTime = Expire.ONE_MINUTE)
+  void expireVariableEntries_boundedPerCycle(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    for (int i = 0; i < (2 * EXPIRATION_THRESHOLD); i++) {
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(i))).isNull();
+    }
+    cache.cleanUp();
+    assertThat(cache.estimatedSize()).isEqualTo(2 * EXPIRATION_THRESHOLD);
+
+    // A large expired backlog is drained in a bounded batch, re-arming to finish the remainder.
+    context.ticker().advance(Duration.ofHours(1));
+    cache.expireVariableEntries(cache.expirationTicker().read());
+    assertThat(cache.estimatedSize()).isEqualTo(EXPIRATION_THRESHOLD);
+    assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_REQUIRED);
   }
 
   private static void checkExpireAfterWriteTolerance(BoundedLocalCache<Int, Int> cache,

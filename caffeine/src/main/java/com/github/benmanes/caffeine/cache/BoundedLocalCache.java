@@ -237,6 +237,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final int ADMIT_HASHDOS_THRESHOLD = 6;
   /** The maximum number of entries that can be transferred between queues. */
   static final int QUEUE_TRANSFER_THRESHOLD = 1_000;
+  /** The maximum number of entries that can be expired per maintenance cycle. */
+  static final int EXPIRATION_THRESHOLD = 1_000;
   /** The maximum time window between touches for expiration updates. */
   static final long EXPIRE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
   /** The maximum duration before an entry expires. */
@@ -938,23 +940,31 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return;
     }
 
-    expireAfterAccessEntries(now, accessOrderWindowDeque());
+    @Var int remaining = EXPIRATION_THRESHOLD;
+    remaining = expireAfterAccessEntries(now, accessOrderWindowDeque(), remaining);
     if (evicts()) {
-      expireAfterAccessEntries(now, accessOrderProbationDeque());
-      expireAfterAccessEntries(now, accessOrderProtectedDeque());
+      remaining = expireAfterAccessEntries(now, accessOrderProbationDeque(), remaining);
+      remaining = expireAfterAccessEntries(now, accessOrderProtectedDeque(), remaining);
+    }
+    if (remaining == 0) {
+      setDrainStatusOpaque(PROCESSING_TO_REQUIRED);
     }
   }
 
-  /** Expires entries in an access-order queue. */
+  /**
+   * Expires entries in an access-order queue, up to the {@code remaining} budget, and returns the
+   * unused budget. When exhausted the caller re-arms maintenance to process the backlog.
+   */
   @GuardedBy("evictionLock")
-  void expireAfterAccessEntries(long now, AccessOrderDeque<Node<K, V>> accessOrderDeque) {
+  int expireAfterAccessEntries(long now,
+      AccessOrderDeque<Node<K, V>> accessOrderDeque, @Var int remaining) {
     var head = accessOrderDeque.peekFirst();
     if (head == null) {
-      return;
+      return remaining;
     }
     var duration = expiresAfterAccessNanos();
     var last = requireNonNull(accessOrderDeque.peekLast());
-    for (var node = head; node != null;) {
+    for (var node = head; (node != null) && (remaining > 0);) {
       var next = (node == last) ? null : node.getNextInAccessOrder();
       if ((now - node.getAccessTime()) < duration) {
         var stalePosition = ((last.getAccessTime() - node.getAccessTime()) < 0);
@@ -963,11 +973,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           node = next;
           continue;
         }
-        return;
+        return remaining;
       }
       evictEntry(node, RemovalCause.EXPIRED, now);
+      remaining--;
       node = next;
     }
+    return remaining;
   }
 
   /** Expires entries on the write-order queue. */
@@ -982,8 +994,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return;
     }
     var duration = expiresAfterWriteNanos();
+    @Var int remaining = EXPIRATION_THRESHOLD;
     var last = requireNonNull(writeOrderDeque().peekLast());
-    for (var node = head; node != null;) {
+    for (var node = head; (node != null) && (remaining > 0);) {
       var next = (node == last) ? null : node.getNextInWriteOrder();
       if ((now - node.getWriteTime()) < duration) {
         var stalePosition = ((last.getWriteTime() - node.getWriteTime()) < 0);
@@ -995,15 +1008,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return;
       }
       evictEntry(node, RemovalCause.EXPIRED, now);
+      remaining--;
       node = next;
+    }
+    if (remaining == 0) {
+      setDrainStatusOpaque(PROCESSING_TO_REQUIRED);
     }
   }
 
   /** Expires entries in the timer wheel. */
   @GuardedBy("evictionLock")
   void expireVariableEntries(long now) {
-    if (expiresVariable()) {
-      timerWheel().advance(this, now);
+    if (expiresVariable() && (timerWheel().advance(this, now, EXPIRATION_THRESHOLD) == 0)) {
+      setDrainStatusOpaque(PROCESSING_TO_REQUIRED);
     }
   }
 

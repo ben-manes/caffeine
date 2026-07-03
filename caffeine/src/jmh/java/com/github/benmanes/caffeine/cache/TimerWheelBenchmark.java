@@ -85,7 +85,7 @@ public class TimerWheelBenchmark {
     timerWheel.nanos = (time - DELTA);
     timerWheel.deschedule(timer);
     timerWheel.schedule(timer);
-    timerWheel.advance(cache, time);
+    timerWheel.advance(cache, time, Integer.MAX_VALUE);
   }
 
   @Benchmark
