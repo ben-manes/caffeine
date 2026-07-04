@@ -144,6 +144,20 @@ public final class EventDispatcher<K, V> {
   }
 
   /**
+   * Publishes an update event for the entry to the interested listeners. This method does not
+   * register the synchronous listener's future with {@link #awaitSynchronous()}.
+   *
+   * @param cache the cache where the entry was updated
+   * @param key the entry's key
+   * @param oldValue the entry's old value
+   * @param newValue the entry's new value
+   */
+  public void publishUpdatedQuietly(Cache<K, V> cache, K key, V oldValue, V newValue) {
+    publish(cache, EventType.UPDATED, key, /* hasOldValue= */ true,
+        oldValue, newValue, /* quiet= */ true);
+  }
+
+  /**
    * Publishes a removal event for the entry to the interested listeners.
    *
    * @param cache the cache where the entry was removed

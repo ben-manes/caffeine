@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
@@ -84,7 +85,7 @@ public final class JCacheLoaderAdapter<K, V>
       @Var Expirable<V> expirable = null;
       if (value != null) {
         requireNonNull(cache);
-        long expireTime = expireTimeMillis();
+        long expireTime = expireTimeMillis(expiry::getExpiryForCreation);
         if (expireTime == 0L) {
           // Per JSR-107 1.1.1 p.55: ZERO duration → entry is already expired
           // and will not be added to the Cache. Match the put-path convention
@@ -124,7 +125,7 @@ public final class JCacheLoaderAdapter<K, V>
         if ((key == null) || (value == null)) {
           continue;
         }
-        long expireTime = expireTimeMillis();
+        long expireTime = expireTimeMillis(expiry::getExpiryForCreation);
         if (expireTime == 0L) {
           // ZERO → already expired and not added; match the put-path convention.
           dispatcher.publishExpired(cache, key, value);
@@ -148,9 +149,31 @@ public final class JCacheLoaderAdapter<K, V>
     }
   }
 
-  private long expireTimeMillis() {
+  @Override
+  public @Nullable Expirable<V> reload(K key, Expirable<V> oldValue) {
     try {
-      Duration duration = expiry.getExpiryForCreation();
+      V value = delegate.load(key);
+      if (value == null) {
+        return null;
+      }
+      requireNonNull(cache);
+      long expireTime = expireTimeMillis(expiry::getExpiryForUpdate);
+      if (expireTime == 0L) {
+        dispatcher.publishExpiredQuietly(cache, key, value);
+        return null;
+      }
+      dispatcher.publishUpdatedQuietly(cache, key, oldValue.get(), value);
+      return new Expirable<>(value, expireTime);
+    } catch (CacheLoaderException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new CacheLoaderException(e);
+    }
+  }
+
+  private long expireTimeMillis(Supplier<Duration> durationSupplier) {
+    try {
+      Duration duration = durationSupplier.get();
       if (duration.isZero()) {
         return 0;
       } else if (duration.isEternal()) {

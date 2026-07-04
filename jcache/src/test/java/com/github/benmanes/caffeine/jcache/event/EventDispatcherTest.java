@@ -196,6 +196,21 @@ final class EventDispatcherTest {
   }
 
   @Test
+  void publishUpdatedQuietly() {
+    CacheEntryUpdatedListener<Integer, Integer> updatedListener = Mockito.mock();
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    try (Cache<Integer, Integer> cache = Mockito.mock()) {
+      registerAll(dispatcher, List.of(updatedListener));
+      dispatcher.publishUpdatedQuietly(cache, 1, 2, 3);
+    }
+
+    verify(updatedListener, times(4)).onUpdated(any());
+    assertThat(dispatcher.pending.get()).isEmpty();
+    assertThat(dispatcher.dispatchQueues.values().stream()
+        .flatMap(queue -> queue.entrySet().stream())).isEmpty();
+  }
+
+  @Test
   void publishRemoved() {
     CacheEntryRemovedListener<Integer, Integer> removedListener = Mockito.mock();
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);

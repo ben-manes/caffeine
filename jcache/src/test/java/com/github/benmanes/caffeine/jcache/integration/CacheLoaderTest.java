@@ -29,13 +29,16 @@ import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryExpiredListener;
+import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
@@ -49,6 +52,7 @@ import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -105,6 +109,46 @@ final class CacheLoaderTest {
       // is subtracted regardless of the loader's result.
       assertThat(JCacheFixture.getStatistics(fixture.jcacheLoading())
           .getAverageGetTime()).isLessThan(50_000f);
+    }
+  }
+
+  @Test
+  void refresh_publishesUpdatedNotCreated() {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(1)).thenReturn(-1, -2);
+
+    var created = new AtomicInteger();
+    var updated = new AtomicInteger();
+    CacheEntryCreatedListener<Integer, Integer> createdListener =
+        events -> events.forEach(event -> created.incrementAndGet());
+    CacheEntryUpdatedListener<Integer, Integer> updatedListener =
+        events -> events.forEach(event -> updated.incrementAndGet());
+
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setCacheLoaderFactory(() -> loader);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setReadThrough(true);
+          config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              () -> createdListener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              () -> updatedListener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        }).build();
+        var cache = fixture.jcacheLoading()) {
+      assertThat(cache.get(1)).isEqualTo(-1);
+      fixture.ticker().advance(java.time.Duration.ofMinutes(2));
+
+      // Trigger the refresh, which runs inline via directExecutor.
+      assertThat(cache.get(1)).isNotNull();
+
+      // The refresh reloads an existing entry, so it publishes UPDATED, not a second CREATED.
+      assertThat(created.get()).isEqualTo(1);
+      assertThat(updated.get()).isEqualTo(1);
     }
   }
 
