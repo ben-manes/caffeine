@@ -51,6 +51,8 @@ import static java.util.Spliterator.SUBSIZED;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -88,7 +90,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.mockito.Mockito;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
+import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
@@ -1442,6 +1448,31 @@ final class AsMapTest {
     assertThat(cache).doesNotContainKey(key);
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG, compute = Compute.SYNC, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.MOCKITO, expiry = CacheExpiry.MOCKITO, expiryTime = Expire.FOREVER)
+  void computeIfPresent_present_callerKey(Map<Int, Int> map, CacheContext context) {
+    // The remapping function, weigher, and Expiry receive the caller's key instance, not the
+    // equal-but-distinct stored one, so a key carrying hidden state is honored (matching CHM)
+    when(context.weigher().weigh(any(), any())).thenReturn(1);
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong())).thenReturn(Long.MAX_VALUE);
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MAX_VALUE);
+
+    var received = new Int[1];
+    var caller = new Int(context.absentKey());
+    map.put(context.absentKey(), context.absentKey());
+    map.computeIfPresent(caller, (key, value) -> {
+      received[0] = key;
+      return context.absentValue();
+    });
+
+    assertThat(received[0]).isSameInstanceAs(caller);
+    verify(context.weigher()).weigh(same(caller), any());
+    verify(context.expiry()).expireAfterUpdate(same(caller), any(), anyLong(), anyLong());
+  }
+
   /* --------------- compute --------------- */
 
   @CheckNoStats
@@ -1617,6 +1648,31 @@ final class AsMapTest {
 
     assertThat(compute).succeedsWith(newValue);
     assertThat(cache).containsEntry(key, newValue);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG, compute = Compute.SYNC, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.MOCKITO, expiry = CacheExpiry.MOCKITO, expiryTime = Expire.FOREVER)
+  void compute_present_callerKey(Map<Int, Int> map, CacheContext context) {
+    // The remapping function, weigher, and Expiry receive the caller's key instance, not the
+    // equal-but-distinct stored one, so a key carrying hidden state is honored (matching CHM)
+    when(context.weigher().weigh(any(), any())).thenReturn(1);
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong())).thenReturn(Long.MAX_VALUE);
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MAX_VALUE);
+
+    var received = new Int[1];
+    var caller = new Int(context.absentKey());
+    map.put(context.absentKey(), context.absentKey());
+    map.compute(caller, (key, value) -> {
+      received[0] = key;
+      return context.absentValue();
+    });
+
+    assertThat(received[0]).isSameInstanceAs(caller);
+    verify(context.weigher()).weigh(same(caller), any());
+    verify(context.expiry()).expireAfterUpdate(same(caller), any(), anyLong(), anyLong());
   }
 
   /* --------------- merge --------------- */
@@ -1844,6 +1900,27 @@ final class AsMapTest {
     await().untilTrue(waiting);
     future.complete(null);
     assertThat(result.get()).succeedsWith(context.absentKey());
+  }
+
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG, compute = Compute.SYNC, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.MOCKITO, expiry = CacheExpiry.MOCKITO, expiryTime = Expire.FOREVER)
+  void merge_present_callerKey(Map<Int, Int> map, CacheContext context) {
+    // merge's remapping function is value-only (no key), but the operation still routes the
+    // caller's key to the weigher and Expiry
+    when(context.weigher().weigh(any(), any())).thenReturn(1);
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong())).thenReturn(Long.MAX_VALUE);
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MAX_VALUE);
+
+    var caller = new Int(context.absentKey());
+    map.put(context.absentKey(), context.absentKey());
+    map.merge(caller, context.absentValue(), Int::add);
+
+    verify(context.weigher()).weigh(same(caller), any());
+    verify(context.expiry()).expireAfterUpdate(same(caller), any(), anyLong(), anyLong());
   }
 
   /* --------------- equals / hashCode --------------- */

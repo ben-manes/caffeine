@@ -3060,7 +3060,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
         boolean wasEvicted = (ctx.cause != null);
         try {
-          ctx.newValue = remappingFunction.apply(ctx.nodeKey,
+          ctx.newValue = remappingFunction.apply(key,
               (ctx.cause == null) ? ctx.oldValue : null);
 
           if (ctx.newValue == null) {

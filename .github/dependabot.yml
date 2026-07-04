@@ -12,6 +12,17 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: github-actions
+    directory: /.github/actions/run-benchmark
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
+  - package-ecosystem: github-actions
     directory: /.github/actions/run-gradle
     schedule:
       interval: monthly

@@ -136,7 +136,6 @@ When to read which doc:
 - **Skills** (`/audit-temporal-walk`): heavyweight history-mining audit. Walks every commit oldest-first, forward-tracking issues across the project's full history. Catches bugs snapshot-style audits cannot — half-fixes invisible from current state, latent+trigger pairs across multi-commit interactions. Manually-invoked CLI tool (`walker.py` + `verify.py`), hours-long, rare-run (every several months or before a major release). Ships focused variants over the same engine — diff-shape lenses (deletion/sibling/intent), a fix-commit walk, a test-coverage-regression walk, and a forward-tracked invariant ledger — orchestrated as a battery by `run.py`; invoking the skill presents the variant menu so they aren't forgotten
 - **Skills** (`/audit-jcache-conformance`): JSR-107 1.1.1 spec-conformance verification for the jcache adapter.
 - **Skills** (`/audit-third-party-contracts`): external-library and JDK contract misuse across adapters, simulator, and examples — verifies call-site assumptions (error paths, duplicate/empty inputs, disposal) against upstream docs
-- **Skills** (`/audit-escalation-closure`): drives open ESCALATED findings from prior audit reports to reproduced/unreachable by porting them into Fray/LinCheck/jcstress and running them
 - **Skills** (`/sim-*`): simulator workflow automation — `/sim-compare` for policy comparison charts, `/sim-analyze` for trace characterization
 - **Auditor agent** (`.claude/agents/`): multi-pass — analysis → reflection → evaluator challenge → targeted re-audit
 
@@ -169,6 +168,5 @@ When to read which doc:
 | Drain-status / node-lifecycle / async-value state machines | `/audit-state-machine` |
 | JSR-107 (JCache) spec conformance of the adapter | `/audit-jcache-conformance` |
 | Third-party/JDK API contract misuse (adapters, simulator, examples) | `/audit-third-party-contracts` |
-| Open ESCALATED findings needing dynamic proof | `/audit-escalation-closure` |
 
 **Review vs Audit**: `/review-change` is for pre-commit code review — reads design docs and filters known-intentional patterns. `/audit-*` skills are for correctness doubts — independent, no design context filtering. Use review for routine changes, audit when you need fresh-eyes analysis. `/audit-temporal-walk` is a third category (heavyweight, rare-run history-mining) — see its `SKILL.md` for invocation.

@@ -11,19 +11,28 @@ env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
   ALLOWED_ENDPOINTS: >
     api.adoptium.net:443
+    api.adoptopenjdk.net:443
     api.foojay.io:443
     api.github.com:443
+    auth.docker.io:443
     caffeine.develocity.cloud:443
+    dl-cdn.alpinelinux.org:80
+    dl-cdn.alpinelinux.org:443
     download.java.net:443
     download.oracle.com:443
     downloads.gradle.org:443
     downloads.gradle-dn.com:443
+    dragonwell-jdk.io:443
     gds.oracle.com:443
     github.com:443
+    hosted-compute-watchdog-prod-eus-01.githubapp.com:443
     maven-central.storage-download.googleapis.com:443
     objects.githubusercontent.com:443
     plugins.gradle.org:443
     plugins-artifacts.gradle.org:443
+    production.cloudfront.docker.com:443
+    registry-1.docker.io:443
+    release-assets.githubusercontent.com:443
     repo.maven.apache.org:443
     repo1.maven.org:443
     raw.githubusercontent.com:443
@@ -102,7 +111,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
-          disable-sudo-and-containers: true
+          disable-sudo: true
           egress-policy: block
           allowed-endpoints: ${{ env.ALLOWED_ENDPOINTS }}
       - name: Checkout

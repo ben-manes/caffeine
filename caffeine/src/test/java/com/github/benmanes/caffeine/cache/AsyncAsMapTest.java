@@ -48,6 +48,9 @@ import static java.util.Spliterator.NONNULL;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -86,7 +89,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
@@ -1493,6 +1500,21 @@ final class AsyncAsMapTest {
         .contains(replaced).exclusively();
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  void computeIfPresent_present_callerKey(AsyncCache<Int, Int> cache, CacheContext context) {
+    // The async view routes the caller's key instance (not the equal-but-distinct stored one) to
+    // the remapping function, matching the synchronous view and CHM
+    var received = new Int[1];
+    var caller = new Int(context.absentKey());
+    cache.asMap().put(context.absentKey(), context.absentKey().toFuture());
+    cache.asMap().computeIfPresent(caller, (key, future) -> {
+      received[0] = key;
+      return context.absentValue().toFuture();
+    });
+    assertThat(received[0]).isSameInstanceAs(caller);
+  }
+
   /* ---------------- compute -------------- */
 
   @CheckNoStats
@@ -1669,6 +1691,21 @@ final class AsyncAsMapTest {
     assertThat(cache).hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(replaced).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
+  void compute_present_callerKey(AsyncCache<Int, Int> cache, CacheContext context) {
+    // The async view routes the caller's key instance (not the equal-but-distinct stored one) to
+    // the remapping function, matching the synchronous view and CHM
+    var received = new Int[1];
+    var caller = new Int(context.absentKey());
+    cache.asMap().put(context.absentKey(), context.absentKey().toFuture());
+    cache.asMap().compute(caller, (key, future) -> {
+      received[0] = key;
+      return context.absentValue().toFuture();
+    });
+    assertThat(received[0]).isSameInstanceAs(caller);
   }
 
   /* ---------------- merge -------------- */
@@ -1936,6 +1973,27 @@ final class AsyncAsMapTest {
     assertThat(cache.asMap().equals(empty)).isFalse();
     assertThat(empty.equals(cache.asMap())).isFalse();
     assertThat(cache.asMap().hashCode()).isNotEqualTo(empty.hashCode());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.MOCKITO, expiry = CacheExpiry.MOCKITO, expiryTime = Expire.FOREVER)
+  void merge_present_callerKey(AsyncCache<Int, Int> cache, CacheContext context) {
+    // merge's remapping function is value-only (no key), but the async operation still routes the
+    // caller's key to the weigher and Expiry
+    when(context.weigher().weigh(any(), any())).thenReturn(1);
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong())).thenReturn(Long.MAX_VALUE);
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Long.MAX_VALUE);
+
+    var caller = new Int(context.absentKey());
+    cache.asMap().put(context.absentKey(), context.absentKey().toFuture());
+    cache.asMap().merge(caller, context.absentValue().toFuture(), (oldValue, value) -> value);
+
+    // The async view re-weighs on completion, so the weigher sees the caller's key more than once.
+    verify(context.weigher(), atLeastOnce()).weigh(same(caller), any());
+    verify(context.expiry(), atLeastOnce())
+        .expireAfterUpdate(same(caller), any(), anyLong(), anyLong());
   }
 
   /* ---------------- toString -------------- */
