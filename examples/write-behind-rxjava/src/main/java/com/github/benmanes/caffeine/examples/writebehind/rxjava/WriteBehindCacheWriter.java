@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.examples.writebehind.rxjava;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -28,6 +30,7 @@ import java.util.function.Consumer;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.PublishSubject;
 import io.reactivex.rxjava3.subjects.Subject;
 
@@ -49,14 +52,25 @@ import io.reactivex.rxjava3.subjects.Subject;
  * @author wim.deblauwe@gmail.com (Wim Deblauwe)
  */
 public final class WriteBehindCacheWriter<K, V> implements BiConsumer<K, V> {
+  private static final Logger logger = System.getLogger(WriteBehindCacheWriter.class.getName());
+
   private final Subject<Entry<K, V>> subject;
 
   private WriteBehindCacheWriter(Builder<K, V> builder) {
+    var writeAction = builder.writeAction;
     subject = PublishSubject.<Entry<K, V>>create().toSerialized();
     subject.buffer(builder.bufferTime.toNanos(), TimeUnit.NANOSECONDS)
         .map(entries -> entries.stream().collect(
             toMap(Entry::getKey, Entry::getValue, builder.coalescer)))
-        .subscribe(builder.writeAction::accept);
+        .filter(batch -> !batch.isEmpty())
+        .observeOn(Schedulers.io())
+        .subscribe(batch -> {
+          try {
+            writeAction.accept(batch);
+          } catch (RuntimeException e) {
+            logger.log(Level.ERROR, "Exception thrown by the write-behind action", e);
+          }
+        });
   }
 
   @Override public void accept(K key, V value) {
@@ -74,7 +88,11 @@ public final class WriteBehindCacheWriter<K, V> implements BiConsumer<K, V> {
      */
     @CanIgnoreReturnValue
     public Builder<K, V> bufferTime(Duration duration) {
-      this.bufferTime = requireNonNull(duration);
+      requireNonNull(duration);
+      if (duration.isNegative() || duration.isZero()) {
+        throw new IllegalArgumentException("bufferTime must be positive");
+      }
+      this.bufferTime = duration;
       return this;
     }
 

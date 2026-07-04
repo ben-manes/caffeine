@@ -18,9 +18,11 @@ package com.github.benmanes.caffeine.examples.writebehind.rxjava;
 import static java.time.temporal.ChronoUnit.DAYS;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -45,7 +47,7 @@ final class WriteBehindCacheWriterTest {
     // Given this cache...
     var writer = new WriteBehindCacheWriter.Builder<Integer, ZonedDateTime>()
         .coalesce(BinaryOperator.maxBy(ZonedDateTime::compareTo))
-        .writeAction(entries -> writerCalled.set(true))
+        .writeAction(_ -> writerCalled.set(true))
         .bufferTime(Duration.ofSeconds(1))
         .build();
     Cache<Integer, ZonedDateTime> cache = Caffeine.newBuilder().build();
@@ -96,12 +98,6 @@ final class WriteBehindCacheWriterTest {
         .coalesce(BinaryOperator.maxBy(ZonedDateTime::compareTo))
         .bufferTime(Duration.ofSeconds(1))
         .writeAction(entries -> {
-          // We might get here before the cache has been written to,
-          // so just wait for the next time we are called
-          if (entries.isEmpty()) {
-            return;
-          }
-
           var zonedDateTime = entries.values().iterator().next();
           timeInWriteBehind.set(zonedDateTime);
           numberOfEntries.set(entries.size());
@@ -114,7 +110,7 @@ final class WriteBehindCacheWriterTest {
       latest = latest.plusNanos(200);
 
       var value = latest;
-      cache.asMap().compute(1L, (key, oldValue) -> {
+      cache.asMap().compute(1L, (key, _) -> {
         writer.accept(key, value);
         return value;
       });
@@ -123,5 +119,47 @@ final class WriteBehindCacheWriterTest {
     // Then the write behind action gets 1 entry to write with the most recent time
     await().untilAtomic(numberOfEntries, is(1));
     await().untilAtomic(timeInWriteBehind, is(latest));
+  }
+
+  @Test
+  void writeActionThrows_keepsWriting() {
+    var firstBatch = new AtomicBoolean(true);
+    var written = new ConcurrentLinkedQueue<Integer>();
+    var writer = new WriteBehindCacheWriter.Builder<Integer, Integer>()
+        .coalesce((_, second) -> second)
+        .bufferTime(Duration.ofMillis(50))
+        .writeAction(batch -> {
+          if (firstBatch.getAndSet(false)) {
+            throw new IllegalStateException("write failed");
+          }
+          written.addAll(batch.keySet());
+        }).build();
+
+    // A throw from the write action must not tear down the pipeline: later writes still flow
+    writer.accept(1, 1);
+    await().untilFalse(firstBatch);
+    writer.accept(2, 2);
+    await().until(() -> written.contains(2));
+  }
+
+  @Test
+  void emptyBatch_notDelivered() {
+    var batchSizes = new ConcurrentLinkedQueue<Integer>();
+    var writer = new WriteBehindCacheWriter.Builder<Integer, Integer>()
+        .coalesce((_, second) -> second)
+        .bufferTime(Duration.ofMillis(20))
+        .writeAction(batch -> batchSizes.add(batch.size())).build();
+
+    // The timed buffer must not deliver empty batches to the write action during idle intervals
+    writer.accept(1, 1);
+    await().until(() -> batchSizes.contains(1));
+    await().during(Duration.ofMillis(150)).until(() -> !batchSizes.contains(0));
+  }
+
+  @Test
+  void invalidArguments() {
+    var builder = new WriteBehindCacheWriter.Builder<Integer, Integer>();
+    assertThrows(IllegalArgumentException.class, () -> builder.bufferTime(Duration.ZERO));
+    assertThrows(IllegalArgumentException.class, () -> builder.bufferTime(Duration.ofMillis(-1)));
   }
 }
