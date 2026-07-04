@@ -980,7 +980,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    @SuppressWarnings("SuspiciousMethodCalls")
+    @SuppressWarnings({"PMD.UnusedNullCheckInEquals", "SuspiciousMethodCalls"})
     public boolean contains(Object o) {
       if (!(o instanceof Entry<?, ?>)) {
         return false;
@@ -992,7 +992,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         return false;
       }
       V cachedValue = cache.get(key);
-      return (cachedValue != null) && cachedValue.equals(value);
+      return (cachedValue != null) && value.equals(cachedValue);
     }
 
     @Override

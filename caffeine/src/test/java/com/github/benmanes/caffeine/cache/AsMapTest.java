@@ -214,6 +214,15 @@ final class AsMapTest {
     assertThat(map.containsValue(context.absentValue())).isFalse();
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, values = ReferenceType.STRONG)
+  void containsValue_brokenCachedEquality(Map<Int, Object> map, CacheContext context) {
+    // The probe is the equals receiver; the cached value's equals is never invoked
+    map.put(context.absentKey(), new ThrowingEquality());
+    assertThat(map.containsValue(Int.valueOf(0))).isFalse();
+    assertThat(map).containsKey(context.absentKey());
+  }
+
   /* --------------- get --------------- */
 
   @CheckNoStats
@@ -730,7 +739,7 @@ final class AsMapTest {
   @CacheSpec(population = Population.EMPTY, values = ReferenceType.STRONG)
   void removeConditionally_brokenCachedEquality(Map<Int, Object> map, CacheContext context) {
     // The expected value is the equals receiver (CHM/bounded/async alignment); the cached value's
-    // equals is never invoked — here it throws to catch a reversed receiver.
+    // equals is never invoked — here it throws to catch a reversed receiver
     map.put(context.absentKey(), new ThrowingEquality());
     assertThat(map.remove(context.absentKey(), Int.valueOf(0))).isFalse();
     assertThat(map).containsKey(context.absentKey());
@@ -3223,6 +3232,15 @@ final class AsMapTest {
     assertThat(context).removalNotifications().isEmpty();
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, values = ReferenceType.STRONG)
+  void valuesRemove_brokenCachedEquality(Map<Int, Object> map, CacheContext context) {
+    // The probe is the equals receiver; the cached value's equals is never invoked
+    map.put(context.absentKey(), new ThrowingEquality());
+    assertThat(map.values().remove(Int.valueOf(0))).isFalse();
+    assertThat(map).containsKey(context.absentKey());
+  }
+
   @CacheSpec
   @CheckNoStats
   @ParameterizedTest
@@ -4011,6 +4029,16 @@ final class AsMapTest {
       return null;
     });
     assertThat(future).succeedsWithNull();
+  }
+
+  @ParameterizedTest
+  @SuppressFBWarnings("MUI_USE_CONTAINSKEY")
+  @CacheSpec(population = Population.EMPTY, values = ReferenceType.STRONG)
+  void entrySetContains_brokenCachedEquality(Map<Int, Object> map, CacheContext context) {
+    // The probe entry's value is the equals receiver; the cached value's equals is never invoked
+    map.put(context.absentKey(), new ThrowingEquality());
+    assertThat(map.entrySet().contains(Map.entry(context.absentKey(), Int.valueOf(0)))).isFalse();
+    assertThat(map).containsKey(context.absentKey());
   }
 
   @CacheSpec

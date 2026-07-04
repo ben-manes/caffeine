@@ -1423,13 +1423,14 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
+      @SuppressWarnings("PMD.UnusedNullCheckInEquals")
       public boolean remove(@Nullable Object o) {
         if (o == null) {
           return false;
         }
         for (var entry : delegate.entrySet()) {
           V value = Async.getIfReady(entry.getValue());
-          if ((value != null) && value.equals(o) && AsMapView.this.remove(entry.getKey(), value)) {
+          if ((value != null) && o.equals(value) && AsMapView.this.remove(entry.getKey(), value)) {
             return true;
           }
         }
@@ -1554,6 +1555,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
+      @SuppressWarnings("PMD.UnusedNullCheckInEquals")
       public boolean contains(Object o) {
         if (!(o instanceof Entry<?, ?>)) {
           return false;
@@ -1565,7 +1567,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           return false;
         }
         V cachedValue = Async.getIfReady(delegate.getIfPresentQuietly(key));
-        return (cachedValue != null) && cachedValue.equals(value);
+        return (cachedValue != null) && value.equals(cachedValue);
       }
 
       @Override
