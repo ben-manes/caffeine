@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.examples.indexable;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Duration;
 import java.util.Set;
@@ -70,6 +71,21 @@ final class IndexedCacheTest {
 
     assertThat(cache.store.asMap()).isEmpty();
     assertThat(cache.indexes).isEmpty();
+  }
+
+  @Test
+  void duplicateSecondaryKey() {
+    var cache = new IndexedCache.Builder<UserKey, User>()
+        .addSecondaryKey(user -> new UserByLogin(user.login()))
+        .addSecondaryKey(user -> new UserByPhone(user.phone()))
+        .primaryKey(user -> new UserById(user.id()))
+        .build(this::findUser);
+
+    // Two users with different ids but the same login violate the unique-index contract; the
+    // second put must fail fast rather than silently clobber the first entry's shared key
+    cache.put(new User(1, "john.doe", "+1 (555) 555-5555"));
+    assertThrows(IllegalStateException.class,
+        () -> cache.put(new User(2, "john.doe", "+1 (777) 777-7777")));
   }
 
   /** Returns the user found in the system of record. */

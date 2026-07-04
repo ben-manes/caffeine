@@ -56,7 +56,7 @@ public final class IndexedCache<K, V> {
     this.locks = Striped.lock(1_024);
     this.indexers = indexers;
     this.store = cacheBuilder
-        .evictionListener((key, value, cause) -> indexes.keySet().removeAll(indexes.get(key)))
+        .evictionListener((key, _, _) -> indexes.keySet().removeAll(indexes.get(key)))
         .build();
   }
 
@@ -108,6 +108,11 @@ public final class IndexedCache<K, V> {
         indexes.keySet().removeAll(Sets.difference(indexes.get(index.getFirst()), index));
       }
       for (var indexKey : index) {
+        var existing = indexes.get(indexKey);
+        checkState((existing == null) || key.equals(existing.getFirst()),
+            "The key '%s' is already associated with a different entry", indexKey);
+      }
+      for (var indexKey : index) {
         indexes.put(indexKey, index);
       }
       return value;
@@ -121,7 +126,7 @@ public final class IndexedCache<K, V> {
       return;
     }
 
-    store.asMap().computeIfPresent(index.getFirst(), (k, v) -> {
+    store.asMap().computeIfPresent(index.getFirst(), (_, _) -> {
       indexes.keySet().removeAll(indexes.get(index.getFirst()));
       return null;
     });
