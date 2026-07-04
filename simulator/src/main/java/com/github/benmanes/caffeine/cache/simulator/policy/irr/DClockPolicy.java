@@ -205,8 +205,10 @@ public final class DClockPolicy implements KeyOnlyPolicy {
       Node victim = requireNonNull(headInactive.prev);
       policyStats.recordEviction();
 
-      victim.nonResidentAge = currentNonResidentAge();
+      // Advance the age before stamping so the shadow's refault distance counts this eviction,
+      // matching workingset_age_nonresident running ahead of the read in the kernel reference.
       evictions++;
+      victim.nonResidentAge = currentNonResidentAge();
       inactiveSize--;
       victim.remove();
       victim.status = Status.NON_RESIDENT;
