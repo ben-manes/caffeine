@@ -271,6 +271,34 @@ final class BoundedLocalCacheTest {
     assertThat(cache.writeBuffer).isEmpty();
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO)
+  void clear_incomplete_reschedules(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    reset(context.scheduler());
+    when(context.scheduler().schedule(any(), any(), anyLong(), any()))
+        .thenReturn(new CompletableFuture<>());
+
+    // A write that raced the clear can leave the drain status required with no scheduled follow-up.
+    cache.drainStatus = REQUIRED;
+    cache.clear();
+
+    assertThat(requireNonNull(cache.pacer()).isScheduled()).isTrue();
+    verify(context.scheduler()).schedule(any(), any(), anyLong(), any());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO)
+  void clear_complete_doesNotReschedule(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    reset(context.scheduler());
+
+    cache.drainStatus = IDLE;
+    cache.clear();
+
+    verifyNoInteractions(context.scheduler());
+  }
+
   /* --------------- Maintenance --------------- */
 
   @Test
