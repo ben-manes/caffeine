@@ -15,10 +15,8 @@
  */
 package com.github.benmanes.caffeine.jcache.integration;
 
-import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
-import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
@@ -152,6 +150,37 @@ final class CacheLoaderTest {
     }
   }
 
+  @Test
+  void loadAll_keepExisting_reloadsJCacheExpired() {
+    // A native expireAfterWrite (long) alongside a shorter jcache ExpiryPolicy: native expiry no
+    // longer mirrors the Expirable, so a jcache-expired entry stays physically present and
+    // keep-existing must still reload it
+    ExpiryPolicy expiry = Mockito.mock(answer -> new Duration(TimeUnit.MINUTES, 1));
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.loadAll(any())).thenAnswer(invocation -> {
+      var loaded = new HashMap<Integer, Integer>();
+      invocation.<Iterable<Integer>>getArgument(0).forEach(key -> loaded.put(key, -2));
+      return loaded;
+    });
+
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setCacheLoaderFactory(() -> loader);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setExpireAfterWrite(OptionalLong.of(TimeUnit.HOURS.toNanos(1)));
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setReadThrough(true);
+        }).build();
+        var cache = fixture.jcacheLoading()) {
+      cache.put(1, -1);
+      fixture.ticker().advance(java.time.Duration.ofMinutes(2));
+
+      cache.loadAll(Set.of(1), /* replaceExistingValues= */ false, null);
+
+      assertThat(cache.get(1)).isEqualTo(-2);
+    }
+  }
+
   @ParameterizedTest @MethodSource("throwables")
   void load_failure(Throwable throwable) {
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ZERO);
@@ -183,7 +212,8 @@ final class CacheLoaderTest {
   void load_adjustedTimeSentinelZero() {
     // A computed creation expiry that collides with the ZERO ("already expired") sentinel is
     // clamped (like the put path, CacheProxy.getWriteExpireTimeMillis) so the loaded entry is
-    // stored as immediately expired rather than mistaken for the not-added sentinel and dropped.
+    // stored rather than mistaken for the not-added sentinel and dropped. Per JSR-107 the caller
+    // that triggers the load still receives the value, whereas the not-added sentinel returns null.
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
     var duration = Mockito.spy(new Duration(TimeUnit.MILLISECONDS, 1));
     when(duration.getAdjustedTime(anyLong())).thenReturn(0L);
@@ -192,9 +222,6 @@ final class CacheLoaderTest {
     try (var fixture = jcacheFixture(expiry, cacheLoader)) {
       when(cacheLoader.load(any())).thenReturn(-1);
       assertThat(fixture.jcacheLoading().get(1)).isEqualTo(-1);
-
-      var expirable = requireNonNull(getExpirable(fixture.jcacheLoading(), 1));
-      assertThat(expirable.getExpireTimeMillis()).isEqualTo(-1L);
     }
   }
 

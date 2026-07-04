@@ -312,8 +312,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @SuppressWarnings("ConstantValue")
   protected void loadAllAndKeepExisting(Set<? extends K> keys) {
     List<K> keysToLoad = keys.stream()
-        .filter(key -> !cache.asMap().containsKey(key))
-        .collect(toUnmodifiableList());
+        .filter(key -> {
+          var expirable = cache.policy().getIfPresentQuietly(key);
+          return (expirable == null)
+              || (!expirable.isEternal() && expirable.hasExpired(currentTimeMillis()));
+        }).collect(toUnmodifiableList());
     Map<K, V> result = cacheLoader.orElseThrow().loadAll(keysToLoad);
     for (var entry : result.entrySet()) {
       if ((entry.getKey() != null) && (entry.getValue() != null)) {
