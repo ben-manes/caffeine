@@ -777,14 +777,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public void removeAll(Set<? extends K> keys) {
     requireNotClosed();
-    keys.forEach(Objects::requireNonNull);
+    var keysToRemove = new LinkedHashSet<>(keys);
+    keysToRemove.forEach(Objects::requireNonNull);
 
     @Var CacheWriterException error = null;
     @Var Set<? extends K> failedKeys = Set.of();
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
-    if (configuration.isWriteThrough() && !keys.isEmpty()) {
-      var keysToWrite = new LinkedHashSet<>(keys);
+    if (configuration.isWriteThrough() && !keysToRemove.isEmpty()) {
+      var keysToWrite = new LinkedHashSet<>(keysToRemove);
       try {
         writer.deleteAll(keysToWrite);
       } catch (CacheWriterException e) {
@@ -797,7 +798,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
 
     @Var int removed = 0;
-    for (var key : keys) {
+    for (var key : keysToRemove) {
       if (!failedKeys.contains(key) && (removeNoCopyOrAwait(key) != null)) {
         removed++;
       }

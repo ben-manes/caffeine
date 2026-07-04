@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache.integration;
 
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.ENTRIES;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
@@ -28,6 +29,7 @@ import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -299,6 +301,29 @@ final class CacheWriterTest {
       keys.add(KEY_1);
 
       assertThrows(CacheWriterException.class, () -> fixture.jcache().removeAll(keys));
+    }
+  }
+
+  @Test
+  void removeAll_racingInsert() {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer);
+         var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+
+      // deleteAll runs between the key snapshot and the removal loop; a key inserted there must
+      // survive removeAll() and stay out of the writer's delete set (else the store retains it and
+      // a later read-through resurrects it)
+      doAnswer(invocation -> {
+        cache.put(KEY_2, VALUE_2);
+        return null;
+      }).when(writer).deleteAll(any());
+
+      cache.removeAll();
+
+      assertThat(cache.containsKey(KEY_1)).isFalse();
+      assertThat(cache.containsKey(KEY_2)).isTrue();
+      verify(writer).deleteAll(Set.of(KEY_1));
     }
   }
 
