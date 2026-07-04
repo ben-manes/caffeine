@@ -16,9 +16,14 @@
 package com.github.benmanes.caffeine.examples.coalescing.bulkloader;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -41,6 +46,8 @@ import reactor.core.scheduler.Schedulers;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CoalescingBulkLoader<K, V> implements AsyncCacheLoader<K, V> {
+  private static final Logger logger = System.getLogger(CoalescingBulkLoader.class.getName());
+
   private final Sinks.Many<Entry<K, CompletableFuture<V>>> sink;
   private final Function<Set<K>, Map<K, V>> mappingFunction;
 
@@ -50,10 +57,11 @@ public final class CoalescingBulkLoader<K, V> implements AsyncCacheLoader<K, V> 
     sink.asFlux()
         .bufferTimeout(builder.maxSize, builder.maxTime)
         .map(requests -> requests.stream().collect(
-            toMap(Entry::getKey, Entry::getValue)))
+            groupingBy(Entry::getKey, mapping(Entry::getValue, toList()))))
         .parallel(builder.parallelism)
         .runOn(Schedulers.boundedElastic())
-        .subscribe(this::handle);
+        .subscribe(this::handle, error ->
+            logger.log(Level.ERROR, "CoalescingBulkLoader pipeline terminated", error));
   }
 
   @Override
@@ -63,12 +71,16 @@ public final class CoalescingBulkLoader<K, V> implements AsyncCacheLoader<K, V> 
     return entry.getValue();
   }
 
-  private void handle(Map<K, CompletableFuture<V>> requests) {
+  private void handle(Map<K, List<CompletableFuture<V>>> requests) {
     try {
       var results = mappingFunction.apply(requests.keySet());
-      requests.forEach((key, result) -> result.complete(results.get(key)));
+      requests.forEach((key, futures) -> {
+        var value = results.get(key);
+        futures.forEach(future -> future.complete(value));
+      });
     } catch (Throwable t) {
-      requests.forEach((key, result) -> result.completeExceptionally(t));
+      requests.values().stream().flatMap(List::stream)
+          .forEach(future -> future.completeExceptionally(t));
     }
   }
 
@@ -81,21 +93,31 @@ public final class CoalescingBulkLoader<K, V> implements AsyncCacheLoader<K, V> 
     /** The maximum collected size before performing a bulk request. */
     @CanIgnoreReturnValue
     public Builder<K, V> maxSize(int maxSize) {
-      this.maxSize = requireNonNull(maxSize);
+      if (maxSize <= 0) {
+        throw new IllegalArgumentException("maxSize must be positive");
+      }
+      this.maxSize = maxSize;
       return this;
     }
 
     /** The maximum duration to wait before performing a bulk request. */
     @CanIgnoreReturnValue
     public Builder<K, V> maxTime(Duration maxTime) {
-      this.maxTime = requireNonNull(maxTime);
+      requireNonNull(maxTime);
+      if (maxTime.isNegative() || maxTime.isZero()) {
+        throw new IllegalArgumentException("maxTime must be positive");
+      }
+      this.maxTime = maxTime;
       return this;
     }
 
     /** The number of parallel bulk loads that can be performed. */
     @CanIgnoreReturnValue
     public Builder<K, V> parallelism(int parallelism) {
-      this.parallelism = requireNonNull(parallelism);
+      if (parallelism <= 0) {
+        throw new IllegalArgumentException("parallelism must be positive");
+      }
+      this.parallelism = parallelism;
       return this;
     }
 

@@ -47,9 +47,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * is optimistically promoted on insert.
  * <p>
  * The algorithm is explained by the authors in
- * <a href="https://github.com/torvalds/linux/blob/ac3a0c8472969a03c0496ae774b3a29eb26c8d5a/mm/workingset.c">
+ * <a href="https://github.com/torvalds/linux/blob/6cbdd9726fb50d749b06ab45a8ef81dff02e69b8/mm/workingset.c">
  * linux/mm/workingset.c</a>. The target size of the active and inactive list is calculated in
- * <a href="https://github.com/torvalds/linux/blob/1590a2e1c681b0991bd42c992cabfd380e0338f2/mm/vmscan.c#L2176-L2204">
+ * <a href="https://github.com/torvalds/linux/blob/7404ce51637231382873d0b55edabc2f3b841a9d/mm/vmscan.c#L2229-L2257">
  * linux/mm/vmscan.c</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)

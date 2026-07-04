@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.examples.coalescing.bulkloader;
 
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.stream.Collectors.toMap;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -89,5 +90,35 @@ final class CoalescingBulkLoaderTest {
 
     long delay = TimeUnit.NANOSECONDS.toMillis(end.get() - start);
     assertThat(delay).isLessThan(maxTime.toMillis());
+  }
+
+  @Test
+  void duplicateKeysInBatch() throws Exception {
+    var loader = new CoalescingBulkLoader.Builder<Integer, Integer>()
+        .mappingFunction(keys -> keys.stream().collect(toMap(key -> key, key -> -key)))
+        .maxTime(Duration.ofMillis(100))
+        .parallelism(1)
+        .maxSize(2)
+        .build();
+    var cache = Caffeine.newBuilder().buildAsync(loader);
+
+    // Two loads of the same key land in one batch (invalidating the in-flight entry re-triggers a
+    // load) so a duplicate key must complete both futures
+    var first = cache.get(1);
+    cache.synchronous().invalidate(1);
+    var second = cache.get(1);
+
+    assertThat(first.get(5, TimeUnit.SECONDS)).isEqualTo(-1);
+    assertThat(second.get(5, TimeUnit.SECONDS)).isEqualTo(-1);
+    assertThat(cache.get(2).get(5, TimeUnit.SECONDS)).isEqualTo(-2);
+  }
+
+  @Test
+  void invalidArguments() {
+    var builder = new CoalescingBulkLoader.Builder<Integer, Integer>();
+    assertThrows(IllegalArgumentException.class, () -> builder.maxSize(0));
+    assertThrows(IllegalArgumentException.class, () -> builder.parallelism(0));
+    assertThrows(IllegalArgumentException.class, () -> builder.maxTime(Duration.ZERO));
+    assertThrows(IllegalArgumentException.class, () -> builder.maxTime(Duration.ofMillis(-1)));
   }
 }
