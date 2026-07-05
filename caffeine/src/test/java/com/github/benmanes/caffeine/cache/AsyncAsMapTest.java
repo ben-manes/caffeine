@@ -74,6 +74,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterators;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1956,6 +1957,22 @@ final class AsyncAsMapTest {
     assertThat(cache.asMap().equals(other)).isFalse();
     assertThat(other.equals(cache.asMap())).isFalse();
     assertThat(cache.asMap().hashCode()).isNotEqualTo(other.hashCode());
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @SuppressWarnings("unlikely-arg-type")
+  @CacheSpec(population = Population.FULL,
+      removalListener = {Listener.DISABLED, Listener.REJECTING})
+  void equals_incompatibleKeyType(AsyncCache<Int, Int> cache) {
+    // A same-size foreign map whose get() rejects our key type must compare unequal, not
+    // propagate the exception, matching ConcurrentHashMap and AbstractMap (JDK-8372256)
+    @Var int i = 0;
+    var incompatible = new TreeMap<Object, CompletableFuture<Int>>();
+    for (var value : cache.asMap().values()) {
+      incompatible.put("caffeine" + i++, value);
+    }
+    assertThat(cache.asMap().equals(incompatible)).isFalse();
   }
 
   @CheckNoStats

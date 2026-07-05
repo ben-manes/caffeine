@@ -3235,20 +3235,24 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     long now = expirationTicker().read();
     @Var int count = 0;
-    for (var node : data.values()) {
-      K key = node.getKey();
-      V value = node.getValue();
-      if ((key == null) || (value == null)
-          || !node.isAlive() || hasExpired(node, now, value)) {
-        scheduleDrainBuffers();
-        return false;
-      } else {
-        var val = map.get(key);
-        if ((val == null) || ((val != value) && !val.equals(value))) {
+    try {
+      for (var node : data.values()) {
+        K key = node.getKey();
+        V value = node.getValue();
+        if ((key == null) || (value == null)
+            || !node.isAlive() || hasExpired(node, now, value)) {
+          scheduleDrainBuffers();
           return false;
+        } else {
+          var val = map.get(key);
+          if ((val == null) || ((val != value) && !val.equals(value))) {
+            return false;
+          }
         }
+        count++;
       }
-      count++;
+    } catch (ClassCastException | NullPointerException ignored) {
+      return false;
     }
     return (count == expectedSize);
   }

@@ -112,6 +112,15 @@
     <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
   </Match>
   <Match>
+    <Or>
+      <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
+      <Class name="com.github.benmanes.caffeine.cache.UnboundedLocalCache"/>
+      <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsMapView"/>
+    </Or>
+    <Method name="equals"/>
+    <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache$AddTask"/>
     <Method name="run"/>
     <Bug pattern="USO_UNSAFE_OBJECT_SYNCHRONIZATION"/>

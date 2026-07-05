@@ -1240,13 +1240,17 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Var int count = 0;
-      for (var iterator = new EntryIterator(); iterator.hasNext();) {
-        var entry = iterator.next();
-        var value = map.get(entry.getKey());
-        if ((value == null) || ((value != entry.getValue()) && !value.equals(entry.getValue()))) {
-          return false;
+      try {
+        for (var iterator = new EntryIterator(); iterator.hasNext();) {
+          var entry = iterator.next();
+          var value = map.get(entry.getKey());
+          if ((value == null) || ((value != entry.getValue()) && !value.equals(entry.getValue()))) {
+            return false;
+          }
+          count++;
         }
-        count++;
+      } catch (ClassCastException | NullPointerException ignored) {
+        return false;
       }
       return (count == expectedSize);
     }
@@ -1423,14 +1427,13 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
-      @SuppressWarnings("PMD.UnusedNullCheckInEquals")
       public boolean remove(@Nullable Object o) {
         if (o == null) {
           return false;
         }
         for (var entry : delegate.entrySet()) {
           V value = Async.getIfReady(entry.getValue());
-          if ((value != null) && o.equals(value) && AsMapView.this.remove(entry.getKey(), value)) {
+          if (o.equals(value) && AsMapView.this.remove(entry.getKey(), value)) {
             return true;
           }
         }
@@ -1555,7 +1558,6 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
-      @SuppressWarnings("PMD.UnusedNullCheckInEquals")
       public boolean contains(Object o) {
         if (!(o instanceof Entry<?, ?>)) {
           return false;
@@ -1567,7 +1569,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           return false;
         }
         V cachedValue = Async.getIfReady(delegate.getIfPresentQuietly(key));
-        return (cachedValue != null) && value.equals(cachedValue);
+        return value.equals(cachedValue);
       }
 
       @Override

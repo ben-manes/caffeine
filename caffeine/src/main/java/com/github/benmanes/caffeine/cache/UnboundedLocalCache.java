@@ -560,7 +560,14 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
   public boolean equals(@Nullable Object o) {
-    return (o == this) || data.equals(o);
+    if (o == this) {
+      return true;
+    }
+    try {
+      return data.equals(o);
+    } catch (ClassCastException | NullPointerException ignored) {
+      return false;
+    }
   }
 
   @Override
@@ -980,7 +987,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    @SuppressWarnings({"PMD.UnusedNullCheckInEquals", "SuspiciousMethodCalls"})
+    @SuppressWarnings("SuspiciousMethodCalls")
     public boolean contains(Object o) {
       if (!(o instanceof Entry<?, ?>)) {
         return false;
@@ -992,7 +999,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         return false;
       }
       V cachedValue = cache.get(key);
-      return (cachedValue != null) && value.equals(cachedValue);
+      return value.equals(cachedValue);
     }
 
     @Override

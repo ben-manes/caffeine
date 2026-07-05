@@ -76,6 +76,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterators;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -2032,6 +2033,21 @@ final class AsMapTest {
       }
     };
     assertThat(cache.asMap().equals(sideEffect)).isFalse();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      removalListener = {Listener.DISABLED, Listener.REJECTING})
+  void equals_incompatibleKeyType(Map<Int, Int> map, CacheContext context) {
+    // A same-size foreign map whose get() rejects our key type must compare unequal, not
+    // propagate the exception, matching ConcurrentHashMap and AbstractMap (JDK-8372256)
+    @Var int i = 0;
+    var incompatible = new TreeMap<Object, Int>();
+    for (var value : context.original().values()) {
+      incompatible.put("caffeine" + i++, value);
+    }
+    assertThat(map.equals(incompatible)).isFalse();
   }
 
   /* --------------- toString --------------- */
