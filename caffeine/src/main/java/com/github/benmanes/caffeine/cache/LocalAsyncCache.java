@@ -544,7 +544,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
     @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     @Override public boolean equals(@Nullable Object o) {
-      return asyncCache.cache().equals(o);
+      return (o == this) || asyncCache.cache().equals(o);
     }
     @Override public int hashCode() {
       return asyncCache.cache().hashCode();

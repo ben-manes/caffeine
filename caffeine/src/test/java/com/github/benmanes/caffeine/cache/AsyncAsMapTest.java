@@ -60,6 +60,7 @@ import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1911,6 +1912,19 @@ final class AsyncAsMapTest {
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void equals_self(AsyncCache<Int, Int> cache) {
     assertThat(cache.asMap().equals(cache.asMap())).isTrue();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @SuppressWarnings("SelfEquals")
+  @CacheSpec(population = Population.FULL,
+      expireAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.DISABLED)
+  void equals_self_expired(AsyncCache<Int, Int> cache, CacheContext context) {
+    // Reflexivity must hold even with an expired-but-unreaped entry, which the delegated
+    // cache().equals would otherwise treat as unequal
+    context.ticker().advance(Duration.ofMinutes(2));
+    var view = cache.asMap();
+    assertThat(view.equals(view)).isTrue();
   }
 
   @CheckNoStats
