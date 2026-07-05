@@ -438,10 +438,10 @@ public final class CacheContextSubject extends Subject {
                 .addCopies(cause, entries.length).build());
           });
           if (cause.wasEvicted()) {
-            var canComputeWeight = context.isCaffeine() && Arrays.stream(entries)
+            boolean canComputeWeight = context.isCaffeine() && Arrays.stream(entries)
                 .allMatch(entry -> (entry.getKey() != null) && (entry.getValue() != null));
             if (canComputeWeight) {
-              var expectedWeight = Arrays.stream(entries)
+              long expectedWeight = Arrays.stream(entries)
                   .mapToLong(entry -> context.weigher().weigh(entry.getKey(), entry.getValue()))
                   .sum();
               statsSubject().evictions(entries.length).evictionWeight(expectedWeight);

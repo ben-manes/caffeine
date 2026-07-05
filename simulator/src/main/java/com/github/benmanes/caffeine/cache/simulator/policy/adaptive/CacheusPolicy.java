@@ -375,7 +375,7 @@ public final class CacheusPolicy implements KeyOnlyPolicy {
     double hitRateCurr = round3(windowHits / (double) maximumSize);
     double hitRateDiff = round3(hitRateCurr - hitRatePrev);
     double product = deltaLr * hitRateDiff;
-    var delta = (int) Math.signum(product);
+    double delta = (int) Math.signum(product);
 
     if (delta > 0) {
       learningRate = Math.min(learningRate + Math.abs(learningRate * deltaLr), LR_MAX);

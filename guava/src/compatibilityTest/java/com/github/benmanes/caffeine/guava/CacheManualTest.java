@@ -33,7 +33,7 @@ import junit.framework.TestCase;
 /**
  * @author Charles Fry
  */
-@SuppressWarnings({"Var", "Varifier"})
+@SuppressWarnings({"JdkObsolete", "Var", "Varifier"})
 public class CacheManualTest extends TestCase {
 
   public void testGetIfPresent() {

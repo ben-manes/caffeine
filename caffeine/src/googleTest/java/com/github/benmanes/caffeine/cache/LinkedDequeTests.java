@@ -43,6 +43,7 @@ import junit.framework.TestSuite;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("JdkObsolete")
 public final class LinkedDequeTests extends TestCase {
   static final LinkedValue a = new LinkedValue("a");
   static final LinkedValue b = new LinkedValue("b");

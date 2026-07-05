@@ -194,14 +194,16 @@ final class CaffeineTest {
 
   @Test
   void hasMethodOverride_absent() {
-    var overridden = Caffeine.hasMethodOverride(CacheLoader.class, loader, "loadAll", Set.class);
+    boolean overridden = Caffeine.hasMethodOverride(
+        CacheLoader.class, loader, "loadAll", Set.class);
     assertThat(overridden).isFalse();
   }
 
   @Test
   @CheckMaxLogLevel(WARN)
   void hasMethodOverride_notFound() {
-    var overridden = Caffeine.hasMethodOverride(CacheLoader.class, loader, "abc_xyz", Set.class);
+    boolean overridden = Caffeine.hasMethodOverride(
+        CacheLoader.class, loader, "abc_xyz", Set.class);
     assertThat(overridden).isFalse();
   }
 
@@ -215,7 +217,7 @@ final class CaffeineTest {
         throw new AssertionError();
       }
     };
-    var overridden = Caffeine.hasMethodOverride(
+    boolean overridden = Caffeine.hasMethodOverride(
         CacheLoader.class, cacheLoader, "loadAll", Set.class);
     assertThat(overridden).isTrue();
   }

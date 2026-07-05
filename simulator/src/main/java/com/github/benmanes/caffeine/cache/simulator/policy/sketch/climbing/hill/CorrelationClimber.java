@@ -81,7 +81,8 @@ public final class CorrelationClimber extends AbstractClimber {
       degradeCount = 0;
     }
 
-    var sign = (int) Math.signum(dw * dHr);
+    @SuppressWarnings("Varifier")
+    int sign = (int) Math.signum(dw * dHr);
     if (sign == 0) {
       // Flat hit-rate response; hold and let the next sample give us a signal
       return 0;

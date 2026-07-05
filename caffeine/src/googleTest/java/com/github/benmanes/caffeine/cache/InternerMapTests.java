@@ -30,6 +30,7 @@ import junit.framework.TestSuite;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("JdkObsolete")
 public final class InternerMapTests extends TestCase {
 
   @SuppressWarnings("PMD.JUnit4SuitesShouldUseSuiteAnnotation")

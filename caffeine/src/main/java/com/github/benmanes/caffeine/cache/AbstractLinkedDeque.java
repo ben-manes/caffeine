@@ -323,6 +323,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   public abstract boolean remove(Object o);
 
   @Override
+  @SuppressWarnings("DequeRemoveFirstOccurrence")
   public boolean removeFirstOccurrence(Object o) {
     return remove(o);
   }
@@ -334,11 +335,13 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   @Override
+  @SuppressWarnings("DequeRemoveFirstOccurrence")
   public boolean removeLastOccurrence(Object o) {
     return remove(o);
   }
 
   @Override
+  @SuppressWarnings("DequeRemoveFirstOccurrence")
   public boolean removeAll(Collection<?> c) {
     @Var boolean modified = false;
     for (Object o : c) {

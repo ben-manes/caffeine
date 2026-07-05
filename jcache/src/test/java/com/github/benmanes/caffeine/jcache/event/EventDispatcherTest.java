@@ -440,7 +440,7 @@ final class EventDispatcherTest {
     CacheEntryEventFilter<Integer, Integer> rejectFilter = event -> false;
     CacheEntryEventFilter<Integer, Integer> allowFilter = event -> true;
 
-    var isOldValueRequired = false;
+    boolean isOldValueRequired = false;
     for (var listener : listeners) {
       for (boolean synchronous : List.of(true, false)) {
         dispatcher.register(new MutableCacheEntryListenerConfiguration<>(

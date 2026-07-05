@@ -52,7 +52,8 @@ final class FastFlowBuffer<E> extends FastFlowHeader.ReadAndWriteCounterRef<E> {
     }
 
     if (casWriteCounter(tail, tail + 1)) {
-      var index = (int) (tail & BUFFER_MASK);
+      @SuppressWarnings("Varifier")
+      int index = (int) (tail & BUFFER_MASK);
       BUFFER.setRelease(buffer, index, e);
       return SUCCESS;
     }
@@ -69,7 +70,8 @@ final class FastFlowBuffer<E> extends FastFlowHeader.ReadAndWriteCounterRef<E> {
       return;
     }
     do {
-      var index = (int) (head & BUFFER_MASK);
+      @SuppressWarnings("Varifier")
+      int index = (int) (head & BUFFER_MASK);
       var e = (E) BUFFER.getAcquire(buffer, index);
       if (e == null) {
         // not published yet

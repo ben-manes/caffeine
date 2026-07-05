@@ -327,7 +327,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
     LONG_TERM,
   }
 
-  static final class Node {
+  private static final class Node {
     final long key;
 
     @Nullable Node prev;
@@ -348,7 +348,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
     }
 
     /** Appends the node to the tail of the list. */
-    public void appendToTail(Node head) {
+    void appendToTail(Node head) {
       Node tail = requireNonNull(head.prev);
       head.prev = this;
       tail.next = this;
@@ -357,7 +357,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
     }
 
     /** Moves the node to the tail. */
-    public void moveToTail(Node head) {
+    void moveToTail(Node head) {
       requireNonNull(head.prev);
       requireNonNull(prev);
       requireNonNull(next);
@@ -374,7 +374,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
     }
 
     /** Removes the node from the list. */
-    public void remove() {
+    void remove() {
       requireNonNull(prev);
       requireNonNull(next);
 

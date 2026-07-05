@@ -64,13 +64,13 @@ public final class TrustRegionEwmaClimber extends AbstractClimber {
 
   @Override
   protected double adjust(double hitRate) {
-    var delta = (hitRate - previousHitRate);
-    var absPrev = previousAbsDelta;
-    var absCur = Math.abs(delta);
+    double delta = (hitRate - previousHitRate);
+    double absPrev = previousAbsDelta;
+    double absCur = Math.abs(delta);
     smoothedAbsDelta = ((1.0 - ewmaAlpha) * smoothedAbsDelta) + (ewmaAlpha * absCur);
 
     if (absPrev > 1e-12) {
-      var ratio = (smoothedAbsDelta / absPrev);
+      double ratio = (smoothedAbsDelta / absPrev);
       if (ratio < shrinkThreshold) {
         stepSize *= shrinkFactor;
       } else if (ratio > growThreshold) {

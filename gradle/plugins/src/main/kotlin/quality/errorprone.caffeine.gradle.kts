@@ -99,6 +99,7 @@ private fun disabledChecks() = listOf(
   "MultipleTopLevelClasses",
   "PatternMatchingInstanceof",
   "RedundantNullCheck",
+  "ReferenceEquality",
   "Slf4jLoggerDeclaration",
   "StatementSwitchToExpressionSwitch",
   "StaticImport",

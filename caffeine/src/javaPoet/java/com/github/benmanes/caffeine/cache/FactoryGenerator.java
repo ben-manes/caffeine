@@ -82,7 +82,7 @@ final class FactoryGenerator {
       var parentFeatures = parentFeatures(features);
       var parentClassName = classNameOf(parentFeatures);
       var higherKey = classNameToFeatures.higherKey(className);
-      var isLeaf = (higherKey == null) || !higherKey.startsWith(className);
+      boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
       checkInheritance(className, parentClassName);
       types.add(specFactory.create(className, parentClassName,
           isLeaf, parentFeatures, generateFeatures(features)));
@@ -96,7 +96,7 @@ final class FactoryGenerator {
     for (var features : featureCombinations) {
       classNameToFeatures.put(classNameOf(features), features);
     }
-    return classNameToFeatures.build();
+    return classNameToFeatures.buildOrThrow();
   }
 
   /** Returns the encoded class name, naming the features in canonical (not set iteration) order. */

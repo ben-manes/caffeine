@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.lirs;
 
+import static java.util.function.Predicate.not;
+
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -36,7 +38,7 @@ public final class LirsTraceReader extends TextTraceReader implements KeyOnlyTra
   public LongStream keys() {
     return lines()
         .filter(line -> !line.equals("*"))
-        .filter(line -> !line.isEmpty())
+        .filter(not(String::isEmpty))
         .mapToLong(Long::parseLong);
   }
 }

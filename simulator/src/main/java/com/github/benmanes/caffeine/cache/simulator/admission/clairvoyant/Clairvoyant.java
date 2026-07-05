@@ -83,8 +83,8 @@ public final class Clairvoyant implements KeyOnlyAdmitter {
 
   @Override
   public boolean admit(long candidateKey, long victimKey) {
-    var candidateTime = nextAccessTime(candidateKey);
-    var victimTime = nextAccessTime(victimKey);
+    int candidateTime = nextAccessTime(candidateKey);
+    int victimTime = nextAccessTime(victimKey);
     if (candidateTime > victimTime) {
       policyStats.recordRejection();
       return false;
@@ -100,8 +100,8 @@ public final class Clairvoyant implements KeyOnlyAdmitter {
 
   private static Long2ObjectMap<IntList> readAccessTimes(BasicSettings settings) {
     checkState(!settings.trace().isSynthetic(), "Synthetic traces cannot be predicted");
-    var skip = settings.trace().skip();
-    var limit = settings.trace().limit();
+    long skip = settings.trace().skip();
+    long limit = settings.trace().limit();
     var accessTimes = new Long2ObjectOpenHashMap<IntList>();
     var trace = settings.trace().traceFiles().format()
         .readFiles(settings.trace().traceFiles().paths());

@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Ported from Eclipse Collections 11.0.
  */
+@SuppressWarnings("JUnitMethodInvoked")
 abstract class ConcurrentHashMapTestCase extends MutableMapTestCase {
 
   @Override

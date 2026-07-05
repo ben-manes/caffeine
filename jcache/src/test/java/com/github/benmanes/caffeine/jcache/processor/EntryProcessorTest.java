@@ -122,7 +122,7 @@ final class EntryProcessorTest {
 
   @SuppressFBWarnings("AI_ANNOTATION_ISSUES_NEEDS_NULLABLE")
   private static Object process(MutableEntry<Integer, Integer> entry) {
-    var value = 1 + firstNonNull(entry.getValue(), 0);
+    int value = 1 + firstNonNull(entry.getValue(), 0);
     entry.setValue(value);
     return nullRef();
   }

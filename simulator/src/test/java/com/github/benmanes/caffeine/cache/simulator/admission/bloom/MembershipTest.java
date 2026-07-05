@@ -70,7 +70,8 @@ final class MembershipTest {
 
       Membership filter = filterType.create(config);
       int falsePositives = falsePositives(filter, input);
-      var expectedInsertions = (int) (capacity * EXPECTED_INSERTIONS_MULTIPLIER);
+      @SuppressWarnings("Varifier")
+      int expectedInsertions = (int) (capacity * EXPECTED_INSERTIONS_MULTIPLIER);
       double falsePositiveRate = ((double) falsePositives / expectedInsertions);
 
       if (!Double.isNaN(falsePositiveRate)) {

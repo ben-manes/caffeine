@@ -2450,7 +2450,7 @@ final class AsyncAsMapTest {
   void keySpliterator_tryAdvance(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().keySet().spliterator();
     var consumed = new LinkedHashSet<Int>();
-    @Var var advanced = 0;
+    @Var int advanced = 0;
     for (;;) {
       boolean remaining = spliterator.tryAdvance(key -> {
         assertThat(cache).containsKey(key);
@@ -2977,7 +2977,7 @@ final class AsyncAsMapTest {
   void valueSpliterator_tryAdvance(AsyncCache<Int, Int> cache, CacheContext context) {
     var spliterator = cache.asMap().values().spliterator();
     var consumed = new LinkedHashSet<Int>();
-    @Var var advanced = 0;
+    @Var int advanced = 0;
     for (;;) {
       boolean remaining = spliterator.tryAdvance(value -> {
         assertThat(cache).containsValue(value);
@@ -3722,7 +3722,7 @@ final class AsyncAsMapTest {
     var expected = new ImmutableMap.Builder<Int, CompletableFuture<@Nullable Int>>()
         .put(context.absentKey(), future)
         .putAll(cache.asMap())
-        .build();
+        .buildOrThrow();
     cache.put(context.absentKey(), future);
     assertThat(cache.asMap().entrySet().stream().toArray(Map.Entry<?, ?>[]::new)).asList()
         .containsExactlyElementsIn(expected.entrySet());

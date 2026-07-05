@@ -69,7 +69,7 @@ public final class TableReporter extends TextReporter {
   private static String formatObject(@Nullable Object object) {
     if (object instanceof Stopwatch stopwatch) {
       var parts = Splitter.on(' ').splitToList(stopwatch.toString());
-      var duration = Double.parseDouble(parts.getFirst());
+      double duration = Double.parseDouble(parts.getFirst());
       return String.format(US, "%.1f %s", duration, parts.getLast());
     }
     return (object == null) ? "" : object.toString();

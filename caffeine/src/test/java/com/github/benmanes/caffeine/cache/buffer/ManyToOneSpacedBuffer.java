@@ -51,7 +51,8 @@ final class ManyToOneSpacedBuffer<E> extends ManyToOneSpacedHeader.ReadAndWriteC
       return FULL;
     }
     if (casWriteCounter(tail, tail + OFFSET)) {
-      var index = (int) (tail & SPACED_MASK);
+      @SuppressWarnings("Varifier")
+      int index = (int) (tail & SPACED_MASK);
       BUFFER.setRelease(buffer, index, e);
       return SUCCESS;
     }
@@ -68,7 +69,8 @@ final class ManyToOneSpacedBuffer<E> extends ManyToOneSpacedHeader.ReadAndWriteC
       return;
     }
     do {
-      var index = (int) (head & SPACED_MASK);
+      @SuppressWarnings("Varifier")
+      int index = (int) (head & SPACED_MASK);
       var e = (E) BUFFER.getAcquire(buffer, index);
       if (e == null) {
         // not published yet

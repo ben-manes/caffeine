@@ -2410,7 +2410,7 @@ final class AsMapTest {
       writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
-      var modified = map.keySet().removeIf(key -> key.equals(context.firstKey()));
+      boolean modified = map.keySet().removeIf(key -> key.equals(context.firstKey()));
       if (context.isGuava()) {
         assertThat(modified).isTrue();
       } else {
@@ -2532,7 +2532,7 @@ final class AsMapTest {
       writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
-      var modified = map.keySet().retainAll(context.original().keySet());
+      boolean modified = map.keySet().retainAll(context.original().keySet());
       if (context.isGuava()) {
         assertThat(modified).isTrue();
       } else {
@@ -2635,7 +2635,7 @@ final class AsMapTest {
   void keySpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     var spliterator = map.keySet().spliterator();
     var consumed = new LinkedHashSet<Int>();
-    @Var var advanced = 0;
+    @Var int advanced = 0;
     for (;;) {
       boolean remaining = spliterator.tryAdvance(key -> {
         assertThat(map).containsKey(key);
@@ -2930,7 +2930,7 @@ final class AsMapTest {
       await().untilTrue(computing);
 
       var value = requireNonNull(context.original().get(context.firstKey()));
-      var modified = map.values().remove(value);
+      boolean modified = map.values().remove(value);
       if (context.isGuava()) {
         assertThat(modified).isTrue();
       } else {
@@ -3088,7 +3088,7 @@ final class AsMapTest {
     future.complete(context.absentValue());
 
     assertThat(cache).containsExactlyEntriesIn(new ImmutableMap.Builder<Int, Int>()
-        .putAll(context.original()).put(context.absentKey(), context.absentValue()).build());
+        .putAll(context.original()).put(context.absentKey(), context.absentValue()).buildOrThrow());
     assertThat(context).removalNotifications().isEmpty();
   }
 
@@ -3179,7 +3179,7 @@ final class AsMapTest {
       writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
-      var modified = map.values().retainAll(context.original().values());
+      boolean modified = map.values().retainAll(context.original().values());
       if (context.isGuava()) {
         assertThat(modified).isTrue();
       } else {
@@ -3340,7 +3340,7 @@ final class AsMapTest {
   void valueSpliterator_tryAdvance(Map<Int, Int> map, CacheContext context) {
     var spliterator = map.values().spliterator();
     var consumed = new LinkedHashSet<Int>();
-    @Var var advanced = 0;
+    @Var int advanced = 0;
     for (;;) {
       boolean remaining = spliterator.tryAdvance(value -> {
         assertThat(map).containsValue(value);
@@ -4025,7 +4025,7 @@ final class AsMapTest {
       writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
-      var modified = map.entrySet().retainAll(context.original().entrySet());
+      boolean modified = map.entrySet().retainAll(context.original().entrySet());
       if (context.isGuava()) {
         assertThat(modified).isTrue();
       } else {

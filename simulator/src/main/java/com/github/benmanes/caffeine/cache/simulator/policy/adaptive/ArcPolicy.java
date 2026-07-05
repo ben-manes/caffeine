@@ -237,7 +237,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     T2, B2,
   }
 
-  static final class Node {
+  private static final class Node {
     final long key;
 
     @Nullable Node prev;
@@ -255,7 +255,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     }
 
     /** Appends the node to the tail of the list. */
-    public void appendToTail(Node head) {
+    void appendToTail(Node head) {
       Node tail = requireNonNull(head.prev);
       head.prev = this;
       tail.next = this;
@@ -264,7 +264,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     }
 
     /** Removes the node from the list. */
-    public void remove() {
+    void remove() {
       requireNonNull(prev);
       requireNonNull(next);
 

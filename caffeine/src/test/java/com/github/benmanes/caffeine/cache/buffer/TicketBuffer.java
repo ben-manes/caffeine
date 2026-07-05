@@ -15,10 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * A bounded buffer that attempts to record once. This design has the benefit of retaining a
@@ -50,7 +50,8 @@ final class TicketBuffer<E> extends ReadBuffer<E> {
   @Override
   public int offer(E e) {
     long writeCount = writeCounter.get();
-    var index = (int) (writeCount & BUFFER_MASK);
+    @SuppressWarnings("Varifier")
+    int index = (int) (writeCount & BUFFER_MASK);
     AtomicReference<Object> slot = buffer[index];
     Object value = slot.get();
     if (!(value instanceof Turn)) {
@@ -73,7 +74,8 @@ final class TicketBuffer<E> extends ReadBuffer<E> {
   @SuppressFBWarnings("AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE")
   protected void drainTo(Consumer<E> consumer) {
     for (int i = 0; i < BUFFER_SIZE; i++) {
-      var index = (int) (readCounter & BUFFER_MASK);
+      @SuppressWarnings("Varifier")
+      int index = (int) (readCounter & BUFFER_MASK);
       AtomicReference<Object> slot = buffer[index];
       if (slot.get() instanceof Turn) {
         break;

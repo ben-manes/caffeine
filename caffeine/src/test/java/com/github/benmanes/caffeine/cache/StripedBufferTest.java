@@ -50,7 +50,7 @@ final class StripedBufferTest {
   void init_null(FakeBuffer<Integer> buffer) {
     assertThat(buffer.table).isNull();
 
-    var result = buffer.offer(ELEMENT);
+    int result = buffer.offer(ELEMENT);
     assertThat(buffer.table).hasLength(1);
     assertThat(result).isEqualTo(SUCCESS);
   }
@@ -60,7 +60,7 @@ final class StripedBufferTest {
   void init_empty(FakeBuffer<Integer> buffer) {
     buffer.table = new Buffer[0];
 
-    var result = buffer.offer(ELEMENT);
+    int result = buffer.offer(ELEMENT);
     assertThat(buffer.table).hasLength(1);
     assertThat(result).isEqualTo(SUCCESS);
   }
@@ -70,7 +70,7 @@ final class StripedBufferTest {
     var buffer = new FakeBuffer<Integer>(FAILED);
     assertThat(buffer.offer(ELEMENT)).isEqualTo(SUCCESS);
 
-    @Var var success = false;
+    @Var boolean success = false;
     for (int i = 0; i < 64; i++) {
       int result = buffer.offer(ELEMENT);
       success |= (result == SUCCESS);

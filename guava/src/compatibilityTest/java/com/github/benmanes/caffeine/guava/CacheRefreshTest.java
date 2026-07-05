@@ -30,7 +30,7 @@ import junit.framework.TestCase;
  *
  * @author Charles Fry
  */
-@SuppressWarnings({"PreferJavaTimeOverload", "Var", "Varifier"})
+@SuppressWarnings({"JdkObsolete", "PreferJavaTimeOverload", "Var", "Varifier"})
 public class CacheRefreshTest extends TestCase {
   public void testAutoRefresh() {
     FakeTicker ticker = new FakeTicker();

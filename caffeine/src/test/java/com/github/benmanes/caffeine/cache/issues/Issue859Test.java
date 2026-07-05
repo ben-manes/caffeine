@@ -68,7 +68,7 @@ final class Issue859Test {
         .executor(executor)
         .build();
     for (int i = 0; i < NUMBER_OF_KEYS; i++) {
-      var key = i;
+      int key = i;
       executor.execute(() -> cache.put(key, true));
     }
 

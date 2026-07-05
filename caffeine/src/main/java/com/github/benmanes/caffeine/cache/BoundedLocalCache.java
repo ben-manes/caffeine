@@ -699,10 +699,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return;
     }
 
-    var max = Math.min(maximum, MAXIMUM_CAPACITY);
-    var window = max - (long) (PERCENT_MAIN * max);
-    var mainProtected = (long) (PERCENT_MAIN_PROTECTED * (max - window));
-    var stepSize = Math.max(HILL_CLIMBER_STEP_PERCENT * max, HILL_CLIMBER_MIN_INITIAL_STEP);
+    long max = Math.min(maximum, MAXIMUM_CAPACITY);
+    long window = max - (long) (PERCENT_MAIN * max);
+    long mainProtected = (long) (PERCENT_MAIN_PROTECTED * (max - window));
+    double stepSize = Math.max(HILL_CLIMBER_STEP_PERCENT * max, HILL_CLIMBER_MIN_INITIAL_STEP);
 
     setMaximum(max);
     setWindowMaximum(window);
@@ -962,12 +962,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (head == null) {
       return remaining;
     }
-    var duration = expiresAfterAccessNanos();
+    long duration = expiresAfterAccessNanos();
     var last = requireNonNull(accessOrderDeque.peekLast());
     for (var node = head; (node != null) && (remaining > 0);) {
       var next = (node == last) ? null : node.getNextInAccessOrder();
       if ((now - node.getAccessTime()) < duration) {
-        var stalePosition = ((last.getAccessTime() - node.getAccessTime()) < 0);
+        boolean stalePosition = ((last.getAccessTime() - node.getAccessTime()) < 0);
         if (stalePosition || isComputingAsync(node.getValue())) {
           accessOrderDeque.moveToBack(node);
           node = next;
@@ -993,13 +993,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (head == null) {
       return;
     }
-    var duration = expiresAfterWriteNanos();
+    long duration = expiresAfterWriteNanos();
     @Var int remaining = EXPIRATION_THRESHOLD;
     var last = requireNonNull(writeOrderDeque().peekLast());
     for (var node = head; (node != null) && (remaining > 0);) {
       var next = (node == last) ? null : node.getNextInWriteOrder();
       if ((now - node.getWriteTime()) < duration) {
-        var stalePosition = ((last.getWriteTime() - node.getWriteTime()) < 0);
+        boolean stalePosition = ((last.getWriteTime() - node.getWriteTime()) < 0);
         if (stalePosition || isComputingAsync(node.getValue())) {
           writeOrderDeque().moveToBack(node);
           node = next;

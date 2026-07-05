@@ -32,8 +32,8 @@ import junit.framework.TestSuite;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"JUnitClassModifiers", "JUnitMethodDeclaration",
-    "PMD.JUnit4SuitesShouldUseSuiteAnnotation"})
+@SuppressWarnings({"JdkObsolete", "JUnitClassModifiers",
+    "JUnitMethodDeclaration", "PMD.JUnit4SuitesShouldUseSuiteAnnotation"})
 public final class CaffeineMapTests extends TestCase {
 
   public static Test suite() {

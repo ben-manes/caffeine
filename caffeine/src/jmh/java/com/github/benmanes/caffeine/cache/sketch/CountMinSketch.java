@@ -82,7 +82,8 @@ public final class CountMinSketch<E> {
    */
   public void ensureCapacity(long maximumSize) {
     checkArgument(maximumSize >= 0);
-    var maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
+    @SuppressWarnings("Varifier")
+    int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
     if ((table != null) && (table.length >= maximum)) {
       return;
     }
@@ -119,8 +120,9 @@ public final class CountMinSketch<E> {
     int start = (hash & 3) << 2;
     @Var int frequency = Integer.MAX_VALUE;
     for (int i = 0; i < 4; i++) {
-      var index = indexOf(hash, i);
-      var count = (int) ((table[index] >>> ((start + i) << 2)) & 0xfL);
+      int index = indexOf(hash, i);
+      @SuppressWarnings("Varifier")
+      int count = (int) ((table[index] >>> ((start + i) << 2)) & 0xfL);
       frequency = Math.min(frequency, count);
     }
     return frequency;

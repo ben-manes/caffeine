@@ -28,7 +28,7 @@ import junit.framework.TestCase;
  *
  * @author Charles Fry
  */
-@SuppressWarnings({"Var", "Varifier"})
+@SuppressWarnings({"JdkObsolete", "Var", "Varifier"})
 public class AbstractCacheTest extends TestCase {
 
   public void testEmptySimpleStats() {

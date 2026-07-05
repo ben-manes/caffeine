@@ -125,8 +125,8 @@ final class TimerWheelTest {
   @Test
   void findBucket_expired() {
     var timerWheel = new TimerWheel<Int, Int>();
-    var clock = ThreadLocalRandom.current().nextLong();
-    var duration = ThreadLocalRandom.current().nextLong(Long.MIN_VALUE, 0);
+    long clock = ThreadLocalRandom.current().nextLong();
+    long duration = ThreadLocalRandom.current().nextLong(Long.MIN_VALUE, 0);
 
     timerWheel.nanos = clock;
     var expected = timerWheel.findBucket(clock);
@@ -761,7 +761,8 @@ final class TimerWheelTest {
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       int indexOffset = ascending ? i : -i;
       int index = startLevel + indexOffset;
-      var ticks = (int) (timerWheel.nanos >>> SHIFT[index]);
+      @SuppressWarnings("Varifier")
+      int ticks = (int) (timerWheel.nanos >>> SHIFT[index]);
       int bucketMask = (timerWheel.wheel[index].length - 1);
       int startBucket = (ticks & bucketMask) + (ascending ? 1 : 0);
       for (int j = 0; j < timerWheel.wheel[index].length; j++) {
@@ -782,7 +783,8 @@ final class TimerWheelTest {
   private static void printTimerWheel(TimerWheel<?, ?> timerWheel) {
     var builder = new StringBuilder();
     for (int i = 0; i < timerWheel.wheel.length; i++) {
-      var ticks = (int) (timerWheel.nanos >>> SHIFT[i]);
+      @SuppressWarnings("Varifier")
+      int ticks = (int) (timerWheel.nanos >>> SHIFT[i]);
       int bucketMask = (timerWheel.wheel[i].length - 1);
       int index = (ticks & bucketMask);
       var buckets = new TreeMap<String, List<Object>>();

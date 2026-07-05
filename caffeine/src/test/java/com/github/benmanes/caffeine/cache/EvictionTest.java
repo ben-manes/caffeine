@@ -1379,7 +1379,7 @@ final class EvictionTest {
         .limit(context.original().size() / 2)
         .sum();
     var coldest = eviction.coldestWeighted(weightedSize);
-    var actualWeighedSize = coldest.entrySet().stream()
+    long actualWeighedSize = coldest.entrySet().stream()
         .mapToLong(entry -> context.weigher().weigh(entry.getKey(), entry.getValue()))
         .sum();
     if (context.isWeighted()) {
@@ -1591,7 +1591,7 @@ final class EvictionTest {
         .limit(context.original().size() / 2)
         .sum();
     var hottest = eviction.hottestWeighted(weightedSize);
-    var actualWeighedSize = hottest.entrySet().stream()
+    long actualWeighedSize = hottest.entrySet().stream()
         .mapToLong(entry -> context.weigher().weigh(entry.getKey(), entry.getValue()))
         .sum();
     if (context.isWeighted()) {

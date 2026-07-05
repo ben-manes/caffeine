@@ -741,7 +741,7 @@ final class BoundedLocalCacheTest {
   void maximumSize_noMaintenance(BoundedLocalCache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
     cache.drainStatus = REQUIRED;
-    var maximum = eviction.getMaximum();
+    long maximum = eviction.getMaximum();
     assertThat(cache.drainStatus).isEqualTo(REQUIRED);
     assertThat(maximum).isEqualTo(context.maximumWeightOrSize());
   }
@@ -1642,7 +1642,7 @@ final class BoundedLocalCacheTest {
       await().untilTrue(writing);
 
       var node = localCache.data.values().iterator().next();
-      var evicted = localCache.evictEntry(node, SIZE, 0);
+      boolean evicted = localCache.evictEntry(node, SIZE, 0);
       assertThat(evicted).isTrue();
 
       assertThat(future).succeedsWith(newValue);
@@ -2320,10 +2320,10 @@ final class BoundedLocalCacheTest {
 
     var buffer = cache.readBuffer;
     for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {
-      var result = buffer.offer(dummy);
+      int result = buffer.offer(dummy);
       assertThat(result).isEqualTo(Buffer.SUCCESS);
     }
-    @Var var result = buffer.offer(dummy);
+    @Var int result = buffer.offer(dummy);
     assertThat(result).isEqualTo(Buffer.FULL);
 
     var refreshed = cache.afterRead(dummy, /* now= */ 0, /* recordHit= */ true);
@@ -2608,7 +2608,8 @@ final class BoundedLocalCacheTest {
     cache.setStepSize(Math.copySign(Math.max(tinyStep, 0.001), cache.stepSize()));
 
     int baseSampleSize = cache.frequencySketch().sampleSize;
-    var cappedSampleSize = (int) (baseSampleSize * SMALL_CACHE_SAMPLE_RATIO_CAP);
+    @SuppressWarnings("Varifier")
+    int cappedSampleSize = (int) (baseSampleSize * SMALL_CACHE_SAMPLE_RATIO_CAP);
 
     // At the capped threshold, the climber should run.
     cache.setPreviousSampleHitRate(0.80);
@@ -4429,7 +4430,7 @@ final class BoundedLocalCacheTest {
       cache.cleanUp();
     }
 
-    var expectedDelay = context.expireAfterAccess().timeNanos()
+    long expectedDelay = context.expireAfterAccess().timeNanos()
         - (context.ticker().read() - cache.accessOrderWindowDeque().getFirst().getAccessTime());
     assertThat(cache.getExpirationDelay(context.ticker().read())).isEqualTo(expectedDelay);
   }
@@ -4461,7 +4462,7 @@ final class BoundedLocalCacheTest {
     context.ticker().advance(Duration.ofNanos(stepSize));
     cache.cleanUp();
 
-    var expectedDelay = context.expireAfterAccess().timeNanos()
+    long expectedDelay = context.expireAfterAccess().timeNanos()
         - (context.ticker().read() - cache.accessOrderProbationDeque().getFirst().getAccessTime());
     assertThat(cache.getExpirationDelay(context.ticker().read())).isEqualTo(expectedDelay);
   }
@@ -4494,7 +4495,7 @@ final class BoundedLocalCacheTest {
       node.setAccessTime(context.ticker().read());
     }
 
-    var expectedDelay = context.expireAfterAccess().timeNanos()
+    long expectedDelay = context.expireAfterAccess().timeNanos()
         - (context.ticker().read() - cache.accessOrderProtectedDeque().getFirst().getAccessTime());
     assertThat(cache.getExpirationDelay(context.ticker().read())).isEqualTo(expectedDelay);
   }
@@ -4517,7 +4518,7 @@ final class BoundedLocalCacheTest {
     }
     cache.cleanUp();
 
-    var expectedDelay = context.expireAfterWrite().timeNanos()
+    long expectedDelay = context.expireAfterWrite().timeNanos()
         - (context.ticker().read() - cache.writeOrderDeque().getFirst().getWriteTime());
     assertThat(cache.getExpirationDelay(context.ticker().read())).isEqualTo(expectedDelay);
   }
@@ -4542,7 +4543,7 @@ final class BoundedLocalCacheTest {
     }
     cache.cleanUp();
 
-    var expectedDelay = context.expiryTime().timeNanos() - (context.ticker().read() - startTime);
+    long expectedDelay = context.expiryTime().timeNanos() - (context.ticker().read() - startTime);
     assertThat(cache.getExpirationDelay(context.ticker().read())).isIn(
         Range.closed(expectedDelay - TimerWheel.SPANS[0], expectedDelay));
   }
@@ -5773,7 +5774,7 @@ final class BoundedLocalCacheTest {
     var node = requireNonNull(Iterables.getOnlyElement(cache.data.values()));
     long duration = cache.expireAfterRead(node, requireNonNull(node.getKey()),
         requireNonNull(node.getValue()), cache.expiry(), context.ticker().read());
-    var expiresAt = cache.expiresVariable()
+    long expiresAt = cache.expiresVariable()
         ? context.ticker().read() + context.expiryTime().timeNanos()
         : 0;
     assertThat(duration).isEqualTo(expiresAt);
