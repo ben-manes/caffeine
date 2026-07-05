@@ -376,6 +376,19 @@ would invite deadlock and non-linearizable observations; the split is the
 inherent sync-over-async tradeoff. `keySet().contains(k) != keySet().remove(k)`
 on a loading entry is accepted.
 
+**A logical read can return the value of a superseded future — the synchronous
+view is not linearizable.** Each read is a two-step composite (map read, then
+`Async.getIfReady` unwrap) with no re-validation between. If the future found in
+step one is in-flight, is superseded by a concurrent `put`/`invalidate`, and then
+completes, the resumed unwrap returns that future's value even though it was the
+mapping at no instant in the reader's window (the completion's identity-conditional
+`replace`/`remove` no-ops once the future is unmapped). Only the raw
+`AsyncCache.asMap()` view over the futures is linearizable; the synchronous view
+reads "the future it found." Double-collecting (re-reading the mapping after the
+unwrap and returning null on change) would close it but adds a map re-read to every
+sync-view hit for a narrow, non-linearizable-by-design corner. Don't add the
+re-check guard.
+
 **`size()` and `isEmpty()` are physical**, delegating straight to the backing map
 (`AsMapView` → `delegate.size()` / `delegate.isEmpty()`). They count in-flight
 (still-loading) entries that `containsKey` / `get` / iteration treat as absent, so

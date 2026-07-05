@@ -1601,7 +1601,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     long tolerance = EXPIRE_TOLERANCE;
     long duration = Math.max(0L, expiry.expireAfterRead(key, value, now, currentDuration));
     long expirationTime = isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
-    if ((duration <= tolerance) || (Math.abs(expirationTime - variableTime) > tolerance)) {
+    if (((duration <= tolerance) || (Math.abs(expirationTime - variableTime) > tolerance))
+        && (node.getValue() == value)) {
       node.casVariableTime(variableTime, expirationTime);
     }
   }

@@ -4112,6 +4112,28 @@ final class BoundedLocalCacheTest {
     });
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  void tryExpireAfterRead_valueChanged_keepsCurrentDuration(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A reader captures value v1, then a concurrent replace stores v2 with its own duration; the
+    // read-extension computed from the stale v1 must not rebind its duration onto v2
+    var expiry = requireNonNull(context.expiry());
+    when(expiry.expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Duration.ofHours(1).toNanos());
+
+    var v1 = Int.valueOf(1);
+    var key = context.absentKey();
+    assertThat(cache.put(key, v1)).isNull();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));
+    assertThat(cache.put(key, Int.valueOf(2))).isEqualTo(1);
+    long expected = node.getVariableTime();
+
+    cache.tryExpireAfterRead(node, key, v1, expiry, context.ticker().read());
+    assertThat(node.getVariableTime()).isEqualTo(expected);
+  }
+
   private static void checkExpiryWriteTolerance(BoundedLocalCache<Int, Int> cache,
       CacheContext context, BiFunction<Int, Int, @Nullable Int> write) {
     @Var var oldValue = cache.put(Int.valueOf(1), Int.valueOf(1));
