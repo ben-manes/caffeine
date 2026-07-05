@@ -618,6 +618,16 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO)
+  void pacer_scheduler_isGuarded(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // a guarded scheduler never throws or returns null into Pacer.schedule, so the
+    // future==null && nextFireTime!=0 self-poison state stays unreachable
+    var pacer = requireNonNull(cache.pacer());
+    assertThat(pacer.scheduler).isInstanceOf(GuardedScheduler.class);
+    assertThat(((GuardedScheduler) pacer.scheduler).delegate).isSameInstanceAs(context.scheduler());
+  }
+
+  @ParameterizedTest
   @SuppressFBWarnings("MDM_LOCK_ISLOCKED")
   @CacheSpec(population = Population.EMPTY)
   void afterWrite_drainFullWriteBuffer(BoundedLocalCache<Int, Int> cache) {

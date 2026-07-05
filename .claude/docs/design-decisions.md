@@ -323,6 +323,22 @@ collision with the sentinel — needed only in edge cases where `now + TOLERANCE
 or `scheduleAt` lands exactly on zero, but the guard removes the ambiguity for
 readers of `schedule()`'s recursion check.
 
+**`future == null && nextFireTime != 0L` is a deliberate transient, not a wedge —
+and its safety leans on `GuardedScheduler`.** `schedule()` commits `nextFireTime`
+(via `calculateSchedule`) *before* calling `scheduler.schedule()`, then publishes
+the returned `future`. Between those two steps the pacer is momentarily in that
+state, which the immediate-scheduler short-circuit relies on: an immediate scheduler
+runs `command` synchronously inside `schedule()`, re-entering `schedule()` before the
+`future` is published, and the `nextFireTime != 0L` check breaks the recursion. If
+`scheduler.schedule()` could *throw* on the first call, that same state would never
+clear — every later `schedule()` early-returns and `cancel()` no-ops (`future` stays
+null), permanently disabling prompt expiration. It can't: `GuardedScheduler` catches
+every delegate throw and maps a null return to `DisabledFuture`, and the pacer is
+always constructed with a guarded scheduler, so `scheduler.schedule()` here never
+throws or returns null. The ordering is safe as written — don't wrap it in a
+try/catch to "harden" an unreachable throw, and don't hand `Pacer` an unguarded
+scheduler (that, not the ordering, would be the bug).
+
 ## Refresh
 
 **`refreshIfNeeded` is intentionally lock-free.** Reads of `writeTime`, `getKey`,
