@@ -176,19 +176,22 @@ public final class TypesafeConfigurator {
     if ((uri.getScheme() != null) && uri.getScheme().equalsIgnoreCase("file")) {
       return ConfigFactory.defaultOverrides(classloader)
           .withFallback(ConfigFactory.parseFile(new File(uri), options))
-          .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
+          .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader))
+          .resolve();
     } else if ((uri.getScheme() != null) && uri.getScheme().equalsIgnoreCase("jar")) {
       try {
         return ConfigFactory.defaultOverrides(classloader)
             .withFallback(ConfigFactory.parseURL(uri.toURL(), options))
-            .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
+            .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader))
+            .resolve();
       } catch (MalformedURLException e) {
         throw new ConfigException.BadPath(uri.toString(), "Failed to load cache configuration", e);
       }
     } else if (isResource(uri)) {
       return ConfigFactory.defaultOverrides(classloader)
           .withFallback(ConfigFactory.parseResources(uri.getSchemeSpecificPart(), options))
-          .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader));
+          .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader))
+          .resolve();
     }
     return ConfigFactory.load(classloader);
   }
