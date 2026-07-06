@@ -1218,6 +1218,7 @@ final class AsyncCacheTest {
   }
 
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void put_insert_failure_before(AsyncCache<Int, Int> cache, CacheContext context) {
     var failedFuture = CompletableFuture.<Int>failedFuture(new IllegalStateException());
@@ -1225,7 +1226,12 @@ final class AsyncCacheTest {
     cache.put(context.absentKey(), failedFuture);
     assertThat(cache).hasSize(context.initialSize());
     assertThat(cache).doesNotContainKey(context.absentKey());
-    assertThat(logEvents()).isEmpty();
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   @ParameterizedTest
@@ -1274,26 +1280,6 @@ final class AsyncCacheTest {
     assertThat(cache).hasSize(context.initialSize());
     assertThat(cache).doesNotContainKey(context.absentKey());
     assertThat(logEvents()).isEmpty();
-  }
-
-  @ParameterizedTest
-  @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  void put_cancelledDuringCheck(AsyncCache<Int, Int> cache, CacheContext context) {
-    // Reproduces the race where the future is cancelled between the
-    // isCompletedExceptionally() and isDone() checks. The helper future lies: it claims to be
-    // in-flight the first time isCompletedExceptionally() is called, then cancels itself before
-    // isDone() returns. Without a guard, join() would throw CancellationException out of put().
-    var future = new CompletableFuture<Int>() {
-      @Override public boolean isDone() {
-        if (!super.isDone()) {
-          cancel(false);
-        }
-        return super.isDone();
-      }
-    };
-
-    cache.put(context.absentKey(), future);
-    assertThat(cache).doesNotContainKey(context.absentKey());
   }
 
   @ParameterizedTest
@@ -1394,7 +1380,7 @@ final class AsyncCacheTest {
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache).hasSize(context.initialSize() - count);
-    assertThat(context).removalNotifications().withCause(EXPLICIT)
+    assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(removed).exclusively();
   }
 

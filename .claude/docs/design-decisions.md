@@ -241,7 +241,13 @@ not a Caffeine bug. Detection is best-effort, not guaranteed: only recursion tha
 on an empty bin's ReservationNode reliably throws `IllegalStateException("Recursive
 update")` (surfaced raw, unwrapped). Recursion into a populated or treeified bin is
 undetected and can silently corrupt (lost inserts, double count updates, clobbered
-writes). Never rely on the ISE as a safety net.
+writes). Never rely on the ISE as a safety net. During a refresh completion this can
+orphan the key's `refreshes` token (suppressing its auto-refresh) only if `data.compute`
+throws *before* `remap`'s lambda — a broken `hashCode` or a rare cross-bin ISE (same-key
+recursion silently re-enters a populated bin instead); in-lambda throws self-clean (remap
+discards on every exit incl. its `catch`), and the orphan self-heals on the next
+write/removal. Don't add a catch-side `refreshes.remove` — it
+re-throws on the broken-`hashCode` sibling.
 
 **CHM bin blocking is not a Caffeine bug.** `compute()` locks the hash bin. If the
 mapping function (cache loader) is slow, all other operations on keys in the same
@@ -338,6 +344,23 @@ always constructed with a guarded scheduler, so `scheduler.schedule()` here neve
 throws or returns null. The ordering is safe as written — don't wrap it in a
 try/catch to "harden" an unreachable throw, and don't hand `Pacer` an unguarded
 scheduler (that, not the ordering, would be the bug).
+
+**`rescheduleCleanUpIfIncomplete` piggybacks an already-scheduled pacer fire, by
+design.** A `drainStatus == REQUIRED` backlog re-arms the pacer only when
+`!pacer.isScheduled()`; if a fire is already pending (the next expiration event), the
+backlog rides that fire rather than stacking a second schedule. An *expiration*
+backlog stays prompt regardless — a >`EXPIRATION_THRESHOLD` backlog leaves an
+already-expired deque/wheel head, so `getExpirationDelay` returns `≤ 0` and
+`expireEntries` already scheduled the pacer at `TOLERANCE` (~1s). Size eviction is
+uncapped (drains fully in one cycle), so it never backlogs. The lone deferral is a
+*write-buffer* backlog (`drainWriteBuffer`'s `WRITE_BUFFER_MAX` cap, reached only when
+a concurrent writer refills during the drain) on a cache whose next expiration is
+distant, that then goes idle: the buffered policy tasks — LRU/weight bookkeeping over
+CHM mappings that are *already committed and visible* — wait for that distant fire or
+any later write / read-stripe / `cleanUp`. Worst observable is a transient over-
+`maximumSize` on an idle cache, the documented async-eviction contract. Best-effort
+amortized maintenance; don't drop the gate to force a ~1s reschedule (it churns the
+distant fire's cancel+reschedule for a narrow, self-healing transient).
 
 ## Refresh
 
