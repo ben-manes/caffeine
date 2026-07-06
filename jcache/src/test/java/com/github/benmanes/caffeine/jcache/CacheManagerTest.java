@@ -68,6 +68,22 @@ final class CacheManagerTest {
   }
 
   @Test
+  @SuppressWarnings("try")
+  void createCache_illegalObjectNameChar() {
+    // a quote is illegal unquoted in an ObjectName; without sanitizing it createCache
+    // throws after registering the cache, stranding an unclosable proxy
+    var config = new MutableConfiguration<Integer, Integer>()
+        .setManagementEnabled(true).setStatisticsEnabled(true);
+    try (var fixture = JCacheFixture.builder().build();
+         var cache = fixture.cacheManager().createCache("a\"b", config)) {
+      cache.put(1, 2);
+      assertThat(cache.get(1)).isEqualTo(2);
+      cache.close();
+      assertThat(cache.isClosed()).isTrue();
+    }
+  }
+
+  @Test
   void jmxBeanIsRegistered_getCache() throws OperationsException {
     try (var fixture = JCacheFixture.builder().build()) {
       checkConfigurationJmx(requireNonNull(fixture.cacheManager().getCache("test-cache")));

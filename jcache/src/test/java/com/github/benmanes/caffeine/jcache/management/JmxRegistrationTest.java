@@ -79,5 +79,6 @@ final class JmxRegistrationTest {
     assertThat(JmxRegistration.sanitize("a\nb")).isEqualTo("a.b");
     assertThat(JmxRegistration.sanitize("a*b")).isEqualTo("a.b");
     assertThat(JmxRegistration.sanitize("a?b")).isEqualTo("a.b");
+    assertThat(JmxRegistration.sanitize("a\"b")).isEqualTo("a.b");
   }
 }

@@ -233,6 +233,31 @@ session memory for the full rationale.
   "total puts" definition uniformly. Intentional.
 - **`CacheProxy.close()` shuts down a configured `ExecutorService`.** Spec-silent;
   defensible default (cache owns the executor). Documented, not a bug.
+- **Operations racing `close()` are conformant — accepted (audit-lifecycle M2/M3,
+  2026-07-06 with Ben; spec-verified against 1.1.1 § *Closing a Cache* + § *Consistency*).**
+  The spec governs only *future* use ("Once closed any attempt to **use** an operational
+  method ... will throw `IllegalStateException`") and is **silent on operations in
+  progress**; § *Consistency* punts concurrent behavior to "implementation dependent." So a
+  `put`/load that passed `requireNotClosed()` before the flag flipped and commits after
+  `close()`'s `invalidateAll` (**M2**) is not just unspecified but **explicitly permitted**:
+  "Closing a Cache does not necessarily destroy the contents ... the contents of a closed
+  Cache may still be available." Local in-memory → the lingering entry is GC-reclaimed, no
+  resource leak. **M3**: `EventDispatcher.publish`'s *first-event* `runAsync` throws
+  `RejectedExecutionException` synchronously to the racing caller once the executor is shut
+  down (subsequent events' `thenRunAsync` captures it — a real internal asymmetry; trigger
+  is a rejecting executor = the close-shutdown or a user's `AbortPolicy` bounded pool). The
+  **event loss itself is spec-mandated** — close() "must prevent events being delivered to
+  configured `CacheEntryListener`s" — which Caffeine enforces **two ways** (the shut-down
+  executor rejects the dispatch task, *and* `EventTypeAwareListener.dispatch` early-returns
+  on `event.getSource().isClosed()`), so the drop is correct on both paths; only the
+  raw-REE-to-caller is the unspecified quirk. **Executor shutdown is spec-SILENT, not required** (correcting a first-draft
+  overclaim): § *Closing a Cache*'s enumerated `Closeable` list is `CacheLoader`/
+  `CacheWriter`/`CacheEntryListener`s/`ExpiryPolicy` — the executor is **not** in it;
+  closing it rests on the general "release all resources coordinated on behalf of the
+  Cache" phrase (defensible, cache-owned — the sibling catalogue entry above). In-flight
+  user callbacks (`CacheWriter` I/O) are the user's lifecycle responsibility; common-pool/
+  virtual-thread defaults don't hit the shutdown-race. Don't add op-vs-close locking or a
+  synchronous REE guard; don't re-raise M2 (spec explicitly permits retained contents).
 - **JMX `ObjectName` sanitize (`[,:=\n*?]→.`)** matches the RI/ecosystem pattern;
   switching to `ObjectName.quote()` would break operator tooling. Intentional.
 - **Exception in `getExpiryForCreation`** → ETERNAL (matches RI/Hazelcast/

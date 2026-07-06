@@ -987,8 +987,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
     synchronized (configuration) {
       if (!isClosed()) {
-        enableManagement(false);
-        enableStatistics(false);
         closed = true;
         try {
           cacheManager.destroyCache(name, this);
@@ -1001,6 +999,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         for (Registration<K, V> registration : dispatcher.registrations()) {
           thrown = tryClose(registration.getCacheEntryListener(), thrown);
         }
+        thrown = tryClose((AutoCloseable) () ->
+            JmxRegistration.unregisterMxBean(this, MBeanType.STATISTICS), thrown);
+        thrown = tryClose((AutoCloseable) () ->
+            JmxRegistration.unregisterMxBean(this, MBeanType.CONFIGURATION), thrown);
         if (thrown != null) {
           logger.log(Level.WARNING, "Failure when closing cache resources", thrown);
         }

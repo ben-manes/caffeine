@@ -108,7 +108,7 @@ public final class JmxRegistration {
 
   /** Returns a sanitized string for use as a management bean name. */
   static String sanitize(@Nullable String name) {
-    return (name == null) ? "" : name.replaceAll("[,:=\n*?]", ".");
+    return (name == null) ? "" : name.replaceAll("[,:=\n*?\"]", ".");
   }
 
   public enum MBeanType {
