@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
-import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;

@@ -63,6 +63,7 @@ import static org.slf4j.event.Level.WARN;
 
 import java.io.IOException;
 import java.util.AbstractMap;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -2137,6 +2138,30 @@ final class AsMapTest {
 
   @CheckNoStats
   @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void keySet_containsAll_present(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().containsAll(context.firstMiddleLastKeys())).isTrue();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void keySet_containsAll_absent(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().containsAll(List.of(context.firstKey(), context.absentKey()))).isFalse();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void keySet_containsAll_nullKey(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.keySet().containsAll(Arrays.asList(context.firstKey(), null))).isFalse();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   void keySet_whenEmpty(Map<Int, Int> map) {
@@ -2742,6 +2767,32 @@ final class AsMapTest {
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   void values_contains_present(Map<Int, Int> map, CacheContext context) {
     assertThat(map.values().contains(context.original().get(context.firstKey()))).isTrue();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void values_containsAll_present(Map<Int, Int> map, CacheContext context) {
+    assertThat(map.values().containsAll(context.original().values())).isTrue();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void values_containsAll_absent(Map<Int, Int> map, CacheContext context) {
+    var probe = Arrays.asList(context.original().get(context.firstKey()), context.absentValue());
+    assertThat(map.values().containsAll(probe)).isFalse();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL,
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void values_containsAll_nullValue(Map<Int, Int> map, CacheContext context) {
+    var probe = Arrays.asList(context.original().get(context.firstKey()), null);
+    assertThat(map.values().containsAll(probe)).isFalse();
   }
 
   @CheckNoStats

@@ -130,6 +130,10 @@ The Caffeine source code is at:
   jcache/src/main/java/com/github/benmanes/caffeine/jcache/. For G2/G4 the reference
   contract is external — the JSR-107 1.1.1 spec/TCK and a real Guava `CacheBuilder`
   cache; construct the witness as a differential test (run both sides), not a read alone.
+  To read Guava's actual behavior (no clone needed), WebFetch a specific method from
+  `https://raw.githubusercontent.com/google/guava/master/guava/src/com/google/common/cache/LocalCache.java`
+  — the source-level complement to G4's executable oracle; the executable side must use
+  the pinned Guava version (`libs.versions.toml`), not master.
 
 # Phase 0: Plan
 For each pair in your group:

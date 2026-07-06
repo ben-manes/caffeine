@@ -637,6 +637,19 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
+    public boolean containsAll(Collection<?> collection) {
+      requireNonNull(collection);
+      if (collection != this) {
+        for (Object o : collection) {
+          if ((o == null) || !contains(o)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    @Override
     public boolean removeAll(Collection<?> collection) {
       requireNonNull(collection);
       @Var boolean modified = false;
@@ -810,6 +823,19 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @SuppressWarnings("SuspiciousMethodCalls")
     public boolean contains(Object o) {
       return cache.containsValue(o);
+    }
+
+    @Override
+    public boolean containsAll(Collection<?> collection) {
+      requireNonNull(collection);
+      if (collection != this) {
+        for (Object o : collection) {
+          if ((o == null) || !contains(o)) {
+            return false;
+          }
+        }
+      }
+      return true;
     }
 
     @Override

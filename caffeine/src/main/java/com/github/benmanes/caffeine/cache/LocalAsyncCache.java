@@ -1299,6 +1299,19 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
+      public boolean containsAll(Collection<?> collection) {
+        requireNonNull(collection);
+        if (collection != this) {
+          for (Object o : collection) {
+            if ((o == null) || !contains(o)) {
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+
+      @Override
       public boolean removeAll(Collection<?> collection) {
         return delegate.keySet().removeAll(collection);
       }
@@ -1405,6 +1418,19 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Override
       public boolean contains(Object o) {
         return AsMapView.this.containsValue(o);
+      }
+
+      @Override
+      public boolean containsAll(Collection<?> collection) {
+        requireNonNull(collection);
+        if (collection != this) {
+          for (Object o : collection) {
+            if ((o == null) || !contains(o)) {
+              return false;
+            }
+          }
+        }
+        return true;
       }
 
       @Override

@@ -219,9 +219,6 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
     @Override public boolean contains(@Nullable Object o) {
       return (o != null) && delegate().contains(o);
     }
-    @Override public boolean containsAll(Collection<?> c) {
-      return standardContainsAll(c);
-    }
     @Override public boolean remove(@Nullable Object o) {
       return (o != null) && delegate().remove(o);
     }
@@ -242,9 +239,6 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   final class ValuesView extends ForwardingCollection<V> {
     @Override public boolean contains(@Nullable Object o) {
       return (o != null) && delegate().contains(o);
-    }
-    @Override public boolean containsAll(Collection<?> c) {
-      return standardContainsAll(c);
     }
     @Override public boolean remove(@Nullable Object o) {
       return (o != null) && delegate().remove(o);
