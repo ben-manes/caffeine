@@ -41,6 +41,8 @@ file" truncates — **prompt for the specific method** ("quote the exact body of
 - **IdentityHashMap** — identity-semantics edge, relevant to weak-key identity and the
   async future-keyed raw view:
   `https://raw.githubusercontent.com/openjdk/jdk/master/src/java.base/share/classes/java/util/IdentityHashMap.java`
+- **WeakHashMap** — relevant to weak keys with automatic removal:
+  `https://raw.githubusercontent.com/openjdk/jdk/master/src/java.base/share/classes/java/util/WeakHashMap.java`
 - **Guava `LocalCache`** — the reference for Caffeine's Guava-compat behavior (the
   `CaffeinatedGuava` facade + the uniform null-leniency the philosophy below cites; its
   `asMap()` views, removal causes, loader/exception translation):

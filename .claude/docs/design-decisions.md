@@ -268,6 +268,16 @@ bin are blocked. This is the #1 recurring user issue (~20 reports). The answer i
 always: use `AsyncCache` for slow loaders, increase `initialCapacity` to reduce
 collisions, or make loaders faster.
 
+**`clear()`/`invalidateAll()` do not wait for an in-flight `computeIfAbsent` insert.** The insert
+is invisible to `clear()`'s `data.values()` snapshot (the CHM Traverser skips the in-flight
+`ReservationNode`), so it survives and serializes *after* the clear. CHM blocks per-bin and removes
+it, but both orderings are linearizable, and the layered design can't see CHM's internal per-bin state
+to block (a fix would require forking CHM). Inserts only — an in-flight *update* on an existing node
+**is** waited for (`clear()`'s `removeNode` goes through `computeIfPresent` + `synchronized(node)`).
+Documented user-facing on the `invalidateAll()` javadoc ("behavior … is undefined for an entry that is
+being loaded (or reloaded) and is otherwise not present") + the wiki. Don't flag the clear-vs-in-flight-
+insert divergence.
+
 **Eviction is async, not immediate.** After `put`, the cache may temporarily exceed
 `maximumSize` until the executor runs maintenance. Use `executor(Runnable::run)` for
 inline eviction in tests, or call `cleanUp()` before assertions.
@@ -302,6 +312,27 @@ shortest remaining duration wins. Prefer `expireAfter(Expiry)` for custom logic.
 **`asMap()` iteration is not a cache read.** Iterators do not update access times or
 frequency counters. This prevents iteration from polluting the eviction policy.
 Expired entries are skipped during iteration.
+
+**The `keySet()`/`entrySet()` views inherit `AbstractSet.equals`/`hashCode`, so a formal
+contract breach in the dead-entry window is unavoidable and accepted.** `size()` is physical
+(counts an expired-but-unreaped or GC'd-weak-key entry) while iteration/`contains`/`hashCode`
+are logical (skip it). With a live `a` + a pending-dead `b`: `HashSet{a,b}.equals(keySet)` is
+*true* (size `2==2`, then `containsAll` over the logical iterator `{a}`) yet the hashCodes differ
+(`Object.hashCode` forbids equal-but-unequal-hash), and it's asymmetric — `keySet().equals(HashSet{a,b})`
+is false, and a view doesn't even equal a copy of itself. **No receiver-side fix exists:** the
+true-returning direction runs inside the *argument's* `HashSet.equals`, which calls
+`keySet.size()`+`iterator()`, so overriding the view's own equals/hashCode can't intercept it; only a
+*logical* `size()` would close it, and that's rejected (lock-free instantaneous physical size; a
+physical hashCode isn't even computable once a weak key is GC'd). This is inherent to
+`AbstractSet`/`AbstractMap` computing over `size()`: **no correct, compatible equals is writable for
+a collection whose contents change under an equality iteration — `WeakHashMap` has the identical
+property** (entries GC'd mid-comparison; even its own `size()` javadoc only notes the snapshot /
+changes-underneath behavior at the *impl* level, not on the `Map` interface). `values()` is clean
+(identity equals/hashCode, like CHM). Same best-effort window as "`size()` is an estimate"; call
+`cleanUp()` with no concurrent ops before comparing if exact equality is needed. Don't try to "fix"
+the view equals/hashCode, and don't add a `size()`-over-counts warning to the `asMap()` view javadoc
+(redundant — `asMap()` is a view of a cache whose `estimatedSize()` already says "approximate," and
+even `WeakHashMap` doesn't warn at the interface level).
 
 ## Read-path maintenance nudges
 

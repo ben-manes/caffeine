@@ -467,6 +467,8 @@ public interface Policy<K, V> {
      * @return the computed value
      * @throws NullPointerException if the mappingFunction is null
      * @throws RuntimeException or Error if the mappingFunction does so
+     * @throws java.util.ConcurrentModificationException if the computation detectably reads or
+     *         writes an entry in this cache
      * @since 3.0.6
      */
     @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
@@ -511,6 +513,8 @@ public interface Policy<K, V> {
      * @return the computed value
      * @throws NullPointerException if the mappingFunction is null
      * @throws RuntimeException or Error if the mappingFunction does so
+     * @throws java.util.ConcurrentModificationException if the computation detectably reads or
+     *         writes an entry in this cache
      * @since 3.0.6
      */
     @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
@@ -719,6 +723,8 @@ public interface Policy<K, V> {
      * @return the computed value
      * @throws NullPointerException if the mappingFunction is null
      * @throws RuntimeException or Error if the mappingFunction does so
+     * @throws java.util.ConcurrentModificationException if the computation detectably reads or
+     *         writes an entry in this cache
      * @since 3.0.6
      */
     @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})
@@ -763,6 +769,8 @@ public interface Policy<K, V> {
      * @return the computed value
      * @throws NullPointerException if the mappingFunction is null
      * @throws RuntimeException or Error if the mappingFunction does so
+     * @throws java.util.ConcurrentModificationException if the computation detectably reads or
+     *         writes an entry in this cache
      * @since 3.0.6
      */
     @SuppressWarnings({"JavadocDeclaration", "JavadocReference"})

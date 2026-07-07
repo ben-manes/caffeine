@@ -120,9 +120,12 @@ import com.google.errorprone.annotations.FormatMethod;
  * {@linkplain #weakValues weakValues}, or {@linkplain #softValues softValues} perform periodic
  * maintenance.
  * <p>
- * The caches produced by {@code Caffeine} are serializable, and the deserialized caches retain all
- * the configuration properties of the original cache. Note that the serialized form does <i>not</i>
- * include cache contents but only configuration.
+ * The caches produced by {@code Caffeine} are serializable when their configured components (such
+ * as the {@code CacheLoader}, {@code Weigher}, {@code Expiry}, and listeners) are serializable, and
+ * the deserialized caches retain those configuration properties. The executor, scheduler, and
+ * statistics are runtime state rather than configuration; they are not serialized and revert to the
+ * defaults. Note that the serialized form does <i>not</i> include cache contents but only
+ * configuration.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <K> the most general key type this builder will be able to create caches for. This is
