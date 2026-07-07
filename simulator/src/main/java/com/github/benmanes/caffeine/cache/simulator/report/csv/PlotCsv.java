@@ -116,8 +116,8 @@ public record PlotCsv(Path inputFile, Path outputFile, String metric,
   }
 
   private static Range calculateRange(CategoryPlot plot) {
-    @Var double upperBound = 0;
-    @Var double lowerBound = 100;
+    @Var double upperBound = Double.NEGATIVE_INFINITY;
+    @Var double lowerBound = Double.POSITIVE_INFINITY;
     checkState(plot.getDataset().getRowCount() > 0, "No data points to plot");
     for (int series = 0; series < plot.getDataset().getRowCount(); series++) {
       for (int item = 0; item < plot.getDataset().getColumnCount(); item++) {
@@ -129,7 +129,7 @@ public record PlotCsv(Path inputFile, Path outputFile, String metric,
       }
     }
     double margin = 0.1 * (upperBound - lowerBound);
-    return new Range(Math.max(0, lowerBound - margin), Math.min(100, upperBound + margin));
+    return new Range(lowerBound - margin, upperBound + margin);
   }
 
   private void applyTheme(JFreeChart chart) {
