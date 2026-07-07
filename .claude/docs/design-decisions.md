@@ -249,6 +249,19 @@ discards on every exit incl. its `catch`), and the orphan self-heals on the next
 write/removal. Don't add a catch-side `refreshes.remove` — it
 re-throws on the broken-`hashCode` sibling.
 
+The **`evictionListener` runs inside the CHM compute lambda** — `notifyEviction` is called
+within `data.compute`/`computeIfPresent`, holding the entry's bin lock — so it is subject to this
+rule: a listener that modifies the cache (same-key *or* other-key) is a recursive update → an ISE
+(caught + logged in `notifyEviction`, so the write is silently lost) or silent corruption. The
+`Caffeine.evictionListener` javadoc says "must not modify this cache." That (and the parallel
+`mappingFunction`/`remappingFunction` warnings across `Cache`/`AsyncCache`/`LoadingCache`/`Policy`)
+was tightened from the wording inherited from ConcurrentHashMap's `compute` javadoc — "must not
+attempt to update any *other* mappings" (CHM's phrasing through JDK 13; JDK-8232652 replaced it with
+"must not modify this map" in JDK 14, though `merge` still carries the old form) — which by negation
+wrongly implied a *same-key* mutation was safe. The `removalListener`, by contrast, runs outside the
+atomic operation (async/after the fact) and *may* modify the cache. Don't flag a same-key mutation
+from the eviction listener as a corruption bug — it's documented misuse.
+
 **CHM bin blocking is not a Caffeine bug.** `compute()` locks the hash bin. If the
 mapping function (cache loader) is slow, all other operations on keys in the same
 bin are blocked. This is the #1 recurring user issue (~20 reports). The answer is

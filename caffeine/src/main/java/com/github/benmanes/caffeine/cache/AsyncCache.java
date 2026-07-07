@@ -66,7 +66,7 @@ public interface AsyncCache<K, V extends @Nullable Object> {
    * computation fails, the entry will be automatically removed from this cache.
    * <p>
    * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
-   * attempt to update any other mappings of this cache.
+   * modify this cache during the computation.
    *
    * @param key the key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value
@@ -87,7 +87,7 @@ public interface AsyncCache<K, V extends @Nullable Object> {
    * computation fails, the entry will be automatically removed from this cache.
    * <p>
    * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
-   * attempt to update any other mappings of this cache.
+   * modify this cache during the computation.
    *
    * @param key the key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value, optionally using the
@@ -188,8 +188,8 @@ public interface AsyncCache<K, V extends @Nullable Object> {
    * <p>
    * A computation operation, such as {@link ConcurrentMap#compute}, performs the entire method
    * invocation atomically, so the function is applied at most once per key. Some attempted update
-   * operations by other threads may be blocked while computation is in progress. The computation
-   * must not attempt to update any other mappings of this cache.
+   * operations by other threads may be blocked while computation is in progress. The mapping
+   * function must not modify this cache during the computation.
    * <p>
    * Iterators from the returned map are at least <i>weakly consistent</i>: they are safe for
    * concurrent use, but if the cache is modified (including by eviction) after the iterator is

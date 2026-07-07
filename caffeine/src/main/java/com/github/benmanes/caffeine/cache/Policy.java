@@ -662,8 +662,8 @@ public interface Policy<K, V> {
      * differs from {@code cache.asMap().compute(key, remappingFunction)} by substituting the
      * configured {@link Expiry} with the specified duration.
      * <p>
-     * <b>Warning:</b> the {@code remappingFunction} <b>must not</b> attempt to update any other
-     * mappings of this cache.
+     * <b>Warning:</b> the {@code remappingFunction} <b>must not</b> modify this cache during the
+     * computation.
      *
      * @param key key with which the specified value is to be associated
      * @param remappingFunction the function to compute a value
