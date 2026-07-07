@@ -21,6 +21,7 @@ import static java.util.Locale.US;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
@@ -51,6 +52,7 @@ public final class TCachePolicy implements Policy {
     factory = new TCacheFactory();
     cache = factory.<Long, Boolean>builder()
         .setMaxElements(Math.toIntExact(settings.maximumSize()))
+        .setMaxCacheTime(Integer.MAX_VALUE, TimeUnit.SECONDS)
         .setEvictionPolicy(policy.type)
         .setStatistics(true)
         .build();

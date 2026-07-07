@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
+import com.google.common.base.Splitter;
 
 import net.openhft.hashing.LongHashFunction;
 
@@ -46,12 +47,13 @@ public final class LibCacheSimTwitterTraceReader extends TextTraceReader {
   @Override
   public Stream<AccessEvent> events() {
     var hasher = LongHashFunction.xx3();
+    var splitter = Splitter.on(",").trimResults();
     return lines()
         .skip(1)
-        .map(line -> line.split(", "))
-        .map(array -> {
-          long key = hasher.hashChars(array[1]);
-          int weight = Integer.parseInt(array[2]);
+        .map(splitter::splitToList)
+        .map(fields -> {
+          long key = hasher.hashChars(fields.get(1));
+          int weight = Integer.parseInt(fields.get(2));
           return AccessEvent.forKeyAndWeight(key, weight);
         });
   }

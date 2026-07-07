@@ -150,6 +150,8 @@ public final class Synthetic {
    * @param events the number of events in the distribution
    */
   public static KeyOnlyTraceReader scrambledZipfian(long items, double constant, long events) {
+    checkArgument((constant > 0) && (constant < 1),
+        "The zipfian constant must be in the range (0, 1) but was %s", constant);
     return generate(new ScrambledZipfianGenerator(0, items - 1, constant), events);
   }
 
@@ -173,6 +175,8 @@ public final class Synthetic {
    * @param events the number of events in the distribution
    */
   public static KeyOnlyTraceReader zipfian(long items, double constant, long events) {
+    checkArgument((constant > 0) && (constant < 1),
+        "The zipfian constant must be in the range (0, 1) but was %s", constant);
     return generate(new ZipfianGenerator(items, constant), events);
   }
 
