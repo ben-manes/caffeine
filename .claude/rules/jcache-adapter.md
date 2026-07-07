@@ -19,8 +19,13 @@ paths:
   await. New async operations must add futures to this set.
 - **TypesafeConfigurator**: External HOCON config (`application.conf`) can intercept
   cache creation. Config-based caches take precedence over programmatic ones.
-- **OSGi classloader**: `CacheManagerImpl` swaps thread context classloader for OSGi
-  bundle environments. The classloader is held via WeakReference.
+- **OSGi classloader**: `CacheManagerImpl` swaps the thread context classloader to the
+  manager's loader on the *creation* paths (`createCache`/`getCache`) — the JCache
+  `FactoryBuilder.ClassFactory` resolves config-named factory classes via the ambient TCCL
+  there. `destroyCache`/`close` intentionally do **not** swap: teardown resolves no class
+  names (the resources are already-instantiated objects), so the TCCL is irrelevant to
+  Caffeine's own close logic; a user `close()` that relies on the ambient TCCL is the user's
+  concern (Ehcache3 swaps the TCCL nowhere). The classloader is held via WeakReference.
 - Tests include JSR-107 TCK (auto-unpacked) and isolated tests (per-JVM forking)
 - **Run `:jcache:tckTest` for spec-conformance changes** — not just `:jcache:test`. The
   TCK encodes interpretations (and some pre-1.1.1 strictness) that unit tests don't

@@ -84,7 +84,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
         cache.asMap().computeIfPresent(key, (k, e) -> {
           if (e == expired) {
             dispatcher.publishExpired(this, key, expired.get());
-            statistics.recordEvictions(1);
+            statistics.recordEvictions(1L);
             return null;
           }
           return e;

@@ -267,7 +267,7 @@ public final class CacheManagerImpl implements CacheManager {
       return clazz.cast(this);
     }
     throw new IllegalArgumentException("Unwrapping to " + clazz
-        + " is not a supported by this implementation");
+        + " is not supported by this implementation");
   }
 
   /** Checks that the cache manager is not closed. */

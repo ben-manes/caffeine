@@ -139,7 +139,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       cache.asMap().computeIfPresent(key, (k, e) -> {
         if (e == expirable) {
           dispatcher.publishExpired(this, key, expirable.get());
-          statistics.recordEvictions(1);
+          statistics.recordEvictions(1L);
           return null;
         }
         return e;
@@ -175,7 +175,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         cache.asMap().computeIfPresent(key, (k, e) -> {
           if (e == expirable) {
             dispatcher.publishExpired(this, key, expirable.get());
-            statistics.recordEvictions(1);
+            statistics.recordEvictions(1L);
             return null;
           }
           return e;
@@ -381,8 +381,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNonNull(value);
 
     var result = new PutResult<V>();
+    V newValue = copyOf(value);
     cache.asMap().compute(copyOf(key), (K k, @Var Expirable<V> expirable) -> {
-      V newValue = copyOf(value);
       if (publishToWriter) {
         publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, value));
       }
@@ -892,7 +892,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       }
       if (expirable.hasExpired(currentTimeMillis)) {
         dispatcher.publishExpired(this, entry.getKey(), expirable.get());
-        statistics.recordEvictions(1);
+        statistics.recordEvictions(1L);
         expirable = null;
       }
     }
