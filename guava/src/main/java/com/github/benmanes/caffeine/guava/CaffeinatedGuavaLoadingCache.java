@@ -29,6 +29,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
+import com.google.common.cache.CacheLoader.UnsupportedLoadingOperationException;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -203,6 +204,12 @@ final class CaffeinatedGuavaLoadingCache<K, V>
           }
         });
         return result;
+      } catch (UnsupportedLoadingOperationException e) {
+        var result = new HashMap<K, V>(keys.size(), /* loadFactor= */ 1.0f);
+        for (K key : keys) {
+          result.put(key, load(key));
+        }
+        return result;
       } catch (RuntimeException | Error e) {
         throw e;
       } catch (InterruptedException e) {
@@ -238,7 +245,16 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     }
     @SuppressWarnings("ConstantValue")
     @Override public Map<K, V> loadAll(Set<? extends K> keys) throws Exception {
-      Map<K, V> loaded = cacheLoader.loadAll(keys);
+      Map<K, V> loaded;
+      try {
+        loaded = cacheLoader.loadAll(keys);
+      } catch (UnsupportedLoadingOperationException e) {
+        var result = new HashMap<K, V>(keys.size(), /* loadFactor= */ 1.0f);
+        for (K key : keys) {
+          result.put(key, load(key));
+        }
+        return result;
+      }
       if (loaded == null) {
         throw new InvalidCacheLoadException("null map");
       }

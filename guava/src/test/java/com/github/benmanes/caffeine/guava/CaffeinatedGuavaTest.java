@@ -226,6 +226,30 @@ final class CaffeinatedGuavaTest {
     assertThat(nullBulkLoad.get()).isNull();
   }
 
+  @Test
+  void bulkLoad_asyncReloading() throws ExecutionException {
+    var cache = CaffeinatedGuava.build(Caffeine.newBuilder(),
+        CacheLoader.asyncReloading(new CacheLoader<Integer, Integer>() {
+          @Override public Integer load(Integer key) {
+            return -key;
+          }
+        }, Runnable::run));
+    assertThat(cache.getAll(ImmutableList.of(1, 2, 3)))
+        .isEqualTo(ImmutableMap.of(1, -1, 2, -2, 3, -3));
+  }
+
+  @Test
+  void bulkLoad_asyncReloading_caffeinate() {
+    var cache = Caffeine.newBuilder().build(
+        caffeinate(CacheLoader.asyncReloading(new CacheLoader<Integer, Integer>() {
+          @Override public Integer load(Integer key) {
+            return -key;
+          }
+        }, Runnable::run)));
+    assertThat(cache.getAll(ImmutableList.of(1, 2, 3)))
+        .isEqualTo(Map.of(1, -1, 2, -2, 3, -3));
+  }
+
   @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
   private static ThreadLocal<?> getNullBulkLoad(LoadingCache<Integer, Integer> cache)
       throws NoSuchFieldException, IllegalAccessException {
