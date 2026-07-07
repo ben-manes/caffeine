@@ -23,7 +23,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.jspecify.annotations.Nullable;
-import org.junit.jupiter.api.Nested;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
@@ -41,8 +40,7 @@ final class PacerFuzzer {
 
   private PacerFuzzer() {}
 
-  @Nested
-  final class ScheduleTest {
+  static final class ScheduleTest {
 
     @FuzzTest(maxDuration = "5m")
     void pacer(FuzzedDataProvider data) {
@@ -72,8 +70,7 @@ final class PacerFuzzer {
     }
   }
 
-  @Nested
-  final class MaySkipTest {
+  static final class MaySkipTest {
 
     @FuzzTest(maxDuration = "5m")
     void maySkip(FuzzedDataProvider data) {

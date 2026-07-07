@@ -110,6 +110,19 @@ final class UnboundedLocalCacheTest {
   }
 
   @Test
+  void computeIfAbsent_present() {
+    var cache = new UnboundedLocalCache<Integer, Integer>(
+        Caffeine.newBuilder(), /* isAsync= */ false);
+    Integer key = 1;
+    assertThat(cache.put(key, 2)).isNull();
+
+    // The stats-free fast-path hit, as when a refresh races a concurrent insert.
+    var result = cache.computeIfAbsent(key, k -> { throw new AssertionError(); },
+        /* recordStats= */ false, /* recordLoad= */ false);
+    assertThat(result).isEqualTo(2);
+  }
+
+  @Test
   void remap_preserveRefresh_discardsOnValueChange() {
     var cache = new UnboundedLocalCache<Integer, Integer>(
         Caffeine.newBuilder(), /* isAsync= */ false);

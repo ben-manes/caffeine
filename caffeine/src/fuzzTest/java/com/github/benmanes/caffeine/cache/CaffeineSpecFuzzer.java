@@ -25,7 +25,6 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import org.jspecify.annotations.Nullable;
-import org.junit.jupiter.api.Nested;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.DictionaryEntries;
@@ -45,8 +44,7 @@ final class CaffeineSpecFuzzer {
 
   private CaffeineSpecFuzzer() {}
 
-  @Nested
-  final class ParseTest {
+  static final class ParseTest {
 
     @DictionaryEntries({"=", " ", "+52", "+5_2", "+_52", ",", "-52", "-5_2", "-_52", "52_", "5_2",
         "_52", "expireAfterAccess", "expireAfterWrite", "initialCapacity", "maximumSize",
@@ -60,8 +58,7 @@ final class CaffeineSpecFuzzer {
     }
   }
 
-  @Nested
-  final class StructuredTest {
+  static final class StructuredTest {
 
     /** Builds a spec string from structured inputs and verifies the cache honors each setting. */
     @FuzzTest(maxDuration = "5m")

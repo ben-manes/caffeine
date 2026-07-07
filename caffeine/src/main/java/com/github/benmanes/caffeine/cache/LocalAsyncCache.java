@@ -109,7 +109,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return requireNonNull(castedResult);
     }, recordStats, /* recordLoad= */ false);
     if (result[0] != null) {
-      handleCompletion(key, result[0], startTime, /* recordMiss= */ false);
+      handleCompletion(key, result[0], startTime);
     }
     return requireNonNull(future);
   }
@@ -199,13 +199,13 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     var castedFuture = (CompletableFuture<V>) valueFuture;
     CompletableFuture<V> prior = cache().put(key, castedFuture);
     if (prior != castedFuture) {
-      handleCompletion(key, valueFuture, startTime, /* recordMiss= */ false);
+      handleCompletion(key, valueFuture, startTime);
     }
   }
 
   @SuppressWarnings({"FutureReturnValueIgnored", "ResultOfMethodCallIgnored"})
   default void handleCompletion(K key, CompletableFuture<? extends V> valueFuture,
-      long startTime, boolean recordMiss) {
+      long startTime) {
     valueFuture.whenComplete((value, error) -> {
       long loadTime = cache().statsTicker().read() - startTime;
       if (value == null) {
@@ -238,9 +238,6 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           cache().statsCounter().recordLoadFailure(loadTime);
           cache().remove(key, valueFuture);
         }
-      }
-      if (recordMiss) {
-        cache().statsCounter().recordMisses(1);
       }
     });
   }
@@ -404,7 +401,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       CompletableFuture<V> prior = asyncCache.cache().putIfAbsent(key, value);
       long startTime = asyncCache.cache().statsTicker().read();
       if (prior == null) {
-        asyncCache.handleCompletion(key, value, startTime, /* recordMiss= */ false);
+        asyncCache.handleCompletion(key, value, startTime);
       }
       return prior;
     }
@@ -412,7 +409,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       CompletableFuture<V> prior = asyncCache.cache().put(key, value);
       long startTime = asyncCache.cache().statsTicker().read();
       if (prior != value) {
-        asyncCache.handleCompletion(key, value, startTime, /* recordMiss= */ false);
+        asyncCache.handleCompletion(key, value, startTime);
       }
       return prior;
     }
@@ -424,7 +421,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       CompletableFuture<V> prior = asyncCache.cache().replace(key, value);
       long startTime = asyncCache.cache().statsTicker().read();
       if ((prior != null) && (prior != value)) {
-        asyncCache.handleCompletion(key, value, startTime, /* recordMiss= */ false);
+        asyncCache.handleCompletion(key, value, startTime);
       }
       return prior;
     }
@@ -433,7 +430,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       boolean replaced = asyncCache.cache().replace(key, oldValue, newValue);
       long startTime = asyncCache.cache().statsTicker().read();
       if (replaced && (newValue != oldValue)) {
-        asyncCache.handleCompletion(key, newValue, startTime, /* recordMiss= */ false);
+        asyncCache.handleCompletion(key, newValue, startTime);
       }
       return replaced;
     }
@@ -456,7 +453,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Nullable CompletableFuture<V> future = asyncCache.cache().computeIfAbsent(
           key, function, /* recordStats= */ true, /* recordLoad= */ false);
       if (result[0] != null) {
-        asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss= */ false);
+        asyncCache.handleCompletion(key, result[0], startTime);
       }
       return future;
     }
@@ -477,7 +474,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }, asyncCache.cache().expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
 
       if ((result[0] != null) && (result[0] != prior[0])) {
-        asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss= */ false);
+        asyncCache.handleCompletion(key, result[0], startTime);
       }
       return result[0];
     }
@@ -498,7 +495,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }, asyncCache.cache().expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
 
       if ((result[0] != null) && (result[0] != prior[0])) {
-        asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss= */ false);
+        asyncCache.handleCompletion(key, result[0], startTime);
       }
       return result[0];
     }
@@ -521,7 +518,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }, asyncCache.cache().expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
 
       if ((result[0] != null) && (result[0] != prior[0])) {
-        asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss= */ false);
+        asyncCache.handleCompletion(key, result[0], startTime);
       }
       return result[0];
     }

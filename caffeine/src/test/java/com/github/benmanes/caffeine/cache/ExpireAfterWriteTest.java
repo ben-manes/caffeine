@@ -228,6 +228,24 @@ final class ExpireAfterWriteTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, expireAfterWrite = Expire.ONE_MINUTE)
+  void computeIfAbsent_async_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    Int key = context.absentKey();
+    cache.put(key, CompletableFuture.completedFuture(context.absentValue()));
+    context.ticker().advance(Duration.ofMinutes(2));
+
+    // Recomputing the expired entry stores the in-flight future, which receives ASYNC_EXPIRY.
+    var future = new CompletableFuture<Int>();
+    var result = cache.asMap().computeIfAbsent(key, k -> future);
+    assertThat(result).isSameInstanceAs(future);
+
+    future.complete(context.absentValue());
+    assertThat(result).succeedsWith(context.absentValue());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(key, context.absentValue()).exclusively();
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.SINGLETON, compute = Compute.SYNC,
       mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE }, expireAfterWrite = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE)

@@ -151,6 +151,92 @@ final class CacheLoaderTest {
   }
 
   @Test
+  void reload_nullValue() {
+    // A refresh whose reload yields null drops the entry rather than storing null.
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(1)).thenReturn(-1, (Integer) null);
+
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setCacheLoaderFactory(() -> loader);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setReadThrough(true);
+          config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
+        }).build();
+        var cache = fixture.jcacheLoading()) {
+      assertThat(cache.get(1)).isEqualTo(-1);
+      fixture.ticker().advance(java.time.Duration.ofMinutes(2));
+
+      // Trigger the refresh; the reload's null result drops the entry.
+      assertThat(cache.get(1)).isEqualTo(-1);
+      verify(loader, Mockito.times(2)).load(1);
+      assertThat(cache.containsKey(1)).isFalse();
+    }
+  }
+
+  @Test
+  void reload_zeroExpiry_publishesExpired() {
+    // A reload whose update expiry is ZERO expires the reloaded value in place of updating it.
+    ExpiryPolicy expiry = Mockito.mock();
+    when(expiry.getExpiryForCreation()).thenReturn(Duration.ETERNAL);
+    when(expiry.getExpiryForUpdate()).thenReturn(Duration.ZERO);
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(1)).thenReturn(-1, -2);
+
+    var expired = new AtomicInteger();
+    CacheEntryExpiredListener<Integer, Integer> expiredListener =
+        events -> events.forEach(event -> expired.incrementAndGet());
+
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setCacheLoaderFactory(() -> loader);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setReadThrough(true);
+          config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              () -> expiredListener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        }).build();
+        var cache = fixture.jcacheLoading()) {
+      assertThat(cache.get(1)).isEqualTo(-1);
+      fixture.ticker().advance(java.time.Duration.ofMinutes(2));
+
+      // Trigger the refresh; the ZERO update expiry publishes EXPIRED and drops the entry.
+      assertThat(cache.get(1)).isEqualTo(-1);
+      verify(loader, Mockito.times(2)).load(1);
+      assertThat(expired.get()).isEqualTo(1);
+      assertThat(cache.containsKey(1)).isFalse();
+    }
+  }
+
+  @ParameterizedTest @MethodSource("throwables")
+  void reload_failure(Throwable throwable) {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(1)).thenReturn(-1).thenThrow(throwable);
+
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setCacheLoaderFactory(() -> loader);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setReadThrough(true);
+          config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
+        }).build();
+        var cache = fixture.jcacheLoading()) {
+      assertThat(cache.get(1)).isEqualTo(-1);
+      fixture.ticker().advance(java.time.Duration.ofMinutes(2));
+
+      // The reload throws; the refresh fails and the entry keeps its prior value.
+      assertThat(cache.get(1)).isEqualTo(-1);
+      verify(loader, Mockito.atLeast(2)).load(1);
+    }
+  }
+
+  @Test
   void loadAll_keepExisting_reloadsJCacheExpired() {
     // A native expireAfterWrite (long) alongside a shorter jcache ExpiryPolicy: native expiry no
     // longer mirrors the Expirable, so a jcache-expired entry stays physically present and
@@ -217,6 +303,21 @@ final class CacheLoaderTest {
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
     var duration = Mockito.spy(new Duration(TimeUnit.MILLISECONDS, 1));
     when(duration.getAdjustedTime(anyLong())).thenReturn(0L);
+    when(expiry.getExpiryForCreation()).thenReturn(duration);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    try (var fixture = jcacheFixture(expiry, cacheLoader)) {
+      when(cacheLoader.load(any())).thenReturn(-1);
+      assertThat(fixture.jcacheLoading().get(1)).isEqualTo(-1);
+    }
+  }
+
+  @Test
+  void load_adjustedTimeSentinelMax() {
+    // A computed creation expiry that collides with the ETERNAL sentinel (Long.MAX_VALUE) is
+    // clamped to a finite expiry so the entry is not mistaken for one that never expires.
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    var duration = Mockito.spy(new Duration(TimeUnit.MILLISECONDS, 1));
+    when(duration.getAdjustedTime(anyLong())).thenReturn(Long.MAX_VALUE);
     when(expiry.getExpiryForCreation()).thenReturn(duration);
     CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
     try (var fixture = jcacheFixture(expiry, cacheLoader)) {

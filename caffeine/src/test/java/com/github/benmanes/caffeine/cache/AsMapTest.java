@@ -3926,6 +3926,21 @@ final class AsMapTest {
     }
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY)
+  void entrySet_removeIf_async_incomplete(AsyncCache<Int, Int> cache, CacheContext context) {
+    Int key = context.absentKey();
+    var future = new CompletableFuture<Int>();
+    cache.put(key, future);
+
+    // An in-flight entry is invisible to removeIf (getIfReady returns null), so it is skipped.
+    boolean removed = cache.synchronous().asMap().entrySet().removeIf(entry -> true);
+    assertThat(removed).isFalse();
+    assertThat(cache).containsKey(key);
+
+    future.complete(context.absentValue());
+  }
+
   @CheckNoStats
   @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.FULL })
