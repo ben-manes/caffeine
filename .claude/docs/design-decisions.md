@@ -102,7 +102,11 @@ races a context switch between the read and the write; only a read-path lock (re
 close it. The window is a few instructions for a normal `Expiry` callback; a wide one requires a
 slow `expireAfterRead` (callback misuse, like a slow `Weigher`). So "never visible later than
 expiry" is best-effort for read-extension — the over-stay is bounded by one duration and
-self-heals on the next maintenance. Don't add a re-check guard.
+self-heals on the next maintenance. Don't add a *fresh-clock* re-check guard for this
+over-stay — it still races a context switch and can't reject an already-expired entry.
+(Distinct from the `node.getValue() == value` value-identity check that `casVariableTime`
+*does* carry: that guards a separate, closable bug — a read duration rebinding onto a
+*replaced* value — and is load-bearing; keep it.)
 
 **writeTime uses plain write** (not opaque like accessTime). It's always written
 under `synchronized(node)`, which provides stronger guarantees than opaque.
@@ -383,11 +387,13 @@ runs `command` synchronously inside `schedule()`, re-entering `schedule()` befor
 `scheduler.schedule()` could *throw* on the first call, that same state would never
 clear — every later `schedule()` early-returns and `cancel()` no-ops (`future` stays
 null), permanently disabling prompt expiration. It can't: `GuardedScheduler` catches
-every delegate throw and maps a null return to `DisabledFuture`, and the pacer is
-always constructed with a guarded scheduler, so `scheduler.schedule()` here never
-throws or returns null. The ordering is safe as written — don't wrap it in a
-try/catch to "harden" an unreachable throw, and don't hand `Pacer` an unguarded
-scheduler (that, not the ordering, would be the bug).
+every delegate throw and maps a null return to `DisabledFuture`. `Caffeine.getScheduler`
+wraps a *user-supplied* scheduler this way, but passes the built-in `systemScheduler()`
+and `disabledScheduler()` through unwrapped — Caffeine's own scheduler types are known
+not to throw or return null, so only user types need guarding. Either way
+`scheduler.schedule()` here never throws or returns null. The ordering is safe as written
+— don't wrap it in a try/catch to "harden" an unreachable throw, and don't hand `Pacer`
+an unguarded *user* scheduler (that, not the ordering, would be the bug).
 
 **`rescheduleCleanUpIfIncomplete` piggybacks an already-scheduled pacer fire, by
 design.** A `drainStatus == REQUIRED` backlog re-arms the pacer only when

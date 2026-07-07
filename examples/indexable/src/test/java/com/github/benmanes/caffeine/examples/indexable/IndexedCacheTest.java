@@ -88,6 +88,27 @@ final class IndexedCacheTest {
         () -> cache.put(new User(2, "john.doe", "+1 (777) 777-7777")));
   }
 
+  @Test
+  void replaceOntoConflictingKey_leavesIndexIntact() {
+    var cache = new IndexedCache.Builder<UserKey, User>()
+        .addSecondaryKey(user -> new UserByLogin(user.login()))
+        .addSecondaryKey(user -> new UserByPhone(user.phone()))
+        .primaryKey(user -> new UserById(user.id()))
+        .build(this::findUser);
+
+    cache.put(new User(1, "john.doe", "+1 (555) 555-5555"));
+    cache.put(new User(2, "jane.doe", "+1 (777) 777-7777"));
+
+    // Re-putting user 1 with user 2's login must fail fast; because the guard runs before any
+    // mutation, the rejected replace leaves both entries and every index key intact
+    assertThrows(IllegalStateException.class,
+        () -> cache.put(new User(1, "jane.doe", "+1 (555) 555-5555")));
+
+    assertThat(cache.store.asMap()).hasSize(2);
+    assertThat(cache.indexes).hasSize(6);
+    assertThat(cache.indexes).containsKey(new UserByLogin("john.doe"));
+  }
+
   /** Returns the user found in the system of record. */
   private User findUser(UserKey key) {
     Predicate<User> predicate = switch (key) {

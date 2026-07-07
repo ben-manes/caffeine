@@ -104,13 +104,13 @@ public final class IndexedCache<K, V> {
     requireNonNull(value);
     var index = buildIndex(value);
     store.asMap().compute(index.getFirst(), (key, oldValue) -> {
-      if (oldValue != null) {
-        indexes.keySet().removeAll(Sets.difference(indexes.get(index.getFirst()), index));
-      }
       for (var indexKey : index) {
         var existing = indexes.get(indexKey);
         checkState((existing == null) || key.equals(existing.getFirst()),
             "The key '%s' is already associated with a different entry", indexKey);
+      }
+      if (oldValue != null) {
+        indexes.keySet().removeAll(Sets.difference(indexes.get(index.getFirst()), index));
       }
       for (var indexKey : index) {
         indexes.put(indexKey, index);
@@ -164,9 +164,15 @@ public final class IndexedCache<K, V> {
       return this;
     }
 
-    /** See {@link Caffeine#ticker(Duration)}. */
+    /** See {@link Caffeine#ticker(Ticker)}. */
     public Builder<K, V> ticker(Ticker ticker) {
       cacheBuilder.ticker(ticker);
+      return this;
+    }
+
+    /** See {@link Caffeine#maximumSize(long)}. */
+    public Builder<K, V> maximumSize(long maximumSize) {
+      cacheBuilder.maximumSize(maximumSize);
       return this;
     }
 
