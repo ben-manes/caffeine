@@ -155,6 +155,15 @@ final class CaffeinatedGuavaLoadingCache<K, V>
       }
       return future;
     }
+    /** Sequentially loads each missing entry. */
+    @SuppressWarnings("PMD.SignatureDeclareThrowsException")
+    Map<K, V> loadSequentially(Set<? extends K> keys) throws Exception {
+      var result = new HashMap<K, V>(keys.size(), /* loadFactor= */ 1.0f);
+      for (K key : keys) {
+        result.put(key, load(key));
+      }
+      return result;
+    }
   }
 
   static class InternalSingleLoader<K, V> extends CaffeinatedLoader<K, V> {
@@ -191,7 +200,12 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     @SuppressWarnings("ConstantValue")
     @Override public Map<K, V> loadAll(Set<? extends K> keys) {
       try {
-        Map<K, V> loaded = cacheLoader.loadAll(keys);
+        Map<K, V> loaded;
+        try {
+          loaded = cacheLoader.loadAll(keys);
+        } catch (UnsupportedLoadingOperationException e) {
+          return loadSequentially(keys);
+        }
         if (loaded == null) {
           throw new InvalidCacheLoadException("null map");
         }
@@ -203,12 +217,6 @@ final class CaffeinatedGuavaLoadingCache<K, V>
             result.put(key, value);
           }
         });
-        return result;
-      } catch (UnsupportedLoadingOperationException e) {
-        var result = new HashMap<K, V>(keys.size(), /* loadFactor= */ 1.0f);
-        for (K key : keys) {
-          result.put(key, load(key));
-        }
         return result;
       } catch (RuntimeException | Error e) {
         throw e;
@@ -249,11 +257,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
       try {
         loaded = cacheLoader.loadAll(keys);
       } catch (UnsupportedLoadingOperationException e) {
-        var result = new HashMap<K, V>(keys.size(), /* loadFactor= */ 1.0f);
-        for (K key : keys) {
-          result.put(key, load(key));
-        }
-        return result;
+        return loadSequentially(keys);
       }
       if (loaded == null) {
         throw new InvalidCacheLoadException("null map");

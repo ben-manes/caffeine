@@ -143,6 +143,28 @@ final class WriteBehindCacheWriterTest {
   }
 
   @Test
+  void coalescerThrows_keepsWriting() {
+    var firstBatch = new AtomicBoolean(true);
+    var written = new ConcurrentLinkedQueue<Integer>();
+    var writer = new WriteBehindCacheWriter.Builder<Integer, Integer>()
+        .coalesce((first, second) -> {
+          if (firstBatch.getAndSet(false)) {
+            throw new IllegalStateException("coalesce failed");
+          }
+          return second;
+        })
+        .bufferTime(Duration.ofMillis(50))
+        .writeAction(batch -> written.addAll(batch.keySet())).build();
+
+    // A throw from the coalescer must not tear down the pipeline: later writes still flow
+    writer.accept(1, 1);
+    writer.accept(1, 2);
+    await().untilFalse(firstBatch);
+    writer.accept(2, 2);
+    await().until(() -> written.contains(2));
+  }
+
+  @Test
   void emptyBatch_notDelivered() {
     var batchSizes = new ConcurrentLinkedQueue<Integer>();
     var writer = new WriteBehindCacheWriter.Builder<Integer, Integer>()

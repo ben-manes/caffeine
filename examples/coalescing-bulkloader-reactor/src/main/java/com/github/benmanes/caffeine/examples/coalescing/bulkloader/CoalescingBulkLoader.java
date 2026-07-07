@@ -131,6 +131,13 @@ public final class CoalescingBulkLoader<K, V> implements AsyncCacheLoader<K, V> 
     /** Returns a loader that batches the individual lookups to the system of record. */
     public CoalescingBulkLoader<K, V> build() {
       requireNonNull(mappingFunction);
+      requireNonNull(maxTime);
+      if (maxSize <= 0) {
+        throw new IllegalStateException("maxSize must be set");
+      }
+      if (parallelism <= 0) {
+        throw new IllegalStateException("parallelism must be set");
+      }
       return new CoalescingBulkLoader<>(this);
     }
   }

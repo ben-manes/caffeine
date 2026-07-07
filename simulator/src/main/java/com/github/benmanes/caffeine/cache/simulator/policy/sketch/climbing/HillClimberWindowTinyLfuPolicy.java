@@ -251,7 +251,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     checkState(maxProtected >= 0);
 
     if (trace) {
-      System.out.printf("+%,d (%,d -> %,d)%n", steps, maxWindow - steps, maxWindow);
+      System.out.printf(US, "+%,d (%,d -> %,d)%n", steps, maxWindow - steps, maxWindow);
     }
   }
 
@@ -280,13 +280,13 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     checkState(maxProtected >= 0);
 
     if (trace) {
-      System.out.printf("-%,d (%,d -> %,d)%n", steps, maxWindow + steps, maxWindow);
+      System.out.printf(US, "-%,d (%,d -> %,d)%n", steps, maxWindow + steps, maxWindow);
     }
   }
 
   private void printSegmentSizes() {
     if (debug) {
-      System.out.printf("maxWindow=%d, maxProtected=%d, percentWindow=%.1f",
+      System.out.printf(US, "maxWindow=%d, maxProtected=%d, percentWindow=%.1f",
           maxWindow, maxProtected, (100.0 * maxWindow) / maximumSize);
     }
   }

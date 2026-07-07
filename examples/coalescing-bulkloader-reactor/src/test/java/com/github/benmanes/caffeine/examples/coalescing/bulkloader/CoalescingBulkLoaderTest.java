@@ -21,8 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -114,11 +116,37 @@ final class CoalescingBulkLoaderTest {
   }
 
   @Test
+  void mappingFunctionThrows() {
+    var loader = new CoalescingBulkLoader.Builder<Integer, Integer>()
+        .mappingFunction(_ -> { throw new IllegalStateException("load failed"); })
+        .maxTime(Duration.ofMillis(100))
+        .parallelism(1)
+        .maxSize(2)
+        .build();
+    var cache = Caffeine.newBuilder().buildAsync(loader);
+
+    // A throwing mappingFunction must complete the futures exceptionally, not leave them hanging
+    var error = assertThrows(ExecutionException.class, () -> cache.get(1).get(5, TimeUnit.SECONDS));
+    assertThat(error).hasCauseThat().isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
   void invalidArguments() {
     var builder = new CoalescingBulkLoader.Builder<Integer, Integer>();
     assertThrows(IllegalArgumentException.class, () -> builder.maxSize(0));
     assertThrows(IllegalArgumentException.class, () -> builder.parallelism(0));
     assertThrows(IllegalArgumentException.class, () -> builder.maxTime(Duration.ZERO));
     assertThrows(IllegalArgumentException.class, () -> builder.maxTime(Duration.ofMillis(-1)));
+  }
+
+  @Test
+  void missingRequiredFields() {
+    assertThrows(NullPointerException.class, () ->
+        new CoalescingBulkLoader.Builder<Integer, Integer>().build());
+    assertThrows(IllegalStateException.class, () ->
+        new CoalescingBulkLoader.Builder<Integer, Integer>()
+            .mappingFunction(_ -> Map.of())
+            .maxTime(Duration.ofMillis(1))
+            .build());
   }
 }

@@ -29,6 +29,7 @@ import java.util.function.Function;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Striped;
@@ -56,7 +57,7 @@ public final class IndexedCache<K, V> {
     this.locks = Striped.lock(1_024);
     this.indexers = indexers;
     this.store = cacheBuilder
-        .evictionListener((key, _, _) -> indexes.keySet().removeAll(indexes.get(key)))
+        .evictionListener((K key, V _, RemovalCause _) -> removeIndexes(key))
         .build();
   }
 
@@ -127,9 +128,14 @@ public final class IndexedCache<K, V> {
     }
 
     store.asMap().computeIfPresent(index.getFirst(), (_, _) -> {
-      indexes.keySet().removeAll(indexes.get(index.getFirst()));
+      removeIndexes(index.getFirst());
       return null;
     });
+  }
+
+  /** Removes every index key that maps to the given primary key. */
+  private void removeIndexes(K primaryKey) {
+    indexes.keySet().removeAll(indexes.get(primaryKey));
   }
 
   /** Returns a sequence of keys where the first item is the primary key. */

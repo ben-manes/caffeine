@@ -60,17 +60,16 @@ public final class WriteBehindCacheWriter<K, V> implements BiConsumer<K, V> {
     var writeAction = builder.writeAction;
     subject = PublishSubject.<Entry<K, V>>create().toSerialized();
     subject.buffer(builder.bufferTime.toNanos(), TimeUnit.NANOSECONDS)
-        .map(entries -> entries.stream().collect(
-            toMap(Entry::getKey, Entry::getValue, builder.coalescer)))
-        .filter(batch -> !batch.isEmpty())
+        .filter(entries -> !entries.isEmpty())
         .observeOn(Schedulers.io())
-        .subscribe(batch -> {
+        .subscribe(entries -> {
           try {
-            writeAction.accept(batch);
+            writeAction.accept(entries.stream().collect(
+                toMap(Entry::getKey, Entry::getValue, builder.coalescer)));
           } catch (RuntimeException e) {
             logger.log(Level.ERROR, "Exception thrown by the write-behind action", e);
           }
-        });
+        }, error -> logger.log(Level.ERROR, "Write-behind pipeline terminated", error));
   }
 
   @Override public void accept(K key, V value) {

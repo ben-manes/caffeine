@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Locale.US;
 
 /**
  * A skeleton for hill climbers that walk using the hit rate.
@@ -74,7 +75,7 @@ public abstract class AbstractClimber implements HillClimber {
     resetSample(hitRate);
 
     if (debug) {
-      System.out.printf("%.2f\t%.2f%n", 100 * hitRate, windowSize);
+      System.out.printf(US, "%.2f\t%.2f%n", 100 * hitRate, windowSize);
     }
     return adaption;
   }
