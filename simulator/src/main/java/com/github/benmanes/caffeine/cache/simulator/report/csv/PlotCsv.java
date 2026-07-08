@@ -110,7 +110,7 @@ public record PlotCsv(Path inputFile, Path outputFile, String metric,
     plot.getRangeAxis().setAutoRange(false);
     plot.getRangeAxis().setRange(calculateRange(plot));
 
-    for (int i = 0; i < plot.getCategories().size(); i++) {
+    for (int i = 0; i < plot.getDataset().getRowCount(); i++) {
       plot.getRenderer().setSeriesStroke(i, new BasicStroke(3.0f));
     }
   }
