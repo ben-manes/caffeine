@@ -341,12 +341,12 @@ session memory for the full rationale.
   `next()` and `remove()` still gets `REMOVED` + a removal count (RI parity — its
   iterator removes unconditionally, "we simply don't care"). The expired→eviction
   gating catalogued above applies to `remove`/`removeAll`/`getAndRemove` only.
-- **`JCacheLoaderAdapter.expireTimeMillis` lacks the ±1 sentinel-collision
-  adjustment** that `CacheProxy.getWriteExpireTimeMillis`/`setAccessExpireTime`
-  apply when a finite adjusted time lands exactly on `0` or `Long.MAX_VALUE`
-  (treated as already-expired / eternal). Requires an exact arithmetic collision
-  with the ticker; informational internal-parity nit, not worth the branch until
-  a loader path shares the helper.
+- **`JCacheLoaderAdapter.expireTimeMillis` applies the same ±1 sentinel-collision
+  adjustment** as `CacheProxy.getWriteExpireTimeMillis`/`setAccessExpireTime` when
+  a finite adjusted time lands exactly on `0` or `Long.MAX_VALUE` (treated as
+  already-expired / eternal). Resolved by 9905bf070 and pinned by
+  `CacheLoaderTest.load_adjustedTimeSentinelZero`/`...Max`; earlier revisions of
+  this list recorded the adjustment as missing — do not re-derive that gap.
 - **Synchronous-listener exceptions are logged and swallowed**, not wrapped in
   `CacheEntryListenerException` and rethrown to the cache-op caller (the RI
   rethrows). The TCK's `testBrokenCacheEntryListener` tolerates both behaviors

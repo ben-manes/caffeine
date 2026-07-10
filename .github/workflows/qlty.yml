@@ -38,7 +38,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install Qlty
-        uses: qltysh/qlty-action/install@fd52dc852530a708d68c3b7342f8d33d1df4cd55 # v2.2.1
+        uses: qltysh/qlty-action/install@08a0a862c159eae9b9003081da6663d96efef637 # v2.3.0
       - name: Setup Qlty
         run: |
           qlty init --skip-plugins -n
@@ -59,7 +59,7 @@ jobs:
         with:
           files: results.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        uses: github/codeql-action/upload-sarif@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: results.sarif
@@ -92,7 +92,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install Qlty
-        uses: qltysh/qlty-action/install@fd52dc852530a708d68c3b7342f8d33d1df4cd55 # v2.2.1
+        uses: qltysh/qlty-action/install@08a0a862c159eae9b9003081da6663d96efef637 # v2.3.0
       - name: Setup Qlty
         run: |
           qlty init --skip-plugins -n
@@ -113,7 +113,7 @@ jobs:
         with:
           files: results.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        uses: github/codeql-action/upload-sarif@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: results.sarif

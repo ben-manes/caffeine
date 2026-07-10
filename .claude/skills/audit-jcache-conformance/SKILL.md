@@ -131,7 +131,12 @@ processors (D)**, **events (E)**, **statistics (F)**, **integration loader+write
 doc + the fetched spec as context, each required to return a concrete witness
 (operation sequence → divergent event/stat/end-state, or the test that pins the
 clause). Sub-agents cannot read session memory — **paste the doc's divergence
-catalogue inline** so they do not re-derive known false-positives.
+catalogue inline** so they do not re-derive known false-positives. Direct each
+sub-auditor to write its report to a **group-suffixed path**
+(`.claude/reports/audit-jcache-conformance-<group>.md`), never the canonical path:
+parallel groups writing `audit-jcache-conformance.md` overwrite each other (the
+2026-07 run lost two group reports this way and had to recover them from agent
+transcripts).
 
 ## Step 3: Resolve and pin
 
@@ -155,7 +160,9 @@ gap (which test to add), not a bug.
 
 ## Output
 
-Write `.claude/reports/audit-jcache-conformance.md` using the standard
+The orchestrator (not the sub-auditors) writes
+`.claude/reports/audit-jcache-conformance.md` — the consolidated adjudication
+across the group-suffixed reports — using the standard
 `.claude/docs/finding-taxonomy.md` schema (severity / category / confidence /
 classification).
 

@@ -3234,9 +3234,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return false;
     }
 
-    long now = expirationTicker().read();
-    @Var int count = 0;
     try {
+      @Var int count = 0;
+      long now = expirationTicker().read();
       for (var node : data.values()) {
         K key = node.getKey();
         V value = node.getValue();
@@ -3252,10 +3252,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
         count++;
       }
+      return (count == expectedSize);
     } catch (ClassCastException | NullPointerException ignored) {
       return false;
     }
-    return (count == expectedSize);
   }
 
   @Override
