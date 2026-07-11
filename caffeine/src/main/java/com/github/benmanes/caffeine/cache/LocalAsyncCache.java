@@ -299,21 +299,36 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return new CompletionException(failure);
     }
 
+    @SuppressWarnings("ImmutableMapCopyOf")
     private @Nullable Throwable handleResponse(
         @Nullable Map<? extends K, ? extends V> result, @Nullable Throwable error) {
       if (result == null) {
         var failure = (error == null) ? new NullMapCompletionException() : error;
-        for (var entry : proxies.entrySet()) {
-          cache.remove(entry.getKey(), entry.getValue());
-          entry.getValue().obtrudeException(failure);
-        }
-        if (!(failure instanceof CancellationException) && !(failure instanceof TimeoutException)) {
-          logger.log(Level.WARNING, "Exception thrown during asynchronous load", failure);
-        }
+        failProxies(failure);
         return failure;
       }
-      var failure = fillProxies(result);
-      return addNewEntries(result, failure);
+
+      Map<K, V> snapshot;
+      try {
+        snapshot = Map.copyOf(result);
+      } catch (Throwable t) {
+        failProxies(t);
+        return t;
+      }
+
+      var failure = fillProxies(snapshot);
+      return addNewEntries(snapshot, failure);
+    }
+
+    /** Removes and exceptionally completes every requested proxy. */
+    private void failProxies(Throwable failure) {
+      for (var entry : proxies.entrySet()) {
+        cache.remove(entry.getKey(), entry.getValue());
+        entry.getValue().obtrudeException(failure);
+      }
+      if (!(failure instanceof CancellationException) && !(failure instanceof TimeoutException)) {
+        logger.log(Level.WARNING, "Exception thrown during asynchronous load", failure);
+      }
     }
 
     /** Populates the proxies with the computed result. */
@@ -347,15 +362,12 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     /** Adds to the cache any extra entries computed that were not requested. */
     private @Nullable Throwable addNewEntries(
-        Map<? extends K, ? extends @Nullable V> result, @Nullable Throwable failure) {
+        Map<? extends K, ? extends V> result, @Nullable Throwable failure) {
       @Var Throwable error = failure;
-      for (Map.Entry<? extends K, ? extends @Nullable V> entry : result.entrySet()) {
+      for (var entry : result.entrySet()) {
         var key = entry.getKey();
         if (!proxies.containsKey(key)) {
-          @Nullable V value = entry.getValue();
-          if (value == null) {
-            continue;
-          }
+          V value = entry.getValue();
           try {
             cache.put(key, CompletableFuture.completedFuture(value));
           } catch (Throwable t) {

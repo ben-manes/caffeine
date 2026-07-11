@@ -33,6 +33,7 @@ jobs:
             maven-central.storage-download.googleapis.com:443
             objects.githubusercontent.com:443
             production.cloudflare.docker.com:443
+            production.cloudfront.docker.com:443
             raw.githubusercontent.com:443
             registry-1.docker.io:443
             *.blob.core.windows.net:443

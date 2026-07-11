@@ -354,13 +354,26 @@ final class AsyncLoadingCacheTest {
 
   @ParameterizedTest
   @CheckMaxLogLevel(WARN)
-  @CacheSpec(loader = {Loader.NULL, Loader.BULK_NULL_MAPPING})
+  @CacheSpec(loader = Loader.NULL)
   void getAll_absent_nullMapping(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    // A per-key loader that returns null leaves each requested key absent (not cached)
     assertThat(cache.getAll(context.absentKeys()).join()).isEmpty();
     int misses = context.absentKeys().size();
-    int loadSuccess = (context.loader().isBulk() || context.isSync()) ? 1 : 0;
-    int loadFailure = (context.loader().isBulk() || context.isSync()) ? 0 : misses;
+    int loadSuccess = context.isSync() ? 1 : 0;
+    int loadFailure = context.isSync() ? 0 : misses;
     assertThat(context).stats().hits(0).misses(misses).success(loadSuccess).failures(loadFailure);
+  }
+
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(loader = Loader.BULK_NULL_MAPPING)
+  void getAll_absent_bulkNullMapping(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    // A bulk loader returning null values is rejected rather than silently dropped
+    assertThat(cache.getAll(context.absentKeys()))
+        .failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(NullPointerException.class);
+    int misses = context.absentKeys().size();
+    assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
   }
 
   @ParameterizedTest
@@ -425,12 +438,13 @@ final class AsyncLoadingCacheTest {
   @CheckMaxLogLevel(WARN)
   @CacheSpec(loader = Loader.BULK_EXCEEDS_NULL)
   void getAll_exceeds_nullMapping(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.getAll(context.absentKeys()).join()).isEmpty();
+    // A bulk loader returning null values, even for unrequested extras, rejects the batch
+    assertThat(cache.getAll(context.absentKeys()))
+        .failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(NullPointerException.class);
     assertThat(cache).containsExactlyEntriesIn(context.original());
     int misses = context.absentKeys().size();
-    int loadSuccess = (context.loader().isBulk() || context.isSync()) ? 1 : 0;
-    int loadFailure = (context.loader().isBulk() || context.isSync()) ? 0 : misses;
-    assertThat(context).stats().hits(0).misses(misses).success(loadSuccess).failures(loadFailure);
+    assertThat(context).stats().hits(0).misses(misses).success(0).failures(1);
   }
 
   @ParameterizedTest

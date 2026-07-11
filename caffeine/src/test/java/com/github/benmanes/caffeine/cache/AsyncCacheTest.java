@@ -49,6 +49,7 @@ import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.io.IOException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -56,6 +57,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -498,6 +500,24 @@ final class AsyncCacheTest {
         .hasSize(1);
   }
 
+  @CacheSpec
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  void getAllFunction_absent_badMap(AsyncCache<Int, Int> cache, CacheContext context) {
+    // A misbehaving result map must fail the batch, not strand the requested proxies.
+    Map<Int, Int> badMap = new AbstractMap<>() {
+      @Override public Set<Entry<Int, Int>> entrySet() {
+        throw new IllegalStateException();
+      }
+    };
+    assertThat(cache.getAll(context.absentKeys(), keys -> badMap))
+        .failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(IllegalStateException.class);
+    for (var key : context.absentKeys()) {
+      assertThat(cache).doesNotContainKey(key);
+    }
+  }
+
   @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void getAllFunction_absent(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -509,12 +529,16 @@ final class AsyncCacheTest {
 
   @CacheSpec
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
   void getAllFunction_absent_nullMapping(AsyncCache<Int, Int> cache, CacheContext context) {
+    // A null value is not a valid mapping, so the batch is rejected rather than silently dropped
     context.absent().put(context.absentKey(), nullValue());
-    var result = cache.getAll(context.absentKeys(), keys -> context.absent()).join();
+    assertThat(cache.getAll(context.absentKeys(), keys -> context.absent()))
+        .failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(NullPointerException.class);
     int count = context.absentKeys().size();
-    assertThat(result).hasSize(count - 1);
-    assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
+    assertThat(context).stats().hits(0).misses(count).success(0).failures(1);
+    assertThat(cache).hasSize(context.initialSize());
   }
 
   @ParameterizedTest
@@ -553,15 +577,17 @@ final class AsyncCacheTest {
 
   @CacheSpec
   @ParameterizedTest
-  void getAllFunction_exceeds_nullMapping(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  @CheckMaxLogLevel(WARN)
+  void getAllFunction_exceeds_nullMapping(AsyncCache<Int, Int> cache, CacheContext context) {
+    // A null value anywhere in the result, even an unrequested extra, rejects the whole batch
     context.absent().put(context.absentKey(), nullValue());
     var expectedKeys = Sets.filter(context.absentKeys(), key -> !context.absentKey().equals(key));
-    var result = cache.getAll(expectedKeys, keys -> context.absent()).join();
+    assertThat(cache.getAll(expectedKeys, keys -> context.absent()))
+        .failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(NullPointerException.class);
     int count = expectedKeys.size();
-    assertThat(result).hasSize(count);
-    assertThat(cache).doesNotContainKey(context.absentKey());
-    assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
+    assertThat(context).stats().hits(0).misses(count).success(0).failures(1);
+    assertThat(cache).hasSize(context.initialSize());
   }
 
   @ParameterizedTest
@@ -937,14 +963,17 @@ final class AsyncCacheTest {
 
   @CacheSpec
   @ParameterizedTest
-  void getAllBifunction_absent_nullMapping(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  @CheckMaxLogLevel(WARN)
+  void getAllBifunction_absent_nullMapping(AsyncCache<Int, Int> cache, CacheContext context) {
+    // A null value is not a valid mapping, so the batch is rejected rather than silently dropped
     context.absent().put(context.absentKey(), nullValue());
-    var result = cache.getAll(context.absentKeys(), (keys, executor) ->
-        CompletableFuture.completedFuture(context.absent())).join();
+    assertThat(cache.getAll(context.absentKeys(), (keys, executor) ->
+        CompletableFuture.completedFuture(context.absent())))
+        .failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(NullPointerException.class);
     int count = context.absentKeys().size();
-    assertThat(result).hasSize(count - 1);
-    assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
+    assertThat(context).stats().hits(0).misses(count).success(0).failures(1);
+    assertThat(cache).hasSize(context.initialSize());
   }
 
   @CacheSpec
@@ -994,16 +1023,18 @@ final class AsyncCacheTest {
 
   @CacheSpec
   @ParameterizedTest
-  void getAllBifunction_exceeds_nullMapping(
-      AsyncCache<Int, Int> cache, CacheContext context) {
+  @CheckMaxLogLevel(WARN)
+  void getAllBifunction_exceeds_nullMapping(AsyncCache<Int, Int> cache, CacheContext context) {
+    // A null value anywhere in the result, even an unrequested extra, rejects the whole batch
     context.absent().put(context.absentKey(), nullValue());
     var expectedKeys = Sets.filter(context.absentKeys(), key -> !context.absentKey().equals(key));
-    var result = cache.getAll(expectedKeys, (keys, executor) ->
-        CompletableFuture.completedFuture(context.absent())).join();
+    assertThat(cache.getAll(expectedKeys, (keys, executor) ->
+        CompletableFuture.completedFuture(context.absent())))
+        .failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(NullPointerException.class);
     int count = expectedKeys.size();
-    assertThat(result).hasSize(count);
-    assertThat(cache).doesNotContainKey(context.absentKey());
-    assertThat(context).stats().hits(0).misses(count).success(1).failures(0);
+    assertThat(context).stats().hits(0).misses(count).success(0).failures(1);
+    assertThat(cache).hasSize(context.initialSize());
   }
 
   @ParameterizedTest
