@@ -55,7 +55,7 @@ public final class CoalescingBulkLoader<K, V> implements AsyncCacheLoader<K, V> 
     this.mappingFunction = builder.mappingFunction;
     sink = Sinks.many().unicast().onBackpressureBuffer();
     sink.asFlux()
-        .bufferTimeout(builder.maxSize, builder.maxTime)
+        .bufferTimeout(builder.maxSize, builder.maxTime, /* fairBackpressure= */ true)
         .map(requests -> requests.stream().collect(
             groupingBy(Entry::getKey, mapping(Entry::getValue, toList()))))
         .parallel(builder.parallelism)
