@@ -20,7 +20,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
-import java.io.FilterWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
@@ -94,10 +93,8 @@ public abstract class TextReporter implements Reporter {
   private Writer makeWriter() throws IOException {
     String output = settings.report().output();
     if (output.equalsIgnoreCase("console")) {
-      var console = new PrintWriter(System.out, /* autoFlush= */ true, UTF_8);
-      return new FilterWriter(console) {
-        @Override public void close() throws IOException {
-          console.println();
+      return new PrintWriter(System.out, /* autoFlush= */ true, UTF_8) {
+        @Override public void close() {
           flush();
         }
       };

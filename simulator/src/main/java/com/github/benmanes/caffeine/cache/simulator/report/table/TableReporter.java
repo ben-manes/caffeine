@@ -64,6 +64,7 @@ public final class TableReporter extends TextReporter {
             .with((PolicyStats policyStats) -> metrics().format(policyStats.metrics().get(header))))
         .toList();
     writer.write(table.data(results, columns).asString());
+    writer.write(System.lineSeparator());
   }
 
   private static String formatObject(@Nullable Object object) {

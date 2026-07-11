@@ -1473,23 +1473,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
                 cause[0] = RemovalCause.EXPLICIT;
               }
               return null;
-            } else if (currentValue == value) {
-              // If the reloaded value is the same instance then no-op
-              return currentValue;
-            } else if (isAsync &&
-                (newValue == Async.getIfReady((CompletableFuture<?>) currentValue))) {
-              // If the completed futures hold the same value instance then no-op
-              return currentValue;
             } else if ((currentValue == oldValue) && ((node.getWriteTime() & ~1L) == writeTime)
                 && (refreshes.get(keyReference) == refreshFuture[0])) {
-              // If the entry was not modified while in-flight (no ABA) then replace
+              // If the entry was not modified while in-flight (no ABA) then replace, refreshing the
+              // metadata even when the reloaded value is the same instance
               return value;
             }
             // Otherwise the refresh is discarded. If a concurrent write changed the value or
-            // writeTime, preserve those timestamps so the refresh rejection does not stomp on
-            // the user's write. An external discard with no concurrent write falls through to the
-            // normal update, which debounces the next refresh attempt.
-            if (value != null) {
+            // writeTime, preserve those timestamps so the refresh rejection does not stomp on the
+            // user's write. An external discard with no concurrent write falls through to the
+            // normal update, which debounces the next refresh attempt. A same-instance reload is
+            // not a value change, so it is not notified.
+            boolean sameInstance = (currentValue == value)
+                || (isAsync && (newValue == Async.getIfReady((CompletableFuture<?>) currentValue)));
+            if ((value != null) && !sameInstance) {
               cause[0] = RemovalCause.REPLACED;
             }
             if ((currentValue != oldValue) || ((node.getWriteTime() & ~1L) != writeTime)) {

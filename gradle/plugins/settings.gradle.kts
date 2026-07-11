@@ -1,4 +1,16 @@
 @file:Suppress("UnstableApiUsage")
+pluginManagement {
+  repositories {
+    if (providers.environmentVariable("CI").isPresent) {
+      maven {
+        name = "googleMavenCentralMirror"
+        url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+        mavenContent { releasesOnly() }
+      }
+    }
+    gradlePluginPortal()
+  }
+}
 plugins {
   id("com.gradle.develocity") version "4.5.0"
   id("com.gradle.common-custom-user-data-gradle-plugin") version "2.7.0"
@@ -7,7 +19,6 @@ plugins {
 
 dependencyResolutionManagement {
   repositories {
-    gradlePluginPortal()
     if (providers.environmentVariable("CI").isPresent) {
       maven {
         name = "googleMavenCentralMirror"
@@ -15,7 +26,7 @@ dependencyResolutionManagement {
         mavenContent { releasesOnly() }
       }
     }
-    mavenCentral()
+    gradlePluginPortal()
   }
   versionCatalogs {
     register("libs") {

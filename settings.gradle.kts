@@ -1,6 +1,16 @@
 @file:Suppress("UnstableApiUsage")
 pluginManagement {
   includeBuild("gradle/plugins")
+  repositories {
+    if (providers.environmentVariable("CI").isPresent) {
+      maven {
+        name = "googleMavenCentralMirror"
+        url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+        mavenContent { releasesOnly() }
+      }
+    }
+    gradlePluginPortal()
+  }
 }
 plugins {
   id("com.gradle.develocity") version "4.5.0"
