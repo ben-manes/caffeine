@@ -33,6 +33,7 @@ import org.jspecify.annotations.Nullable;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.copy.Copier;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.google.errorprone.annotations.Var;
@@ -50,9 +51,9 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   public LoadingCacheProxy(String name, Executor executor, CacheManagerImpl cacheManager,
       CaffeineConfiguration<K, V> configuration, LoadingCache<K, @Nullable Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader, ExpiryPolicy expiry,
-      Ticker ticker, JCacheStatisticsMXBean statistics) {
+      Ticker ticker, JCacheStatisticsMXBean statistics, Copier copier) {
     super(name, executor, cacheManager, configuration, cache, dispatcher,
-        Optional.of(cacheLoader), expiry, ticker, statistics);
+        Optional.of(cacheLoader), expiry, ticker, statistics, copier);
     this.cache = cache;
   }
 
@@ -94,7 +95,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     }
 
     if (expirable == null) {
-      expirable = cache.get(key);
+      expirable = cache.get(copyOf(key));
       statistics.recordMisses(1L);
     } else {
       setAccessExpireTime(key, expirable, millis);
@@ -122,6 +123,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       if (entries.size() != keys.size()) {
         List<K> keysToLoad = keys.stream()
             .filter(key -> !entries.containsKey(key))
+            .map(this::copyOf)
             .collect(toUnmodifiableList());
         entries.putAll(cache.getAll(keysToLoad));
       }

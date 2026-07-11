@@ -97,6 +97,7 @@ import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.copy.Copier;
 import com.github.benmanes.caffeine.jcache.processor.Action;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
 import com.google.common.collect.ImmutableMap;
@@ -505,7 +506,7 @@ final class CacheProxyTest {
         var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry);
         var proxy = new LoadingCacheProxy<>("dummy", Runnable::run, fixture.cacheManager(),
             Mockito.mock(), cache, Mockito.mock(), Mockito.mock(),
-            expiry, Mockito.mock(), Mockito.mock())) {
+            expiry, Mockito.mock(), Mockito.mock(), Copier.identity())) {
       var actual = assertThrows(thrown, () -> proxy.get(KEY_1));
       if (wrapped) {
         assertThat(actual).hasCauseThat().isSameInstanceAs(underlying);
@@ -524,7 +525,7 @@ final class CacheProxyTest {
         var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry);
         var proxy = new LoadingCacheProxy<>("dummy", Runnable::run, fixture.cacheManager(),
             Mockito.mock(), cache, Mockito.mock(), Mockito.mock(),
-            expiry, Mockito.mock(), Mockito.mock())) {
+            expiry, Mockito.mock(), Mockito.mock(), Copier.identity())) {
       var actual = assertThrows(thrown, () -> proxy.getAll(Set.of(KEY_1)));
       if (wrapped) {
         assertThat(actual).hasCauseThat().isSameInstanceAs(underlying);
@@ -982,6 +983,43 @@ final class CacheProxyTest {
   }
 
   @Test
+  void readThrough_storesCopiedKey() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      CacheLoader<MutableInt, Integer> loader = Mockito.mock();
+      when(loader.load(any())).thenReturn(VALUE_1);
+      var config = new MutableConfiguration<MutableInt, Integer>()
+          .setReadThrough(true)
+          .setCacheLoaderFactory(() -> loader);
+      try (Cache<MutableInt, Integer> cache = fixture.cacheManager()
+              .createCache("read-through-key", config)) {
+        var key = new MutableInt(1);
+        assertThat(cache.get(key)).isEqualTo(VALUE_1);
+        key.setValue(2);
+        assertThat(cache.containsKey(new MutableInt(1))).isTrue();
+        assertThat(cache.containsKey(new MutableInt(2))).isFalse();
+      }
+    }
+  }
+
+  @Test
+  void readThrough_storesCopiedValue() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      CacheLoader<Integer, MutableInt> loader = Mockito.mock();
+      var loaded = new MutableInt(VALUE_1);
+      when(loader.load(any())).thenReturn(loaded);
+      var config = new MutableConfiguration<Integer, MutableInt>()
+          .setReadThrough(true)
+          .setCacheLoaderFactory(() -> loader);
+      try (Cache<Integer, MutableInt> cache = fixture.cacheManager()
+              .createCache("read-through-value", config)) {
+        assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
+        loaded.setValue(VALUE_2);
+        assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
+      }
+    }
+  }
+
+  @Test
   @SuppressFBWarnings("HES_LOCAL_EXECUTOR_SERVICE")
   void close_awaitsInFlightLoadAll() throws InterruptedException {
     @SuppressWarnings("PMD.CloseResource")
@@ -1109,7 +1147,7 @@ final class CacheProxyTest {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       var cache = new CacheProxy<Integer, Integer>("mock", Mockito.mock(), fixture.cacheManager(),
           Mockito.mock(), underlying, Mockito.mock(), Mockito.mock(), Mockito.mock(),
-          Mockito.mock(), Mockito.mock()) {
+          Mockito.mock(), Mockito.mock(), Copier.identity()) {
         int isClosed;
         @Override public boolean isClosed() {
           isClosed++;
@@ -1231,7 +1269,7 @@ final class CacheProxyTest {
       when(expiry.getExpiryForCreation()).thenReturn(ETERNAL);
       try (var orphan = new CacheProxy<Integer, Integer>("orphan", Runnable::run,
           fixture.cacheManager(), new CaffeineConfiguration<>(), Mockito.mock(), Mockito.mock(),
-          Optional.empty(), expiry, Mockito.mock(), Mockito.mock())) {
+          Optional.empty(), expiry, Mockito.mock(), Mockito.mock(), Copier.identity())) {
         fixture.cacheManager().close();
         orphan.close();
 

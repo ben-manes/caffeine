@@ -108,24 +108,21 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       CaffeineConfiguration<K, V> configuration,
       com.github.benmanes.caffeine.cache.Cache<K, @Nullable Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, Optional<CacheLoader<K, V>> cacheLoader,
-      ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics) {
+      ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics, Copier copier) {
     this.writer = requireNonNullElse(configuration.getCacheWriter(), DisabledCacheWriter.get());
     this.configuration = requireNonNull(configuration);
     this.cacheManager = requireNonNull(cacheManager);
     this.cacheLoader = requireNonNull(cacheLoader);
+    this.inFlight = ConcurrentHashMap.newKeySet();
     this.dispatcher = requireNonNull(dispatcher);
     this.statistics = requireNonNull(statistics);
+    this.cacheMxBean = new JCacheMXBean(this);
     this.executor = requireNonNull(executor);
     this.expiry = requireNonNull(expiry);
     this.ticker = requireNonNull(ticker);
     this.cache = requireNonNull(cache);
+    this.copier = requireNonNull(copier);
     this.name = requireNonNull(name);
-
-    copier = configuration.isStoreByValue()
-        ? configuration.getCopierFactory().create()
-        : Copier.identity();
-    cacheMxBean = new JCacheMXBean(this);
-    inFlight = ConcurrentHashMap.newKeySet();
   }
 
   @Override

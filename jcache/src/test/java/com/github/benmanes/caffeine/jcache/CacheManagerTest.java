@@ -110,8 +110,8 @@ final class CacheManagerTest {
   void reservedNames_areNotCaches() {
     // The reference.conf's `default` overlay template and `listeners` catalog are reserved
     // configuration sections, not cache definitions.
-    try (var fixture = JCacheFixture.builder().build()) {
-      var cacheManager = fixture.cacheManager();
+    try (var fixture = JCacheFixture.builder().build();
+         var cacheManager = fixture.cacheManager()) {
       assertThat(cacheManager.getCache("default")).isNull();
       assertThat(cacheManager.getCache("listeners")).isNull();
       assertThat(cacheManager.getCacheNames()).containsNoneOf("default", "listeners");

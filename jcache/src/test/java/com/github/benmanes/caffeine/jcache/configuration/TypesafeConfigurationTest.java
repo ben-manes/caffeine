@@ -194,8 +194,10 @@ final class TypesafeConfigurationTest {
   @Test
   void configSource_substitution() throws URISyntaxException {
     var classloader = Thread.currentThread().getContextClassLoader();
-    var classpath = configSource().get(URI.create("classpath:custom-substitution.conf"), classloader);
-    assertThat(classpath.getInt("caffeine.jcache.substitution.policy.maximum.size")).isEqualTo(1000);
+    var classpath = configSource().get(
+        URI.create("classpath:custom-substitution.conf"), classloader);
+    assertThat(classpath.getInt("caffeine.jcache.substitution.policy.maximum.size"))
+        .isEqualTo(1000);
 
     var file = requireNonNull(getClass().getResource("/custom-substitution.conf")).toURI();
     var config = configSource().get(file, classloader);

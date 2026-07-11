@@ -35,6 +35,7 @@ import org.jspecify.annotations.Nullable;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.CacheProxy;
 import com.github.benmanes.caffeine.jcache.Expirable;
+import com.github.benmanes.caffeine.jcache.copy.Copier;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.google.errorprone.annotations.Var;
@@ -51,16 +52,21 @@ public final class JCacheLoaderAdapter<K, V>
   private final JCacheStatisticsMXBean statistics;
   private final EventDispatcher<K, V> dispatcher;
   private final CacheLoader<K, V> delegate;
+  private final ClassLoader classLoader;
   private final ExpiryPolicy expiry;
+  private final Copier copier;
   private final Ticker ticker;
 
   private @Nullable CacheProxy<K, V> cache;
 
   public JCacheLoaderAdapter(CacheLoader<K, V> delegate, EventDispatcher<K, V> dispatcher,
-      ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics) {
+      ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics,
+      Copier copier, ClassLoader classLoader) {
     this.dispatcher = requireNonNull(dispatcher);
     this.statistics = requireNonNull(statistics);
+    this.classLoader = requireNonNull(classLoader);
     this.delegate = requireNonNull(delegate);
+    this.copier = requireNonNull(copier);
     this.expiry = requireNonNull(expiry);
     this.ticker = requireNonNull(ticker);
   }
@@ -85,15 +91,16 @@ public final class JCacheLoaderAdapter<K, V>
       @Var Expirable<V> expirable = null;
       if (value != null) {
         requireNonNull(cache);
+        V copy = copyOf(value);
         long expireTime = expireTimeMillis(expiry::getExpiryForCreation);
         if (expireTime == 0L) {
           // Per JSR-107 1.1.1 p.55: ZERO duration → entry is already expired
           // and will not be added to the Cache. Match the put-path convention
           // of publishing EXPIRED in place of CREATED.
-          dispatcher.publishExpired(cache, key, value);
+          dispatcher.publishExpired(cache, key, copy);
         } else {
-          expirable = new Expirable<>(value, expireTime);
-          dispatcher.publishCreated(cache, key, value);
+          expirable = new Expirable<>(copy, expireTime);
+          dispatcher.publishCreated(cache, key, copy);
         }
       }
 
@@ -125,12 +132,13 @@ public final class JCacheLoaderAdapter<K, V>
         if ((key == null) || (value == null)) {
           continue;
         }
+        V copy = copyOf(value);
         long expireTime = expireTimeMillis(expiry::getExpiryForCreation);
         if (expireTime == 0L) {
           // ZERO → already expired and not added; match the put-path convention.
-          dispatcher.publishExpired(cache, key, value);
+          dispatcher.publishExpired(cache, key, copy);
         } else {
-          result.put(key, new Expirable<>(value, expireTime));
+          result.put(key, new Expirable<>(copy, expireTime));
         }
       }
       for (var entry : result.entrySet()) {
@@ -157,18 +165,24 @@ public final class JCacheLoaderAdapter<K, V>
         return null;
       }
       requireNonNull(cache);
+      V copy = copyOf(value);
       long expireTime = expireTimeMillis(expiry::getExpiryForUpdate);
       if (expireTime == 0L) {
-        dispatcher.publishExpiredQuietly(cache, key, value);
+        dispatcher.publishExpiredQuietly(cache, key, copy);
         return null;
       }
-      dispatcher.publishUpdatedQuietly(cache, key, oldValue.get(), value);
-      return new Expirable<>(value, expireTime);
+      dispatcher.publishUpdatedQuietly(cache, key, oldValue.get(), copy);
+      return new Expirable<>(copy, expireTime);
     } catch (CacheLoaderException e) {
       throw e;
     } catch (RuntimeException e) {
       throw new CacheLoaderException(e);
     }
+  }
+
+  /** Returns a copy of the value if value-based caching is enabled. */
+  private V copyOf(V value) {
+    return requireNonNull(copier.copy(value, classLoader));
   }
 
   private long expireTimeMillis(Supplier<Duration> durationSupplier) {

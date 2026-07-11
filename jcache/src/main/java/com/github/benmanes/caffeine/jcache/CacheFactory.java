@@ -41,6 +41,7 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
+import com.github.benmanes.caffeine.jcache.copy.Copier;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.event.JCacheEvictionListener;
 import com.github.benmanes.caffeine.jcache.integration.JCacheLoaderAdapter;
@@ -134,6 +135,7 @@ final class CacheFactory {
 
   /** A one-shot builder for creating a cache instance. */
   private static final class Builder<K, V> {
+    final Copier copier;
     final Ticker ticker;
     final String cacheName;
     final Executor executor;
@@ -156,6 +158,9 @@ final class CacheFactory {
       this.scheduler = config.getSchedulerFactory().create();
       this.expiryPolicy = config.getExpiryPolicyFactory().create();
       this.dispatcher = new EventDispatcher<>(executor);
+      this.copier = config.isStoreByValue()
+          ? config.getCopierFactory().create()
+          : Copier.identity();
 
       caffeine.ticker(ticker);
       caffeine.executor(executor);
@@ -211,17 +216,17 @@ final class CacheFactory {
       var cacheLoaderFactory = config.getCacheLoaderFactory();
       var cacheLoader = (cacheLoaderFactory == null) ? null : cacheLoaderFactory.create();
       return new CacheProxy<>(cacheName, executor, cacheManager, config, caffeine.build(),
-          dispatcher, Optional.ofNullable(cacheLoader), expiryPolicy, ticker, statistics);
+          dispatcher, Optional.ofNullable(cacheLoader), expiryPolicy, ticker, statistics, copier);
     }
 
     /** Creates a cache that reads through on a cache miss. */
     private CacheProxy<K, V> newLoadingCacheProxy() {
       CacheLoader<K, V> cacheLoader = requireNonNull(config.getCacheLoaderFactory()).create();
-      var adapter = new JCacheLoaderAdapter<>(
-          cacheLoader, dispatcher, expiryPolicy, ticker, statistics);
+      var adapter = new JCacheLoaderAdapter<>(cacheLoader, dispatcher, expiryPolicy, ticker,
+          statistics, copier, requireNonNull(cacheManager.getClassLoader()));
       var cache = caffeine.build(adapter);
       var jcache = new LoadingCacheProxy<>(cacheName, executor, cacheManager, config,
-          cache, dispatcher, cacheLoader, expiryPolicy, ticker, statistics);
+          cache, dispatcher, cacheLoader, expiryPolicy, ticker, statistics, copier);
       adapter.setCache(jcache);
       return jcache;
     }
