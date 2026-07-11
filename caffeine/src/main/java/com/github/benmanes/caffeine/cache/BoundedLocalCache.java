@@ -4623,15 +4623,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
       @SuppressWarnings("unchecked")
       @Nullable V putIfAbsentAsync(K key, V value, long duration, TimeUnit unit) {
-        // Keep in sync with LocalAsyncCache.AsMapView#putIfAbsent(key, value)
+        // Mirrors LocalAsyncCache.AsMapView#putIfAbsent(key, value), but always probes quietly:
+        // the fixed duration must not be recomputed by the user's Expiry on a present entry
         var expiry = (Expiry<K, V>) new AsyncExpiry<>(new FixedExpireAfterWrite<>(duration, unit));
         var asyncValue = (V) CompletableFuture.completedFuture(value);
 
-        @Var CompletableFuture<V> priorFuture = null;
         for (;;) {
-          priorFuture = (CompletableFuture<V>) ((priorFuture == null)
-              ? cache.getIfPresent(key, /* recordStats= */ false)
-              : cache.getIfPresentQuietly(key));
+          var priorFuture = (CompletableFuture<V>) cache.getIfPresentQuietly(key);
           if (priorFuture != null) {
             if (!priorFuture.isDone()) {
               Async.getWhenSuccessful(priorFuture);

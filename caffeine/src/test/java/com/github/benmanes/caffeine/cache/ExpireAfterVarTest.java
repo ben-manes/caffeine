@@ -52,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -1774,6 +1775,25 @@ final class ExpireAfterVarTest {
     context.ticker().advance(Duration.ofSeconds(90));
     cache.cleanUp();
     assertThat(cache).isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  void putIfAbsent_present_preservesDuration(Cache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Expire.ONE_MINUTE.timeNanos());
+    Int key = context.absentKey();
+    cache.put(key, context.absentValue());
+
+    // A present-entry putIfAbsent carries a fixed duration and must not consult the user Expiry's
+    // read leg, which would otherwise rewrite the entry's expiration (an async-view regression)
+    Int result = expireAfterVar.putIfAbsent(key, context.absentValue(), Duration.ofMinutes(2));
+    assertThat(result).isEqualTo(context.absentValue());
+    assertThat(expireAfterVar.getExpiresAfter(key, TimeUnit.NANOSECONDS))
+        .hasValue(Expire.ONE_MINUTE.timeNanos());
+    verify(context.expiry(), never()).expireAfterRead(any(), any(), anyLong(), anyLong());
   }
 
   @ParameterizedTest
