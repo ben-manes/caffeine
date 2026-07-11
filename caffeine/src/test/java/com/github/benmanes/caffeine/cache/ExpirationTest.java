@@ -256,6 +256,27 @@ final class ExpirationTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO,
+      mustExpireWithAnyOf = VARIABLE, expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  void setExpiresAfter_reschedules(Cache<Int, Int> cache, CacheContext context) {
+    when(context.scheduler().schedule(any(), any(), anyLong(), any()))
+        .then(invocation -> DisabledFuture.instance());
+    cache.put(context.absentKey(), context.absentValue());
+
+    var delay1 = ArgumentCaptor.forClass(long.class);
+    verify(context.scheduler()).schedule(any(), any(), delay1.capture(), any());
+
+    // Shortening the expiry must re-arm the scheduler through the lossless write path so the
+    // entry is evicted at the new, sooner deadline rather than the original one.
+    cache.policy().expireVariably().orElseThrow()
+        .setExpiresAfter(context.absentKey(), 1, TimeUnit.SECONDS);
+
+    var delay2 = ArgumentCaptor.forClass(long.class);
+    verify(context.scheduler(), times(2)).schedule(any(), any(), delay2.capture(), any());
+    assertThat(delay2.getValue()).isLessThan(delay1.getValue());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
