@@ -94,11 +94,10 @@ public abstract class TextReporter implements Reporter {
   private Writer makeWriter() throws IOException {
     String output = settings.report().output();
     if (output.equalsIgnoreCase("console")) {
-      // print() closes the writer, but System.out belongs to the process, not the reporter.
-      // Flush instead of closing so the caller's later output is not dropped onto a dead stream.
       var console = new PrintWriter(System.out, /* autoFlush= */ true, UTF_8);
       return new FilterWriter(console) {
         @Override public void close() throws IOException {
+          console.println();
           flush();
         }
       };
