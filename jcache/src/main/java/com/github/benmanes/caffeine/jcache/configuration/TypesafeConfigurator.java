@@ -25,6 +25,7 @@ import java.lang.System.Logger.Level;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -65,6 +66,9 @@ import jakarta.inject.Inject;
 public final class TypesafeConfigurator {
   static final Logger logger = System.getLogger(TypesafeConfigurator.class.getName());
 
+  /** Sections nested under {@code caffeine.jcache} that are reserved and not cache definitions. */
+  static final Set<String> RESERVED_NAMES = Set.of("default", "listeners");
+
   static final AtomicReference<ConfigSource> configSource =
       new AtomicReference<>(TypesafeConfigurator::resolveConfig);
   static final AtomicReference<FactoryCreator> factoryCreator =
@@ -79,9 +83,12 @@ public final class TypesafeConfigurator {
    * @return the names of the configured caches
    */
   public static Set<String> cacheNames(Config config) {
-    return config.hasPath("caffeine.jcache")
-        ? Collections.unmodifiableSet(config.getObject("caffeine.jcache").keySet())
-        : Collections.emptySet();
+    if (!config.hasPath("caffeine.jcache")) {
+      return Collections.emptySet();
+    }
+    var names = new LinkedHashSet<>(config.getObject("caffeine.jcache").keySet());
+    names.removeAll(RESERVED_NAMES);
+    return Collections.unmodifiableSet(names);
   }
 
   /**
@@ -108,7 +115,7 @@ public final class TypesafeConfigurator {
   public static <K, V> Optional<CaffeineConfiguration<K, V>> from(Config config, String cacheName) {
     try {
       requireNonNull(cacheName);
-      return config.hasPath("caffeine.jcache." + cacheName)
+      return (!RESERVED_NAMES.contains(cacheName) && config.hasPath("caffeine.jcache." + cacheName))
           ? Optional.of(new Configurator<K, V>(config, cacheName).configure())
           : Optional.empty();
     } catch (ConfigException.BadPath e) {

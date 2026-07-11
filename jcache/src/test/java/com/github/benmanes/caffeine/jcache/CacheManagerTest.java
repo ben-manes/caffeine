@@ -107,6 +107,23 @@ final class CacheManagerTest {
   }
 
   @Test
+  void reservedNames_areNotCaches() {
+    // The reference.conf's `default` overlay template and `listeners` catalog are reserved
+    // configuration sections, not cache definitions.
+    try (var fixture = JCacheFixture.builder().build()) {
+      var cacheManager = fixture.cacheManager();
+      assertThat(cacheManager.getCache("default")).isNull();
+      assertThat(cacheManager.getCache("listeners")).isNull();
+      assertThat(cacheManager.getCacheNames()).containsNoneOf("default", "listeners");
+
+      // A real config-defined cache is still materialized on demand, and a reserved name is not
+      // "configured externally" so it may be created programmatically.
+      assertThat(cacheManager.getCache("test-cache")).isNotNull();
+      assertThat(cacheManager.createCache("default", new MutableConfiguration<>())).isNotNull();
+    }
+  }
+
+  @Test
   void maximumWeight_noWeigher() {
     try (var fixture = JCacheFixture.builder().build()) {
       var config = new CaffeineConfiguration<>().setMaximumWeight(OptionalLong.of(1_000));

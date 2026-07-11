@@ -231,7 +231,7 @@ final class TypesafeConfigurationTest {
     assertThat(TypesafeConfigurator.cacheNames(ConfigFactory.empty())).isEmpty();
 
     var names = TypesafeConfigurator.cacheNames(ConfigFactory.load());
-    assertThat(names).containsExactly("default", "listeners", "osgi-cache", "invalid-cache",
+    assertThat(names).containsExactly("osgi-cache", "invalid-cache", "derived-cache",
         "test-cache", "test-cache-2", "test-cache-3", "test-cache-4", "guice");
   }
 
@@ -260,6 +260,14 @@ final class TypesafeConfigurationTest {
   void invalidCache() {
     assertThrows(IllegalStateException.class, () ->
         TypesafeConfigurator.from(ConfigFactory.load(), "invalid-cache"));
+  }
+
+  @Test
+  void from_userTemplate_composesViaSubstitution() {
+    CaffeineConfiguration<String, Integer> cache = TypesafeConfigurator
+        .<String, Integer>from(ConfigFactory.load(), "derived-cache").orElseThrow();
+    assertThat(cache.getMaximumSize()).hasValue(1234);
+    assertThat(cache.getKeyType()).isEqualTo(String.class);
   }
 
   @Test
