@@ -261,6 +261,24 @@ final class ExpireAfterWriteTest {
     assertThat(context).removalNotifications().isEmpty();
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON,
+      mustExpireWithAnyOf = { AFTER_WRITE, VARIABLE }, expireAfterWrite = Expire.ONE_MINUTE,
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.WRITE }, expiryTime = Expire.ONE_MINUTE)
+  void merge_sameInstance(Map<Int, Int> map, CacheContext context) {
+    Int value = context.original().get(context.firstKey());
+    context.ticker().advance(Duration.ofSeconds(30));
+    assertThat(map.merge(context.firstKey(), context.absentValue(),
+        (oldValue, v) -> value)).isSameInstanceAs(value);
+
+    // The same-instance return is a setter no-op but still resets the write time (matching the
+    // synchronous cache), so the entry has not expired. The async view must not freeze it.
+    context.ticker().advance(Duration.ofSeconds(45));
+    assertThat(map).containsEntry(context.firstKey(), value);
+    assertThat(map).hasSize(1);
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
   /* --------------- Policy --------------- */
 
   @CheckNoStats

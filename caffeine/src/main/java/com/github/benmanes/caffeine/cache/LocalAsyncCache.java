@@ -1203,8 +1203,6 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
               if (mergedValue == null) {
                 return null;
               } else if (mergedValue == oldValue) {
-                hints.preserveTimestamps = true;
-                hints.preserveRefresh = true;
                 return oldValueFuture;
               } else if (mergedValue == value) {
                 return newValueFuture;
