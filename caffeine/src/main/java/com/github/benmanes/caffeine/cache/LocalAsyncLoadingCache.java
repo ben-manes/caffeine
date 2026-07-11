@@ -294,12 +294,6 @@ abstract class LocalAsyncLoadingCache<K, V>
             var discard = new boolean[1];
             var hints = new LocalCache.RemapHints();
             var value = asyncCache.cache().compute(key, (ignored, currentValue) -> {
-              if (newValue == Async.getIfReady((CompletableFuture<?>) currentValue)) {
-                // If the completed futures hold the same value instance then no-op
-                hints.preserveTimestamps = true;
-                return currentValue;
-              }
-
               // Keep the refresh registered until the write clears it to avoid refreshAfterWrite
               // readers from prematurely scheduling another reload
               boolean successful =
@@ -309,7 +303,7 @@ abstract class LocalAsyncLoadingCache<K, V>
               }
               // Otherwise, a write invalidated the refresh so discard it
               hints.preserveTimestamps = true;
-              discard[0] = true;
+              discard[0] = (newValue != Async.getIfReady((CompletableFuture<?>) currentValue));
               return currentValue;
             }, asyncCache.cache().expiry(), /* recordLoad= */ false,
                 /* recordLoadFailure= */ true, hints);

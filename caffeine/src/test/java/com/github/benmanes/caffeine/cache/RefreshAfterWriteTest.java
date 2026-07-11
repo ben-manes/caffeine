@@ -423,6 +423,29 @@ final class RefreshAfterWriteTest {
   @CheckNoEvictions
   @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      refreshAfterWrite = Expire.ONE_MINUTE, expireAfterWrite = Expire.FOREVER,
+      removalListener = Listener.CONSUMING, loader = Loader.ASYNC_INCOMPLETE)
+  void refresh_sameInstance_updatesWriteTime(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // A successful refresh that reloads the same value instance still resets the write time — a
+    // same-instance setter no-op, not a metadata no-op — so the entry is not treated as unwritten.
+    var originalValue = requireNonNull(context.original().get(context.firstKey()));
+    var refreshFuture = cache.refresh(context.firstKey());
+    assertThat(refreshFuture).isNotDone();
+    var expireAfterWrite = cache.policy().expireAfterWrite().orElseThrow();
+
+    context.ticker().advance(Duration.ofSeconds(30));
+    refreshFuture.complete(originalValue);
+
+    assertThat(refreshFuture).succeedsWith(originalValue);
+    assertThat(cache).containsEntry(context.firstKey(), originalValue);
+    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS)).hasValue(0L);
+    assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE)
   void refreshIfNeeded_writeTimeABA(LoadingCache<Int, Int> cache, CacheContext context) {
