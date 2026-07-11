@@ -303,15 +303,19 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     V nv = data.computeIfPresent(key, (K k, V value) -> {
       BiFunction<? super K, ? super V, ? extends @Nullable V> function = statsAware(
           remappingFunction, /* recordLoad= */ true, /* recordLoadFailure= */ true);
-      V newValue = function.apply(k, value);
+      try {
+        V newValue = function.apply(k, value);
+        replaced[0] = (newValue != null);
+        if (newValue != value) {
+          oldValue[0] = value;
+        }
 
-      replaced[0] = (newValue != null);
-      if (newValue != value) {
-        oldValue[0] = value;
+        discardRefresh(k);
+        return newValue;
+      } catch (Throwable t) {
+        discardRefresh(k);
+        throw t;
       }
-
-      discardRefresh(k);
-      return newValue;
     });
     if (replaced[0]) {
       notifyOnReplace(key, oldValue[0], nv);
@@ -356,25 +360,30 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Nullable V[] oldValue = (@Nullable V[]) new Object[1];
     boolean[] replaced = new boolean[1];
     V nv = data.compute(key, (K k, V value) -> {
-      V newValue = remappingFunction.apply(k, value);
-      if ((value == null) && (newValue == null)) {
-        discardRefresh(k);
-        return null;
-      }
+      try {
+        V newValue = remappingFunction.apply(k, value);
+        if ((value == null) && (newValue == null)) {
+          discardRefresh(k);
+          return null;
+        }
 
-      replaced[0] = (newValue != null);
-      if (newValue != value) {
-        oldValue[0] = value;
-      }
+        replaced[0] = (newValue != null);
+        if (newValue != value) {
+          oldValue[0] = value;
+        }
 
-      // A query-style caller may flag a same-instance return as a no-op that must leave any
-      // in-flight refresh intact whereas a real mutation discards a racing refresh so that a
-      // stale reload cannot overwrite the new mapping.
-      boolean preserveRefresh = (hints != null) && hints.preserveRefresh && (newValue == value);
-      if (!preserveRefresh) {
+        // A query-style caller may flag a same-instance return as a no-op that must leave any
+        // in-flight refresh intact whereas a real mutation discards a racing refresh so that a
+        // stale reload cannot overwrite the new mapping.
+        boolean preserveRefresh = (hints != null) && hints.preserveRefresh && (newValue == value);
+        if (!preserveRefresh) {
+          discardRefresh(k);
+        }
+        return newValue;
+      } catch (Throwable t) {
         discardRefresh(k);
+        throw t;
       }
-      return newValue;
     });
     if (replaced[0]) {
       notifyOnReplace(key, oldValue[0], nv);

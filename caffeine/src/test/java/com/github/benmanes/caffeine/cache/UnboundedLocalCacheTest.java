@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.slf4j.event.Level.TRACE;
 
 import java.util.concurrent.CompletableFuture;
@@ -137,5 +138,40 @@ final class UnboundedLocalCacheTest {
 
     assertThat(result).isEqualTo(2);
     assertThat(cache.refreshes()).doesNotContainKey(key);
+  }
+
+  @Test
+  void remap_discardsRefresh_whenFunctionThrows() {
+    var cache = new UnboundedLocalCache<Integer, Integer>(
+        Caffeine.newBuilder(), /* isAsync= */ false);
+    Integer key = 1;
+    assertThat(cache.put(key, 2)).isNull();
+    cache.refreshes().put(key, new CompletableFuture<>());
+
+    // A throwing remap over a live entry discards a racing refresh, matching the bounded cache.
+    var expected = new IllegalStateException();
+    var thrown = assertThrows(IllegalStateException.class, () ->
+        cache.remap(key, (k, value) -> { throw expected; }, /* hints= */ null));
+
+    assertThat(thrown).isSameInstanceAs(expected);
+    assertThat(cache.refreshes()).doesNotContainKey(key);
+    assertThat(cache.getIfPresent(key, /* recordStats= */ false)).isEqualTo(2);
+  }
+
+  @Test
+  void computeIfPresent_discardsRefresh_whenFunctionThrows() {
+    var cache = new UnboundedLocalCache<Integer, Integer>(
+        Caffeine.newBuilder(), /* isAsync= */ false);
+    Integer key = 1;
+    assertThat(cache.put(key, 2)).isNull();
+    cache.refreshes().put(key, new CompletableFuture<>());
+
+    var expected = new IllegalStateException();
+    var thrown = assertThrows(IllegalStateException.class, () ->
+        cache.computeIfPresent(key, (k, value) -> { throw expected; }));
+
+    assertThat(thrown).isSameInstanceAs(expected);
+    assertThat(cache.refreshes()).doesNotContainKey(key);
+    assertThat(cache.getIfPresent(key, /* recordStats= */ false)).isEqualTo(2);
   }
 }
