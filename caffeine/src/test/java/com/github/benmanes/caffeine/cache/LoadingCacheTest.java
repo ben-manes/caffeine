@@ -50,6 +50,7 @@ import static org.slf4j.event.Level.WARN;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -178,9 +179,22 @@ final class LoadingCacheTest {
   @ParameterizedTest
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DISABLED, Listener.REJECTING })
-  void getAll_iterable_nullKey(LoadingCache<Int, Int> cache) {
-    var keys = Collections.singletonList(nullKey());
-    assertThrows(NullPointerException.class, () -> cache.getAll(keys));
+  void getAll_iterable_nullKey(LoadingCache<Int, Int> cache, CacheContext context) {
+    var key1 = Iterables.get(context.absentKeys(), 0);
+    var key2 = Iterables.get(context.absentKeys(), 1);
+    var inputs = List.of(
+        Collections.singleton(nullKey()),
+        Arrays.asList(key1, nullKey()),
+        Arrays.asList(nullKey(), key1, key2),
+        Arrays.asList(key1, nullKey(), key2),
+        Arrays.asList(key1, key2, nullKey()));
+    for (var keys : inputs) {
+      assertThrows(NullPointerException.class, () -> cache.getAll(keys));
+      if (context.isCaffeine()) {
+        assertThat(cache).doesNotContainKey(key1);
+        assertThat(cache).doesNotContainKey(key2);
+      }
+    }
   }
 
   @CheckNoEvictions

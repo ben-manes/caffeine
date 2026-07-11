@@ -72,7 +72,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   default Map<K, V> loadSequentially(Iterable<? extends K> keys) {
     var result = new LinkedHashMap<K, @Nullable V>(calculateHashMapCapacity(keys));
     for (K key : keys) {
-      result.put(key, null);
+      result.put(requireNonNull(key), null);
     }
 
     @Var int count = 0;

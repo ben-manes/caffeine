@@ -58,6 +58,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -396,10 +397,21 @@ final class CacheTest {
 
   @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
-  void getAll_iterable_nullKey(Cache<Int, Int> cache) {
-    var keys = Collections.singletonList(nullKey());
-    assertThrows(NullPointerException.class, () ->
-        cache.getAll(keys, k -> { throw new AssertionError(); }));
+  void getAll_iterable_nullKey(Cache<Int, Int> cache, CacheContext context) {
+    var key1 = Iterables.get(context.absentKeys(), 0);
+    var key2 = Iterables.get(context.absentKeys(), 1);
+    var inputs = List.of(
+        Collections.singleton(nullKey()),
+        Arrays.asList(key1, nullKey()),
+        Arrays.asList(nullKey(), key1, key2),
+        Arrays.asList(key1, nullKey(), key2),
+        Arrays.asList(key1, key2, nullKey()));
+    for (var keys : inputs) {
+      assertThrows(NullPointerException.class, () -> cache.getAll(
+          keys, keysToLoad -> { throw new AssertionError(); }));
+      assertThat(cache).doesNotContainKey(key1);
+      assertThat(cache).doesNotContainKey(key2);
+    }
   }
 
   @ParameterizedTest

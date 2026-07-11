@@ -31,7 +31,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
 
@@ -131,14 +130,18 @@ abstract class LocalAsyncLoadingCache<K, V>
       return getAll(keys, bulkMappingFunction);
     }
 
-    Function<K, CompletableFuture<V>> mappingFunction = this::get;
-    var result = new LinkedHashMap<K, CompletableFuture<@Nullable V>>(
-        calculateHashMapCapacity(keys));
+    int initialCapacity = calculateHashMapCapacity(keys);
+    var result = new LinkedHashMap<K, @Nullable CompletableFuture<@Nullable V>>(initialCapacity);
     for (K key : keys) {
-      var future = result.computeIfAbsent(key, mappingFunction);
-      requireNonNull(future);
+      result.put(requireNonNull(key), null);
     }
-    return composeResult(result);
+    for (var entry : result.entrySet()) {
+      entry.setValue(requireNonNull(get(entry.getKey())));
+    }
+
+    @SuppressWarnings("NullAway")
+    Map<K, CompletableFuture<@Nullable V>> results = result;
+    return composeResult(results);
   }
 
   @Override

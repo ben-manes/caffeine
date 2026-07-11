@@ -131,12 +131,14 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     requireNonNull(keys);
 
     int initialCapacity = calculateHashMapCapacity(keys);
-    var futures = new LinkedHashMap<K, CompletableFuture<@Nullable V>>(initialCapacity);
-    var proxies = new LinkedHashMap<K, CompletableFuture<@Nullable V>>(initialCapacity);
+    var futures = new LinkedHashMap<K, @Nullable CompletableFuture<@Nullable V>>(initialCapacity);
     for (K key : keys) {
-      if (futures.containsKey(key)) {
-        continue;
-      }
+      futures.put(requireNonNull(key), null);
+    }
+
+    var proxies = new LinkedHashMap<K, CompletableFuture<@Nullable V>>(initialCapacity);
+    for (var entry : futures.entrySet()) {
+      K key = entry.getKey();
       @Var CompletableFuture<V> future = cache().getIfPresent(key, /* recordStats= */ false);
       if (future == null) {
         var proxy = new CompletableFuture<V>();
@@ -146,19 +148,22 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           proxies.put(key, proxy);
         }
       }
-      futures.put(key, future);
+      entry.setValue(future);
     }
     cache().statsCounter().recordMisses(proxies.size());
     cache().statsCounter().recordHits(futures.size() - proxies.size());
+
+    @SuppressWarnings("NullAway")
+    Map<K, CompletableFuture<@Nullable V>> results = futures;
     if (proxies.isEmpty()) {
-      return composeResult(futures);
+      return composeResult(results);
     }
 
     var completer = new AsyncBulkCompleter<>(cache(), proxies);
     try {
       var loader = mappingFunction.apply(
           Collections.unmodifiableSet(proxies.keySet()), cache().executor());
-      return loader.handle(completer).thenCompose(ignored -> composeResult(futures));
+      return loader.handle(completer).thenCompose(ignored -> composeResult(results));
     } catch (Throwable t) {
       throw completer.error(t);
     }
