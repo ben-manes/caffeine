@@ -57,7 +57,10 @@ import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CacheWriterException;
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -209,6 +212,61 @@ final class CacheWriterTest {
           () -> cache.putIfAbsent(KEY_1, new Object()));
       verifyNoInteractions(writer);
     }
+  }
+
+  @ParameterizedTest
+  @MethodSource("invokeExpiredPriorOps")
+  void invoke_expiredPrior_failingWriter_singleExpiry(
+      EntryProcessor<Integer, Integer, @Nullable Void> processor) {
+    var expiredCount = new AtomicInteger();
+    CacheEntryExpiredListener<Integer, Integer> expiredListener =
+        events -> events.forEach(event -> expiredCount.incrementAndGet());
+    CacheWriter<Integer, Integer> writer = Mockito.mock();
+    var jcacheFixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(true);
+          config.setStatisticsEnabled(true);
+          config.setExpiryPolicyFactory(
+              CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MINUTES, 1)));
+          // a long native expiry keeps the jcache-expired entry physically present, so postProcess
+          // exercises its lazy expired-prior path rather than seeing a natively-reaped absent entry
+          config.setExpireAfterWrite(OptionalLong.of(TimeUnit.HOURS.toNanos(1)));
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> expiredListener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
+
+      // the failed invoke must not publish or evict the expired prior; only the follow-up get reaps
+      // it, so exactly one EXPIRED event and one eviction occur for the single expiration
+      doThrow(CacheWriterException.class).when(writer).write(any());
+      doThrow(CacheWriterException.class).when(writer).delete(any());
+      assertThrows(EntryProcessorException.class,
+          () -> cache.<@Nullable Void>invoke(KEY_1, processor));
+
+      assertThat(cache.get(KEY_1)).isNull();
+      assertThat(expiredCount.get()).isEqualTo(1);
+      assertThat(getStatistics(cache).getCacheEvictions()).isEqualTo(1L);
+    }
+  }
+
+  static Stream<Arguments> invokeExpiredPriorOps() {
+    EntryProcessor<Integer, Integer, @Nullable Void> setValue = (entry, args) -> {
+      entry.setValue(VALUE_2);
+      return nullRef();
+    };
+    EntryProcessor<Integer, Integer, @Nullable Void> remove = (entry, args) -> {
+      entry.remove();
+      return nullRef();
+    };
+    return Stream.of(
+        arguments(named("setValue", setValue)),
+        arguments(named("remove", remove)));
   }
 
   @Test

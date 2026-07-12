@@ -838,7 +838,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
-  public <T> @Nullable T invoke(K key,
+  public <T extends @Nullable Object> T invoke(K key,
       EntryProcessor<K, V, T> entryProcessor, Object... arguments) {
     requireNonNull(entryProcessor);
     requireNonNull(arguments);
@@ -884,28 +884,30 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @SuppressWarnings("fallthrough")
   @Nullable Expirable<V> postProcess(@Var @Nullable Expirable<V> expirable,
       EntryProcessorEntry<K, V> entry, @Var long currentTimeMillis) {
+    @Var V expiredValue = null;
     if ((expirable != null) && !expirable.isEternal()) {
       if (currentTimeMillis == 0) {
         currentTimeMillis = currentTimeMillis();
       }
       if (expirable.hasExpired(currentTimeMillis)) {
-        dispatcher.publishExpired(this, entry.getKey(), expirable.get());
-        statistics.recordEvictions(1L);
+        expiredValue = expirable.get();
         expirable = null;
       }
     }
     switch (entry.getAction()) {
       case NONE:
+        publishExpiredPrior(entry.getKey(), expiredValue);
         return expirable;
       case READ: {
         setAccessExpireTime(entry.getKey(), requireNonNull(expirable), 0L);
         return expirable;
       }
       case CREATED:
-        this.publishToCacheWriter(writer::write, () -> entry);
+        publishToCacheWriter(writer::write, () -> entry);
         // fallthrough
       case LOADED: {
         V value = copyOf(requireNonNull(entry.getValue()));
+        publishExpiredPrior(entry.getKey(), expiredValue);
         long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ true);
         if (expireTimeMillis == 0) {
           // A zero creation expiry means the entry is already expired and is not added, so the
@@ -931,6 +933,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       }
       case DELETED:
         publishToCacheWriter(writer::delete, entry::getKey);
+        publishExpiredPrior(entry.getKey(), expiredValue);
         if (expirable != null) {
           statistics.recordRemovals(1L);
           dispatcher.publishRemoved(this, entry.getKey(), expirable.get());
@@ -938,6 +941,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         return null;
     }
     throw new IllegalStateException("Unknown state: " + entry.getAction());
+  }
+
+  /** Publishes the deferred expiration of a lazily-expired prior entry, counting the eviction. */
+  private void publishExpiredPrior(K key, @Nullable V expiredValue) {
+    if (expiredValue != null) {
+      dispatcher.publishExpired(this, key, expiredValue);
+      statistics.recordEvictions(1L);
+    }
   }
 
   @Override
