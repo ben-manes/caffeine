@@ -361,6 +361,31 @@ session memory for the full rationale.
   "unchanged" sentinel, which behaves as effectively eternal; `CREATED` is
   published and the put counted, consistently across all creation paths. The RI
   would NPE. Implementation-defined input; not a defect.
+- **Access-expiry touch runs lock-free; a concurrent replace races it loosely —
+  adjudicated benign (2026-07-12 with Ben; J3 ≡ adversarial F3/F4).** `get`,
+  `getAll` (`getAndFilterExpiredEntries`), `EntryIterator.hasNext`, and
+  `LoadingCacheProxy.getOrLoad` read via `getIfPresent`, then `setAccessExpireTime`
+  applies `policy.setExpiresAfter(key, …)` — which re-looks-up the node by key, so
+  if the entry was replaced in between it moves the *new* entry's native timer. Not
+  a defect: `getExpiryForAccess()` is value-independent (nullary), so the applied
+  duration is identical to what a real get of the new entry would set — the raced
+  outcome is exactly the legal "get linearized after the put" serialization. The
+  authoritative field (`Expirable.expireTimeMillis`, which every read gates on) is
+  only ever written on the *held* instance, never the replacement, so reads stay
+  correct; the stale `setExpiresAfter` moves only the native mirror, and the
+  effective expiry is the earlier of native/wrapper — either end is a valid
+  serialization (access bound ⇒ "get after put"; write bound ⇒ "get before put").
+  Worst case is a background `EXPIRED` firing at the access bound instead of the
+  write bound, indistinguishable from "a get happened." Enforcing wrapper/native
+  serializability would cost a `computeIfPresent` bin-lock on *every* access-expiry
+  read to close a race that only ever yields a legal outcome — wrong trade against
+  best-effort expiry (same reasoning as core `accessTime`'s opaque-write-not-CAS).
+  The F4 corollary — `access=ZERO` + eternal + a concurrent `invoke` whose
+  processor READs — lets the unlocked `setExpireTimeMillis(0L)` flip the shared
+  `Expirable` under `invoke`'s `compute`, surfacing an `EntryProcessorException`-
+  wrapped TOCTOU (**not** a raw NPE; `postProcess` runs inside the processor-
+  exception wrapper). Same family, caught/wrapped, pathological config. Don't add
+  per-access locking or an identity guard; don't re-raise J3/F3/F4.
 
 When auditing JCache, read this list first to avoid re-deriving known
 false-positives, then run the differential on anything new.
