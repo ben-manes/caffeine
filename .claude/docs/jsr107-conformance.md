@@ -451,5 +451,17 @@ session memory for the full rationale.
   eternal-on-throw. Pinned by `CacheLoaderTest.reload_nullUpdateExpiry_keepsExpiration` /
   `reload_updateExpiryFailure_keepsExpiration`.
 
+- **`putAll` awaits committed entries' synchronous listeners even when a copier throws mid-loop**
+  (fixed 2026-07-12). Under store-by-value, `putNoCopyOrAwait`'s `copyOf(value)`/`copyOf(key)` run
+  before the atomic compute, so a non-copyable entry threw out of the store loop and skipped the
+  single post-loop `awaitSynchronous` — the already-committed entries' `CREATED`/`UPDATED` sync
+  futures (added to the `pending` ThreadLocal by `EventDispatcher.publish`) leaked to the thread's
+  next operation (over-wait only; no correctness loss). The loop is now wrapped in try/finally with
+  `awaitSynchronous` in the finally, matching `getAll`. Correct because every committed `putAll`
+  publish corresponds to a real mutation, and the up-front `writeAll`-failure path publishes nothing.
+  `removeAll(Set)` shares the loop shape but its `removeNoCopyOrAwait` uses the raw key (no `copyOf`),
+  so it has no mid-loop throw vector and is unaffected. Pinned by
+  `EventDispatcherTest.putAll_copierFailsMidway_doesNotLeakPending`.
+
 When auditing JCache, read this list first to avoid re-deriving known
 false-positives, then run the differential on anything new.

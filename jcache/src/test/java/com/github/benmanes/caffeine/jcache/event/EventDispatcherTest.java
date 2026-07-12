@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.event;
 
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.await;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.OptionalLong;
@@ -46,6 +48,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.cache.Cache;
+import javax.cache.CacheException;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
@@ -70,6 +73,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
+import com.github.benmanes.caffeine.jcache.copy.Copier;
 import com.google.common.collect.Iterables;
 import com.google.common.testing.EqualsTester;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -435,6 +439,39 @@ final class EventDispatcherTest {
       doThrow(CacheWriterException.class).when(writer).write(any());
       assertThrows(CacheWriterException.class, () -> cache.putIfAbsent(KEY_1, VALUE_2));
 
+      assertThat(JCacheFixture.getDispatcher(cache).pending.get()).isEmpty();
+    }
+  }
+
+  @Test
+  void putAll_copierFailsMidway_doesNotLeakPending() {
+    // A store-by-value copier that throws mid-loop must not skip awaitSynchronous for the entries
+    // already committed -- their synchronous futures would otherwise leak to the thread's next op
+    CacheEntryCreatedListener<Integer, Integer> createdListener = events -> {};
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        if (Objects.equals(object, VALUE_2)) {
+          throw new CacheException("copy failed");
+        }
+        return object;
+      }
+    };
+    var jcacheFixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setStoreByValue(true);
+          config.setCopierFactory(() -> copier);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> createdListener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcache()) {
+      // KEY_1 commits and pends its CREATED future; KEY_2's value copy throws mid-loop.
+      var entries = new LinkedHashMap<Integer, Integer>();
+      entries.put(KEY_1, VALUE_1);
+      entries.put(KEY_2, VALUE_2);
+      assertThrows(CacheException.class, () -> cache.putAll(entries));
       assertThat(JCacheFixture.getDispatcher(cache).pending.get()).isEmpty();
     }
   }

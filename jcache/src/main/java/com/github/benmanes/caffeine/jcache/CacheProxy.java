@@ -438,16 +438,19 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
 
     @Var int puts = 0;
-    for (var entry : map.entrySet()) {
-      if (!failedKeys.contains(entry.getKey())) {
-        var result = putNoCopyOrAwait(entry.getKey(),
-            entry.getValue(), /* publishToWriter= */ false);
-        if (result.written) {
-          puts++;
+    try {
+      for (var entry : map.entrySet()) {
+        if (!failedKeys.contains(entry.getKey())) {
+          var result = putNoCopyOrAwait(entry.getKey(),
+              entry.getValue(), /* publishToWriter= */ false);
+          if (result.written) {
+            puts++;
+          }
         }
       }
+    } finally {
+      dispatcher.awaitSynchronous();
     }
-    dispatcher.awaitSynchronous();
 
     if (statsEnabled) {
       statistics.recordPuts(puts);
