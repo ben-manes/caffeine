@@ -436,5 +436,20 @@ session memory for the full rationale.
   Don't wrap the failure inside `invoke` itself. Pinned by
   `CacheProxyTest.invokeAll_perKeyFailure_isolatedNotAborted`.
 
+- **Refresh `reload` honors the update null/throw → "unchanged" rule** (fixed 2026-07-12).
+  `JCacheLoaderAdapter.expireTimeMillis` (shared by `load`/`loadAll` creation and `reload`
+  update) called `duration.isZero()` without a null guard, so a `getExpiryForUpdate()`
+  returning `null` — the `CreatedExpiryPolicy`/`AccessedExpiryPolicy`/default-`EternalExpiryPolicy`
+  behavior — NPE'd into the `catch (RuntimeException)` and returned `Long.MAX_VALUE` (eternal)
+  plus a WARNING per refresh, silently making a finite-expiry entry eternal on
+  `refreshAfterWrite`. The helper now takes a `boolean created` (mirroring
+  `CacheProxy.getWriteExpireTimeMillis`): a null-or-throwing **update** returns the
+  `Long.MIN_VALUE` "unchanged" sentinel, which `reload` remaps to `oldValue.getExpireTimeMillis()`;
+  **creation** keeps null/throw → eternal so the loaded entry is not lost. `reload` is an update
+  (it receives `oldValue`), so this matches the put/replace update paths — both null and a
+  throwing `getExpiryForUpdate` leave the expiration unchanged; only the *insert* path is
+  eternal-on-throw. Pinned by `CacheLoaderTest.reload_nullUpdateExpiry_keepsExpiration` /
+  `reload_updateExpiryFailure_keepsExpiration`.
+
 When auditing JCache, read this list first to avoid re-deriving known
 false-positives, then run the differential on anything new.

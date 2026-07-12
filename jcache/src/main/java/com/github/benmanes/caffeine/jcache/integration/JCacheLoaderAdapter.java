@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
@@ -92,7 +91,7 @@ public final class JCacheLoaderAdapter<K, V>
       if (value != null) {
         requireNonNull(cache);
         V copy = copyOf(value);
-        long expireTime = expireTimeMillis(expiry::getExpiryForCreation);
+        long expireTime = expireTimeMillis(/* created= */ true);
         if (expireTime == 0L) {
           // Per JSR-107 1.1.1 p.55: ZERO duration → entry is already expired
           // and will not be added to the Cache. Match the put-path convention
@@ -133,7 +132,7 @@ public final class JCacheLoaderAdapter<K, V>
           continue;
         }
         V copy = copyOf(value);
-        long expireTime = expireTimeMillis(expiry::getExpiryForCreation);
+        long expireTime = expireTimeMillis(/* created= */ true);
         if (expireTime == 0L) {
           // ZERO → already expired and not added; match the put-path convention.
           dispatcher.publishExpired(cache, key, copy);
@@ -166,7 +165,10 @@ public final class JCacheLoaderAdapter<K, V>
       }
       requireNonNull(cache);
       V copy = copyOf(value);
-      long expireTime = expireTimeMillis(expiry::getExpiryForUpdate);
+      @Var long expireTime = expireTimeMillis(/* created= */ false);
+      if (expireTime == Long.MIN_VALUE) {
+        expireTime = oldValue.getExpireTimeMillis();
+      }
       if (expireTime == 0L) {
         dispatcher.publishExpiredQuietly(cache, key, copy);
         return null;
@@ -185,10 +187,12 @@ public final class JCacheLoaderAdapter<K, V>
     return requireNonNull(copier.copy(value, classLoader));
   }
 
-  private long expireTimeMillis(Supplier<Duration> durationSupplier) {
+  private long expireTimeMillis(boolean created) {
     try {
-      Duration duration = durationSupplier.get();
-      if (duration.isZero()) {
+      Duration duration = created ? expiry.getExpiryForCreation() : expiry.getExpiryForUpdate();
+      if (duration == null) {
+        return created ? Long.MAX_VALUE : Long.MIN_VALUE;
+      } else if (duration.isZero()) {
         return 0;
       } else if (duration.isEternal()) {
         return Long.MAX_VALUE;
@@ -197,11 +201,10 @@ public final class JCacheLoaderAdapter<K, V>
       long expireTime = duration.getAdjustedTime(millis);
       return ((expireTime == 0L) || (expireTime == Long.MAX_VALUE)) ? (expireTime - 1) : expireTime;
     } catch (RuntimeException e) {
-      // Per JSR-107 1.1.1 p.55: if the expiry policy throws, an implementation
-      // specific default Duration will be used. We treat as eternal so the
-      // loaded entry is not lost.
+      // Per JSR-107 1.1.1 p.55 a throwing policy uses an implementation default: creation falls
+      // back to eternal so the entry is not lost, an update leaves the expiration unchanged
       logger.log(Level.WARNING, "Exception thrown by expiry policy", e);
-      return Long.MAX_VALUE;
+      return created ? Long.MAX_VALUE : Long.MIN_VALUE;
     }
   }
 }

@@ -37,6 +37,7 @@ import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryUpdatedListener;
+import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
@@ -125,10 +126,10 @@ final class CacheLoaderTest {
 
     try (var fixture = JCacheFixture.builder()
         .loading(config -> {
+          config.setReadThrough(true);
           config.setCacheLoaderFactory(() -> loader);
           config.setExpiryPolicyFactory(() -> expiry);
           config.setExecutorFactory(MoreExecutors::directExecutor);
-          config.setReadThrough(true);
           config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
           config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
               () -> createdListener, /* filterFactory= */ null,
@@ -159,10 +160,10 @@ final class CacheLoaderTest {
 
     try (var fixture = JCacheFixture.builder()
         .loading(config -> {
+          config.setReadThrough(true);
           config.setCacheLoaderFactory(() -> loader);
           config.setExpiryPolicyFactory(() -> expiry);
           config.setExecutorFactory(MoreExecutors::directExecutor);
-          config.setReadThrough(true);
           config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
         }).build();
         var cache = fixture.jcacheLoading()) {
@@ -191,10 +192,10 @@ final class CacheLoaderTest {
 
     try (var fixture = JCacheFixture.builder()
         .loading(config -> {
+          config.setReadThrough(true);
           config.setCacheLoaderFactory(() -> loader);
           config.setExpiryPolicyFactory(() -> expiry);
           config.setExecutorFactory(MoreExecutors::directExecutor);
-          config.setReadThrough(true);
           config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
           config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
               () -> expiredListener, /* filterFactory= */ null,
@@ -212,6 +213,69 @@ final class CacheLoaderTest {
     }
   }
 
+  @Test
+  void reload_nullUpdateExpiry_keepsExpiration() {
+    // getExpiryForUpdate() returning null (the CreatedExpiryPolicy/AccessedExpiryPolicy default)
+    // means "no change" — a refresh reload must keep the entry's existing expiration rather than
+    // make it eternal. A long native expireAfterWrite keeps the jcache-expired entry present.
+    var expiry = new CreatedExpiryPolicy(new Duration(TimeUnit.MINUTES, 2));
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(1)).thenReturn(-1, -2);
+
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setReadThrough(true);
+          config.setCacheLoaderFactory(() -> loader);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setExpireAfterWrite(OptionalLong.of(TimeUnit.HOURS.toNanos(1)));
+          config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
+        }).build();
+        var cache = fixture.jcacheLoading()) {
+      // t=0: created with a 2-minute expiry.
+      assertThat(cache.get(1)).isEqualTo(-1);
+
+      // t=90s: past refreshAfterWrite(1m) so the reload runs inline; getExpiryForUpdate()==null
+      // must keep the original expiry (t=2m), not extend it to eternal.
+      fixture.ticker().advance(java.time.Duration.ofSeconds(90));
+      assertThat(cache.get(1)).isNotNull();
+
+      // t=125s: past the original 2-minute expiry but before the reload re-arms refresh (t=150s).
+      fixture.ticker().advance(java.time.Duration.ofSeconds(35));
+      assertThat(cache.containsKey(1)).isFalse();
+    }
+  }
+
+  @Test
+  void reload_updateExpiryFailure_keepsExpiration() {
+    // A throwing getExpiryForUpdate uses the implementation default of leaving the expiration
+    // unchanged (matching the put path), not making the entry eternal.
+    ExpiryPolicy expiry = Mockito.mock();
+    when(expiry.getExpiryForCreation()).thenReturn(new Duration(TimeUnit.MINUTES, 2));
+    when(expiry.getExpiryForUpdate()).thenThrow(IllegalStateException.class);
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(1)).thenReturn(-1, -2);
+
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setReadThrough(true);
+          config.setCacheLoaderFactory(() -> loader);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setExpireAfterWrite(OptionalLong.of(TimeUnit.HOURS.toNanos(1)));
+          config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
+        }).build();
+        var cache = fixture.jcacheLoading()) {
+      assertThat(cache.get(1)).isEqualTo(-1);
+
+      fixture.ticker().advance(java.time.Duration.ofSeconds(90));
+      assertThat(cache.get(1)).isNotNull();
+
+      fixture.ticker().advance(java.time.Duration.ofSeconds(35));
+      assertThat(cache.containsKey(1)).isFalse();
+    }
+  }
+
   @ParameterizedTest @MethodSource("throwables")
   void reload_failure(Throwable throwable) {
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
@@ -220,10 +284,10 @@ final class CacheLoaderTest {
 
     try (var fixture = JCacheFixture.builder()
         .loading(config -> {
+          config.setReadThrough(true);
           config.setCacheLoaderFactory(() -> loader);
           config.setExpiryPolicyFactory(() -> expiry);
           config.setExecutorFactory(MoreExecutors::directExecutor);
-          config.setReadThrough(true);
           config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
         }).build();
         var cache = fixture.jcacheLoading()) {
@@ -251,11 +315,11 @@ final class CacheLoaderTest {
 
     try (var fixture = JCacheFixture.builder()
         .loading(config -> {
+          config.setReadThrough(true);
           config.setCacheLoaderFactory(() -> loader);
           config.setExpiryPolicyFactory(() -> expiry);
           config.setExpireAfterWrite(OptionalLong.of(TimeUnit.HOURS.toNanos(1)));
           config.setExecutorFactory(MoreExecutors::directExecutor);
-          config.setReadThrough(true);
         }).build();
         var cache = fixture.jcacheLoading()) {
       cache.put(1, -1);
@@ -389,9 +453,9 @@ final class CacheLoaderTest {
     CacheEntryCreatedListener<Integer, Integer> listener = Mockito.mock();
     try (var fixture = JCacheFixture.builder()
         .loading(config -> {
-          config.setCacheLoaderFactory(() -> cacheLoader);
-          config.setExpiryPolicyFactory(() -> expiry);
           config.setReadThrough(true);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setCacheLoaderFactory(() -> cacheLoader);
           config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
               /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
               /* isOldValueRequired= */ false, /* isSynchronous= */ true));
