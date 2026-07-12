@@ -421,5 +421,20 @@ session memory for the full rationale.
   config error; the `FactoryBuilder` bare-`RuntimeException` on a bad factory class is the
   spec's own code, `javax.cache.configuration.FactoryBuilder`, not Caffeine's to rewrap.)
 
+- **`invokeAll` isolates a per-key failure instead of aborting the batch** (fixed 2026-07-12).
+  The per-key catch was `EntryProcessorException`-only, so a non-EPE failure — e.g. a
+  non-serializable key's `copyOf(key)` `CacheException`, evaluated *outside* the EPE-wrapping
+  remap — escaped and aborted the whole batch (committing side effects for already-iterated
+  keys, then discarding all results). A second `catch (RuntimeException e)` now captures it as
+  that key's result: an existing EPE passes through as-is, a non-EPE is wrapped once in
+  `EntryProcessorException` (matching Ehcache3; the RI/Hazelcast double-wrap `EPE(EPE)`). All
+  four impls (RI/Ehcache3/cache2k/Hazelcast) isolate per-key with a broad catch + EPE-wrap;
+  Caffeine was the lone outlier. **Single-key `invoke` is intentionally unchanged** — it throws
+  the raw `CacheException` for a bad key (consistent with `put`, and the `invoke` javadoc's
+  "EPE only if the EntryProcessor throws"); the EPE-wrap is only the `invokeAll` *result*
+  surface, whose `EntryProcessorResult.get()` is spec-declared `@throws EntryProcessorException`.
+  Don't wrap the failure inside `invoke` itself. Pinned by
+  `CacheProxyTest.invokeAll_perKeyFailure_isolatedNotAborted`.
+
 When auditing JCache, read this list first to avoid re-deriving known
 false-positives, then run the differential on anything new.

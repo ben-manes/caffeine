@@ -969,6 +969,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         }
       } catch (EntryProcessorException e) {
         results.put(key, () -> { throw e; });
+      } catch (RuntimeException e) {
+        results.put(key, () -> { throw new EntryProcessorException(e); });
       }
     }
     return results;

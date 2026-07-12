@@ -84,6 +84,7 @@ import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CompletionListener;
 import javax.cache.integration.CompletionListenerFuture;
+import javax.cache.processor.EntryProcessorException;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.jspecify.annotations.Nullable;
@@ -1138,6 +1139,23 @@ final class CacheProxyTest {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       assertThrows(NullPointerException.class, () ->
           fixture.jcache().invokeAll(Set.of(), nullRef()));
+    }
+  }
+
+  @Test
+  void invokeAll_perKeyFailure_isolatedNotAborted() {
+    var config =  new MutableConfiguration<Object, Integer>();
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+         var cache = fixture.cacheManager().createCache("invokeAll-nonSerializableKey", config)) {
+      var goodKey = KEY_1;
+      var badKey = new Object();
+      cache.put(goodKey, VALUE_1);
+      var results = cache.invokeAll(Set.of(goodKey, badKey), (entry, args) -> entry.getValue());
+
+      // The good key is processed and returned -- one bad key does not abort the batch.
+      assertThat(requireNonNull(results.get(goodKey)).get()).isEqualTo(VALUE_1);
+      // The store-by-value copy failure of the bad key is isolated to its own result.
+      assertThrows(EntryProcessorException.class, () -> requireNonNull(results.get(badKey)).get());
     }
   }
 
