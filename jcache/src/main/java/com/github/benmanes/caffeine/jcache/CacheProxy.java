@@ -492,21 +492,22 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @CanIgnoreReturnValue
   private boolean putIfAbsentNoAwait(K key, V value, boolean publishToWriter) {
     boolean[] absent = { false };
-    cache.asMap().compute(copyOf(key), (K k, @Var Expirable<V> expirable) -> {
-      if ((expirable != null) && !expirable.isEternal()
-          && expirable.hasExpired(currentTimeMillis())) {
-        dispatcher.publishExpired(this, key, expirable.get());
-        statistics.recordEvictions(1L);
-        expirable = null;
-      }
-      if (expirable != null) {
+    cache.asMap().compute(copyOf(key), (K k, Expirable<V> expirable) -> {
+      boolean expired = (expirable != null) && !expirable.isEternal()
+          && expirable.hasExpired(currentTimeMillis());
+      if ((expirable != null) && !expired) {
         return expirable;
-      }
-      if (publishToWriter) {
-        publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, value));
       }
 
       V copy = copyOf(value);
+      if (publishToWriter) {
+        publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, value));
+      }
+      if (expirable != null) {
+        dispatcher.publishExpired(this, key, expirable.get());
+        statistics.recordEvictions(1L);
+      }
+
       long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ true);
       if (expireTimeMillis == 0) {
         // A zero creation expiry means the entry is already expired and is not added

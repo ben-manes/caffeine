@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.jcache.event;
 
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.await;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
@@ -22,20 +25,24 @@ import static javax.cache.event.EventType.CREATED;
 import static javax.cache.event.EventType.EXPIRED;
 import static javax.cache.event.EventType.REMOVED;
 import static javax.cache.event.EventType.UPDATED;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.OptionalLong;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.cache.Cache;
@@ -50,6 +57,10 @@ import javax.cache.event.CacheEntryListener;
 import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
+import javax.cache.expiry.CreatedExpiryPolicy;
+import javax.cache.expiry.Duration;
+import javax.cache.integration.CacheWriter;
+import javax.cache.integration.CacheWriterException;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AutoClose;
@@ -58,8 +69,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.mockito.Mockito;
 
+import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.google.common.collect.Iterables;
 import com.google.common.testing.EqualsTester;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -392,6 +405,38 @@ final class EventDispatcherTest {
 
     dispatcher.awaitSynchronous();
     assertThat(dispatcher.pending.get()).isEmpty();
+  }
+
+  @Test
+  void putIfAbsent_abortedWrite_doesNotLeakPending() {
+    CacheEntryExpiredListener<Integer, Integer> expiredListener = events -> {};
+    CacheWriter<Integer, Integer> writer = Mockito.mock();
+    var jcacheFixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(true);
+          config.setExpiryPolicyFactory(
+              CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MINUTES, 1)));
+          // a long native expiry keeps the jcache-expired entry physically present, so putIfAbsent
+          // reaches its lazy expired-prior path where the pre-reorder publish/pend would occur
+          config.setExpireAfterWrite(OptionalLong.of(TimeUnit.HOURS.toNanos(1)));
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> expiredListener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
+
+      // the reorder writes before publishing the expired prior, so a failing writer aborts before
+      // any synchronous future is pended; a leak would strand it in the thread's next operation
+      doThrow(CacheWriterException.class).when(writer).write(any());
+      assertThrows(CacheWriterException.class, () -> cache.putIfAbsent(KEY_1, VALUE_2));
+
+      assertThat(JCacheFixture.getDispatcher(cache).pending.get()).isEmpty();
+    }
   }
 
   @Test

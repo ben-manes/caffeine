@@ -37,15 +37,24 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
+import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
+import javax.cache.configuration.MutableConfiguration;
+import javax.cache.event.CacheEntryExpiredListener;
+import javax.cache.expiry.CreatedExpiryPolicy;
+import javax.cache.expiry.Duration;
 import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CacheWriterException;
 
@@ -59,6 +68,7 @@ import com.github.benmanes.caffeine.jcache.EntryProxy;
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -144,6 +154,60 @@ final class CacheWriterTest {
 
       assertThrows(CacheWriterException.class, () -> fixture.jcache().putAll(map));
       assertThat(map).containsExactly(KEY_1, VALUE_1);
+    }
+  }
+
+  @Test
+  void putIfAbsent_expiredPrior_failingWriter_singleExpiry() {
+    var expiredCount = new AtomicInteger();
+    CacheEntryExpiredListener<Integer, Integer> expiredListener =
+        events -> events.forEach(event -> expiredCount.incrementAndGet());
+    CacheWriter<Integer, Integer> writer = Mockito.mock();
+    var jcacheFixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(true);
+          config.setStatisticsEnabled(true);
+          config.setExpiryPolicyFactory(
+              CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MINUTES, 1)));
+          // a long native expiry keeps the jcache-expired entry physically present, so putIfAbsent
+          // exercises its own lazy-expiry path rather than seeing a natively-reaped absent entry
+          config.setExpireAfterWrite(OptionalLong.of(TimeUnit.HOURS.toNanos(1)));
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> expiredListener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
+
+      // the failed putIfAbsent must not publish or evict the expired prior; only the follow-up get
+      // reaps it, so exactly one EXPIRED event and one eviction occur for the single expiration
+      doThrow(CacheWriterException.class).when(writer).write(any());
+      assertThrows(CacheWriterException.class, () -> cache.putIfAbsent(KEY_1, VALUE_2));
+
+      assertThat(cache.get(KEY_1)).isNull();
+      assertThat(expiredCount.get()).isEqualTo(1);
+      assertThat(getStatistics(cache).getCacheEvictions()).isEqualTo(1L);
+    }
+  }
+
+  @Test
+  void putIfAbsent_nonSerializableValue_doesNotWrite() {
+    CacheWriter<Integer, Object> writer = Mockito.mock();
+    var config = new MutableConfiguration<Integer, Object>()
+        .setStoreByValue(true)
+        .setWriteThrough(true)
+        .setCacheWriterFactory(() -> writer);
+    try (var fixture = JCacheFixture.builder().build();
+         var cache = fixture.cacheManager().createCache("non-serializable", config)) {
+      // copyOf(value) fails before the writer runs, so a failed store-by-value putIfAbsent leaves
+      // the write-through store untouched
+      assertThrows(UncheckedIOException.class,
+          () -> cache.putIfAbsent(KEY_1, new Object()));
+      verifyNoInteractions(writer);
     }
   }
 

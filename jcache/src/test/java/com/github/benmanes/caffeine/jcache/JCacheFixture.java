@@ -28,6 +28,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
 import com.google.common.collect.ImmutableMap;
@@ -122,6 +123,10 @@ public final class JCacheFixture implements AutoCloseable {
 
   public static JCacheStatisticsMXBean getStatistics(CacheProxy<Integer, Integer> cache) {
     return cache.statistics;
+  }
+
+  public static EventDispatcher<Integer, Integer> getDispatcher(CacheProxy<Integer, Integer> cache) {
+    return cache.dispatcher;
   }
 
   public static @Nullable Expirable<Integer> getExpirable(
