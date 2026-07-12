@@ -25,7 +25,6 @@ import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.ObjectStreamClass;
-import java.io.UncheckedIOException;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -74,7 +73,7 @@ public class JavaSerializationCopier extends AbstractCopier<byte[]> {
     try (var output = new ObjectOutputStream(bytes)) {
       output.writeObject(object);
     } catch (IOException e) {
-      throw new UncheckedIOException("Failed to serialize " + object.getClass(), e);
+      throw new CacheException("Failed to serialize " + object.getClass(), e);
     }
     return bytes.toByteArray();
   }

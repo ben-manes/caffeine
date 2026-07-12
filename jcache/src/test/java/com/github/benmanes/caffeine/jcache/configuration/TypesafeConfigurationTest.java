@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
@@ -265,6 +266,21 @@ final class TypesafeConfigurationTest {
   }
 
   @Test
+  void resolvesTypesViaContextClassLoader() {
+    Config config = ConfigFactory.load();
+    var original = Thread.currentThread().getContextClassLoader();
+    var recording = new RecordingClassLoader(original);
+    Thread.currentThread().setContextClassLoader(recording);
+    try {
+      var configuration = TypesafeConfigurator.from(config, "test-cache").orElseThrow();
+      assertThat(recording.loaded).contains(configuration.getKeyType().getName());
+      assertThat(recording.loaded).contains(configuration.getValueType().getName());
+    } finally {
+      Thread.currentThread().setContextClassLoader(original);
+    }
+  }
+
+  @Test
   void from_userTemplate_composesViaSubstitution() {
     CaffeineConfiguration<String, Integer> cache = TypesafeConfigurator
         .<String, Integer>from(ConfigFactory.load(), "derived-cache").orElseThrow();
@@ -429,5 +445,18 @@ final class TypesafeConfigurationTest {
     assertThat(config.getMaximumSize()).isEmpty();
     assertThat(config.getMaximumWeight()).hasValue(1_000L);
     assertThat(config.getWeigherFactory().orElseThrow().create()).isInstanceOf(TestWeigher.class);
+  }
+
+  /** A classloader that records the names it is asked to load, delegating resolution to its parent. */
+  private static final class RecordingClassLoader extends ClassLoader {
+    final List<String> loaded = new ArrayList<>();
+
+    RecordingClassLoader(ClassLoader parent) {
+      super(parent);
+    }
+    @Override protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+      loaded.add(name);
+      return super.loadClass(name, resolve);
+    }
   }
 }

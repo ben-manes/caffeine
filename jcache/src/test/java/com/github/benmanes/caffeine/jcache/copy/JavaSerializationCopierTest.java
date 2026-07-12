@@ -28,7 +28,6 @@ import java.io.InputStream;
 import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
-import java.io.UncheckedIOException;
 import java.time.Month;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -77,7 +76,7 @@ final class JavaSerializationCopierTest {
 
   @ParameterizedTest @MethodSource("copiers")
   void serializable_fail(JavaSerializationCopier copier) {
-    assertThrows(UncheckedIOException.class, () -> copier.serialize(new Object()));
+    assertThrows(CacheException.class, () -> copier.serialize(new Object()));
   }
 
   @Test

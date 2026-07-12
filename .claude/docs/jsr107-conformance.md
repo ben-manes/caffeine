@@ -386,6 +386,40 @@ session memory for the full rationale.
   wrapped TOCTOU (**not** a raw NPE; `postProcess` runs inside the processor-
   exception wrapper). Same family, caught/wrapped, pathological config. Don't add
   per-access locking or an identity guard; don't re-raise J3/F3/F4.
+- **A non-serializable store-by-value value throws `CacheException`** (fixed 2026-07-12).
+  `JavaSerializationCopier.serialize` wrapped the failure in `UncheckedIOException`
+  while `deserialize` (and `Cache.put`'s `@throws CacheException`) used `CacheException`
+  — so `put`/`putIfAbsent` of a non-serializable value escaped as a non-`CacheException`.
+  Now aligned with `deserialize`. Ecosystem is split (cache2k `CacheException`, RI
+  `IllegalArgumentException` — itself serialize/deserialize-asymmetric, Hazelcast own
+  `RuntimeException`); consistency + cache2k parity won, no TCK coverage. Pinned by
+  `JavaSerializationCopierTest.serializable_fail` and
+  `CacheWriterTest.putIfAbsent_nonSerializableValue_doesNotWrite`. Don't revert toward
+  the RI's `IllegalArgumentException`.
+- **Config `key-type`/`value-type` resolve via the context classloader** (fixed 2026-07-12).
+  `TypesafeConfigurator.addKeyValueTypes` used bare `Class.forName(name)` — the adapter's own
+  module loader, which is neither the TCCL nor the manager loader. Now
+  `Class.forName(name, true, tccl)` (adapter loader when the TCCL is null; `true` preserves the
+  original single-arg initialization). The TCCL is the spec's own resolution idiom —
+  `Caching.getDefaultClassLoader()` **is** the TCCL, and the customization classes
+  (`CacheLoader`/`CacheWriter`/`ExpiryPolicy`/listeners) resolve through `FactoryBuilder`, which
+  also uses the TCCL — so types now resolve the same way as customizations, and
+  `CacheManagerImpl`'s OSGi swap makes the TCCL == the manager loader where the TCCL is
+  unreliable. **Threading the manager loader directly (types via `managerCL.loadClass`,
+  customizations via a CL-aware `FactoryCreator`) was built and rejected**: the spec's own
+  `FactoryBuilder` uses the TCCL, so out-correcting it for types alone splits a cache's loaders
+  for the one case it would help (an explicit-CL manager outside OSGi), which `FactoryBuilder`
+  doesn't help either. Match the TCCL idiom; don't add a manager-CL parameter to `FactoryCreator`.
+  Pinned by `TypesafeConfigurationTest.resolvesTypesViaContextClassLoader`.
+- **`TypesafeConfigurator.from` swallows only `ConfigException.BadPath`; other
+  `ConfigException`s bubble up raw — intentional** (adjudicated 2026-07-12 with Ben).
+  `BadPath` is the mandatory no-op for a JCache cache name that isn't representable as a
+  Typesafe config path (Typesafe's path grammar is stricter than JCache names), returning
+  `Optional.empty()`. Every other `ConfigException` (Missing/WrongType) is a real
+  misconfiguration and *should* surface — don't wrap creation failures in `CacheException`
+  here. (`addKeyValueTypes` CNFE → `IllegalStateException` likewise surfaces as a real
+  config error; the `FactoryBuilder` bare-`RuntimeException` on a bad factory class is the
+  spec's own code, `javax.cache.configuration.FactoryBuilder`, not Caffeine's to rewrap.)
 
 When auditing JCache, read this list first to avoid re-deriving known
 false-positives, then run the differential on anything new.

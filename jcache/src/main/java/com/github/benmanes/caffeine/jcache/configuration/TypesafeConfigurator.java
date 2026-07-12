@@ -255,11 +255,15 @@ public final class TypesafeConfigurator {
 
     /** Adds the key and value class types. */
     private void addKeyValueTypes() {
+      @Var ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+      if (classLoader == null) {
+        classLoader = getClass().getClassLoader();
+      }
       try {
         @SuppressWarnings("unchecked")
-        var keyType = (Class<K>) Class.forName(merged.getString("key-type"));
+        var keyType = (Class<K>) Class.forName(merged.getString("key-type"), true, classLoader);
         @SuppressWarnings("unchecked")
-        var valueType = (Class<V>) Class.forName(merged.getString("value-type"));
+        var valueType = (Class<V>) Class.forName(merged.getString("value-type"), true, classLoader);
         configuration.setTypes(keyType, valueType);
       } catch (ClassNotFoundException e) {
         throw new IllegalStateException(e);

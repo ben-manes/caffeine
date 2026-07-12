@@ -37,7 +37,6 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -208,7 +207,7 @@ final class CacheWriterTest {
          var cache = fixture.cacheManager().createCache("non-serializable", config)) {
       // copyOf(value) fails before the writer runs, so a failed store-by-value putIfAbsent leaves
       // the write-through store untouched
-      assertThrows(UncheckedIOException.class,
+      assertThrows(CacheException.class,
           () -> cache.putIfAbsent(KEY_1, new Object()));
       verifyNoInteractions(writer);
     }
