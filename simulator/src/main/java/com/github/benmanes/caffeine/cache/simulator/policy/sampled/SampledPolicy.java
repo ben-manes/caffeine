@@ -279,6 +279,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     public Node(long key, int index, long tick) {
       this.insertionTime = tick;
       this.accessTime = tick;
+      this.frequency = 1;
       this.index = index;
       this.key = key;
     }
