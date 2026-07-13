@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradient.Adam;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradient.AmsGrad;
@@ -39,16 +39,16 @@ import com.typesafe.config.Config;
 @SuppressWarnings("ImmutableEnumChecker")
 public enum HillClimberType {
   // hill climbing
-  SIMPLE(SimpleClimber::new),
-  CORRELATION(CorrelationClimber::new),
-  TRUST_REGION_EWMA(TrustRegionEwmaClimber::new),
-  SIMULATED_ANNEALING(SimulatedAnnealingClimber::new),
+  SIMPLE((_, config) -> new SimpleClimber(config)),
+  CORRELATION((_, config) -> new CorrelationClimber(config)),
+  TRUST_REGION_EWMA((_, config) -> new TrustRegionEwmaClimber(config)),
+  SIMULATED_ANNEALING((_, config) -> new SimulatedAnnealingClimber(config)),
 
   // gradient descent
-  STOCHASTIC_GRADIENT_DESCENT(Stochastic::new),
-  AMSGRAD(AmsGrad::new),
-  NADAM(Nadam::new),
-  ADAM(Adam::new),
+  STOCHASTIC_GRADIENT_DESCENT((_, config) -> new Stochastic(config)),
+  AMSGRAD((_, config) -> new AmsGrad(config)),
+  NADAM((_, config) -> new Nadam(config)),
+  ADAM((_, config) -> new Adam(config)),
 
   // simulation
   MINISIM(MiniSimClimber::new),
@@ -56,13 +56,13 @@ public enum HillClimberType {
   // inference
   INDICATOR(IndicatorClimber::new);
 
-  private final Function<Config, HillClimber> factory;
+  private final BiFunction<Double, Config, HillClimber> factory;
 
-  HillClimberType(Function<Config, HillClimber> factory) {
+  HillClimberType(BiFunction<Double, Config, HillClimber> factory) {
     this.factory = requireNonNull(factory);
   }
 
-  public HillClimber create(Config config) {
-    return factory.apply(config);
+  public HillClimber create(double percentMain, Config config) {
+    return factory.apply(percentMain, config);
   }
 }

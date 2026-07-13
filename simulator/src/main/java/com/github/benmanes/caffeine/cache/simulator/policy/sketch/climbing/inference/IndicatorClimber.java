@@ -31,10 +31,10 @@ public final class IndicatorClimber implements HillClimber {
 
   private double prevPercent;
 
-  public IndicatorClimber(Config config) {
+  public IndicatorClimber(double percentMain, Config config) {
     var settings = new HillClimberWindowTinyLfuSettings(config);
     this.cacheSize = Math.toIntExact(settings.maximumSize());
-    this.prevPercent = 1 - settings.percentMain().getFirst();
+    this.prevPercent = 1 - percentMain;
     this.indicator = new Indicator(config);
   }
 

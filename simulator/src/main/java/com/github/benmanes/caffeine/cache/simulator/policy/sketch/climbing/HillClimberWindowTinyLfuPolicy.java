@@ -91,7 +91,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     this.policyStats = new PolicyStats(name() + " (%s %.0f%%)",
         strategy.name().toLowerCase(US), 100 * (1.0 - initialPercentMain));
     this.admitter = Admission.TINYLFU.from(settings.config(), policyStats);
-    this.climber = strategy.create(settings.config());
+    this.climber = strategy.create(percentMain, settings.config());
 
     printSegmentSizes();
   }

@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.sim;
 
-import java.util.List;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy.WindowTinyLfuSettings;
@@ -48,21 +46,21 @@ public final class MiniSimClimber implements HillClimber {
   private int sample;
   private double prevPercent;
 
-  public MiniSimClimber(Config config) {
+  public MiniSimClimber(double percentMain, Config config) {
     var settings = new MiniSimSettings(config);
     this.cacheSize = Math.toIntExact(settings.maximumSize());
     samplingRate = Math.max(1, (cacheSize / 1000) > 100 ? 1000 : (cacheSize / 100));
     var simulationSettings = new WindowTinyLfuSettings(ConfigFactory
         .parseString("maximum-size = " + (cacheSize / samplingRate))
         .withFallback(config));
-    this.prevPercent = 1 - settings.percentMain().getFirst();
+    this.prevPercent = 1 - percentMain;
     this.period = settings.minisimPeriod();
     this.minis = new WindowTinyLfuPolicy[101];
     this.prevMisses = new long[minis.length];
 
     for (int i = 0; i < minis.length; i++) {
-      double percentMain = 1.0 - (i / 100.0);
-      minis[i] = new WindowTinyLfuPolicy(percentMain, simulationSettings);
+      double miniPercentMain = 1.0 - (i / 100.0);
+      minis[i] = new WindowTinyLfuPolicy(miniPercentMain, simulationSettings);
     }
   }
 
@@ -117,9 +115,6 @@ public final class MiniSimClimber implements HillClimber {
   static final class MiniSimSettings extends BasicSettings {
     public MiniSimSettings(Config config) {
       super(config);
-    }
-    public List<Double> percentMain() {
-      return config().getDoubleList("hill-climber-window-tiny-lfu.percent-main");
     }
     public int minisimPeriod() {
       return config().getInt("hill-climber-window-tiny-lfu.minisim.period");

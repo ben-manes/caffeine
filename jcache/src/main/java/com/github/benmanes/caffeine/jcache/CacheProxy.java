@@ -497,9 +497,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private boolean putIfAbsentNoAwait(K key, V value, boolean publishToWriter) {
     boolean[] absent = { false };
     cache.asMap().compute(copyOf(key), (K k, Expirable<V> expirable) -> {
-      boolean expired = (expirable != null) && !expirable.isEternal()
-          && expirable.hasExpired(currentTimeMillis());
-      if ((expirable != null) && !expired) {
+      if ((expirable != null)
+          && (expirable.isEternal() || !expirable.hasExpired(currentTimeMillis()))) {
         return expirable;
       }
 
