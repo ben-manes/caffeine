@@ -93,6 +93,8 @@ public final class IndexedCache<K, V> {
         return null;
       }
 
+      checkState(buildIndex(value).contains(key),
+          "The loaded value is not indexed by the requested key '%s'", key);
       put(value);
       return value;
     } finally {

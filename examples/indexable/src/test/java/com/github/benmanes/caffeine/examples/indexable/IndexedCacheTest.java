@@ -109,6 +109,20 @@ final class IndexedCacheTest {
     assertThat(cache.indexes).containsKey(new UserByLogin("john.doe"));
   }
 
+  @Test
+  void get_loaderReturnsMisindexedValue_failsFast() {
+    var cache = new IndexedCache.Builder<UserKey, User>()
+        .addSecondaryKey(user -> new UserByLogin(user.login()))
+        .addSecondaryKey(user -> new UserByPhone(user.phone()))
+        .primaryKey(user -> new UserById(user.id()))
+        .build(_ -> new User(1, "john.doe", "+1 (555) 555-5555"));
+
+    // A loader that returns a value not indexed by the requested key would never populate that
+    // key's mapping, silently reloading on every lookup; the get must fail fast instead
+    assertThrows(IllegalStateException.class, () -> cache.get(new UserByLogin("ghost")));
+    assertThat(cache.getIfPresent(new UserByLogin("ghost"))).isNull();
+  }
+
   /** Returns the user found in the system of record. */
   private User findUser(UserKey key) {
     Predicate<User> predicate = switch (key) {
