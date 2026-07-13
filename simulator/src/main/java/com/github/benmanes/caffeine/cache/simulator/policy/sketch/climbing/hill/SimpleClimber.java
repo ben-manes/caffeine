@@ -55,10 +55,12 @@ public final class SimpleClimber extends AbstractClimber {
     this.sampleDecayRate = settings.sampleDecayRate();
     this.stepDecayRate = settings.stepDecayRate();
     this.tolerance = settings.tolerance();
+    this.increaseWindow = isSmallCache();
     this.sampleSize = initialSampleSize;
     this.stepSize = initialStepSize;
   }
 
+  /** Small caches grow the window first, larger caches shrink first. */
   private boolean isSmallCache() {
     return (smallCacheThreshold > 0) && (maximumSize <= smallCacheThreshold);
   }
@@ -89,11 +91,10 @@ public final class SimpleClimber extends AbstractClimber {
       double ratio = Math.clamp(initialStepSize / magnitude, 1.0, smallCacheSampleRatioCap);
       sampleSize = (int) (initialSampleSize * ratio);
     } else {
+      // Decay the step toward zero but keep sampling, so a workload shift still trips
+      // restart-threshold and revives the step -- mirrors BLC, which never freezes
       stepSize *= stepDecayRate;
-      sampleSize = (int) (sampleSize * sampleDecayRate);
-      if ((stepSize <= 0.01) || (sampleSize <= 1)) {
-        sampleSize = Integer.MAX_VALUE;
-      }
+      sampleSize = Math.max(1, (int) (sampleSize * sampleDecayRate));
     }
   }
 
