@@ -463,5 +463,23 @@ session memory for the full rationale.
   so it has no mid-loop throw vector and is unaffected. Pinned by
   `EventDispatcherTest.putAll_copierFailsMidway_doesNotLeakPending`.
 
+- **`CacheProxy` surfaces a store-by-value copier failure as `CacheException` across the whole API**
+  (fixed 2026-07-12). `get`/`getAll` propagated a copier's non-`CacheException` `RuntimeException`
+  raw, while `LoadingCacheProxy.get`/`getAll` wrapped it — a `get`-behaves-differently-by-read-through
+  divergence (sibling-divergence G-F7). Per spec each op `@throws CacheException if there is a
+  problem fetching/doing …`, and the RI's `fromInternal` read-copy throws `CacheException`. Fixed at
+  the copier boundary: the `copyOf` primitive (exception-wrapping folded in; the old `copyValue`
+  removed, its callers now `copyOf(expirable.get())`) rethrows `NPE`/`ISE`/`CCE`/`CacheException` raw
+  and wraps any other `RuntimeException` in `CacheException`, so every method
+  (`get`/`getAll`/`getAnd*`/`put*`/`replace*`/`iterator`) is consistent — the copier is the only
+  user-pluggable non-`CacheException` vector (a writer failure is already `CacheWriterException`).
+  `copyOf` is also **strict** (non-null parameter) so NullAway enforces the assumed non-null at every
+  call site; the only genuinely-nullable callers are the 3 `getAnd*` prior-value returns, which guard
+  with `(x == null) ? null : copyOf(x)`. The `JCacheLoaderAdapter`'s own `copyOf` is deliberately left
+  surfacing copier failures as `CacheLoaderException` (a `CacheException` subtype, contextually correct
+  for the read-through/refresh/`loadAll` flow; converging it would need a `catch (CacheException)`
+  passthrough that risks the TCK's mandatory loader→`CacheLoaderException` wrapping). Pinned by
+  `CacheProxyTest.copierFailure_wrappedInCacheException`.
+
 When auditing JCache, read this list first to avoid re-deriving known
 false-positives, then run the differential on anything new.

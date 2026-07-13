@@ -772,13 +772,6 @@ final class CacheProxyTest {
   }
 
   @Test
-  void copyValue_null() {
-    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
-      assertThat(fixture.jcache().copyValue(null)).isNull();
-    }
-  }
-
-  @Test
   void setAccessExpireTime_eternal() throws IOException {
     try (CloseableExpiryPolicy expiry = Mockito.mock();
         var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry)) {
@@ -1156,6 +1149,35 @@ final class CacheProxyTest {
       assertThat(requireNonNull(results.get(goodKey)).get()).isEqualTo(VALUE_1);
       // The store-by-value copy failure of the bad key is isolated to its own result.
       assertThrows(EntryProcessorException.class, () -> requireNonNull(results.get(badKey)).get());
+    }
+  }
+
+  @Test
+  void copierFailure_wrappedInCacheException() {
+    // A non-CacheException copier failure surfaces as CacheException across the API (spec: each op
+    // @throws CacheException), matching LoadingCacheProxy and the reference implementation
+    var armed = new AtomicBoolean(false);
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        if (armed.get() && object.equals(VALUE_1)) {
+          throw new IllegalArgumentException("copy failed");
+        }
+        return object;
+      }
+    };
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setStoreByValue(true);
+          config.setCopierFactory(() -> copier);
+        }).build();
+        var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      armed.set(true);
+      // read copies (get, getAll, getAndRemove) and a write copy (put)
+      assertThrows(CacheException.class, () -> cache.get(KEY_1));
+      assertThrows(CacheException.class, () -> cache.getAll(Set.of(KEY_1)));
+      assertThrows(CacheException.class, () -> cache.put(KEY_2, VALUE_1));
+      assertThrows(CacheException.class, () -> cache.getAndRemove(KEY_1));
     }
   }
 

@@ -45,6 +45,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import javax.cache.Cache;
+import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Configuration;
@@ -187,7 +188,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
 
     setAccessExpireTime(key, expirable, millis);
-    V value = copyValue(expirable);
+    V value = copyOf(expirable.get());
     if (statsEnabled) {
       statistics.recordHits(1L);
       statistics.recordGetTime(ticker.read() - start);
@@ -361,7 +362,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       statistics.recordGetTime(duration);
       statistics.recordPutTime(duration);
     }
-    return copyOf(result.oldValue);
+    return (result.oldValue == null) ? null : copyOf(result.oldValue);
   }
 
   /**
@@ -377,8 +378,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNonNull(key);
     requireNonNull(value);
 
-    var result = new PutResult<V>();
     V newValue = copyOf(value);
+    var result = new PutResult<V>();
     cache.asMap().compute(copyOf(key), (K k, @Var Expirable<V> expirable) -> {
       if (publishToWriter) {
         publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, value));
@@ -626,10 +627,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     publishToCacheWriter(writer::delete, () -> key);
     V value = removeNoCopyOrAwait(key);
     dispatcher.awaitSynchronous();
-    V copy = copyOf(value);
 
+    V copy = (value == null) ? null : copyOf(value);
     if (statsEnabled) {
-      if (value == null) {
+      if (copy == null) {
         statistics.recordMisses(1L);
       } else {
         statistics.recordHits(1L);
@@ -729,10 +730,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     V oldValue = replaceNoCopyOrAwait(key, value);
     dispatcher.awaitSynchronous();
-    V copy = copyOf(oldValue);
 
+    V copy = (oldValue == null) ? null : copyOf(oldValue);
     if (statsEnabled) {
-      if (oldValue == null) {
+      if (copy == null) {
         statistics.recordMisses(1L);
       } else {
         statistics.recordHits(1L);
@@ -755,7 +756,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @return the old value
    */
   private @Nullable V replaceNoCopyOrAwait(K key, V value) {
-    requireNonNull(value);
     V copy = copyOf(value);
     @SuppressWarnings("unchecked")
     var replaced = (V[]) new Object[1];
@@ -856,7 +856,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         statistics.recordMisses(1L);
         value = null;
       } else {
-        value = copyValue(expirable);
+        value = copyOf(expirable.get());
         statistics.recordHits(1L);
       }
       var entry = new EntryProcessorEntry<>(key, value,
@@ -1167,28 +1167,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param <T> the type of object being copied
    * @return a copy of the object if storing by value or the same instance if by reference
    */
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
-  protected final <T> T copyOf(@Nullable T object) {
-    if (object == null) {
-      return null;
+  protected final <T> T copyOf(T object) {
+    try {
+      return requireNonNull(
+          copier.copy(requireNonNull(object), requireNonNull(cacheManager.getClassLoader())));
+    } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new CacheException(e);
     }
-    T copy = copier.copy(object, requireNonNull(cacheManager.getClassLoader()));
-    return requireNonNull(copy);
-  }
-
-  /**
-   * Returns a copy of the value if value-based caching is enabled.
-   *
-   * @param expirable the expirable value to be copied
-   * @return a copy of the value if storing by value or the same instance if by reference
-   */
-  @SuppressWarnings({"DataFlowIssue", "NullAway"})
-  protected final V copyValue(@Nullable Expirable<V> expirable) {
-    if (expirable == null) {
-      return null;
-    }
-    V copy = copier.copy(expirable.get(), requireNonNull(cacheManager.getClassLoader()));
-    return requireNonNull(copy);
   }
 
   /**
@@ -1199,10 +1186,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    */
   @SuppressWarnings("CollectorMutability")
   protected final Map<K, V> copyMap(Map<K, Expirable<V>> map) {
-    var classLoader = requireNonNull(cacheManager.getClassLoader());
     return map.entrySet().stream().collect(toMap(
-        entry -> copier.copy(entry.getKey(), classLoader),
-        entry -> copier.copy(entry.getValue().get(), classLoader)));
+        entry -> copyOf(entry.getKey()),
+        entry -> copyOf(entry.getValue().get())));
   }
 
   /** Returns the current time in milliseconds. */
@@ -1310,7 +1296,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       statistics.recordHits(1L);
       current = requireNonNull(cursor);
       cursor = null;
-      return new EntryProxy<>(copyOf(current.getKey()), copyValue(current.getValue()));
+      return new EntryProxy<>(copyOf(current.getKey()), copyOf(current.getValue().get()));
     }
 
     @Override

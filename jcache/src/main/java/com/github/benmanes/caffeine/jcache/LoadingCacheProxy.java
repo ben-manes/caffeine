@@ -104,7 +104,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
     @Var V value = null;
     if (expirable != null) {
-      value = copyValue(expirable);
+      value = copyOf(expirable.get());
     }
     if (statsEnabled) {
       statistics.recordGetTime(ticker.read() - start);

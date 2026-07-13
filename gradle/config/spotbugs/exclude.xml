@@ -405,6 +405,11 @@
     <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
+    <Method name="copyOf"/>
+    <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.jcache.LoadingCacheProxy"/>
     <Or>
       <Method name="get"/>
