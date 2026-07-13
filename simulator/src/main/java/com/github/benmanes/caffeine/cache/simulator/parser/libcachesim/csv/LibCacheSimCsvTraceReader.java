@@ -48,7 +48,7 @@ public final class LibCacheSimCsvTraceReader extends TextTraceReader {
         .map(line -> line.split(","))
         .map(array -> {
           long key = Long.parseLong(array[4]);
-          int weight = Integer.parseInt(array[3]);
+          int weight = Math.max(1, Integer.parseInt(array[3]));
           return AccessEvent.forKeyAndWeight(key, weight);
         });
   }

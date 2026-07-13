@@ -146,7 +146,8 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
     if ((sizeMain + sizeIn) < maximumSize) {
       data.put(node.key, node);
     } else if (sizeIn > maxIn) {
-      // IN is full, move to OUT
+      // IN is full, page out its tail to the non-resident OUT queue
+      policyStats.recordEviction();
       Node n = headIn.next;
       n.remove();
       sizeIn--;
@@ -155,8 +156,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
       sizeOut++;
 
       if (sizeOut > maxOut) {
-        // OUT is full, drop oldest
-        policyStats.recordEviction();
+        // OUT is full, drop the oldest non-resident identifier
         Node victim = headOut.next;
         data.remove(victim.key);
         victim.remove();

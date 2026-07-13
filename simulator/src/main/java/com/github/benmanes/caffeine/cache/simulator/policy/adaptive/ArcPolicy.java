@@ -170,6 +170,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
         evict(node);
       } else {
         Node victim = requireNonNull(headT1.next);
+        policyStats.recordEviction();
         data.remove(victim.key);
         victim.remove();
         sizeT1--;

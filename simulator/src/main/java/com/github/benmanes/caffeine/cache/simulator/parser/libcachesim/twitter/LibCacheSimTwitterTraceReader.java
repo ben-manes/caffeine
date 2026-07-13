@@ -53,7 +53,7 @@ public final class LibCacheSimTwitterTraceReader extends TextTraceReader {
         .map(splitter::splitToList)
         .map(fields -> {
           long key = hasher.hashChars(fields.get(1));
-          int weight = Integer.parseInt(fields.get(2));
+          int weight = Math.max(1, Integer.parseInt(fields.get(2)));
           return AccessEvent.forKeyAndWeight(key, weight);
         });
   }

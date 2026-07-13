@@ -41,9 +41,11 @@ public final class CambridgeTraceReader extends TextTraceReader implements KeyOn
         .map(line -> line.split(","))
         .filter(array -> array[3].equals("Read"))
         .flatMapToLong(array -> {
+          long disk = Long.parseLong(array[2]);
           long startBlock = Long.parseLong(array[4]) / BLOCK_SIZE;
           int sequence = IntMath.divide(Integer.parseInt(array[5]), BLOCK_SIZE, RoundingMode.UP);
-          return LongStream.range(startBlock, startBlock + sequence);
+          return LongStream.range(startBlock, startBlock + sequence)
+              .map(block -> (disk << 40) | (block & 0xFFFFFFFFFFL));
         });
   }
 }
