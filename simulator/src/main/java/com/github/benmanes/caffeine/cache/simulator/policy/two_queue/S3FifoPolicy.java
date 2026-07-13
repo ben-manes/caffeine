@@ -87,7 +87,7 @@ public final class S3FifoPolicy implements Policy {
     this.maximumSize = settings.maximumSize();
     this.maxFrequency = settings.maximumFrequency();
     this.moveToMainThreshold = settings.moveToMainThreshold();
-    this.maxSmall = (long) (maximumSize * settings.percentSmall());
+    this.maxSmall = Math.max(1, (long) (maximumSize * settings.percentSmall()));
     this.maxGhost = (long) (maximumSize * settings.percentGhost());
     this.maxMain = maximumSize - maxSmall;
   }
