@@ -78,6 +78,7 @@ import javax.cache.event.CacheEntryListener;
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
+import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
@@ -689,7 +690,7 @@ final class CacheProxyTest {
           Action.LOADED, Action.DELETED, unknown });
       EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
       when(entry.getAction()).thenReturn(unknown);
-      assertThrows(IllegalStateException.class, () -> fixture.jcache().postProcess(null, entry, 0));
+      assertThrows(IllegalStateException.class, () -> fixture.jcache().postProcess(null, entry));
     }
   }
 
@@ -700,7 +701,7 @@ final class CacheProxyTest {
           fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
       EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
       when(entry.getAction()).thenReturn(Action.NONE);
-      assertThat(fixture.jcache().postProcess(expirable, entry, 0L)).isSameInstanceAs(expirable);
+      assertThat(fixture.jcache().postProcess(expirable, entry)).isSameInstanceAs(expirable);
     }
   }
 
@@ -715,7 +716,7 @@ final class CacheProxyTest {
 
       var stats = JCacheFixture.getStatistics(fixture.jcache());
       long removalsBefore = stats.getCacheRemovals();
-      assertThat(fixture.jcache().postProcess(expirable, entry, 0L)).isNull();
+      assertThat(fixture.jcache().postProcess(expirable, entry)).isNull();
       assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore + 1);
     }
   }
@@ -729,45 +730,45 @@ final class CacheProxyTest {
 
       var stats = JCacheFixture.getStatistics(fixture.jcache());
       long removalsBefore = stats.getCacheRemovals();
-      assertThat(fixture.jcache().postProcess(null, entry, 0L)).isNull();
+      assertThat(fixture.jcache().postProcess(null, entry)).isNull();
       assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore);
     }
   }
 
   @Test
-  void postProcess_deleted_expired_publishesExpiredNotRemoved() {
+  void postProcess_created() {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
-      var expired = new Expirable<>(VALUE_1, fixture.currentTime().toMillis() - 1);
-      EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
-      when(entry.getAction()).thenReturn(Action.DELETED);
-      when(entry.getKey()).thenReturn(KEY_1);
-
-      var stats = JCacheFixture.getStatistics(fixture.jcache());
-      long removalsBefore = stats.getCacheRemovals();
-      long evictionsBefore = stats.getCacheEvictions();
-      assertThat(fixture.jcache().postProcess(expired, entry, 0L)).isNull();
-      assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore);
-      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
-    }
-  }
-
-  @Test
-  void postProcess_created_expiredPrior_publishesExpiredForPrior() {
-    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
-      var expired = new Expirable<>(VALUE_1, fixture.currentTime().toMillis() - 1);
       EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
       when(entry.getAction()).thenReturn(Action.CREATED);
       when(entry.getKey()).thenReturn(KEY_1);
       when(entry.getValue()).thenReturn(VALUE_2);
 
       var stats = JCacheFixture.getStatistics(fixture.jcache());
-      long evictionsBefore = stats.getCacheEvictions();
       long putsBefore = stats.getCachePuts();
-      var result = fixture.jcache().postProcess(expired, entry, 0L);
+      var result = fixture.jcache().postProcess(null, entry);
       assertThat(result).isNotNull();
       assertThat(result.get()).isEqualTo(VALUE_2);
-      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
       assertThat(stats.getCachePuts()).isEqualTo(putsBefore + 1);
+    }
+  }
+
+  @Test
+  void invoke_eternal_notEvicted() {
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExpiryPolicyFactory(EternalExpiryPolicy.factoryOf());
+          config.setStatisticsEnabled(true);
+        }).build()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+
+      // isEternal short-circuits before hasExpired, whose (now - MAX_VALUE) subtraction would
+      // otherwise overflow to "expired" under a negative clock (the fixture's random start time)
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long evictionsBefore = stats.getCacheEvictions();
+      var result = fixture.jcache().invoke(KEY_1, (entry, args) -> entry.getValue());
+
+      assertThat(result).isEqualTo(VALUE_1);
+      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore);
     }
   }
 

@@ -228,7 +228,7 @@ final class CacheWriterTest {
           config.setStatisticsEnabled(true);
           config.setExpiryPolicyFactory(
               CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MINUTES, 1)));
-          // a long native expiry keeps the jcache-expired entry physically present, so postProcess
+          // a long native expiry keeps the jcache-expired entry physically present, so invoke
           // exercises its lazy expired-prior path rather than seeing a natively-reaped absent entry
           config.setExpireAfterWrite(OptionalLong.of(TimeUnit.HOURS.toNanos(1)));
           config.setExecutorFactory(MoreExecutors::directExecutor);
@@ -241,8 +241,9 @@ final class CacheWriterTest {
       cache.put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
 
-      // the failed invoke must not publish or evict the expired prior; only the follow-up get reaps
-      // it, so exactly one EXPIRED event and one eviction occur for the single expiration
+      // the expired prior is published and its eviction counted before the processor runs, and its
+      // removal commits even though the writer then fails, so the follow-up get finds nothing left
+      // to reap: exactly one EXPIRED event and one eviction for the single expiration
       doThrow(CacheWriterException.class).when(writer).write(any());
       doThrow(CacheWriterException.class).when(writer).delete(any());
       assertThrows(EntryProcessorException.class,

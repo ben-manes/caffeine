@@ -11,7 +11,25 @@ paths:
   Caffeine's native expiry. Every value access involves the wrapper.
 - **EntryProcessor state machine**: `EntryProcessorEntry.Action` tracks the dominant
   operation (NONE → READ/CREATED/UPDATED/LOADED/DELETED). `getValue()` is stateful —
-  first call triggers loading. Action transitions have strict rules.
+  first call triggers loading. Action transitions have strict rules. `remove()` from
+  CREATED resets to NONE (same-call create+delete is a no-op); DELETED with a null prior
+  means `remove()` (or load-through then `remove()`) hit an absent/expired key — the
+  `CacheWriter.delete` still fires (write-through), but no REMOVED event or removal stat.
+- **EntryProcessor lazy-expiry is reconciled before the processor**: `invoke` reconciles a
+  lazily-expired prior inline *before* running the processor — it publishes EXPIRED, counts
+  the eviction, and passes the entry to the processor as absent,
+  mirroring `BoundedLocalCache`'s evict-before-callback ordering. If the processor or a
+  write-through `CacheWriter` then throws **any `Throwable`** (else the eager EXPIRED is
+  orphaned and double-fires on the next reap), the expired prior's removal is **committed**,
+  its synchronous EXPIRED listener is awaited, and the failure is rethrown after `compute`
+  returns via `processorFailure` — an `Error` as-is, anything else wrapped as an
+  `EntryProcessorException` (per the `Cache.invoke` javadoc's "wrap any `Exception` thrown")
+  — so a failed `invoke` fires exactly one EXPIRED + one eviction. The expiration is a clock
+  fact, not
+  contingent on the operation succeeding. Consequently `postProcess` is
+  expiry-free: a null prior means "absent", so READ/UPDATED (which imply a live prior) never
+  observe one and their `requireNonNull(expirable)` is a proven invariant. Don't move the
+  expiry check back into `postProcess` or re-read the clock there.
 - **EventDispatcher**: Per-key ordering via CompletableFuture chains. Synchronous
   listeners tracked in ThreadLocal; callers must call `awaitSynchronous()` or
   `ignoreSynchronous()`.

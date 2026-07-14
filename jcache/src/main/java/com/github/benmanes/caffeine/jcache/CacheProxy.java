@@ -846,35 +846,54 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNonNull(arguments);
     requireNotClosed();
 
-    Object[] result = new Object[1];
+    var result = new Object[1];
+    var failure = new Throwable[1];
     BiFunction<K, Expirable<V>, Expirable<V>> remappingFunction = (k, expirable) -> {
+      // Publish a lazily-expired prior's expiration before the processor observes it as absent,
+      // so listeners see a linearizable sequence and the expiration is committed exactly once
+      boolean expired;
+      Expirable<V> prior;
+      if ((expirable != null) && !expirable.isEternal()
+          && expirable.hasExpired(currentTimeMillis())) {
+        dispatcher.publishExpired(this, key, expirable.get());
+        statistics.recordEvictions(1L);
+        expired = true;
+        prior = null;
+      } else {
+        prior = expirable;
+        expired = false;
+      }
+
       V value;
-      @Var long millis = 0L;
-      if ((expirable == null)
-          || (!expirable.isEternal() && expirable.hasExpired(millis = currentTimeMillis()))) {
+      if (prior == null) {
         statistics.recordMisses(1L);
         value = null;
       } else {
-        value = copyOf(expirable.get());
+        value = copyOf(prior.get());
         statistics.recordHits(1L);
       }
       var entry = new EntryProcessorEntry<>(key, value,
           configuration.isReadThrough() ? cacheLoader : Optional.empty());
       try {
         result[0] = entryProcessor.process(entry, arguments);
-        return postProcess(expirable, entry, millis);
-      } catch (EntryProcessorException e) {
-        throw e;
-      } catch (RuntimeException e) {
-        throw new EntryProcessorException(e);
+        return postProcess(prior, entry);
+      } catch (Throwable e) {
+        if (!expired) {
+          throw processorFailure(e);
+        }
+        failure[0] = e;
+        return null;
       }
     };
     try {
       cache.asMap().compute(copyOf(key), remappingFunction);
-      dispatcher.awaitSynchronous();
     } catch (Throwable t) {
       dispatcher.ignoreSynchronous();
       throw t;
+    }
+    dispatcher.awaitSynchronous();
+    if (failure[0] != null) {
+      throw processorFailure(failure[0]);
     }
 
     @SuppressWarnings("unchecked")
@@ -882,23 +901,26 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     return castedResult;
   }
 
-  /** Returns the updated expirable value after performing the post-processing actions. */
-  @SuppressWarnings("fallthrough")
-  @Nullable Expirable<V> postProcess(@Var @Nullable Expirable<V> expirable,
-      EntryProcessorEntry<K, V> entry, @Var long currentTimeMillis) {
-    @Var V expiredValue = null;
-    if ((expirable != null) && !expirable.isEternal()) {
-      if (currentTimeMillis == 0) {
-        currentTimeMillis = currentTimeMillis();
-      }
-      if (expirable.hasExpired(currentTimeMillis)) {
-        expiredValue = expirable.get();
-        expirable = null;
-      }
+  /** Rethrows on an entry processor failure. */
+  private static RuntimeException processorFailure(Throwable e) {
+    if (e instanceof Error) {
+      throw (Error) e;
+    } else if (e instanceof EntryProcessorException) {
+      throw (EntryProcessorException) e;
     }
+    throw new EntryProcessorException(e);
+  }
+
+  /**
+   * Returns the updated expirable value after performing the post-processing actions. A null
+   * {@code expirable} means the entry was absent and READ/UPDATED (which require a live prior)
+   * never observe one.
+   */
+  @SuppressWarnings("fallthrough")
+  @Nullable Expirable<V> postProcess(
+      @Nullable Expirable<V> expirable, EntryProcessorEntry<K, V> entry) {
     switch (entry.getAction()) {
       case NONE:
-        publishExpiredPrior(entry.getKey(), expiredValue);
         return expirable;
       case READ: {
         setAccessExpireTime(entry.getKey(), requireNonNull(expirable), 0L);
@@ -909,7 +931,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         // fallthrough
       case LOADED: {
         V value = copyOf(requireNonNull(entry.getValue()));
-        publishExpiredPrior(entry.getKey(), expiredValue);
         long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ true);
         if (expireTimeMillis == 0) {
           // A zero creation expiry means the entry is already expired and is not added, so the
@@ -935,7 +956,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       }
       case DELETED:
         publishToCacheWriter(writer::delete, entry::getKey);
-        publishExpiredPrior(entry.getKey(), expiredValue);
         if (expirable != null) {
           statistics.recordRemovals(1L);
           dispatcher.publishRemoved(this, entry.getKey(), expirable.get());
@@ -943,14 +963,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         return null;
     }
     throw new IllegalStateException("Unknown state: " + entry.getAction());
-  }
-
-  /** Publishes the deferred expiration of a lazily-expired prior entry, counting the eviction. */
-  private void publishExpiredPrior(K key, @Nullable V expiredValue) {
-    if (expiredValue != null) {
-      dispatcher.publishExpired(this, key, expiredValue);
-      statistics.recordEvictions(1L);
-    }
   }
 
   @Override

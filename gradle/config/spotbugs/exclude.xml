@@ -409,6 +409,11 @@
     <Method name="copyOf"/>
     <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
   </Match>
+   <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
+    <Method name="processorFailure"/>
+    <Bug pattern="ITC_INHERITANCE_TYPE_CHECKING"/>
+  </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.jcache.LoadingCacheProxy"/>
     <Or>
