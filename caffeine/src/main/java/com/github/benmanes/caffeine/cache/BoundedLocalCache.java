@@ -2192,7 +2192,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
     if (collectKeys() && cleanUp) {
       cleanUp();
-    } else if (entries.isEmpty()) {
+    } else {
       rescheduleCleanUpIfIncomplete();
     }
   }

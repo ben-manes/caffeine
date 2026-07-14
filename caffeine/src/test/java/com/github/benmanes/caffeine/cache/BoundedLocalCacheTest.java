@@ -288,6 +288,47 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
+  @SuppressWarnings("StatementWithEmptyBody")
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
+      scheduler = CacheScheduler.MOCKITO, removalListener = Listener.MOCKITO)
+  void clear_incompleteStragglers_reschedules(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    reset(context.scheduler());
+    when(context.scheduler().schedule(any(), any(), anyLong(), any()))
+        .thenReturn(new CompletableFuture<>());
+
+    // A write racing clear() can leave the drain status required with no scheduled follow-up when
+    // the under-lock loop bails early with stragglers remaining and every straggler remove(key)
+    // no-ops because a concurrent thread already removed those keys. Force the early bail by
+    // filling the write buffer during the first removal, then remove the rest (an internal removal
+    // does not reschedule) so each straggler lookup misses.
+    var stranded = new boolean[1];
+    Answer<?> strandStragglers = invocation -> {
+      if (!stranded[0]) {
+        stranded[0] = true;
+        while (cache.writeBuffer.offer(() -> {})) {
+          // ignored
+        }
+        long now = cache.expirationTicker().read();
+        for (var node : List.copyOf(cache.data.values())) {
+          cache.removeNode(node, now);
+        }
+        cache.drainStatus = REQUIRED;
+      }
+      return null;
+    };
+    doAnswer(strandStragglers)
+        .when(context.removalListener())
+        .onRemoval(any(), any(), any());
+
+    cache.clear();
+
+    assertThat(stranded[0]).isTrue();
+    assertThat(requireNonNull(cache.pacer()).isScheduled()).isTrue();
+    verify(context.scheduler()).schedule(any(), any(), anyLong(), any());
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO)
   void clear_complete_doesNotReschedule(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
