@@ -114,11 +114,22 @@ final class CaffeinatedGuavaTest {
 
   @ParameterizedTest
   @MethodSource("caches")
+  void asMap_replace_null(Cache<Integer, Integer> cache) {
+    cache.put(1, 2);
+
+    // Guava checks the key and new value for null before the old-value guard, so a null key or
+    // new value throws rather than silently returning false
+    assertThrows(NullPointerException.class, () -> cache.asMap().replace(null, null, 3));
+    assertThrows(NullPointerException.class, () -> cache.asMap().replace(1, null, null));
+  }
+
+  @ParameterizedTest
+  @MethodSource("caches")
   void asMap_entrySet_removeIf_setValue(Cache<String, String> cache) {
     cache.put("a", "1");
 
     // The view delegates to the cache's removeIf, which (like ConcurrentHashMap and Guava,
-    // JDK-8078726) passes the predicate an immutable snapshot, so setValue is unsupported.
+    // JDK-8078726) passes the predicate an immutable snapshot, so setValue is unsupported
     assertThrows(UnsupportedOperationException.class, () ->
         cache.asMap().entrySet().removeIf(entry -> {
           entry.setValue("2");
@@ -130,7 +141,7 @@ final class CaffeinatedGuavaTest {
   @Test
   void asMap_spliterator_concurrent() {
     // The views delegate to the cache so the spliterators report CONCURRENT rather than the
-    // SIZED default that the forwarding views would otherwise inherit.
+    // SIZED default that the forwarding views would otherwise inherit
     Cache<String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder());
     cache.put("a", "1");
 
@@ -156,7 +167,7 @@ final class CaffeinatedGuavaTest {
     cache.put(1, 2);
     cache.put(3, 4);
 
-    // A null element is skipped (as in Guava), not an NPE that leaves a partial removal.
+    // A null element is skipped (as in Guava), not an NPE that leaves a partial removal
     cache.invalidateAll(Arrays.asList(1, null, 3));
     assertThat(cache.asMap()).isEmpty();
   }
@@ -165,7 +176,7 @@ final class CaffeinatedGuavaTest {
   @MethodSource("caches")
   @SuppressFBWarnings("LUI_VACUOUS_ADDALL")
   void entrySet_addAll_empty(Cache<Integer, Integer> cache) {
-    // Guava's AbstractCollection.addAll returns false for an empty collection rather than throwing.
+    // Guava's AbstractCollection.addAll returns false for an empty collection rather than throwing
     assertThat(cache.asMap().entrySet().addAll(Set.<Map.Entry<Integer, Integer>>of())).isFalse();
   }
 

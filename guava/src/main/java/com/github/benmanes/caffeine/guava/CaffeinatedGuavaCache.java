@@ -178,6 +178,8 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
       return (key != null) && (value != null) && delegate().remove(key, value);
     }
     @Override public boolean replace(K key, @Nullable V oldValue, V newValue) {
+      requireNonNull(key);
+      requireNonNull(newValue);
       return (oldValue != null) && delegate().replace(key, oldValue, newValue);
     }
     @Override public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {

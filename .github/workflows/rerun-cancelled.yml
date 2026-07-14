@@ -1,0 +1,73 @@
+# Re-runs Build shards that a GitHub-hosted runner killed mid-job (default branch only)
+name: Re-run cancelled
+permissions: {}
+on:
+  workflow_run:
+    workflows: [Build]
+    types: [completed]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  rerun:
+    name: Re-run infra-cancelled shards
+    if: >-
+      contains(fromJSON('["cancelled", "failure"]'), github.event.workflow_run.conclusion) &&
+      contains(fromJSON('["push", "workflow_dispatch"]'), github.event.workflow_run.event) &&
+      github.event.workflow_run.run_attempt < 3
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write # required to re-run jobs
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          disable-sudo-and-containers: true
+          egress-policy: block
+          allowed-endpoints: api.github.com:443
+      - name: Re-run only if the failure was an infra cancel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          MAX_CANCELLED: 5 # a larger cancel batch is a supersede/manual stop/outage — leave it
+        run: |
+          set -euo pipefail
+
+          # Don't resurrect a run a newer push already superseded (cancel-in-progress):
+          # only the newest run for the branch is eligible. A re-run keeps the same id,
+          # so our own reruns are not treated as superseding themselves.
+          newest=$(gh api "repos/$REPO/actions/workflows/build.yml/runs?branch=$BRANCH&per_page=1" \
+            --jq '.workflow_runs[0].id')
+          if [ "$newest" != "$RUN_ID" ]; then
+            echo "Run $RUN_ID superseded by $newest on $BRANCH — skipping."
+            exit 0
+          fi
+
+          # Classify the outcomes. Re-run only the "a few stragglers were cancelled
+          # while everything else passed" shape. Any genuine failure, or a mass-cancel
+          # (manual stop / broad outage), is left for a human.
+          counts=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" \
+            --jq '[ ([.jobs[] | select(.conclusion == "failure")]   | length),
+                    ([.jobs[] | select(.conclusion == "cancelled")] | length),
+                    ([.jobs[] | select(.conclusion == "success")]   | length) ] | @tsv')
+          IFS=$'\t' read -r failure cancelled success <<< "$counts"
+          echo "failure=$failure cancelled=$cancelled success=$success (attempt $ATTEMPT)"
+
+          if [ "$failure" -ne 0 ]; then
+            echo "Genuine failure(s) present — not auto-rerunning."; exit 0
+          fi
+          if [ "$cancelled" -eq 0 ]; then
+            echo "Nothing cancelled — nothing to do."; exit 0
+          fi
+          if [ "$cancelled" -gt "$MAX_CANCELLED" ] || [ "$success" -le "$cancelled" ]; then
+            echo "Mass cancellation ($cancelled cancelled / $success ok) — likely supersede or manual stop; skipping."
+            exit 0
+          fi
+
+          echo "Re-running $cancelled infra-cancelled job(s) on run $RUN_ID."
+          gh run rerun "$RUN_ID" --repo "$REPO" --failed
