@@ -105,8 +105,8 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
     @Var long previousDelta = previousTimeNanos;
     @Var long currentDelta = currentTimeNanos;
     if ((previousTimeNanos < 0) && (currentTimeNanos >= 0)) {
-      previousDelta += Long.MAX_VALUE;
-      currentDelta += Long.MAX_VALUE;
+      previousDelta += Long.MIN_VALUE;
+      currentDelta += Long.MIN_VALUE;
     }
 
     try {

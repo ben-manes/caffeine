@@ -216,6 +216,22 @@ final class TimerWheelTest {
   }
 
   @Test
+  void advance_fromMinValueAcrossZero() {
+    BoundedLocalCache<Int, Int> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Int, Int>();
+
+    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
+
+    // The degenerate wrap: previousTimeNanos == Long.MIN_VALUE. The delta bias must map it to
+    // unsigned 0, not 2^64-1, else every wheel delta is <= 0 and the advance is a no-op.
+    timerWheel.nanos = Long.MIN_VALUE;
+    timerWheel.schedule(new Timer(Long.MIN_VALUE + SPANS[0]));
+
+    timerWheel.advance(cache, SPANS[0], Integer.MAX_VALUE);
+    verify(cache).evictEntry(any(), any(), anyLong());
+  }
+
+  @Test
   void advance_largeDelta() {
     BoundedLocalCache<Int, Int> cache = Mockito.mock();
     var timerWheel = new TimerWheel<Int, Int>();

@@ -108,6 +108,19 @@ over-stay — it still races a context switch and can't reject an already-expire
 *does* carry: that guards a separate, closable bug — a read duration rebinding onto a
 *replaced* value — and is load-bearing; keep it.)
 
+**Bulk reads evaluate expiry at a single scan-wide `now`, by design.** `getAllPresent`
+(and `containsValue`) read `expirationTicker()` once and reuse that `now` for every
+element's `hasExpired`/`setAccessTime`/`tryExpireAfterRead`. This gives the batch
+*internal consistency* — every key judged at one instant, a point-in-time snapshot. A key
+late in a long scan can therefore be returned present just after a concurrent single-key
+`get` (fresh `now`) reported it expired (a LATE-direction over-stay). That's accepted
+best-effort: a concurrent single-key read can always disagree with a bulk read on a
+boundary entry under lock-free expiration, the over-stay self-heals on the next
+maintenance/access, and it's sub-millisecond (inside `EXPIRE_TOLERANCE`) unless a *user*
+`Expiry.expireAfterRead` callback is slow (callback misuse). Don't "fix" this by re-reading
+the ticker per element — it judges keys of the same call at different instants (a downgrade
+of the snapshot) and adds a `nanoTime` read per key on the hot path.
+
 **writeTime uses plain write** (not opaque like accessTime). It's always written
 under `synchronized(node)`, which provides stronger guarantees than opaque.
 
