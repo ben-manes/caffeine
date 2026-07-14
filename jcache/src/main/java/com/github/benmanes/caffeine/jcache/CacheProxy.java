@@ -901,7 +901,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         publishExpiredPrior(entry.getKey(), expiredValue);
         return expirable;
       case READ: {
-        setAccessExpireTime(entry.getKey(), requireNonNull(expirable), 0L);
+        if (expirable == null) {
+          // the read entry expired lazily during processing, so publish its expiration and drop it
+          publishExpiredPrior(entry.getKey(), expiredValue);
+          return null;
+        }
+        setAccessExpireTime(entry.getKey(), expirable, 0L);
         return expirable;
       }
       case CREATED:
@@ -922,9 +927,22 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         return new Expirable<>(value, expireTimeMillis);
       }
       case UPDATED: {
+        if (expirable == null) {
+          // the prior expired lazily during processing, so the write is a creation, not an update
+          publishToCacheWriter(writer::write, () -> entry);
+          V created = copyOf(requireNonNull(entry.getValue(), "Expected a new value but was null"));
+          publishExpiredPrior(entry.getKey(), expiredValue);
+          long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ true);
+          if (expireTimeMillis == 0) {
+            dispatcher.publishExpired(this, entry.getKey(), created);
+            return null;
+          }
+          statistics.recordPuts(1L);
+          dispatcher.publishCreated(this, entry.getKey(), created);
+          return new Expirable<>(created, expireTimeMillis);
+        }
         publishToCacheWriter(writer::write, () -> entry);
         statistics.recordPuts(1L);
-        requireNonNull(expirable, "Expected a previous value but was null");
         V value = copyOf(requireNonNull(entry.getValue(), "Expected a new value but was null"));
         dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), value);
         @Var long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ false);

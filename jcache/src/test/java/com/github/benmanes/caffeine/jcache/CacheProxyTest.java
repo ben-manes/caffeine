@@ -772,6 +772,61 @@ final class CacheProxyTest {
   }
 
   @Test
+  void postProcess_read_expiredPrior_publishesExpiredForPrior() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      var expired = new Expirable<>(VALUE_1, fixture.currentTime().toMillis() - 1);
+      EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
+      when(entry.getAction()).thenReturn(Action.READ);
+      when(entry.getKey()).thenReturn(KEY_1);
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long evictionsBefore = stats.getCacheEvictions();
+      assertThat(fixture.jcache().postProcess(expired, entry, 0L)).isNull();
+      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
+    }
+  }
+
+  @Test
+  void postProcess_updated_expiredPrior_publishesExpiredForPrior() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      var expired = new Expirable<>(VALUE_1, fixture.currentTime().toMillis() - 1);
+      EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
+      when(entry.getAction()).thenReturn(Action.UPDATED);
+      when(entry.getKey()).thenReturn(KEY_1);
+      when(entry.getValue()).thenReturn(VALUE_2);
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long evictionsBefore = stats.getCacheEvictions();
+      long putsBefore = stats.getCachePuts();
+      var result = fixture.jcache().postProcess(expired, entry, 0L);
+      assertThat(result).isNotNull();
+      assertThat(result.get()).isEqualTo(VALUE_2);
+      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
+      assertThat(stats.getCachePuts()).isEqualTo(putsBefore + 1);
+    }
+  }
+
+  @Test
+  void postProcess_updated_expiredPriorZeroCreation_notAdded() throws IOException {
+    try (CloseableExpiryPolicy expiry = Mockito.mock();
+        var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry)) {
+      when(expiry.getExpiryForCreation()).thenReturn(Duration.ZERO);
+      var expired = new Expirable<>(VALUE_1, fixture.currentTime().toMillis() - 1);
+      EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
+      when(entry.getAction()).thenReturn(Action.UPDATED);
+      when(entry.getKey()).thenReturn(KEY_1);
+      when(entry.getValue()).thenReturn(VALUE_2);
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long evictionsBefore = stats.getCacheEvictions();
+      long putsBefore = stats.getCachePuts();
+      assertThat(fixture.jcache().postProcess(expired, entry, 0L)).isNull();
+      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
+      assertThat(stats.getCachePuts()).isEqualTo(putsBefore);
+    }
+  }
+
+  @Test
   void setAccessExpireTime_eternal() throws IOException {
     try (CloseableExpiryPolicy expiry = Mockito.mock();
         var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry)) {
