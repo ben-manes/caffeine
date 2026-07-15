@@ -281,6 +281,22 @@ final class TypesafeConfigurationTest {
   }
 
   @Test
+  void resolvesTypesWithNullContextClassLoader() {
+    // A null thread-context classloader (e.g. under the bootstrap loader) falls back to the loader
+    // that defined the configurator, so the key and value types still resolve.
+    Config config = ConfigFactory.load();
+    var original = Thread.currentThread().getContextClassLoader();
+    Thread.currentThread().setContextClassLoader(null);
+    try {
+      var configuration = TypesafeConfigurator.from(config, "test-cache").orElseThrow();
+      assertThat(configuration.getKeyType()).isEqualTo(Object.class);
+      assertThat(configuration.getValueType()).isEqualTo(Object.class);
+    } finally {
+      Thread.currentThread().setContextClassLoader(original);
+    }
+  }
+
+  @Test
   void from_userTemplate_composesViaSubstitution() {
     CaffeineConfiguration<String, Integer> cache = TypesafeConfigurator
         .<String, Integer>from(ConfigFactory.load(), "derived-cache").orElseThrow();

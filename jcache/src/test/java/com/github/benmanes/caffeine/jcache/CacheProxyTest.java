@@ -25,6 +25,7 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_3;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.await;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
@@ -423,6 +424,32 @@ final class CacheProxyTest {
       CompletionListener listener = Mockito.mock();
       fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, listener);
       verify(listener).onException(any(CacheLoaderException.class));
+    }
+  }
+
+  @Test
+  void invoke_readThroughLoad_recordsMissNotPut() {
+    // Per the JSR-107 statistics table, invoke counts a put only if setValue was called; a
+    // getValue() read-through load is a miss, not a put (the LOADED action).
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(KEY_1)).thenReturn(VALUE_1);
+    var jcacheFixture = JCacheFixture.builder()
+        .configure(config -> config.setExecutorFactory(MoreExecutors::directExecutor))
+        .loading(config -> {
+          config.setCacheLoaderFactory(() -> loader);
+          config.setReadThrough(true);
+          config.setStatisticsEnabled(true);
+        });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcacheLoading()) {
+      Integer loaded = cache.invoke(KEY_1, (entry, args) -> entry.getValue());
+
+      assertThat(loaded).isEqualTo(VALUE_1);
+      assertThat(cache.containsKey(KEY_1)).isTrue();
+      var stats = getStatistics(cache);
+      assertThat(stats.getCachePuts()).isEqualTo(0L);
+      assertThat(stats.getCacheMisses()).isEqualTo(1L);
+      assertThat(stats.getCacheHits()).isEqualTo(0L);
     }
   }
 

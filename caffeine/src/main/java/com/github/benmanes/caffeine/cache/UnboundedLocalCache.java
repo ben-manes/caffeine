@@ -250,7 +250,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     requireNonNull(function);
 
     BiFunction<K, @Nullable V, @Nullable V> remappingFunction = (key, oldValue) ->
-        (oldValue == null) ? null : requireNonNull(function.apply(key, oldValue));
+        requireNonNull(function.apply(key, requireNonNull(oldValue)));
     for (K key : data.keySet()) {
       remap(key, remappingFunction, /* hints= */ null, /* computeIfAbsent= */ false);
     }

@@ -273,3 +273,45 @@ final class EvictionFrayTest {
 - **`FakeTicker`** (Guava) — `advance(Duration)` for time control
 - **Validation annotations**: `@CheckNoEvictions`, `@CheckMaxLogLevel(WARN)`,
   `@CheckNoStats`
+
+## Coverage (JaCoCo)
+
+The aggregate `jacocoFullReport` merges every `**/*<module>*/**/jacoco/*.exec` across
+`:caffeine`, `:guava`, `:jcache` (main source sets only — not simulator/examples). Target is
+100% line and branch, with one sanctioned exception: `StripedBuffer.expandOrRetry`'s spin-lock
+retry, which no test can deterministically drive.
+
+To re-measure a specific class without the full CI matrix, run the covering test class(es) then
+that module's report, e.g. `:jcache:test --tests 'CacheLoaderTest' :jcache:jacocoTestReport`,
+and read `<module>/build/reports/jacoco/test/jacocoTestReport.xml` (per-line `mi`/`ci`/`mb`/`cb`
+counters). The merged CI HTML can show *internally inconsistent* line vs. branch markers when
+shards drift — trust a fresh local run over a stale merged report.
+
+### `throw alwaysThrows()` is uncoverable — a helper that never returns
+
+A call site like `throw processorFailure(e)`, where the helper *always* throws (every path ends
+in `throw`), reads as **fully uncovered** even when a test drives it. JaCoCo infers a line's
+coverage from a probe placed *after* it; the `invokestatic` unwinds before that probe fires, so
+the call site's instructions never count — and paradoxically the always-throwing helper itself
+shows covered while its only callers show `mi>0, ci=0`. That impossible combination (a covered
+callee with uncovered call sites) is the tell.
+
+Fix by making the helper **return** the exception for the caller to throw (rethrowing only the
+one case it must, e.g. `Error`), so `throw helper(e)` becomes a direct throw JaCoCo can probe:
+
+```java
+private static RuntimeException processorFailure(Throwable e) {
+  if (e instanceof Error) {
+    throw (Error) e;                        // must rethrow: can't return an Error as RuntimeException
+  } else if (e instanceof EntryProcessorException) {
+    return (EntryProcessorException) e;     // return, don't throw
+  }
+  return new EntryProcessorException(e);
+}
+```
+
+Watch for this whenever an audit fix replaces direct `throw`s with a throw-helper — the behavior
+is identical but the coverage silently drops. (A separate way audit fixes shed coverage: an added
+upstream short-circuit makes a downstream guard dead — e.g. `remap` skipping a vanished key before
+the `replaceAll` lambda runs left that lambda's `oldValue == null` branch unreachable. There the
+fix is to delete the now-dead branch, not to test it.)

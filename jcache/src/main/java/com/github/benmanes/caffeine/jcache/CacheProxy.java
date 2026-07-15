@@ -73,6 +73,7 @@ import com.github.benmanes.caffeine.jcache.management.JCacheMXBean;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.github.benmanes.caffeine.jcache.management.JmxRegistration;
 import com.github.benmanes.caffeine.jcache.management.JmxRegistration.MBeanType;
+import com.github.benmanes.caffeine.jcache.processor.Action;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.Var;
@@ -906,14 +907,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     return castedResult;
   }
 
-  /** Rethrows on an entry processor failure. */
+  /** Returns the exception to rethrow on an entry processor failure. */
   private static RuntimeException processorFailure(Throwable e) {
     if (e instanceof Error) {
       throw (Error) e;
     } else if (e instanceof EntryProcessorException) {
-      throw (EntryProcessorException) e;
+      return (EntryProcessorException) e;
     }
-    throw new EntryProcessorException(e);
+    return new EntryProcessorException(e);
   }
 
   /**
@@ -943,7 +944,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           dispatcher.publishExpired(this, entry.getKey(), value);
           return null;
         }
-        statistics.recordPuts(1L);
+        if (entry.getAction() == Action.CREATED) {
+          statistics.recordPuts(1L);
+        }
         dispatcher.publishCreated(this, entry.getKey(), value);
         return new Expirable<>(value, expireTimeMillis);
       }

@@ -391,6 +391,22 @@ final class CacheLoaderTest {
   }
 
   @Test
+  void load_nullCreationExpiry_isEternal() {
+    // getExpiryForCreation() returning null (unlike ZERO or a finite Duration) leaves the loaded
+    // entry eternal rather than dropping or expiring it, matching the put path's default.
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    when(expiry.getExpiryForCreation()).thenReturn(null);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    try (var fixture = jcacheFixture(expiry, cacheLoader)) {
+      when(cacheLoader.load(any())).thenReturn(-1);
+      assertThat(fixture.jcacheLoading().get(1)).isEqualTo(-1);
+
+      fixture.ticker().advance(java.time.Duration.ofDays(1));
+      assertThat(fixture.jcacheLoading().containsKey(1)).isTrue();
+    }
+  }
+
+  @Test
   void load_zeroExpiry_publishesExpiredNotCreated() {
     // Per JSR-107 1.1.1 p.55: "If a Duration#ZERO is returned the new Cache.Entry
     // is considered to be already expired and will not be added to the Cache."
