@@ -370,7 +370,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param key key with which the specified value is to be associated
    * @param value value to be associated with the specified key
    * @param publishToWriter if the writer should be notified
-   * @return the old value
+   * @return the oldValue and if the new value was stored
    */
   @CanIgnoreReturnValue
   protected PutResult<V> putNoCopyOrAwait(K key, V value, boolean publishToWriter) {
@@ -468,19 +468,21 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
 
-    boolean added = putIfAbsentNoAwait(key, value, /* publishToWriter= */ true);
+    var result = putIfAbsentNoAwait(key, value, /* publishToWriter= */ true);
     dispatcher.awaitSynchronous();
 
     if (statsEnabled) {
-      if (added) {
-        statistics.recordPuts(1L);
-        statistics.recordMisses(1L);
-        statistics.recordPutTime(ticker.read() - start);
-      } else {
+      if (result.oldValue != null) {
         statistics.recordHits(1L);
+      } else {
+        statistics.recordMisses(1L);
+      }
+      if (result.written) {
+        statistics.recordPuts(1L);
+        statistics.recordPutTime(ticker.read() - start);
       }
     }
-    return added;
+    return result.written;
   }
 
   /**
@@ -490,14 +492,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param key key with which the specified value is to be associated
    * @param value value to be associated with the specified key
    * @param publishToWriter if the writer should be notified
-   * @return if the mapping was successful
+   * @return the oldValue and if the new value was stored
    */
   @CanIgnoreReturnValue
-  private boolean putIfAbsentNoAwait(K key, V value, boolean publishToWriter) {
-    boolean[] absent = { false };
+  private PutResult<V> putIfAbsentNoAwait(K key, V value, boolean publishToWriter) {
+    var result = new PutResult<V>();
     cache.asMap().compute(copyOf(key), (K k, Expirable<V> expirable) -> {
       if ((expirable != null)
           && (expirable.isEternal() || !expirable.hasExpired(currentTimeMillis()))) {
+        result.oldValue = expirable.get();
         return expirable;
       }
 
@@ -516,12 +519,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         dispatcher.publishExpired(this, key, copy);
         return null;
       } else {
-        absent[0] = true;
+        result.written = true;
         dispatcher.publishCreated(this, key, copy);
         return new Expirable<>(copy, expireTimeMillis);
       }
     });
-    return absent[0];
+    return result;
   }
 
   @Override

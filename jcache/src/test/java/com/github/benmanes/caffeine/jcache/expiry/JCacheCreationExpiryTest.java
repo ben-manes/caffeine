@@ -139,11 +139,20 @@ final class JCacheCreationExpiryTest {
             }))));
   }
 
-  /** No live entry results, so putIfAbsent reports false — matching the RI and put()'s no-put rule. */
+  /**
+   * No live entry results, so putIfAbsent reports false — matching the RI and put()'s no-put rule.
+   * The absent key is a miss (not a hit): the hit/miss reflects prior-presence, not whether the new
+   * value was stored.
+   */
   @Test
-  void putIfAbsent_absent_zeroCreationExpiry_returnsFalse() {
+  void putIfAbsent_absent_zeroCreationExpiry_recordsMissNotHit() {
     try (var fixture = zeroCreationFixture(new AtomicInteger())) {
       assertThat(fixture.jcache().putIfAbsent(KEY_1, VALUE_1)).isFalse();
+
+      var stats = getStatistics(fixture.jcache());
+      assertThat(stats.getCacheMisses()).isEqualTo(1L);
+      assertThat(stats.getCacheHits()).isEqualTo(0L);
+      assertThat(stats.getCachePuts()).isEqualTo(0L);
     }
   }
 

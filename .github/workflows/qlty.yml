@@ -43,6 +43,9 @@ jobs:
         run: |
           qlty init --skip-plugins -n
           qlty plugins enable ktlint radarlint-java radarlint-kotlin trufflehog
+          # Test methods use the method_scenario_expectation convention (underscores); silence
+          # radarlint/Sonar S100 (method naming) for test sources, matching the gradle PMD config.
+          printf '\n[[triage]]\nmatch.rules = ["radarlint-java:java:S100"]\nmatch.file_patterns = ["**/src/test/**"]\nset.ignored = true\n' >> .qlty/qlty.toml
       - name: Run Qlty Check
         continue-on-error: true
         run: |
