@@ -3747,6 +3747,28 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  void computeIfAbsent_absent_weigherThrows_keepsRefresh(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    when(context.weigher().weigh(any(), any()))
+        .thenThrow(new IllegalStateException("weigher failure"));
+    var keyRef = cache.nodeFactory.newReferenceKey(context.absentKey(), cache.keyReferenceQueue());
+    var future = new CompletableFuture<Int>();
+    cache.refreshes().put(keyRef, future);
+
+    // A weigher throw aborts the creation without installing a value, unlike a clean value or null
+    // return. Since nothing was mutated and an independent in-flight refresh may still populate the
+    // absent key, the refresh is preserved (not discarded like remap's completion-path self-clean).
+    assertThrows(IllegalStateException.class, () ->
+        cache.doComputeIfAbsent(context.absentKey(), keyRef,
+            key -> context.absentValue(), new ComputeContext<>(0L), /* recordStats= */ false));
+
+    assertThat(cache.refreshes()).containsKey(keyRef);
+    cache.refreshes().remove(keyRef); // the artificial token has no completion to self-clean it
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   void remap_collectedKey(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {

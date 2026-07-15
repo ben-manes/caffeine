@@ -477,6 +477,45 @@ without discarding on the absent branch when creation is disallowed. A creating 
 above). `UnboundedLocalCache.remap` used to discard unconditionally on the absent+null path,
 diverging from `BoundedLocalCache` on the `replaceAll`-races-remove race.
 
+**Sync `getAll` discards an unloaded key's refresh only on the sequential path — by design,
+and it reflects a real consistency difference, not a bug.** For a key that fails to load
+while a refresh is in flight (an absent key whose refresh is still pending): the **sequential**
+path (`loadSequentially`, no `loadAll` override) loads via `get(key)` → `computeIfAbsent`, so a
+null load *discards* the refresh; the **bulk** path (an overridden `loadAll`) loads via
+`loadAll` outside any lock and side-loads the results with `put`, so an *omitted* key never
+reaches `compute` and its refresh *survives*. This is not an oversight to unify. A single
+`get(k)` that loads null discards (same `computeIfAbsent`), and sequential `getAll` is exactly
+N linearized `get(k)` calls — each observes absence *atomically under the bin lock*, which is
+the standing that justifies discarding a racing refresh. The bulk path has no such standing:
+`loadAll` cannot run under a lock (CHM won't let us hold a bin across the load, and we can't
+lock entries), so it is a **non-linearizable side-load** — closer to `refreshAll` than to a
+load. Its only linearized moments are the `put` insert/replace points (where we match Guava,
+atomic or not); the "this key was absent" observations happen outside any lock and a key may
+materialize afterward (we stomp the still-missing keys but do not remove ones that appeared).
+With no atomic absence-observation instant, it has nothing to hang a discard on. So the
+sequential path discards because it *can* judge; the bulk path preserves because it *can't* —
+forcing bulk to discard would impose an absence-decision onto the one path structurally unable
+to make one. Don't "fix" the split; don't add `discardRefresh` to the `LocalCache` interface
+for it.
+
+**`doComputeIfAbsent`'s new-node path preserves a racing refresh on a weigher/expiry throw —
+by design; don't add a `discardRefresh` there.** It discards on a clean value return (a real
+mutation) and on a clean null return (the loader's authoritative "no value" verdict, same as a
+single `get(k)` that loads null), but a `weigher.weigh`/`expireAfterCreate` throw aborts the
+creation without installing anything, so it is *not* wrapped in a token-clearing `finally`. The
+rule is coherent: a clean completion (value or null) is an authoritative verdict that discards a
+racing refresh; a throw is an aborted op with no verdict, and an independent in-flight refresh
+may still legitimately populate the absent key, so it is preserved. This is asymmetric with
+`remap`'s create branch, which *does* discard on a throw (`try {…} finally { discardRefresh }`,
+the #1970 fix) — but only because `remap` doubles as the **refresh-completion** path and must
+self-clean *its own* token on every exit; it can't tell a user compute from a completion, so it
+discards uniformly (a doctrine-safe over-discard). `doComputeIfAbsent` is only ever a user load,
+so it can afford the correct behavior. Adding the `finally` here would make a *failed*
+`computeIfAbsent` also abort an unrelated legitimate refresh — the inverted direction. Pinned by
+`BoundedLocalCacheTest.computeIfAbsent_absent_weigherThrows_keepsRefresh` (extends the
+already-adjudicated "mapping-function throw doesn't discard is correct" to the weigher/expiry
+throw).
+
 ## Async Synchronous View
 
 **`AsyncCache.synchronous().asMap()` queries are logical, mutations are
