@@ -332,10 +332,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     var result = putNoCopyOrAwait(key, value, /* publishToWriter= */ true);
     dispatcher.awaitSynchronous();
 
-    if (statsEnabled) {
-      if (result.written) {
-        statistics.recordPuts(1);
-      }
+    if (statsEnabled && result.written) {
+      statistics.recordPuts(1);
       statistics.recordPutTime(ticker.read() - start);
     }
   }
@@ -355,12 +353,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       } else {
         statistics.recordHits(1L);
       }
+      long duration = ticker.read() - start;
       if (result.written) {
         statistics.recordPuts(1);
+        statistics.recordPutTime(duration);
       }
-      long duration = ticker.read() - start;
       statistics.recordGetTime(duration);
-      statistics.recordPutTime(duration);
     }
     return (result.oldValue == null) ? null : copyOf(result.oldValue);
   }
@@ -453,7 +451,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       dispatcher.awaitSynchronous();
     }
 
-    if (statsEnabled) {
+    if (statsEnabled && (puts > 0)) {
       statistics.recordPuts(puts);
       statistics.recordPutTime(ticker.read() - start);
     }
@@ -476,10 +474,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if (added) {
         statistics.recordPuts(1L);
         statistics.recordMisses(1L);
+        statistics.recordPutTime(ticker.read() - start);
       } else {
         statistics.recordHits(1L);
       }
-      statistics.recordPutTime(ticker.read() - start);
     }
     return added;
   }
@@ -536,11 +534,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     V value = removeNoCopyOrAwait(key);
     dispatcher.awaitSynchronous();
 
-    if (statsEnabled) {
-      statistics.recordRemoveTime(ticker.read() - start);
-    }
     if (value != null) {
       statistics.recordRemovals(1L);
+      if (statsEnabled) {
+        statistics.recordRemoveTime(ticker.read() - start);
+      }
       return true;
     }
     return false;
@@ -606,12 +604,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if (removed[0]) {
         statistics.recordRemovals(1L);
         statistics.recordHits(1L);
+        statistics.recordRemoveTime(ticker.read() - start);
       } else if (found[0]) {
         statistics.recordHits(1L);
       } else {
         statistics.recordMisses(1L);
       }
-      statistics.recordRemoveTime(ticker.read() - start);
     }
     return removed[0];
   }
@@ -629,14 +627,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     V copy = (value == null) ? null : copyOf(value);
     if (statsEnabled) {
+      long duration = ticker.read() - start;
       if (copy == null) {
         statistics.recordMisses(1L);
       } else {
         statistics.recordHits(1L);
         statistics.recordRemovals(1L);
+        statistics.recordRemoveTime(duration);
       }
-      long duration = ticker.read() - start;
-      statistics.recordRemoveTime(duration);
       statistics.recordGetTime(duration);
     }
     return copy;
@@ -684,12 +682,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     dispatcher.awaitSynchronous();
 
     if (statsEnabled) {
-      statistics.recordPuts(replaced[0] ? 1L : 0L);
       statistics.recordMisses(found[0] ? 0L : 1L);
       statistics.recordHits(found[0] ? 1L : 0L);
       long duration = ticker.read() - start;
+      if (replaced[0]) {
+        statistics.recordPuts(1L);
+        statistics.recordPutTime(duration);
+      }
       statistics.recordGetTime(duration);
-      statistics.recordPutTime(duration);
     }
 
     return replaced[0];
@@ -732,15 +732,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     V copy = (oldValue == null) ? null : copyOf(oldValue);
     if (statsEnabled) {
+      long duration = ticker.read() - start;
       if (copy == null) {
         statistics.recordMisses(1L);
       } else {
         statistics.recordHits(1L);
         statistics.recordPuts(1L);
+        statistics.recordPutTime(duration);
       }
-      long duration = ticker.read() - start;
       statistics.recordGetTime(duration);
-      statistics.recordPutTime(duration);
     }
     return copy;
   }
@@ -808,7 +808,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
     dispatcher.awaitSynchronous();
 
-    if (statsEnabled) {
+    if (statsEnabled && (removed > 0)) {
       statistics.recordRemovals(removed);
       statistics.recordRemoveTime(ticker.read() - start);
     }
