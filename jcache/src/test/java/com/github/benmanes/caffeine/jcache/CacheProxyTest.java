@@ -515,6 +515,52 @@ final class CacheProxyTest {
   }
 
   @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
+  void putTime_noOpOperations_notRecorded() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      fixture.ticker().setAutoIncrementStep(1, TimeUnit.SECONDS);
+      fixture.jcache().put(KEY_1, VALUE_1);
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      float baseline = stats.getAveragePutTime();
+      assertThat(baseline).isGreaterThan(0F);
+
+      // Operations that store nothing must not accumulate put time against the put count.
+      assertThat(fixture.jcache().putIfAbsent(KEY_1, VALUE_2)).isFalse();
+      assertThat(fixture.jcache().replace(KEY_2, VALUE_1)).isFalse();
+      assertThat(fixture.jcache().replace(KEY_1, VALUE_2, VALUE_3)).isFalse();
+      assertThat(fixture.jcache().getAndReplace(KEY_2, VALUE_1)).isNull();
+      fixture.jcache().putAll(Map.of());
+
+      assertThat(stats.getCachePuts()).isEqualTo(1);
+      assertThat(stats.getAveragePutTime()).isEqualTo(baseline);
+    }
+  }
+
+  @Test
+  @SuppressWarnings("PreferJavaTimeOverload")
+  void removeTime_noOpOperations_notRecorded() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.ticker().setAutoIncrementStep(1, TimeUnit.SECONDS);
+      assertThat(fixture.jcache().remove(KEY_1)).isTrue();
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      float baseline = stats.getAverageRemoveTime();
+      assertThat(baseline).isGreaterThan(0F);
+
+      // Operations that remove nothing must not accumulate remove time against the removal count.
+      assertThat(fixture.jcache().remove(KEY_2)).isFalse();
+      assertThat(fixture.jcache().remove(KEY_2, VALUE_1)).isFalse();
+      assertThat(fixture.jcache().getAndRemove(KEY_2)).isNull();
+      fixture.jcache().removeAll(Set.of(KEY_2));
+
+      assertThat(stats.getCacheRemovals()).isEqualTo(1);
+      assertThat(stats.getAverageRemoveTime()).isEqualTo(baseline);
+    }
+  }
+
+  @Test
   void loadAll_loading_executorRejects_notifiesListener() {
     Executor rejecting = task -> { throw new RejectedExecutionException("test"); };
     try (var fixture = JCacheFixture.builder()
