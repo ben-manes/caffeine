@@ -408,6 +408,28 @@ not to throw or return null, so only user types need guarding. Either way
 — don't wrap it in a try/catch to "harden" an unreachable throw, and don't hand `Pacer`
 an unguarded *user* scheduler (that, not the ordering, would be the bug).
 
+**A fire-time executor rejection orphaning the pacer's future is accepted best-effort — don't
+wrap `SystemScheduler`.** `SystemScheduler` schedules via `CompletableFuture.runAsync(command,
+delayedExecutor)`; at fire-time the JDK `Delayer` submits the future-completing task to the
+cache `executor`, and if `executor.execute` throws `RejectedExecutionException` there, the
+returned future never completes. **This is a JDK `delayedExecutor` limitation, not our misuse:**
+`delayedExecutor.execute` accepts the task synchronously (schedules a `TaskSubmitter` on the
+shared `Delayer` STPE) so `runAsync` believes submission succeeded, but the fire-time
+`baseExecutor.execute` REE is thrown inside the Delayer's own (discarded) `ScheduledFutureTask`
+→ swallowed, and `AsyncRun` never runs to complete the CF. A *synchronous* rejection from
+`runAsync` **does** propagate to the caller (confirmed empirically on JDK 25) — only the
+deferred one is dropped. `GuardedScheduler` can't catch it either — that REE is asynchronous
+(fire-time, on the Delayer thread), while the guard wraps only the synchronous `schedule()`
+call. `Pacer.schedule` then suppresses *similar-or-later* re-arms while `!future.isDone()`, so
+one expiration cycle is lost — but it self-heals: an *earlier* re-arm fails `maySkip` and
+reschedules, and once `now` passes the phantom `nextFireTime` the next re-arm reschedules
+regardless (no permanent wedge; the stale future is replaced next schedule, no leak). This sits
+inside the documented amortized/best-effort expiration envelope, the `executor(Executor)`
+javadoc already warns that an executor "that discards tasks or never runs them may experience
+non-deterministic behavior," and the default `commonPool` only rejects at JVM shutdown (where a
+lost expiration cycle is irrelevant). Don't add an executor wrapper to complete the future on
+rejection — it hardens a self-healing, user-configuration-warned corner for no real gain.
+
 **`rescheduleCleanUpIfIncomplete` piggybacks an already-scheduled pacer fire, by
 design.** A `drainStatus == REQUIRED` backlog re-arms the pacer only when
 `!pacer.isScheduled()`; if a fire is already pending (the next expiration event), the

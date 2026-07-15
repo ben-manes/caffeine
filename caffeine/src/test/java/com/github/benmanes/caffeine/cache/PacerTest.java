@@ -135,6 +135,28 @@ final class PacerTest {
   }
 
   @Test
+  void schedule_overduePendingFuture_cancels() {
+    Scheduler scheduler = Mockito.mock();
+    Executor executor = Mockito.mock();
+    Runnable command = Mockito.mock();
+    Future<?> future = Mockito.mock();
+    Future<?> next = Mockito.mock();
+    var pacer = new Pacer(scheduler);
+
+    // A future overdue past its fire time but not yet done is cancelled when it is replaced.
+    pacer.nextFireTime = NOW - ONE_MINUTE_IN_NANOS;
+    pacer.future = future;
+    when(scheduler.schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS))
+        .then(invocation -> next);
+
+    pacer.schedule(executor, command, NOW, /* delay= */ 0L);
+
+    verify(future).cancel(false);
+    assertThat(pacer.future).isSameInstanceAs(next);
+    assertThat(pacer.isScheduled()).isTrue();
+  }
+
+  @Test
   void scheduled_afterNextFireTime_skip() {
     Scheduler scheduler = Mockito.mock();
     Executor executor = Mockito.mock();
