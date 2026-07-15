@@ -252,7 +252,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     BiFunction<K, @Nullable V, @Nullable V> remappingFunction = (key, oldValue) ->
         (oldValue == null) ? null : requireNonNull(function.apply(key, oldValue));
     for (K key : data.keySet()) {
-      remap(key, remappingFunction, /* hints= */ null);
+      remap(key, remappingFunction, /* hints= */ null, /* computeIfAbsent= */ false);
     }
   }
 
@@ -330,7 +330,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
       boolean recordLoadFailure, @Nullable RemapHints hints) {
     requireNonNull(remappingFunction);
-    return remap(key, statsAware(remappingFunction, recordLoad, recordLoadFailure), hints);
+    return remap(key, statsAware(remappingFunction, recordLoad, recordLoadFailure),
+        hints, /* computeIfAbsent= */ true);
   }
 
   @Override
@@ -341,7 +342,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     return remap(key, (K k, @Nullable V oldValue) ->
       (oldValue == null) ? value : statsAware(remappingFunction).apply(oldValue, value),
-      /* hints= */ null);
+      /* hints= */ null, /* computeIfAbsent= */ true);
   }
 
   /**
@@ -350,16 +351,20 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
    * @param key key with which the specified value is to be associated
    * @param remappingFunction the function to compute a value
    * @param hints flags from a query-style caller, or {@code null} if not present
+   * @param computeIfAbsent whether the caller may create an entry when the key is absent
    * @return the new value associated with the specified key, or null if none
    */
   @Nullable V remap(K key,
       BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction,
-      @Nullable RemapHints hints) {
+      @Nullable RemapHints hints, boolean computeIfAbsent) {
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
     @Nullable V[] oldValue = (@Nullable V[]) new Object[1];
     boolean[] replaced = new boolean[1];
     V nv = data.compute(key, (K k, V value) -> {
+      if ((value == null) && !computeIfAbsent) {
+        return null;
+      }
       try {
         V newValue = remappingFunction.apply(k, value);
         if ((value == null) && (newValue == null)) {

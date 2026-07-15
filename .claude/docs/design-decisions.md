@@ -467,6 +467,16 @@ return with `preserveRefresh` set skips `discardRefresh`); a real mutation still
 The unbounded cache used to drop the hint and cancel the reload — the sibling caches must
 stay in sync here.
 
+The same sibling-sync covers a **vanished-key skip**: a non-creating caller (`replaceAll`,
+`computeIfPresent`) whose key was concurrently removed hits `remap` with `value == null` and
+returns null — a no-op, not a mutation, so it must **not** discard a refresh registered
+*after* the removal (that refresh raced nothing). Both caches thread a `computeIfAbsent` flag
+(`false` for `replaceAll`/`computeIfPresent`, `true` for `compute`/`merge`) and return early
+without discarding on the absent branch when creation is disallowed. A creating caller
+(`compute`/`merge`) that returns null on an absent key still discards (over-aggressive, as
+above). `UnboundedLocalCache.remap` used to discard unconditionally on the absent+null path,
+diverging from `BoundedLocalCache` on the `replaceAll`-races-remove race.
+
 ## Async Synchronous View
 
 **`AsyncCache.synchronous().asMap()` queries are logical, mutations are

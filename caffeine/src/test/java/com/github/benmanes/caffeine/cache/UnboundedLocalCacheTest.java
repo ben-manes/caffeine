@@ -134,10 +134,26 @@ final class UnboundedLocalCacheTest {
     // so the refresh is still discarded; a stale reload cannot overwrite the new mapping
     var hints = new LocalCache.RemapHints();
     hints.preserveRefresh = true;
-    var result = cache.remap(key, (k, value) -> 2, hints);
+    var result = cache.remap(key, (k, value) -> 2, hints, /* computeIfAbsent= */ true);
 
     assertThat(result).isEqualTo(2);
     assertThat(cache.refreshes()).doesNotContainKey(key);
+  }
+
+  @Test
+  void remap_replaceAll_vanishedKey_preservesRefresh() {
+    var cache = new UnboundedLocalCache<Integer, Integer>(
+        Caffeine.newBuilder(), /* isAsync= */ false);
+    Integer key = 1;
+    cache.refreshes().put(key, new CompletableFuture<>());
+
+    // A non-creating remap (replaceAll) on a vanished key is a skip, not a mutation, so a refresh
+    // registered after the removal must survive, matching the bounded cache.
+    var result = cache.remap(key, (k, value) -> (value == null) ? null : value,
+        /* hints= */ null, /* computeIfAbsent= */ false);
+
+    assertThat(result).isNull();
+    assertThat(cache.refreshes()).containsKey(key);
   }
 
   @Test
@@ -151,7 +167,8 @@ final class UnboundedLocalCacheTest {
     // A throwing remap over a live entry discards a racing refresh, matching the bounded cache.
     var expected = new IllegalStateException();
     var thrown = assertThrows(IllegalStateException.class, () ->
-        cache.remap(key, (k, value) -> { throw expected; }, /* hints= */ null));
+        cache.remap(key, (k, value) -> { throw expected; },
+            /* hints= */ null, /* computeIfAbsent= */ true));
 
     assertThat(thrown).isSameInstanceAs(expected);
     assertThat(cache.refreshes()).doesNotContainKey(key);
