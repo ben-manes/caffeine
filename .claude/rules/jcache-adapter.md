@@ -30,6 +30,14 @@ paths:
   expiry-free: a null prior means "absent", so READ/UPDATED (which imply a live prior) never
   observe one and their `requireNonNull(expirable)` is a proven invariant. Don't move the
   expiry check back into `postProcess` or re-read the clock there.
+- **Write-through fires the writer INSIDE the compute**: single-key mutating ops
+  (`put`/`putIfAbsent`/`replace`/`remove`/`getAndRemove`/invoke) call
+  `CacheWriter.write`/`delete` *within* the `cache.asMap().compute*` lambda (gated by a
+  `publishToWriter` flag), so the store write/delete and the cache mutation commit atomically
+  under the per-key bin lock — a racing same-key op cannot interleave between them. Use
+  `compute` (not `computeIfPresent`) when the writer must fire unconditionally, e.g. a
+  write-through `delete` on an absent key. Don't hoist the writer call out ahead of the
+  compute. `removeAll` is the exception (batch `deleteAll` can't hold a lock across all bins).
 - **EventDispatcher**: Per-key ordering via CompletableFuture chains. Synchronous
   listeners tracked in ThreadLocal; callers must call `awaitSynchronous()` or
   `ignoreSynchronous()`.

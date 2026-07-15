@@ -129,6 +129,16 @@ Lock context depends on path:
 - **Initial load (new node)**: INSIDE CHM bin lock, NOT inside synchronized(node)
 - **Expired/collected existing node**: INSIDE CHM bin lock + synchronized(node)
 
+### CacheLoader.asyncReload / asyncLoad — INSIDE the `refreshes` CHM bin lock
+Refresh registration invokes the loader inside a `refreshes.compute*` bin lambda, so the
+loader dispatch (including the default `CompletableFuture.supplyAsync`'s `executor.execute`)
+runs under the **refreshes** bin lock. Two consequences, both bounded to user misuse:
+- **Caller-runs executor** (`Runnable::run` or a synchronous prefix) runs the entire user
+  reload body under that lock — a slow reload stalls other refreshes on the same bin.
+- The only closing leg of a `refreshes-bin → data-bin` order (which would invert
+  `discardRefresh`'s `data-bin → refreshes-bin`) is a user loader re-entering the cache —
+  the documented callback-re-entrancy hazard, not an in-library cycle.
+
 ### RemovalListener.onRemoval — OUTSIDE all locks (normal path)
 Delivered asynchronously via executor. Safe for re-entrant cache operations on
 the normal path. Exception: see the executor-rejection fallback under

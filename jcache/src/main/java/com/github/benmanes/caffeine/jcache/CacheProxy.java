@@ -532,8 +532,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
 
-    publishToCacheWriter(writer::delete, () -> key);
-    V value = removeNoCopyOrAwait(key);
+    V value = removeNoCopyOrAwait(key, /* publishToWriter= */ true);
     dispatcher.awaitSynchronous();
 
     if (statsEnabled) {
@@ -551,18 +550,24 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * listeners to complete.
    *
    * @param key key whose mapping is to be removed from the cache
+   * @param publishToWriter if the writer should be notified
    * @return the old value
    */
-  private @Nullable V removeNoCopyOrAwait(K key) {
+  private @Nullable V removeNoCopyOrAwait(K key, boolean publishToWriter) {
     @SuppressWarnings("unchecked")
     var removed = (V[]) new Object[1];
-    cache.asMap().computeIfPresent(key, (k, expirable) -> {
-      if (!expirable.isEternal() && expirable.hasExpired(currentTimeMillis())) {
-        dispatcher.publishExpired(this, key, expirable.get());
-        statistics.recordEvictions(1L);
-      } else {
-        dispatcher.publishRemoved(this, key, expirable.get());
-        removed[0] = expirable.get();
+    cache.asMap().compute(key, (K k, Expirable<V> expirable) -> {
+      if (publishToWriter) {
+        publishToCacheWriter(writer::delete, () -> key);
+      }
+      if (expirable != null) {
+        if (!expirable.isEternal() && expirable.hasExpired(currentTimeMillis())) {
+          dispatcher.publishExpired(this, key, expirable.get());
+          statistics.recordEvictions(1L);
+        } else {
+          dispatcher.publishRemoved(this, key, expirable.get());
+          removed[0] = expirable.get();
+        }
       }
       return null;
     });
@@ -623,8 +628,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
 
-    publishToCacheWriter(writer::delete, () -> key);
-    V value = removeNoCopyOrAwait(key);
+    V value = removeNoCopyOrAwait(key, /* publishToWriter= */ true);
     dispatcher.awaitSynchronous();
 
     V copy = (value == null) ? null : copyOf(value);
@@ -802,7 +806,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     @Var int removed = 0;
     for (var key : keysToRemove) {
-      if (!failedKeys.contains(key) && (removeNoCopyOrAwait(key) != null)) {
+      if (!failedKeys.contains(key)
+          && (removeNoCopyOrAwait(key, /* publishToWriter= */ false) != null)) {
         removed++;
       }
     }

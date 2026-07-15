@@ -42,6 +42,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -71,6 +73,7 @@ import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -449,6 +452,27 @@ final class CacheWriterTest {
     }
   }
 
+  @Test
+  void removeAll_nonClearingWriter_stillEmptiesCache() {
+    // A CacheWriter.deleteAll that does not remove the deleted keys from the passed collection (as
+    // a naive or mock writer will not) is treated as a full success, so removeAll empties the
+    // cache. This intentionally diverges from the reference implementation, which honors the
+    // residual collection even on success and would leave the entries mapped -- matching it would
+    // make removeAll a no-op for the common non-clearing writer. The residual is honored only on
+    // the throw path (removeAll_fails), where it distinguishes the partially-deleted keys.
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer);
+         var cache = fixture.jcache()) {
+      cache.putAll(ENTRIES);
+
+      cache.removeAll(ENTRIES.keySet());
+
+      for (var key : ENTRIES.keySet()) {
+        assertThat(cache.containsKey(key)).isFalse();
+      }
+    }
+  }
+
   /**
    * Per the integration contract, a {@link CacheWriter} failure must abort the operation without
    * mutating the cache or recording a statistic, so every update path must agree that no put is
@@ -552,6 +576,55 @@ final class CacheWriterTest {
           iterator.next();
           iterator.remove();
         })));
+  }
+
+  @ParameterizedTest
+  @MethodSource("removeThroughOps")
+  void removeThrough_racingSameKeyPut_noStoreCacheDivergence(
+      Consumer<Cache<Integer, Integer>> op) throws InterruptedException, IOException {
+    // remove(K)/getAndRemove(K) must delete-through and remove from the cache atomically under the
+    // per-key lock; otherwise a same-key put racing between the store delete and the cache removal
+    // strands the store's newer value while the cache goes absent. With the writer's delete under
+    // the bin lock, the racing put is serialized (blocks until the removal commits), so the store
+    // and cache always agree; with the writer outside the lock (the bug) the put commits between
+    // the two steps and the store keeps VALUE_2 while the cache is empty.
+    var deleting = new CountDownLatch(1);
+    try (CloseableCacheWriter writer = Mockito.mock();
+         var fixture = jcacheFixture(writer);
+         var cache = fixture.jcache()) {
+      var store = new ConcurrentHashMap<Integer, Integer>();
+      doAnswer(invocation -> {
+        Cache.Entry<Integer, Integer> entry = invocation.getArgument(0);
+        store.put(entry.getKey(), entry.getValue());
+        return null;
+      }).when(writer).write(any());
+
+      cache.put(KEY_1, VALUE_1);
+
+      doAnswer(invocation -> {
+        store.remove(KEY_1);
+        deleting.countDown();               // let the racing put attempt to interleave
+        TimeUnit.MILLISECONDS.sleep(100);   // window; the put blocks on the bin lock once fixed
+        return null;
+      }).when(writer).delete(KEY_1);
+
+      var racingPut = new Thread(() -> {
+        Uninterruptibles.awaitUninterruptibly(deleting);
+        cache.put(KEY_1, VALUE_2);
+      });
+      racingPut.start();
+      op.accept(cache);
+      racingPut.join();
+
+      assertThat(cache.get(KEY_1)).isEqualTo(store.get(KEY_1));
+    }
+  }
+
+  static Stream<Arguments> removeThroughOps() {
+    return Stream.of(
+        arguments(named("remove", (Consumer<Cache<Integer, Integer>>) c -> c.remove(KEY_1))),
+        arguments(named("getAndRemove",
+            (Consumer<Cache<Integer, Integer>>) c -> c.getAndRemove(KEY_1))));
   }
 
   @Test

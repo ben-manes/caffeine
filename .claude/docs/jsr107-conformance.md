@@ -341,6 +341,39 @@ session memory for the full rationale.
   `next()` and `remove()` still gets `REMOVED` + a removal count (RI parity — its
   iterator removes unconditionally, "we simply don't care"). The expired→eviction
   gating catalogued above applies to `remove`/`removeAll`/`getAndRemove` only.
+- **`remove(K)` / `getAndRemove(K)` fire `CacheWriter.delete` under the per-key bin lock,
+  atomically with the cache removal** (resolved 2026-07-14, "Serialize the jcache
+  remove/getAndRemove write-through under the bin lock"). **Spec-required**, not just a nicety:
+  the `CacheWriter` contract states *"the non-batch writer methods are atomic with respect to the
+  corresponding cache operation"*, and these ops use the non-batch `delete` (`@see
+  CacheWriter#delete`). The pre-fix code ran the writer *before* an unconditional
+  `computeIfPresent` removal, so a racing same-key `put` interleaved (store=value / cache=absent)
+  — a conformance violation. Now `removeNoCopyOrAwait` takes a `publishToWriter` flag and uses
+  `compute` (mirroring `putNoCopyOrAwait`); the writer still fires unconditionally for an absent
+  key (*"invoked even if no mapping for the key exists"*). Pinned by
+  `CacheWriterTest.removeThrough_racingSameKeyPut_noStoreCacheDivergence`. Ecosystem: atomic
+  writer/removal is universal (RI holds `lock(key)` across both; Ehcache 3 fires the writer inside
+  the store `getAndCompute` — the same in-`compute` mechanism as ours; Hazelcast serializes per
+  partition thread; cache2k pins the entry; Coherence-partitioned commits via an entry processor);
+  only Coherence's in-process `localcache` ships the identical pre-fix window.
+- **`removeAll(Set)` uses the batch `deleteAll`, is not cross-key atomic, and treats a non-throwing
+  return as full success (empties the cache), honoring the residual only on a throw — spec-
+  sanctioned.** The `CacheWriter` contract states *"For batch methods … the entire cache operation
+  is not required to be atomic … and is therefore not required to be atomic in the writer"*, and
+  `removeAll` `@see`s the batch `deleteAll`; the RI locking all keys goes *beyond* the spec. A clean
+  return = full success (residual empty for a conformant writer) → remove all; the residual is
+  honored only on the throw path (*"In the case of partial success, the collection … must contain
+  only those entries which failed"*). Honoring the residual on success (the RI's reading) makes
+  `removeAll` a **cache no-op** for any writer that doesn't clear the collection — every mock and
+  most naive writers — investigated and reverted. A **per-key `delete` loop is permitted but neither
+  required nor more correct**: it discards `deleteAll`'s batching for no spec-mandated gain (the
+  spec releases batch atomicity). Ehcache 3 and Coherence-partitioned use the identical batch
+  approach; only cache2k/Infinispan/Coherence-localcache loop per-key, forced by their per-key
+  persistence SPI. The same-key window is a structural residual (no multi-bin lock across a bulk
+  `deleteAll`), and the spec disclaims write-through atomicity beyond *"the cache is the only
+  application mutating an external resource"* (§Integration). Pinned by
+  `CacheWriterTest.removeAll_nonClearingWriter_stillEmptiesCache`. Do not "fix" toward the RI or
+  per-key.
 - **`JCacheLoaderAdapter.expireTimeMillis` applies the same ±1 sentinel-collision
   adjustment** as `CacheProxy.getWriteExpireTimeMillis`/`setAccessExpireTime` when
   a finite adjusted time lands exactly on `0` or `Long.MAX_VALUE` (treated as
