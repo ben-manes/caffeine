@@ -37,6 +37,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -159,6 +160,29 @@ final class CacheWriterTest {
 
       assertThrows(CacheWriterException.class, () -> fixture.jcache().putAll(map));
       assertThat(map).containsExactly(KEY_1, VALUE_1);
+    }
+  }
+
+  @Test
+  void putAll_partialSuccess_storesWrittenEntriesOnly() throws IOException {
+    try (CloseableCacheWriter writer = Mockito.mock();
+         var fixture = jcacheFixture(writer)) {
+      // writeAll writes KEY_1 (removing it from the batch) then fails, leaving KEY_2 unwritten;
+      // only the written entry is committed to the cache
+      doAnswer(invocation -> {
+        Collection<Cache.Entry<? extends Integer, ? extends Integer>> entries =
+            invocation.getArgument(0);
+        entries.removeIf(entry -> entry.getKey().equals(KEY_1));
+        throw new CacheWriterException();
+      }).when(writer).writeAll(any());
+
+      var map = new HashMap<Integer, Integer>();
+      map.put(KEY_1, VALUE_1);
+      map.put(KEY_2, VALUE_2);
+
+      assertThrows(CacheWriterException.class, () -> fixture.jcache().putAll(map));
+      assertThat(fixture.jcache().containsKey(KEY_1)).isTrue();
+      assertThat(fixture.jcache().containsKey(KEY_2)).isFalse();
     }
   }
 

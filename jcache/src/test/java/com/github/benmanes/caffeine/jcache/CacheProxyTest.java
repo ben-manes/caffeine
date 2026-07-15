@@ -727,6 +727,19 @@ final class CacheProxyTest {
   }
 
   @Test
+  void putAll_nullValueMidMap_storesNothing() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      var map = new HashMap<Integer, Integer>();
+      map.put(KEY_1, VALUE_1);
+      map.put(KEY_2, null); // whole-map validation must reject before any entry is stored
+
+      assertThrows(NullPointerException.class, () -> fixture.jcache().putAll(map));
+      assertThat(fixture.jcache().containsKey(KEY_1)).isFalse();
+      assertThat(fixture.jcache().containsKey(KEY_2)).isFalse();
+    }
+  }
+
+  @Test
   void remove_eternal() {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       fixture.jcache().put(KEY_1, VALUE_1);
@@ -1084,6 +1097,25 @@ final class CacheProxyTest {
         loaded.setValue(VALUE_2);
         assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
       }
+    }
+  }
+
+  @Test
+  void reads_returnCopies_callerMutationDoesNotCorruptCache() {
+    var config = new MutableConfiguration<Integer, MutableInt>();
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+         var cache = fixture.cacheManager().createCache("reads-return-copies", config)) {
+      cache.put(KEY_1, new MutableInt(VALUE_1));
+
+      // Each read path hands back a copy: mutating it leaves the stored value untouched.
+      requireNonNull(cache.get(KEY_1)).setValue(VALUE_2);
+      assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
+
+      requireNonNull(cache.getAll(Set.of(KEY_1)).get(KEY_1)).setValue(VALUE_2);
+      assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
+
+      requireNonNull(cache.iterator().next().getValue()).setValue(VALUE_2);
+      assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
     }
   }
 

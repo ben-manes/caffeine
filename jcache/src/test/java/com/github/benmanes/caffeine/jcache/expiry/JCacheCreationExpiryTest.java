@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,8 +40,10 @@ import java.util.stream.Stream;
 import javax.cache.Cache;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryCreatedListener;
+import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.integration.CacheLoader;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -153,6 +156,47 @@ final class JCacheCreationExpiryTest {
       assertThat(stats.getCacheMisses()).isEqualTo(1L);
       assertThat(stats.getCacheHits()).isEqualTo(0L);
       assertThat(stats.getCachePuts()).isEqualTo(0L);
+    }
+  }
+
+  /**
+   * A read-through load inside an entry processor is a create (LOADED). Under a zero creation
+   * expiry the loaded value is observed by the processor but not stored: it publishes EXPIRED and,
+   * unlike a CREATED, records no put.
+   */
+  @Test
+  void invoke_readThroughLoad_zeroCreationExpiry_suppressedAndExpired() {
+    var expiredValues = new ArrayList<Integer>();
+    CacheEntryExpiredListener<Integer, Integer> expiredListener =
+        events -> events.forEach(event -> expiredValues.add(event.getValue()));
+    var expiredListenerConfig = new MutableCacheEntryListenerConfiguration<>(
+        /* listenerFactory= */ () -> expiredListener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ true, /* isSynchronous= */ true);
+    CacheLoader<Integer, Integer> loader = new CacheLoader<>() {
+      @Override public Integer load(Integer key) {
+        return VALUE_1;
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        throw new UnsupportedOperationException();
+      }
+    };
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExpiryPolicyFactory(
+              () -> new CreatedExpiryPolicy(javax.cache.expiry.Duration.ZERO));
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setStatisticsEnabled(true);
+          config.setReadThrough(true);
+          config.setCacheLoaderFactory(() -> loader);
+          config.addCacheEntryListenerConfiguration(expiredListenerConfig);
+        }).build()) {
+      var observed = fixture.jcache().invoke(KEY_1, (entry, args) -> entry.getValue());
+
+      assertThat(observed).isEqualTo(VALUE_1);
+      assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+      assertThat(fixture.jcache().containsKey(KEY_1)).isFalse();
+      assertThat(expiredValues).containsExactly(VALUE_1);
+      assertThat(getStatistics(fixture.jcache()).getCachePuts()).isEqualTo(0L);
     }
   }
 

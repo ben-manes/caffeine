@@ -205,6 +205,17 @@ final class JCacheCombinedExpiryTest {
     }
   }
 
+  @Test
+  void getAndReplace_expired() {
+    try (var fixture = jcacheFixture()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
+
+      assertThat(fixture.jcache().getAndReplace(KEY_1, VALUE_2)).isNull();
+      assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+    }
+  }
+
   /* --------------- invoke --------------- */
 
   @Test
