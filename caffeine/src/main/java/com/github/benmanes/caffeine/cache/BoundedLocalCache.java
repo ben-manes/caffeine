@@ -3517,7 +3517,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final class WeightLimiter<K, V> implements Function<Stream<CacheEntry<K, V>>, Map<K, V>> {
     private final long weightLimit;
 
-    private long weightedSize;
+    long weightedSize;
 
     WeightLimiter(long weightLimit) {
       requireArgument(weightLimit >= 0);
@@ -3528,7 +3528,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     public Map<K, V> apply(Stream<CacheEntry<K, V>> stream) {
       var map = new LinkedHashMap<K, V>();
       stream.takeWhile(entry -> {
-        weightedSize = Math.addExact(weightedSize, entry.weight());
+        weightedSize += entry.weight();
+        if (weightedSize < 0) {
+          weightedSize = Long.MAX_VALUE;
+        }
         return (weightedSize <= weightLimit);
       }).forEach(entry -> map.put(entry.getKey(), entry.getValue()));
       return Collections.unmodifiableMap(map);

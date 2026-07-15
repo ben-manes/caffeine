@@ -3797,6 +3797,21 @@ final class BoundedLocalCacheTest {
     requireNonNull(context.build(key -> key));
   }
 
+  @Test
+  void weightLimiter_overflow_disregardsMaxValueLimit() {
+    var limiter = new BoundedLocalCache.WeightLimiter<Int, Int>(Long.MAX_VALUE);
+    limiter.weightedSize = Long.MAX_VALUE;
+
+    Policy.CacheEntry<Int, Int> entry = Mockito.mock();
+    when(entry.weight()).thenReturn(1);
+    when(entry.getKey()).thenReturn(Int.valueOf(1));
+    when(entry.getValue()).thenReturn(Int.valueOf(2));
+
+    // Long.MAX_VALUE disregards the limit, so the weight sum must saturate rather than throw
+    var result = limiter.apply(Stream.of(entry));
+    assertThat(result).containsEntry(Int.valueOf(1), Int.valueOf(2));
+  }
+
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY,
       initialCapacity = InitialCapacity.FULL, maximumSize = Maximum.UNREACHABLE)
