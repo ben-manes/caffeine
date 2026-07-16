@@ -111,7 +111,7 @@ mkdir -p /tmp/ri-src && (cd /tmp/ri-src && unzip -oq /tmp/cache-ri-impl-sources.
   |---|---|
   | Write / read / remove ops, expiry, put/hit/miss/removal stats | `org.jsr107.ri.RICache` (every `put`/`replace`/`getAndReplace`/`get`/`remove`/`invoke` path) + `RICachedValue` |
   | Write-through | `RICache.writeCacheEntry` / `deleteCacheEntry` (both gate on `configuration.isWriteThrough()`); `cacheWriter.writeAll` / `deleteAll` for `putAll`/`removeAll` partial-failure collection mutation |
-  | Statistics | `org.jsr107.ri.management.RICacheStatisticsMXBean` — five `AtomicLong` counters (`cacheHits`/`Misses`/`Puts`/`Removals`/`Evictions`); `CacheGets = hits + misses`; hit/miss percentages; **averages return 0** (the RI does not track `Average*Time`) |
+  | Statistics | `org.jsr107.ri.management.RICacheStatisticsMXBean` — `AtomicLong` counters (`cacheHits`/`Misses`/`Puts`/`Removals`/`Evictions`) plus three nano-time accumulators recorded on nearly every op; `CacheGets = hits + misses`; hit/miss percentages; **all three `Average*Time` getters divide by `getCacheGets()`** (an RI bug — Caffeine divides each average by its own counter) |
   | Events | `org.jsr107.ri.event.RICacheEventDispatcher` + `RICacheEntryEvent`; filters via `RICacheEntryEventFilteringIterator` |
   | Entry processors | `org.jsr107.ri.processor.EntryProcessorEntry` + `MutableEntryOperation` (the action machine Caffeine's `EntryProcessorEntry.Action` mirrors) |
   | Store-by-value vs by-reference | `RISerializingInternalConverter` vs `RIReferenceInternalConverter` (the copy-on-store / copy-on-return points) |
@@ -227,10 +227,13 @@ session memory for the full rationale.
 - **ZERO-expiry `EXPIRED` event carries the just-put value, not the prior value.**
   Suppressing it or passing `null` would strand resources tied to the discarded
   value. Intentional.
-- **`invoke` read-through `getValue()` counts as a put; `get`/`getAll` do not.**
-  The spec lacks a `CacheLoads` stat; counting invoke-loads surfaces some
-  stampede visibility. The spec's own per-operation tables don't apply the broad
-  "total puts" definition uniformly. Intentional.
+- **`invoke` read-through `getValue()` records a miss and no put** (reversed
+  2026-07-15 by "resolve branch-coverage gaps from the audit changes"; earlier
+  revisions of this list recorded the pre-reversal put-count as intentional — that
+  divergence no longer exists). Now spec/RI-conformant: the EP javadoc says
+  `getValue()` "will behave as if Cache.get(Object) was called", the statistics
+  table treats a read-through load as a miss-not-put, and the RI's LOAD case does
+  not count a put. Pinned by `CacheProxyTest.invoke_readThroughLoad_recordsMissNotPut`.
 - **`CacheProxy.close()` shuts down a configured `ExecutorService`.** Spec-silent;
   defensible default (cache owns the executor). Documented, not a bug.
 - **Operations racing `close()` are conformant — accepted (audit-lifecycle M2/M3,
@@ -333,10 +336,15 @@ session memory for the full rationale.
   entry"); the stats table's looser "Yes, if remove() was called" is internally
   inconsistent with its removeAll/remove(K) rows. Caffeine's gating matches the
   listener table and its own `remove(K)`. TCK only tests remove-on-present.
-- **`putIfAbsent` under zero creation expiry returns false, records a hit, fires
-  `EXPIRED` with the new value, no put** — exact RI parity (RI: `result=false` →
-  `increaseCacheHits(1)`, `processExpiries` with the new value). The
-  hit-for-an-absent-key looks wrong but is the oracle's behavior; do not "fix".
+- **`putIfAbsent` under zero creation expiry returns false, records a MISS, fires
+  `EXPIRED` with the new value, no put** (reversed 2026-07-16 by "Record a
+  putIfAbsent miss for an absent zero-creation-expiry key"; earlier revisions of
+  this list pinned the RI's hit — do not restore it). Hit/miss now classifies on
+  prior-presence per the statistics-table preamble ("a hit will occur if a mapping
+  exists, and a miss if one does not"); getAndPut classifies identically. A
+  deliberate, spec-backed divergence from the RI (whose `result=false` branch
+  records a hit); TCK-blind. Pinned by
+  `JCacheCreationExpiryTest.putIfAbsent_absent_zeroCreationExpiry_recordsMissNotHit`.
 - **`iterator().remove()` does not gate on expiry**: an entry that expires between
   `next()` and `remove()` still gets `REMOVED` + a removal count (RI parity — its
   iterator removes unconditionally, "we simply don't care"). The expired→eviction
@@ -384,7 +392,10 @@ session memory for the full rationale.
   `CacheEntryListenerException` and rethrown to the cache-op caller (the RI
   rethrows). The TCK's `testBrokenCacheEntryListener` tolerates both behaviors
   (catch-without-fail), and the queued-dispatch model has no synchronous frame to
-  rethrow from. Intentional; documented in the `EventDispatcher` class javadoc.
+  rethrow from. Intentional (the swallow-and-log mechanism is
+  `EventTypeAwareListener.dispatch`'s catch plus `awaitSynchronous`'s
+  `CompletionException` catch; the `EventDispatcher` class javadoc documents
+  ordering/await semantics, not this policy).
 - **Entry-processor `getValue()`-load followed by `remove()` calls
   `CacheWriter.delete`** (action `LOADED` → `DELETED`). The RI cancels LOAD+remove
   to a no-op. Spec-silent; Caffeine's behavior is internally consistent with

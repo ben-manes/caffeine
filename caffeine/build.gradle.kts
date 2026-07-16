@@ -4,9 +4,12 @@ import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
 import org.gradle.api.tasks.testing.logging.TestLogEvent.STARTED
+import org.gradle.kotlin.dsl.fray
+import org.gradle.kotlin.dsl.invoke
 import org.gradle.plugins.ide.eclipse.model.Library
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
+import org.pastalab.fray.gradle.tasks.PrepareWorkspaceTask
 
 plugins {
   id("org.pastalab.fray.gradle")
@@ -177,6 +180,14 @@ tasks.named<JavaCompile>("compileJmhJava").configure {
   options.apply {
     compilerArgs.add("-Xlint:-classfile")
   }
+}
+
+tasks.named<PrepareWorkspaceTask>("jlink").configure {
+  val frayJava = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(25)
+    vendor = JvmVendorSpec.AMAZON
+  }
+  originalJdkPath = frayJava.map { it.metadata.installationPath.asFile.absolutePath }
 }
 
 fray.testTask = "frayTest"

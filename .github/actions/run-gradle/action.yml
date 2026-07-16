@@ -47,12 +47,19 @@ runs:
         echo "version=${toolchainVersion}" >> $GITHUB_OUTPUT
     - name: Set up JDK ${{ steps.gradle_toolchain.outputs.version }}
       id: gradle_jdk
-      uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+      uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
       with:
         java-version: ${{ steps.gradle_toolchain.outputs.version }}
         distribution: temurin
+    - name: Set up JDK 25 (Fray)
+      id: fray_jdk
+      if: ${{ contains(inputs.arguments, 'frayTest') }}
+      uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+      with:
+        java-version: 25
+        distribution: corretto # requires jmods
     - name: Set up JDK
-      uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+      uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
       with:
         java-version: ${{ inputs.java }}
         distribution: ${{ endsWith(inputs.java, '-ea') && 'temurin' || inputs.distribution }}
@@ -86,21 +93,6 @@ runs:
         add-job-summary: on-failure
         cache-read-only: ${{ inputs.local-cache-read-only }}
         cache-encryption-key: ${{ inputs.cache-encryption-key }}
-    - name: Read Fray version
-      id: fray_version
-      if: ${{ contains(inputs.arguments, 'frayTest') }}
-      shell: bash
-      run: |
-        version=$(grep -oP '(?<=^fray = ")[^"]+' gradle/libs.versions.toml)
-        echo "version=${version}" >> $GITHUB_OUTPUT
-    - name: Cache Fray instrumented JDK
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      if: ${{ contains(inputs.arguments, 'frayTest') }}
-      with:
-        path: |
-          build/fray/fray-java
-          build/fray/fray-jvmti
-        key: fray-jdk-${{ runner.os }}-${{ steps.fray_version.outputs.version }}
     - name: Run ${{ inputs.arguments }}
       if: ${{ inputs.arguments != '' }}
       env:
@@ -109,6 +101,7 @@ runs:
         INPUTS_ATTEMPT_LIMIT: ${{ inputs.attempt-limit }}
         DAEMON_JDK: ${{ steps.gradle_jdk.outputs.path }}
         JDK_CI: ${{ steps.java_toolchain.outputs.java_home }}
+        JDK25_HOME: ${{ steps.fray_jdk.outputs.path }}
         GRAALVM_HOME: ${{ steps.java_toolchain.outputs.graalvm_home }}
         ORG_GRADLE_PROJECT_graalvm: ${{ steps.java_toolchain.outputs.graalvm }}
         ORG_GRADLE_PROJECT_javaVendor: ${{ steps.java_toolchain.outputs.vendor }}
@@ -133,7 +126,7 @@ runs:
           fi
         done
     - name: Restore to toolchain JDK (${{ steps.gradle_toolchain.outputs.version }})
-      uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+      uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
       if: always()
       with:
         java-version: ${{ steps.gradle_toolchain.outputs.version }}

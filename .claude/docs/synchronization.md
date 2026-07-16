@@ -60,6 +60,13 @@ lambda — which holds only the bin lock, no node monitor — e.g.
 | policyWeight | plain | plain | evictionLock; unlocked reads accept staleness |
 | queueType | plain | plain | evictionLock |
 
+Note: `writeTime`'s plain `set` is the one 64-bit plain write observed by lock-free
+`getOpaque` readers. Per the VarHandle spec, plain accesses are bitwise-atomic only for
+references and ≤32-bit primitives, and a plain-mode VarHandle access is NOT upgraded by
+the field's volatile declaration — so a torn read is formally possible on a 32-bit VM.
+Accepted: no impact on 64-bit VMs, and the consequence is bounded to one wrong
+expiry/refresh decision that self-heals on the next read/write.
+
 ## Drain Status State Machine
 
 ```

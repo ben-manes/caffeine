@@ -588,9 +588,12 @@ after replacing it is unusual, and the second `replace(k, f1, f1)` is idempotent
 ## TimerWheel
 
 **Sub-tick advances correctly produce `delta = 0`.** Advancing `nanos` by less
-than `2^SHIFT[i]` nanoseconds (e.g., `-1 → 0`) shifts to the same unsigned tick
-index, so no buckets are processed. This is correct: no tick boundary was
-crossed. Entries whose `variableTime` maps to the "last" bucket of a wheel are
+than `2^SHIFT[i]` nanoseconds within one tick (e.g., `0 → 1`) shifts to the same
+unsigned tick index, so no buckets are processed. This is correct: no tick
+boundary was crossed. (The former `-1 → 0` example is stale since "Fix the timer
+wheel wrap bias at Long.MIN_VALUE" — that crossing now lands on a rebased tick
+boundary and yields `delta = 1`, also correct.) Entries whose `variableTime`
+maps to the "last" bucket of a wheel are
 visited on the next full wheel cycle (~68s for `wheel[0]`), which is within
 expiration's documented best-effort amortization. Read-path `hasExpired` also
 evicts on access.

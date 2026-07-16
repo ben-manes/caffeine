@@ -20,6 +20,7 @@ env:
     cdn.azul.com:443
     cloudflare.com:443
     corretto.aws:443
+    corretto.github.io:443
     docker.io:443
     docs.oracle.com:443
     download.java.net:443
@@ -216,7 +217,6 @@ jobs:
     name: Coverage
     runs-on: ubuntu-latest
     needs: tests-minimum
-    if: ${{ !cancelled() }}
     permissions:
       contents: read
     steps:
@@ -328,7 +328,6 @@ jobs:
     name: Test Results
     runs-on: ubuntu-latest
     needs: tests-minimum
-    if: ${{ !cancelled() }}
     permissions:
       contents: read
       checks: write # Needed to annotate commit
