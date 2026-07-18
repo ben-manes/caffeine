@@ -131,7 +131,7 @@ abstract class AbstractLincheckCacheTest {
   }
 
   @Operation
-  public Integer remove(@Param(name = "key") int key) {
+  public @Nullable Integer remove(@Param(name = "key") int key) {
     return cache.asMap().remove(key);
   }
 
