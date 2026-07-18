@@ -451,7 +451,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
       return replaced;
     }
-    @Override public CompletableFuture<V> remove(Object key) {
+    @Override public @Nullable CompletableFuture<V> remove(Object key) {
       return asyncCache.cache().remove(key);
     }
     @Override public boolean remove(Object key, Object value) {
