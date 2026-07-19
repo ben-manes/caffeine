@@ -143,6 +143,28 @@ final class WriteBehindCacheWriterTest {
   }
 
   @Test
+  void writeActionThrowsError_keepsWriting() {
+    var firstBatch = new AtomicBoolean(true);
+    var written = new ConcurrentLinkedQueue<Integer>();
+    var writer = new WriteBehindCacheWriter.Builder<Integer, Integer>()
+        .coalesce((_, second) -> second)
+        .bufferTime(Duration.ofMillis(50))
+        .writeAction(batch -> {
+          if (firstBatch.getAndSet(false)) {
+            throw new AssertionError("write failed");
+          }
+          written.addAll(batch.keySet());
+        }).build();
+
+    // A non-RuntimeException (Error) from the write action must also not terminate the
+    // subscription; otherwise every subsequent write is silently dropped
+    writer.accept(1, 1);
+    await().untilFalse(firstBatch);
+    writer.accept(2, 2);
+    await().until(() -> written.contains(2));
+  }
+
+  @Test
   void coalescerThrows_keepsWriting() {
     var firstBatch = new AtomicBoolean(true);
     var written = new ConcurrentLinkedQueue<Integer>();

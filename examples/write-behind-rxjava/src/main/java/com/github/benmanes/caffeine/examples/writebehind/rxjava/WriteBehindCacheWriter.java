@@ -66,7 +66,7 @@ public final class WriteBehindCacheWriter<K, V> implements BiConsumer<K, V> {
           try {
             writeAction.accept(entries.stream().collect(
                 toMap(Entry::getKey, Entry::getValue, builder.coalescer)));
-          } catch (RuntimeException e) {
+          } catch (Throwable e) {
             logger.log(Level.ERROR, "Exception thrown by the write-behind action", e);
           }
         }, error -> logger.log(Level.ERROR, "Write-behind pipeline terminated", error));
