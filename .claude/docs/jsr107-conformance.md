@@ -259,8 +259,19 @@ session memory for the full rationale.
   closing it rests on the general "release all resources coordinated on behalf of the
   Cache" phrase (defensible, cache-owned — the sibling catalogue entry above). In-flight
   user callbacks (`CacheWriter` I/O) are the user's lifecycle responsibility; common-pool/
-  virtual-thread defaults don't hit the shutdown-race. Don't add op-vs-close locking or a
-  synchronous REE guard; don't re-raise M2 (spec explicitly permits retained contents).
+  virtual-thread defaults don't hit the shutdown-race. **Background refresh / straggler loads
+  racing close() (F1/A12)** are the same family: a native `refreshAfterWrite` reload (or a
+  `loadAll` exceeding the 10s `inFlight` await, or an `invoke`) in flight at close can invoke the
+  *closed* `CacheLoader` + `ExpiryPolicy` afterward. That fails gracefully — the reload's
+  `whenComplete` catches `Throwable` → logs + `recordLoadFailure`, and `getWriteExpireTimeMillis`
+  catches an `ExpiryPolicy` throw → default — and never resurrects: the trailing `invalidateAll`
+  (= `clear`) purges the `refreshes` map, so a late completion's `owned` check fails (and one that
+  commits before `invalidateAll` is purged by it). `inFlight` deliberately awaits only *explicit*
+  user `loadAll` (which carries a `CompletionListener` the user expects to fire), not implicit
+  best-effort refresh; blocking close() to drain `policy().refreshes()` would stall on the user's
+  executor (their hook). Don't add op-vs-close locking or a synchronous REE guard; don't funnel
+  refreshes into `inFlight` or await them in close(); don't re-raise M2/F1 (spec explicitly permits
+  retained contents and is silent on in-progress operations).
 - **JMX `ObjectName` sanitize (`[,:=\n*?]→.`)** matches the RI/ecosystem pattern;
   switching to `ObjectName.quote()` would break operator tooling. Intentional.
 - **Exception in `getExpiryForCreation`** → ETERNAL (matches RI/Hazelcast/
