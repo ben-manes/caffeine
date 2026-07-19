@@ -301,8 +301,11 @@ abstract class LocalAsyncLoadingCache<K, V>
               if (successful && (currentValue == oldValueFuture[0])) {
                 return (newValue == null) ? null : castedFuture;
               }
-              // Otherwise, a write invalidated the refresh so discard it
+              // Otherwise, a write invalidated the refresh so discard it. If a successor refresh
+              // owns the registration, leave it intact so this stale completion's by-key discard
+              // cannot steal the successor's token (its fresh value would then be discarded).
               hints.preserveTimestamps = true;
+              hints.preserveRefresh = !successful;
               discard[0] = (newValue != Async.getIfReady((CompletableFuture<?>) currentValue));
               return currentValue;
             }, asyncCache.cache().expiry(), /* recordLoad= */ false,

@@ -155,8 +155,12 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
             if (owned && (currentValue == oldValue[0])) {
               return (currentValue == null) && (newValue == null) ? null : newValue;
             }
-            discard[0] = (currentValue != newValue);
+            // When a successor refresh owns the registration, leave it intact so a stale
+            // completion's by-key discard cannot steal the successor's token (its fresh value
+            // would then be discarded in turn)
+            hints.preserveRefresh = !owned;
             hints.preserveTimestamps = true;
+            discard[0] = (currentValue != newValue);
             return currentValue;
           }, cache().expiry(), /* recordLoad= */ false,
               /* recordLoadFailure= */ true, hints);

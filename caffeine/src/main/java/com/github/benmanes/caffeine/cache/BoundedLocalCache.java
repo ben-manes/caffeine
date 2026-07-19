@@ -1473,8 +1473,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
                 cause[0] = RemovalCause.EXPLICIT;
               }
               return null;
-            } else if ((currentValue == oldValue) && ((node.getWriteTime() & ~1L) == writeTime)
-                && (refreshes.get(keyReference) == refreshFuture[0])) {
+            }
+            boolean owned = (refreshes.get(keyReference) == refreshFuture[0]);
+            if ((currentValue == oldValue) && ((node.getWriteTime() & ~1L) == writeTime) && owned) {
               // If the entry was not modified while in-flight (no ABA) then replace, refreshing the
               // metadata even when the reloaded value is the same instance
               return value;
@@ -1483,7 +1484,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             // writeTime, preserve those timestamps so the refresh rejection does not stomp on the
             // user's write. An external discard with no concurrent write falls through to the
             // normal update, which debounces the next refresh attempt. A same-instance reload is
-            // not a value change, so it is not notified.
+            // not a value change, so it is not notified. When a successor refresh owns the
+            // registration, leave it intact so this by-key discard cannot steal its token.
             boolean sameInstance = (currentValue == value)
                 || (isAsync && (newValue == Async.getIfReady((CompletableFuture<?>) currentValue)));
             if ((value != null) && !sameInstance) {
@@ -1492,6 +1494,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             if ((currentValue != oldValue) || ((node.getWriteTime() & ~1L) != writeTime)) {
               hints.preserveTimestamps = true;
             }
+            hints.preserveRefresh = !owned;
             return currentValue;
           }, expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true, hints);
         } catch (Throwable t) {

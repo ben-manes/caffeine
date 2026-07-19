@@ -476,6 +476,75 @@ final class RefreshAfterWriteTest {
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE)
+  void refresh_staleCompletion_doesNotDiscardSuccessor(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // A stale refresh completing after a newer refresh has registered must not discard the
+    // successor's registration by key; the refreshes map holds one future per key, so a by-key
+    // discard is only safe for the owner. Otherwise the successor's fresh reload is thrown away
+    // and the cache is left stale. Exercises the reject branch of LocalLoadingCache.refresh (sync)
+    // and LocalAsyncLoadingCache.tryComputeRefresh (async) per the parameterized compute mode.
+    Int key = context.firstKey();
+
+    var r1 = cache.refresh(key);
+    assertThat(r1).isNotDone();
+
+    // A write discards R1's registration; R2 then registers for the new value
+    cache.put(key, context.absentValue());
+    var r2 = cache.refresh(key);
+    assertThat(r2).isNotDone();
+
+    // Stale R1 completes first: it must leave R2's registration intact
+    r1.complete(context.absentKey().negate());
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    // R2's successful reload must be committed, not silently discarded
+    r2.complete(context.absentKey());
+    assertThat(cache).containsEntry(key, context.absentKey());
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE)
+  void refreshIfNeeded_staleCompletion_doesNotDiscardSuccessor(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // Same stale-first steal as refresh_staleCompletion_doesNotDiscardSuccessor, but via the
+    // automatic refreshAfterWrite path (BoundedLocalCache.refreshIfNeeded) triggered on the read
+    // after the write threshold elapses.
+    Int key = context.absentKey();
+    Int original = context.absentValue();
+    Int updated = original.add(1);
+    Int reloaded = original.add(2);
+    cache.put(key, original);
+
+    // R1 auto-refresh registers for the original snapshot
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.get(key)).isEqualTo(original);
+    var r1 = requireNonNull(cache.policy().refreshes().get(key));
+
+    // A write discards R1's registration and resets the refresh clock
+    cache.put(key, updated);
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+
+    // R2 auto-refresh registers for the updated snapshot
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.get(key)).isEqualTo(updated);
+    var r2 = requireNonNull(cache.policy().refreshes().get(key));
+
+    // Stale R1 completes first: it must leave R2's registration intact
+    r1.complete(reloaded.negate());
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    // R2's fresh reload must be committed
+    r2.complete(reloaded);
+    assertThat(cache).containsEntry(key, reloaded);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
+      loader = Loader.ASYNC_INCOMPLETE)
   void refreshIfNeeded_writeTimeABA(LoadingCache<Int, Int> cache, CacheContext context) {
     // When a refresh is in-flight and a put replaces the value with the SAME instance,
     // currentValue == oldValue is true but the write time changed. The completion's ABA check
