@@ -389,7 +389,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         }
         return newValue;
       } catch (Throwable t) {
-        discardRefresh(k);
+        if (value != null) {
+          discardRefresh(k);
+        }
         throw t;
       }
     });

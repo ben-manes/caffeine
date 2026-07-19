@@ -800,6 +800,30 @@ final class RefreshAfterWriteTest {
 
   @CheckNoEvictions
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC, loader = Loader.ASYNC_INCOMPLETE,
+      maximumSize = { Maximum.DISABLED, Maximum.FULL })
+  void compute_absentThrows_keepsRefresh(LoadingCache<Int, Int> cache, CacheContext context) {
+    // A compute whose user function throws on an absent key created nothing, so an independent
+    // in-flight refresh must survive — on both the bounded and unbounded siblings (the unbounded
+    // remap's blanket catch used to discard on this absent path)
+    Int key = context.absentKey();
+    var refresh = cache.refresh(key);
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    assertThrows(IllegalStateException.class,
+        () -> cache.asMap().compute(key, (k, v) -> { throw new IllegalStateException(); }));
+
+    // The aborted compute created nothing, so the independent refresh is left intact
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    // Let it complete so it populates the key (and clears its token for the teardown check)
+    refresh.complete(context.absentValue());
+    assertThat(cache).containsEntry(key, context.absentValue());
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
   void refreshIfNeeded_cancel_noLog(CacheContext context) {

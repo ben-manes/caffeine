@@ -261,9 +261,12 @@ undetected and can silently corrupt (lost inserts, double count updates, clobber
 writes). Never rely on the ISE as a safety net. During a refresh completion this can
 orphan the key's `refreshes` token (suppressing its auto-refresh) only if `data.compute`
 throws *before* `remap`'s lambda — a broken `hashCode` or a rare cross-bin ISE (same-key
-recursion silently re-enters a populated bin instead); in-lambda throws self-clean (remap
-discards on every exit incl. its `catch`), and the orphan self-heals on the next
-write/removal. Don't add a catch-side `refreshes.remove` — it
+recursion silently re-enters a populated bin instead); in-lambda throws self-clean on the
+exits a completion can reach (the create-branch `finally` and the present-entry `catch`).
+The one exit that *preserves* — an absent-branch **user-function** throw (B1-1; both
+siblings, after ULC's catch was narrowed to `value != null`) — a refresh completion never
+hits, because its own lambda cannot throw before materialization. Either way the orphan
+self-heals on the next write/removal. Don't add a catch-side `refreshes.remove` — it
 re-throws on the broken-`hashCode` sibling.
 
 The **`evictionListener` runs inside the CHM compute lambda** — `notifyEviction` is called
@@ -568,7 +571,13 @@ may still legitimately populate the absent key, so it is preserved. This is asym
 `remap`'s create branch, which *does* discard on a throw (`try {…} finally { discardRefresh }`,
 the #1970 fix) — but only because `remap` doubles as the **refresh-completion** path and must
 self-clean *its own* token on every exit; it can't tell a user compute from a completion, so it
-discards uniformly (a doctrine-safe over-discard). `doComputeIfAbsent` is only ever a user load,
+discards uniformly (a doctrine-safe over-discard). That uniform discard is scoped to the exits a
+completion can reach — the present-entry `catch` and the create-branch `finally`; the
+absent-branch **user-function** throw precedes any materialization and no completion throws there,
+so both siblings *preserve* it. `UnboundedLocalCache.remap`'s catch used to discard on that path
+too (a blanket `catch (Throwable)` from the "unbounded compute throws" fix whose intent was the
+*present*-entry parity); it was narrowed to `if (value != null)` to match `BoundedLocalCache`,
+which never had an absent-branch catch (B1-1). `doComputeIfAbsent` is only ever a user load,
 so it can afford the correct behavior. Adding the `finally` here would make a *failed*
 `computeIfAbsent` also abort an unrelated legitimate refresh — the inverted direction. Pinned by
 `BoundedLocalCacheTest.computeIfAbsent_absent_weigherThrows_keepsRefresh` (extends the
