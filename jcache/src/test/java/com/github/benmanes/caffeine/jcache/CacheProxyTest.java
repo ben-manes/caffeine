@@ -78,6 +78,7 @@ import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryListener;
+import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
@@ -1223,6 +1224,61 @@ final class CacheProxyTest {
       }
     } finally {
       executor.shutdownNow();
+    }
+  }
+
+  @Test
+  @SuppressFBWarnings("HES_LOCAL_EXECUTOR_SERVICE")
+  void removeAll_awaitsSynchronousListenersWhenLoopThrows() throws InterruptedException {
+    @SuppressWarnings("PMD.CloseResource")
+    var delegate = Executors.newSingleThreadExecutor();
+    try {
+      var rejectAll = new AtomicBoolean();
+      Executor executor = task -> {
+        if (rejectAll.get()) {
+          throw new RejectedExecutionException("rejected");
+        }
+        delegate.execute(task);
+      };
+      var letProceed = new AtomicBoolean();
+      var listenerEntered = new AtomicBoolean();
+      CacheEntryRemovedListener<Integer, Integer> listener = events -> {
+        listenerEntered.set(true);
+        await().untilTrue(letProceed);
+      };
+      var listenerConfig = new MutableCacheEntryListenerConfiguration<>(
+          /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+      try (var fixture = JCacheFixture.builder()
+          .configure(config -> {
+            config.setExecutorFactory(() -> executor);
+            config.addCacheEntryListenerConfiguration(listenerConfig);
+          }).build();
+          var cache = fixture.jcache();) {
+        cache.put(KEY_2, VALUE_2);
+
+        var worker = new Thread(() -> {
+          // Seed this thread's pending list with an in-flight synchronous future (a parked listener),
+          // then make removeAll's own dispatch fail: the loop aborts, and the finally must still
+          // await/clear the seeded future rather than leaking it.
+          cache.dispatcher.publishRemoved(cache, KEY_1, VALUE_1);
+          rejectAll.set(true);
+          assertThrows(RejectedExecutionException.class, () -> cache.removeAll(Set.of(KEY_2)));
+        });
+        worker.start();
+        await().untilTrue(listenerEntered);
+
+        // Pre-fix the throw skipped awaitSynchronous and the worker terminated with the seeded
+        // future stranded; post-fix the finally blocks in awaitSynchronous until it is released.
+        var settled = EnumSet.of(BLOCKED, WAITING, TERMINATED);
+        await().until(() -> settled.contains(worker.getState()));
+        assertThat(worker.isAlive()).isTrue();
+
+        letProceed.set(true);
+        worker.join();
+      }
+    } finally {
+      delegate.shutdownNow();
     }
   }
 

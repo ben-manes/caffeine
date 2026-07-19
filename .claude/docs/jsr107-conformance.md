@@ -249,6 +249,17 @@ session memory for the full rationale.
   `RejectedExecutionException` synchronously to the racing caller once the executor is shut
   down (subsequent events' `thenRunAsync` captures it — a real internal asymmetry; trigger
   is a rejecting executor = the close-shutdown or a user's `AbortPolicy` bounded pool). The
+  **sync-`pending` ThreadLocal leak (F7/A14)** is a non-issue: `runAsync` sits *inside*
+  `dispatchQueue.compute` and `pending.add` runs only after it returns, so a fully-rejecting
+  (shut-down) executor throws on the *first* registration before any `pend` → `pending` stays
+  empty. A stale future needs the executor to flip accepting→rejecting **mid-loop** (an
+  `AbortPolicy` pool crossing capacity between two registrations/keys), and it self-heals on the
+  next `awaitSynchronous`/`ignoreSynchronous` (both `clear()` in a `finally`). The bulk loop ops
+  (`getAll`/`putAll`/`removeAll`) already wrap their loop in a `try..finally` that awaits/clears
+  `pending` even on a throw (`removeAll` was brought into line with `putAll`); the single-key ops
+  don't need it (the throw precedes any `pend`), so the only residue is a single-key op with ≥2
+  sync listeners hitting a mid-loop flip, self-healing on the next op — not worth per-caller
+  try/finally there. The
   **event loss itself is spec-mandated** — close() "must prevent events being delivered to
   configured `CacheEntryListener`s" — which Caffeine enforces **two ways** (the shut-down
   executor rejects the dispatch task, *and* `EventTypeAwareListener.dispatch` early-returns

@@ -813,13 +813,16 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
 
     @Var int removed = 0;
-    for (var key : keysToRemove) {
-      if (!failedKeys.contains(key)
-          && (removeNoCopyOrAwait(key, /* publishToWriter= */ false) != null)) {
-        removed++;
+    try {
+      for (var key : keysToRemove) {
+        if (!failedKeys.contains(key)
+            && (removeNoCopyOrAwait(key, /* publishToWriter= */ false) != null)) {
+          removed++;
+        }
       }
+    } finally {
+      dispatcher.awaitSynchronous();
     }
-    dispatcher.awaitSynchronous();
 
     if (statsEnabled && (removed > 0)) {
       statistics.recordRemovals(removed);
