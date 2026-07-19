@@ -98,7 +98,9 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       expirable = cache.get(copyOf(key));
       statistics.recordMisses(1L);
     } else {
-      setAccessExpireTime(key, expirable, millis);
+      var duration = getAccessExpireTime();
+      setVariableExpiration(key, duration);
+      setAccessExpireTime(expirable, duration, millis);
       statistics.recordHits(1L);
     }
 

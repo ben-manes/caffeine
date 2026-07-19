@@ -256,6 +256,21 @@ final class JCacheAccessExpiryTest {
   }
 
   @Test
+  void invoke_present_extendsNativeExpiration() {
+    try (var fixture = jcacheFixture()) {
+      fixture.ticker().advance(EXPIRY_DURATION.dividedBy(2));
+
+      // An EntryProcessor read extends the access expiry from inside invoke's compute lambda; the
+      // native timer is rescheduled by the compute's expiry, not a bin-lock-held setExpiresAfter.
+      Integer result = fixture.jcache().invoke(KEY_1, (entry, args) -> entry.getValue());
+      assertThat(result).isEqualTo(VALUE_1);
+      fixture.ticker().advance(EXPIRY_DURATION.multipliedBy(3).dividedBy(4));
+
+      assertThat(getExpirable(fixture.jcache(), KEY_1)).isNotNull();
+    }
+  }
+
+  @Test
   void invoke_existsOnly_doesNotExtendAccessExpiry() {
     try (var fixture = jcacheFixture()) {
       var expirable = getExpirable(fixture.jcache(), KEY_1);
@@ -319,6 +334,22 @@ final class JCacheAccessExpiryTest {
   }
 
   @Test
+  void removeConditionally_mismatch_extendsNativeExpiration() {
+    try (var fixture = jcacheFixture()) {
+      fixture.ticker().advance(EXPIRY_DURATION.dividedBy(2));
+
+      // A failed conditional remove extends the access expiry from inside its compute lambda. The
+      // native timer must be rescheduled by the compute's expiry, not an explicit setExpiresAfter
+      // under the bin lock, so the entry survives past its original deadline instead of being
+      // evicted early.
+      assertThat(fixture.jcache().remove(KEY_1, VALUE_2)).isFalse();
+      fixture.ticker().advance(EXPIRY_DURATION.multipliedBy(3).dividedBy(4));
+
+      assertThat(getExpirable(fixture.jcache(), KEY_1)).isNotNull();
+    }
+  }
+
+  @Test
   @SuppressWarnings("PreferJavaTimeOverload")
   void removeConditionally_stats() {
     try (var fixture = jcacheFixture()) {
@@ -351,6 +382,20 @@ final class JCacheAccessExpiryTest {
       assertThat(expirable).isNotNull();
       assertThat(expirable.getExpireTimeMillis())
           .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+    }
+  }
+
+  @Test
+  void replaceConditionally_mismatch_extendsNativeExpiration() {
+    try (var fixture = jcacheFixture()) {
+      fixture.ticker().advance(EXPIRY_DURATION.dividedBy(2));
+
+      // As with a failed conditional remove, the native timer is rescheduled by the compute's
+      // expiry rather than a bin-lock-held setExpiresAfter.
+      assertThat(fixture.jcache().replace(KEY_1, VALUE_2, VALUE_3)).isFalse();
+      fixture.ticker().advance(EXPIRY_DURATION.multipliedBy(3).dividedBy(4));
+
+      assertThat(getExpirable(fixture.jcache(), KEY_1)).isNotNull();
     }
   }
 

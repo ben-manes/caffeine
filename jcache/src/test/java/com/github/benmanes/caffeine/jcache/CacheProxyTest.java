@@ -869,7 +869,9 @@ final class CacheProxyTest {
       var expirable = requireNonNull(getExpirable(fixture.jcache(), KEY_1));
       assertThat(expirable.isEternal()).isFalse();
 
-      fixture.jcache().setAccessExpireTime(KEY_1, expirable, 0);
+      var duration = fixture.jcache().getAccessExpireTime();
+      fixture.jcache().setVariableExpiration(KEY_1, duration);
+      fixture.jcache().setAccessExpireTime(expirable, duration, 0);
       assertThat(expirable.isEternal()).isTrue();
 
       var policy = fixture.jcache().cache.policy().expireVariably().orElseThrow();
@@ -884,7 +886,9 @@ final class CacheProxyTest {
         var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry)) {
       when(expiry.getExpiryForAccess()).thenThrow(IllegalStateException.class);
       var expirable = new Expirable<>(KEY_1, 0);
-      fixture.jcache().setAccessExpireTime(KEY_1, expirable, 0);
+      var duration = fixture.jcache().getAccessExpireTime();
+      assertThat(duration).isNull();
+      fixture.jcache().setAccessExpireTime(expirable, duration, 0);
       assertThat(expirable.getExpireTimeMillis()).isEqualTo(0);
     }
   }
@@ -897,10 +901,9 @@ final class CacheProxyTest {
 
       var duration = Mockito.spy(new Duration(TimeUnit.MILLISECONDS, 1));
       when(duration.getAdjustedTime(anyLong())).thenReturn(0L);
-      when(expiry.getExpiryForAccess()).thenReturn(duration);
 
       var expirable = requireNonNull(getExpirable(fixture.jcache(), KEY_1));
-      fixture.jcache().setAccessExpireTime(KEY_1, expirable, 1L);
+      fixture.jcache().setAccessExpireTime(expirable, duration, 1L);
       assertThat(expirable.getExpireTimeMillis()).isEqualTo(-1L);
     }
   }
@@ -913,10 +916,9 @@ final class CacheProxyTest {
 
       var duration = Mockito.spy(new Duration(TimeUnit.MILLISECONDS, 1));
       when(duration.getAdjustedTime(anyLong())).thenReturn(Long.MAX_VALUE);
-      when(expiry.getExpiryForAccess()).thenReturn(duration);
 
       var expirable = requireNonNull(getExpirable(fixture.jcache(), KEY_1));
-      fixture.jcache().setAccessExpireTime(KEY_1, expirable, 1L);
+      fixture.jcache().setAccessExpireTime(expirable, duration, 1L);
       assertThat(expirable.getExpireTimeMillis()).isEqualTo(Long.MAX_VALUE - 1);
     }
   }

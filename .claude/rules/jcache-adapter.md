@@ -9,6 +9,21 @@ paths:
 - **Expirable wrapper**: All values are stored as `Expirable<V>`, not `V` directly.
   JCache requires application-level expiration via `ExpiryPolicy`, separate from
   Caffeine's native expiry. Every value access involves the wrapper.
+- **Access-expiry: write the Expirable timestamp everywhere, poke the native timer only on
+  reads**: JCache access expiry (`get`, `getAll`, `invoke` READ, and a *failed* conditional
+  `remove`/`replace`) extends `Expirable.expireTimeMillis`; `ExpirableToExpiry` (the native
+  `Expiry` wired for any non-eternal policy) derives the timer-wheel deadline from it. The
+  split is `getAccessExpireTime` (eval the policy) → `setAccessExpireTime` (write the
+  timestamp — **every** path) → `setVariableExpiration` (poke the native timer via
+  `setExpiresAfter` — **read paths only**). A read path (`get`/`getAll`/iterator) has no
+  enclosing `compute`, so it pokes the native timer explicitly *after* the read — a benign
+  lock-free race. A write path (the failed-conditional / `invoke`-READ ops run inside
+  `cache.asMap().compute*`) must **not** poke it: `setExpiresAfter` → `afterWrite` under the
+  bin lock violates `Cache.policy()` ("no policy operation within another operation's atomic
+  scope") and can block on the eviction lock or run maintenance inline (a same-bin nested CHM
+  mutation). The compute already refreshes the native timer via its own `Expiry` on commit
+  (`expireAfterUpdate` fires even on a same-instance return, reading the just-written
+  timestamp). Don't add `setVariableExpiration` to a write path.
 - **EntryProcessor state machine**: `EntryProcessorEntry.Action` tracks the dominant
   operation (NONE → READ/CREATED/UPDATED/LOADED/DELETED). `getValue()` is stateful —
   first call triggers loading. Action transitions have strict rules. `remove()` from
