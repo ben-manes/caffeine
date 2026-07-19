@@ -519,6 +519,23 @@ without discarding on the absent branch when creation is disallowed. A creating 
 above). `UnboundedLocalCache.remap` used to discard unconditionally on the absent+null path,
 diverging from `BoundedLocalCache` on the `replaceAll`-races-remove race.
 
+**`invalidate(k)`/`clear()` discard an *absent* key's pending refresh — a purge is not a
+query.** A `refresh(k)` on an absent key registers a reload in `refreshes` with **no data-map
+node** (sync `asyncLoad` only), so a `remove`/`clear` that reaches `discardRefresh` only through
+a present-node lambda leaves the registration alive; its completion then commits (`owned` still
+holds, `null == oldValue[0]`) and **resurrects the key past the purge** — sync-only, since an
+async refresh-of-absent inserts a physical in-flight entry that `remove` does see (audit A2-F1b).
+The fix keeps `remove(Object)` on `data.compute` (not `computeIfPresent`) so an absent key still
+enters the lambda **under the bin lock** and discards there — deliberately, because the refresh
+*completion* commits under that same bin lock, so doing the discard outside it (after a
+`computeIfPresent` miss) races: the completion can insert between the absence check and the
+discard. `clear()` purges the whole `refreshes` map up front for the same reason (the node loop
+can't reach node-less registrations). This is the over-aggressive-discard doctrine applied to a
+purge, which is legitimate exactly as it is for present keys. Note `remove(k, v)` is **not**
+extended: a conditional remove that matched nothing (absent or wrong value) is a query-style
+no-op that "raced nothing," so it preserves the refresh (like `remove(k, wrongValue)` on a
+present key). Don't move the absent-key discard back outside the bin lock.
+
 **Sync `getAll` discards an unloaded key's refresh only on the sequential path — by design,
 and it reflects a real consistency difference, not a bug.** For a key that fails to load
 while a refresh is in flight (an absent key whose refresh is still pending): the **sequential**
@@ -581,6 +598,23 @@ reads "the future it found." Double-collecting (re-reading the mapping after the
 unwrap and returning null on change) would close it but adds a map re-read to every
 sync-view hit for a narrow, non-linearizable-by-design corner. Don't add the
 re-check guard.
+
+**The compute variants adopt the found future too — `synchronous().get(k, func)` /
+`getAll` load-coalesce, they do not recompute.** The present-branch of
+`LocalAsyncCache.get` returns any in-flight future it finds (no `isDone`/`isReady`
+screen) and `AbstractCacheView.resolve` joins it, so the caller's function never runs
+and the future's outcome is adopted — a null result, a rethrown *foreign* load
+exception, a raw `CancellationException` (`resolve` doesn't unwrap it), or an
+indefinite wait on a stuck future. This diverges from sync `Cache.get(k, func)` (=
+`computeIfAbsent`, the ConcurrentHashMap family, which recomputes when the prior load
+left no mapping) and from the *same view's* `asMap().computeIfAbsent` (whose retry loop
+recomputes on null/exception/cancel). That is not a bug: `Cache.get`/`getAll` promise
+neither model, load-coalescing is a legitimate policy (Guava's `LoadingCache` coalesces;
+CHM does not), and the synchronous view cannot fully emulate the async view's
+linearizability regardless — it "reads the future it found" for computes as well as
+reads. Whether coalescing is better or worse is perspective-dependent; the point is only
+that it *differs*. Don't "fix" `get(k, func)` by routing it through
+`AsyncAsMapView.computeIfAbsent`'s retry loop. (Audit F-E4-1, adjudicated by-design.)
 
 **`size()` and `isEmpty()` are physical**, delegating straight to the backing map
 (`AsMapView` → `delegate.size()` / `delegate.isEmpty()`). They count in-flight

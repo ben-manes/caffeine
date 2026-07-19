@@ -2156,6 +2156,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   @Override
   public void clear() {
+    // Discard all pending refreshes
+    var pending = refreshes;
+    if (pending != null) {
+      pending.clear();
+    }
+
     Deque<Node<K, V>> entries;
     evictionLock.lock();
     try {
@@ -2587,7 +2593,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   public @Nullable V remove(Object key) {
     var ctx = new RemoveContext<K, V>();
     Object lookupKey = nodeFactory.newLookupKey(key);
-    data.computeIfPresent(lookupKey, (k, n) -> {
+    data.compute(lookupKey, (k, n) -> {
+      if (n == null) {
+        discardRefresh(k);
+        return null;
+      }
       synchronized (n) {
         requireIsAlive(key, n);
         ctx.oldKey = n.getKey();

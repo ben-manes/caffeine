@@ -416,6 +416,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   @SuppressWarnings("ResultOfMethodCallIgnored")
   public void clear() {
+    var pending = refreshes;
+    if (pending != null) {
+      pending.clear();
+    }
+
     var keys = (removalListener == null) ? data.keySet() : List.copyOf(data.keySet());
     for (K key : keys) {
       remove(key);
@@ -485,7 +490,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     var castKey = (K) key;
     @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
     @Nullable V[] oldValue = (V[]) new Object[1];
-    data.computeIfPresent(castKey, (k, v) -> {
+    data.compute(castKey, (k, v) -> {
       discardRefresh(k);
       oldValue[0] = v;
       return null;

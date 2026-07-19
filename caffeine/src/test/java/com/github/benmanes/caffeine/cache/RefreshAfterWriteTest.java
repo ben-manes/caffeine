@@ -762,6 +762,44 @@ final class RefreshAfterWriteTest {
 
   @CheckNoEvictions
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE)
+  void refresh_absentThenInvalidate_doesNotResurrect(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // A refresh of an absent key registers a reload with no data-map node; invalidate(k) must
+    // still discard it so the completing reload cannot resurrect the key past the purge
+    Int key = context.absentKey();
+    var refresh = cache.refresh(key);
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    cache.invalidate(key);
+    refresh.complete(context.absentValue());
+
+    assertThat(cache).doesNotContainKey(key);
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE)
+  void refresh_absentThenInvalidateAll_doesNotResurrect(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // Same via a full invalidateAll(): clear()'s node loop can't reach a node-less absent-key
+    // registration, so it must purge pending refreshes
+    Int key = context.absentKey();
+    var refresh = cache.refresh(key);
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    cache.invalidateAll();
+    refresh.complete(context.absentValue());
+
+    assertThat(cache).doesNotContainKey(key);
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE)
   void refreshIfNeeded_cancel_noLog(CacheContext context) {
