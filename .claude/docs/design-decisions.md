@@ -489,6 +489,26 @@ return with `preserveRefresh` set skips `discardRefresh`); a real mutation still
 The unbounded cache used to drop the hint and cancel the reload — the sibling caches must
 stay in sync here.
 
+The same hint also **owner-scopes a refresh completion**. When a refresh finishes it
+re-enters `compute` to install or reject the reloaded value. Because `refreshes` holds one
+future per key, a by-key `discardRefresh` from that completion is safe *only while the
+completing refresh still owns the registration*. If a newer refresh has since registered — the
+prior token was cleared by a racing write, or by an `invalidate` + `refresh` that re-registers
+an `asyncLoad` on the now-absent key — the by-key discard would steal the successor's token,
+dropping its freshly loaded value and leaving the cache stale (self-heals only on the next
+refresh-eligible read). So each completion path (`LocalLoadingCache.refresh`,
+`LocalAsyncLoadingCache.tryComputeRefresh`, `BoundedLocalCache.refreshIfNeeded`) computes
+`owned = refreshes.get(kr) == ownFuture` and sets `preserveRefresh = !owned` on its non-commit
+exits — reject *and* absent — mirroring the error path, which was already owner-scoped
+(`refreshes.remove(kr, ownFuture)`). Honoring the hint therefore extends beyond the
+same-instance no-op block: both `remap` absent exits (`n == null` and the evicted-retire) and
+the unbounded absent exit skip the discard when `preserveRefresh` is set. The **absent-branch**
+steal is reachable in **sync mode only**: a successor `refresh(k)` on an absent key registers
+an `asyncLoad` without inserting the entry, so the stale completion observes the entry absent;
+in async mode the successor's `get` inserts an in-flight future, making the entry present so the
+completion takes the reject branch instead. Don't reintroduce an unconditional by-key discard on
+any refresh-completion exit.
+
 The same sibling-sync covers a **vanished-key skip**: a non-creating caller (`replaceAll`,
 `computeIfPresent`) whose key was concurrently removed hits `remap` with `value == null` and
 returns null — a no-op, not a mutation, so it must **not** discard a refresh registered

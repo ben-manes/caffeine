@@ -542,6 +542,71 @@ final class RefreshAfterWriteTest {
 
   @CheckNoEvictions
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE)
+  void refresh_staleAbsentCompletion_doesNotDiscardSuccessor(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // A stale refresh that completes while the entry is absent returns null, and remap's
+    // absent-exit must not discard a successor's registration by key. The successor here refreshes
+    // the absent key (asyncLoad); its loaded value must survive rather than being dropped.
+    Int key = context.absentKey();
+    cache.put(key, context.absentValue());
+
+    var r1 = cache.refresh(key);
+    assertThat(r1).isNotDone();
+
+    // Invalidate: entry absent, R1's registration discarded
+    cache.invalidate(key);
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+
+    // R2 refreshes the now-absent key (asyncLoad) and registers as a successor
+    var r2 = cache.refresh(key);
+    assertThat(r2).isNotDone();
+
+    // Stale R1 completes while absent: it must leave R2's registration intact
+    r1.complete(context.absentValue());
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    // R2's successful load must populate the entry, not be silently discarded
+    r2.complete(context.absentKey());
+    assertThat(cache).containsEntry(key, context.absentKey());
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE)
+  void refreshIfNeeded_staleAbsentCompletion_doesNotDiscardSuccessor(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // Same absent-exit steal, but the stale refresh is the automatic refreshAfterWrite reload
+    // (BoundedLocalCache.refreshIfNeeded), whose absent branch must also honor the hint.
+    Int key = context.absentKey();
+    cache.put(key, context.absentValue());
+
+    // R1 auto-refresh registers for the present snapshot
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.get(key)).isEqualTo(context.absentValue());
+    var r1 = requireNonNull(cache.policy().refreshes().get(key));
+
+    // Invalidate: entry absent, R1's registration discarded
+    cache.invalidate(key);
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+
+    // R2 explicit refresh of the absent key (asyncLoad) registers as a successor
+    var r2 = cache.refresh(key);
+    assertThat(r2).isNotDone();
+
+    // Stale auto-refresh R1 completes while absent: it must leave R2's registration intact
+    r1.complete(context.absentValue());
+    assertThat(cache.policy().refreshes()).containsKey(key);
+
+    // R2's successful load must populate the entry
+    r2.complete(context.absentKey());
+    assertThat(cache).containsEntry(key, context.absentKey());
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE)

@@ -368,7 +368,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       try {
         V newValue = remappingFunction.apply(k, value);
         if ((value == null) && (newValue == null)) {
-          discardRefresh(k);
+          // A stale refresh whose entry is absent leaves a successor's registration intact
+          if ((hints == null) || !hints.preserveRefresh) {
+            discardRefresh(k);
+          }
           return null;
         }
 

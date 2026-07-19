@@ -1467,14 +1467,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           result = compute(key, (K k, @Nullable V currentValue) -> {
             // Keep the refresh registered until the write clears it to avoid readers from
             // prematurely scheduling another reload
+            boolean owned = (refreshes.get(keyReference) == refreshFuture[0]);
             if (currentValue == null) {
-              // If the entry is absent then discard the refresh and maybe notify the listener
+              // If the entry is absent then drop this refresh, unless a successor owns the
+              // registration, and maybe notify the listener
               if (value != null) {
                 cause[0] = RemovalCause.EXPLICIT;
               }
+              hints.preserveRefresh = !owned;
               return null;
             }
-            boolean owned = (refreshes.get(keyReference) == refreshFuture[0]);
             if ((currentValue == oldValue) && ((node.getWriteTime() & ~1L) == writeTime) && owned) {
               // If the entry was not modified while in-flight (no ABA) then replace, refreshing the
               // metadata even when the reloaded value is the same instance
@@ -3019,7 +3021,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
         ctx.newValue = remappingFunction.apply(key, null);
         if (ctx.newValue == null) {
-          discardRefresh(kr);
+          // A stale refresh whose entry is absent leaves a successor's registration intact
+          if ((ctx.hints == null) || !ctx.hints.preserveRefresh) {
+            discardRefresh(kr);
+          }
           return null;
         }
         try {
@@ -3070,7 +3075,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             if (ctx.cause == null) {
               ctx.cause = RemovalCause.EXPLICIT;
             }
-            discardRefresh(kr);
+            // A stale refresh whose entry was evicted leaves a successor's registration intact
+            if ((ctx.hints == null) || !ctx.hints.preserveRefresh) {
+              discardRefresh(kr);
+            }
             ctx.removed = n;
             n.retire();
             return null;
