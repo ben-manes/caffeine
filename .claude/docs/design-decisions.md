@@ -539,6 +539,28 @@ extended: a conditional remove that matched nothing (absent or wrong value) is a
 no-op that "raced nothing," so it preserves the refresh (like `remove(k, wrongValue)` on a
 present key). Don't move the absent-key discard back outside the bin lock.
 
+**A sync `refresh(k)` on an absent key is an isolated side-load; the async view makes it a
+first-class in-flight entry — a structurally-forced divergence, not a bug (A2-F1a).**
+`LocalLoadingCache.refresh` on an absent key registers `asyncLoad` **only in `refreshes()`** and
+leaves the data map untouched until the completion `compute` inserts. So the pending reload is
+invisible to a concurrent `get(k)`, whose `computeIfAbsent` sees an absent map and loads **again**
+— two loader invocations, and the refresh's value is then discarded with a **phantom `REPLACED`**
+notification carrying a value that was never a mapping. The async view
+(`LoadingCacheView.tryOptimisticRefresh`) instead side-loads via `asyncCache.get(...)`, inserting
+the in-flight future into the data map immediately, so a concurrent `get` joins it (one load) and
+the future is joinable / invalidatable / cancellable. This is inherent: a sync cache **cannot** join
+an in-progress `computeIfAbsent` from outside the bin lock, so it cannot dedup a refresh against a
+`get` the way the async view (whose loads are visible cache entries) can. The `LoadingCache.refresh`
+javadoc — "Returns an existing future without doing anything if another thread is currently loading
+the value for {@code key}" — holds under the **narrow** reading (another *refresh* in flight; both
+siblings dedup via the `refreshes` map) but not the broad reading (any load, including a
+`get`-initiated one); that scope gap is intentional and left as-is. Cancellation blast radius
+differs accordingly: cancelling the future from async `refresh(absentKey)` cancels the *shared*
+in-cache load (all `get` waiters get `CancellationException`, `handleCompletion` removes the entry),
+while cancelling the sync refresh future only unregisters the isolated reload and leaves a
+concurrent `get`'s own load untouched. Don't try to make the sync cache dedup a refresh against a
+`get`; pinned by `RefreshAfterWriteTest.refresh_absent_sideLoad_*`.
+
 **Sync `getAll` discards an unloaded key's refresh only on the sequential path — by design,
 and it reflects a real consistency difference, not a bug.** For a key that fails to load
 while a refresh is in flight (an absent key whose refresh is still pending): the **sequential**
@@ -583,6 +605,29 @@ so it can afford the correct behavior. Adding the `finally` here would make a *f
 `BoundedLocalCacheTest.computeIfAbsent_absent_weigherThrows_keepsRefresh` (extends the
 already-adjudicated "mapping-function throw doesn't discard is correct" to the weigher/expiry
 throw).
+
+**Quick reference — `discardRefresh` across the compute family** (verified consistent, both
+siblings). `compute`/`merge`/`computeIfPresent`/`replaceAll` all route through `remap`;
+`computeIfAbsent` uses `doComputeIfAbsent` (BLC) or a direct `data.computeIfAbsent` lambda (ULC).
+
+| Verdict | `remap` (compute · merge · computeIfPresent · replaceAll) | `computeIfAbsent` |
+|---|---|---|
+| clean value (mutation) | discard | discard |
+| clean null — present (removal) | discard | discard |
+| clean null — absent (no-value verdict) | discard | discard |
+| same-instance no-op (`preserveRefresh`) | preserve | preserve (returns existing) |
+| user-function throw — present | discard | discard |
+| user-function throw — absent | preserve | preserve |
+| weigher/expiry throw — absent create | **discard** | **preserve** |
+
+Cross-cutting rules layered on top: non-creating callers (`computeIfPresent`/`replaceAll`) on a
+*vanished* key take the `computeIfAbsent=false` early return and preserve; refresh completions and
+async-view no-ops set `preserveRefresh` so a stale completion can't steal a successor's registration
+(owner-scoping); `invalidate`/`clear` discard an absent key's refresh (a purge, not a query). The
+**only** intentional split is the last row — `remap` doubles as the completion path and self-cleans,
+`doComputeIfAbsent` is a user-load-only path (and ULC, having no weigher/expiry, has no such case at
+all). The absent *user-function* throw row was made uniform by B1-1 (ULC's `remap` catch narrowed to
+`value != null`).
 
 ## Async Synchronous View
 

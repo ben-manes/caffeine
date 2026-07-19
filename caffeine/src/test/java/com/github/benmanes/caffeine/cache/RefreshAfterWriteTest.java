@@ -47,6 +47,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -820,6 +821,47 @@ final class RefreshAfterWriteTest {
     // Let it complete so it populates the key (and clears its token for the teardown check)
     refresh.complete(context.absentValue());
     assertThat(cache).containsEntry(key, context.absentValue());
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.EMPTY, executor = CacheExecutor.THREADED)
+  void refresh_absent_sideLoad_dupLoads(CacheContext context) throws InterruptedException {
+    // A refresh of an absent key is an isolated side-load on the sync cache (registered only in
+    // refreshes(), invisible to a concurrent get, which loads again) but a first-class in-flight
+    // entry on the async view (a concurrent get joins it). Pins the intentional A2-F1a divergence.
+    var loads = new AtomicInteger();
+    var release = new CountDownLatch(1);
+    var loadStarted = new CountDownLatch(1);
+    CacheLoader<Int, Int> loader = key -> {
+      loads.incrementAndGet();
+      loadStarted.countDown();
+      release.await();
+      return key.negate();
+    };
+    LoadingCache<Int, Int> cache = context.isAsync()
+        ? context.buildAsync(loader).synchronous()
+        : context.build(loader);
+    Int key = context.absentKey();
+
+    // Kick off the reload asynchronously (default asyncLoad = supplyAsync), then wait until it is
+    // registered and running so the concurrent get below races an in-flight reload
+    var refresh = cache.refresh(key);
+    loadStarted.await();
+
+    var get = CompletableFuture.supplyAsync(() -> cache.get(key), executor);
+    if (!context.isAsync()) {
+      // The sync get cannot see the invisible side-load, so it starts a second load
+      await().until(() -> loads.get() == 2);
+    }
+    release.countDown();
+
+    assertThat(get.join()).isEqualTo(key.negate());
+    refresh.join();
+    await().until(() -> cache.policy().refreshes().isEmpty());
+
+    assertThat(loads.get()).isEqualTo(context.isAsync() ? 1 : 2);
   }
 
   @CheckNoEvictions
