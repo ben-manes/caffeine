@@ -183,7 +183,13 @@ is observable but TCK-invisible:
 
 - **`getExpiryForCreation()` → `Duration.ZERO`**: the entry *"is considered to be
   already expired and **will not be added to the Cache**."* → suppress everything:
-  no store, no `CREATED`, no put recorded.
+  no store, no `CREATED`, no put recorded. **Write-through is *not* suppressed**, though:
+  `CacheWriter.write` fires *before* the creation-expiry guard on every write path
+  (`put`/`putIfAbsent`/`getAndPut`/`invoke`-create), so the SoR persists the value even
+  though the cache stores nothing. This is RI parity — `RICache` calls `writeCacheEntry`
+  (→ `cacheWriter.write`) unconditionally *before* evaluating `getExpiryForCreation`, then
+  drops the immediately-expired entry — and the defensible reading (write-through persists the
+  caller's write intent; suppressing it would make a write-through `put` silently not persist).
 - **`getExpiryForUpdate()` → `Duration.ZERO`**: *"a Cache.Entry is **considered
   immediately expired**."* → the entry **is** updated, then expires. The
   "Invocation of Listeners" table fires `UPDATE` for `put`/`replace`/`invoke` on
@@ -340,16 +346,21 @@ session memory for the full rationale.
   `EntryProcessorException(CacheWriterException)` in both). Do not "fix" toward
   the RI — the explicit spec section beats the RI here. (An audit initially
   guessed the RI direction; same inverted-direction trap as zero-update expiry.)
-- **Store-by-value event payloads expose the cache's stored value instance**
-  (`CREATED`/`UPDATED` carry the stored copy; `EXPIRED`/`REMOVED` carry
-  `expirable.get()`), so a listener that mutates `event.getValue()` mutates the
-  cached value. cache2k events carry stored values identically; the RI hands
+- **Store-by-value event payloads expose the cache's stored value instance (and the
+  caller's uncopied key)** (`CREATED`/`UPDATED` carry the stored value copy; `EXPIRED`/`REMOVED`
+  and `UPDATED`'s old value carry `expirable.get()`), so a listener that mutates
+  `event.getValue()` mutates the cached value. The **key** is likewise never copied for events —
+  every `publish*` passes the caller's raw `key` (or `entry.getKey()`), never `copyOf(key)` —
+  but the key is *benign* where the value is not: the cache's own stored key copy is never
+  exposed, so a listener mutating `event.getKey()` cannot corrupt the lookup (it is only
+  intra-application aliasing of the caller's key), whereas the value hands out the stored
+  instance. cache2k events carry stored values identically; the RI hands
   listeners the caller's instance (CREATED/UPDATED) or a fresh deserialized copy
   (EXPIRED/REMOVED), but only as an artifact of its serialized-bytes store.
   Spec-silent (store-by-value text addresses caller mutation, not listener
   mutation); TCK-blind (`StoreByValueTest` asserts nothing about listener
   payloads); the spec's portability recommendations already discourage
-  listener-side cache interaction. Intentional — a per-event copy would tax
+  listener-side cache interaction. Intentional — a per-event copy (of key or value) would tax
   every listener-bearing op. Do not change without a driver.
 - **Read-through `loadAll` stores the loader-returned key uncopied under store-by-value**
   (`JCacheLoaderAdapter.loadAll` copies the value but does `result.put(key, …)` with the loader's own
@@ -361,6 +372,20 @@ session memory for the full rationale.
   key is the loader's internal instance. The one app-reachable leak is the `CREATED` event carrying
   the loader's key, which is the same "events expose the stored instance" family as the entry above.
   Don't add a `copyOf(key)` in `loadAll`.
+- **Listener registrations dedup by `MutableCacheEntryListenerConfiguration` field-equality, not the
+  caller's config `equals`.** `Registration` wraps the supplied `CacheEntryListenerConfiguration` in an
+  immutable MCELC (whose `equals` is spec-defined over the listener/filter factories +
+  `isOldValueRequired`/`isSynchronous`), and both `register` and `deregister` key the dispatch-queue map
+  by it (`deregister` wraps its lookup the same way — commit "Wrap EventDispatcher.deregister key to match
+  Registration's defensive copy", `20ef40f9`). So two *distinct* configs that are field-equal (share the
+  same factories/flags) but report `equals == false` under a **custom** `equals` register **once**, not
+  twice — the RI fires both. Intentional and the more defensible reading: it dedups an accidental
+  double-register (vs the RI firing the same listener twice), the MCELC copy gives a stable, well-defined
+  key immune to a caller mutating its config after registering (commit "jcache should return an immutable
+  configuration", `790aa330`), and the only divergent input is absurdly contrived (two *distinct* config
+  objects sharing one listener factory *and* a custom `equals` that reports them unequal — a plain
+  `MutableCacheEntryListenerConfiguration` is field-equal, so the config list itself rejects the second as
+  a duplicate). Don't re-key `Registration`/`deregister` by the raw config (it reintroduces `20ef40f9`).
 - **`invoke` `remove()` on an absent entry records no removal and fires no
   `REMOVED` event** (only `CacheWriter.delete` is called). The RI unconditionally
   counts a removal and fires REMOVED-with-null-value, contradicting its own
@@ -413,7 +438,11 @@ session memory for the full rationale.
   `deleteAll`), and the spec disclaims write-through atomicity beyond *"the cache is the only
   application mutating an external resource"* (§Integration). Pinned by
   `CacheWriterTest.removeAll_nonClearingWriter_stillEmptiesCache`. Do not "fix" toward the RI or
-  per-key.
+  per-key. **`putAll` is the symmetric batch case**: `writer.writeAll` fires once up front, then
+  per-key `compute`s put with `publishToWriter=false` — the same structural same-key window (a
+  racing single-key op can leave cache and store inverted) and the same spec exemption apply. Both
+  batch ops use the atomicity-exempt writer methods; the single-key `put`/`remove` fixes above do
+  not extend to them, by design.
 - **`JCacheLoaderAdapter.expireTimeMillis` applies the same ±1 sentinel-collision
   adjustment** as `CacheProxy.getWriteExpireTimeMillis`/`setAccessExpireTime` when
   a finite adjusted time lands exactly on `0` or `Long.MAX_VALUE` (treated as

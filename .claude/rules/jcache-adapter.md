@@ -16,8 +16,20 @@ paths:
   split is `getAccessExpireTime` (eval the policy) → `setAccessExpireTime` (write the
   timestamp — **every** path) → `setVariableExpiration` (poke the native timer via
   `setExpiresAfter` — **read paths only**). A read path (`get`/`getAll`/iterator) has no
-  enclosing `compute`, so it pokes the native timer explicitly *after* the read — a benign
-  lock-free race. A write path (the failed-conditional / `invoke`-READ ops run inside
+  enclosing `compute` (kept lock-free for read throughput), so it pokes the native timer
+  *after* the read via the by-key `setExpiresAfter` — a benign lock-free race with no identity
+  guard: a concurrent write replacing the entry between the lock-free capture and the poke
+  lands the access duration on the *new* entry. Never a stale read — the per-wrapper
+  `Expirable.expireTimeMillis` gates every lazy read, and `setAccessExpireTime` wrote the old,
+  now-dead wrapper; at worst the new entry inherits the accessed entry's native deadline
+  (slightly-early eager eviction + a phantom `EXPIRED`, only when that deadline is shorter than
+  the new entry's own write deadline), an accepted concurrency edge (JCache doesn't order
+  concurrent events, cf. read-through `getAll`). Extra-benign because `ExpiryPolicy` is
+  **parameterless**: `getExpiryForAccess()` can't depend on the value, so the misapplied
+  duration is the one the policy would assign the new entry anyway — zero deviation for the
+  standard `Accessed`/`Touched` policies (access == creation duration), the early edge only for
+  a custom access < creation policy. Don't wrap reads in a locked `computeIfPresent` to close
+  it. A write path (the failed-conditional / `invoke`-READ ops run inside
   `cache.asMap().compute*`) must **not** poke it: `setExpiresAfter` → `afterWrite` under the
   bin lock violates `Cache.policy()` ("no policy operation within another operation's atomic
   scope") and can block on the eviction lock or run maintenance inline (a same-bin nested CHM
@@ -52,7 +64,11 @@ paths:
   under the per-key bin lock — a racing same-key op cannot interleave between them. Use
   `compute` (not `computeIfPresent`) when the writer must fire unconditionally, e.g. a
   write-through `delete` on an absent key. Don't hoist the writer call out ahead of the
-  compute. `removeAll` is the exception (batch `deleteAll` can't hold a lock across all bins).
+  compute. The batch ops `putAll`/`removeAll` are the exception: their `writeAll`/`deleteAll`
+  fires once up front (a single lock can't span all bins), then per-key `compute`s mutate with
+  `publishToWriter=false`, so a concurrent same-key single-key op can invert the cache vs the
+  store across the batch window. Spec-sanctioned — the `CacheWriter` contract exempts batch
+  methods from atomicity ("not required to be atomic in the writer"); see `jsr107-conformance.md`.
 - **Read-through `getAll` clobbers (replace-on-materialize); `loadAll(keepExisting)` uses
   putIfAbsent — intentional divergence**: `LoadingCacheProxy.getAll` delegates the miss-load to
   Caffeine's `getAll`, whose `bulkLoad` stores loaded values with `put` (**replace**), so a value
@@ -70,7 +86,15 @@ paths:
   write will materialize, and JCache doesn't order concurrent events.)
 - **EventDispatcher**: Per-key ordering via CompletableFuture chains. Synchronous
   listeners tracked in ThreadLocal; callers must call `awaitSynchronous()` or
-  `ignoreSynchronous()`.
+  `ignoreSynchronous()`. The per-key dispatch-queue slot (`compute` appends
+  `runAsync`/`thenRunAsync`; a `whenComplete` removes the future) is **race-safe** and needs no
+  extra locking: `compute` is atomic (CHM bin lock) so the chain-append can't interleave a
+  completing future's cleanup, and cleanup is a **conditional** `remove(key, future)` that fires
+  only if that exact future is still the slot's head (the preceding `get(key) == future` is only an
+  optimistic fast-path). A successor chained before cleanup leaves the slot intact; cleanup before a
+  successor lets the next event start a fresh chain after the prior one already completed (ordering
+  preserved). Don't add locking or "fix" the get-then-remove — the conditional remove is the
+  authority.
 - **In-flight futures**: All async operations add to `inFlight` set for close() to
   await. New async operations must add futures to this set.
 - **`close()` shuts down an *owned* `ExecutorService` — per-cache ownership is by-design**:
