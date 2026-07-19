@@ -53,11 +53,37 @@ paths:
   `compute` (not `computeIfPresent`) when the writer must fire unconditionally, e.g. a
   write-through `delete` on an absent key. Don't hoist the writer call out ahead of the
   compute. `removeAll` is the exception (batch `deleteAll` can't hold a lock across all bins).
+- **Read-through `getAll` clobbers (replace-on-materialize); `loadAll(keepExisting)` uses
+  putIfAbsent — intentional divergence**: `LoadingCacheProxy.getAll` delegates the miss-load to
+  Caffeine's `getAll`, whose `bulkLoad` stores loaded values with `put` (**replace**), so a value
+  written concurrently *during* the load (the window is the whole SoR round-trip) is overwritten
+  by the freshly-loaded value. This is deliberate, not a lost-write bug: the loaded value is the
+  freshest read of the SoR, and — crucially — `JCacheLoaderAdapter.loadAll` always fires `CREATED`
+  for it, so a `CacheEntryListener` that tracks/owns loaded resources is notified. Storing via
+  `putIfAbsent` instead would **silently drop** the loaded value on a concurrent-write race → its
+  `CREATED` never fires → the listener's resource tracking leaks. So read-through `getAll`
+  clobbers-and-notifies rather than drops-silently, and legitimately differs from
+  `loadAll(replaceExistingValues=false)` → `loadAllAndKeepExisting`, whose contract *is* "keep
+  existing" (there the freshly-loaded value losing to a present entry is the point). Don't "fix"
+  read-through `getAll` to `putIfAbsent`. (The race can emit two `CREATED`s for one key with no
+  intervening `UPDATED` — an accepted concurrency edge; `loadAll` can't know at load time that a
+  write will materialize, and JCache doesn't order concurrent events.)
 - **EventDispatcher**: Per-key ordering via CompletableFuture chains. Synchronous
   listeners tracked in ThreadLocal; callers must call `awaitSynchronous()` or
   `ignoreSynchronous()`.
 - **In-flight futures**: All async operations add to `inFlight` set for close() to
   await. New async operations must add futures to this set.
+- **`close()` shuts down an *owned* `ExecutorService` — per-cache ownership is by-design**:
+  `shutdownExecutor()` calls `es.shutdown()` when `executor instanceof ExecutorService` (the
+  `PMD.CloseResource` suppression marks it deliberate). The `Factory<Executor>` contract means
+  "create the executor this cache owns", so shutdown-on-close is correct. The default factory is
+  `ForkJoinPool::commonPool`, and `commonPool().shutdown()` is a JDK-documented **no-op**, so the
+  default is safe. A user who wants to **share** one executor across caches must pass it as a plain
+  `Executor` (e.g. `shared::execute`) — the `instanceof ExecutorService` gate then skips shutdown,
+  and the trailing `tryClose` no-ops on a non-`AutoCloseable`. So a shared `ExecutorService` handed
+  in raw (via a `Factory` returning a singleton) getting shut down on the first `close()` is misuse,
+  not a defect — the plain-`Executor` wrapper is the sanctioned share opt-out. Don't add a
+  don't-shutdown flag or skip the shutdown.
 - **TypesafeConfigurator**: External HOCON config (`application.conf`) can intercept
   cache creation. Config-based caches take precedence over programmatic ones.
 - **OSGi classloader**: `CacheManagerImpl` swaps the thread context classloader to the

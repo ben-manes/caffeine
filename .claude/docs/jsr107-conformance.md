@@ -329,6 +329,16 @@ session memory for the full rationale.
   payloads); the spec's portability recommendations already discourage
   listener-side cache interaction. Intentional — a per-event copy would tax
   every listener-bearing op. Do not change without a driver.
+- **Read-through `loadAll` stores the loader-returned key uncopied under store-by-value**
+  (`JCacheLoaderAdapter.loadAll` copies the value but does `result.put(key, …)` with the loader's own
+  key instance). Not a store-by-value violation: the *application*-boundary keys are already copied —
+  `getAll` copies the requested keys going in, and every read path copies going out (`copyMap` for
+  `getAll`'s return, `EntryProxy` for iteration). The raw stored key is internal and never handed to
+  the application uncopied, so its identity is immaterial. The put path copies the *caller's* key
+  precisely because that one is application-reachable — a false parity with `loadAll`, whose stored
+  key is the loader's internal instance. The one app-reachable leak is the `CREATED` event carrying
+  the loader's key, which is the same "events expose the stored instance" family as the entry above.
+  Don't add a `copyOf(key)` in `loadAll`.
 - **`invoke` `remove()` on an absent entry records no removal and fires no
   `REMOVED` event** (only `CacheWriter.delete` is called). The RI unconditionally
   counts a removal and fires REMOVED-with-null-value, contradicting its own
