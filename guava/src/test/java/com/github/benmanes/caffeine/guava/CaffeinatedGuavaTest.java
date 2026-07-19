@@ -285,6 +285,21 @@ final class CaffeinatedGuavaTest {
   }
 
   @Test
+  void asyncReload_interrupted_restoresInterruptStatus() throws Exception {
+    var loader = CaffeinatedGuava.caffeinate(new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) throws InterruptedException {
+        throw new InterruptedException();
+      }
+    });
+
+    var future = loader.asyncReload(1, 2, Runnable::run);
+    assertThat(future.isCompletedExceptionally()).isTrue();
+    // Matching the synchronous load path and Guava, the interrupt status is restored (and cleared
+    // here so it does not leak to other tests)
+    assertThat(Thread.interrupted()).isTrue();
+  }
+
+  @Test
   void reload_throwable() {
     LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(
         Caffeine.newBuilder().executor(MoreExecutors.directExecutor()),

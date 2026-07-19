@@ -150,6 +150,9 @@ final class CaffeinatedGuavaLoadingCache<K, V>
         } else {
           Futures.addCallback(reloader, new FutureCompleter<>(future), Runnable::run);
         }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        future.completeExceptionally(e);
       } catch (Throwable t) {
         future.completeExceptionally(t);
       }
