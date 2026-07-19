@@ -42,7 +42,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -1286,6 +1288,68 @@ final class CacheProxyTest {
       assertThrows(CacheException.class, () -> cache.getAll(Set.of(KEY_1)));
       assertThrows(CacheException.class, () -> cache.put(KEY_2, VALUE_1));
       assertThrows(CacheException.class, () -> cache.getAndRemove(KEY_1));
+    }
+  }
+
+  @Test
+  void invoke_created_copierThrows_doesNotWriteThrough() throws IOException {
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        if (object.equals(VALUE_1)) {
+          throw new IllegalArgumentException("copy failed");
+        }
+        return object;
+      }
+    };
+    try (CloseableCacheWriter writer = Mockito.mock();
+        var fixture = JCacheFixture.builder().configure(config -> {
+          config.setStoreByValue(true);
+          config.setCopierFactory(() -> copier);
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(true);
+        }).build();
+        var cache = fixture.jcache()) {
+      // The store-by-value copy fails after the processor sets the value; it must abort before the
+      // write-through, so a failed create leaves neither the store written nor the cache updated.
+      assertThrows(EntryProcessorException.class, () ->
+          cache.invoke(KEY_1, (entry, args) -> {
+            entry.setValue(VALUE_1);
+            return null;
+          }));
+      verifyNoInteractions(writer);
+      assertThat(cache.containsKey(KEY_1)).isFalse();
+    }
+  }
+
+  @Test
+  void invoke_updated_copierThrows_doesNotWriteThrough() throws IOException {
+    var armed = new AtomicBoolean(false);
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        if (armed.get() && object.equals(VALUE_2)) {
+          throw new IllegalArgumentException("copy failed");
+        }
+        return object;
+      }
+    };
+    try (CloseableCacheWriter writer = Mockito.mock();
+        var fixture = JCacheFixture.builder().configure(config -> {
+          config.setStoreByValue(true);
+          config.setCopierFactory(() -> copier);
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(true);
+        }).build();
+        var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      armed.set(true);
+      clearInvocations(writer);
+
+      assertThrows(EntryProcessorException.class, () ->
+          cache.invoke(KEY_1, (entry, args) -> {
+            entry.setValue(VALUE_2);
+            return null;
+          }));
+      verify(writer, never()).write(any());
     }
   }
 

@@ -929,7 +929,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * {@code expirable} means the entry was absent and READ/UPDATED (which require a live prior)
    * never observe one.
    */
-  @SuppressWarnings("fallthrough")
   @Nullable Expirable<V> postProcess(
       @Nullable Expirable<V> expirable, EntryProcessorEntry<K, V> entry) {
     switch (entry.getAction()) {
@@ -940,10 +939,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         return expirable;
       }
       case CREATED:
-        publishToCacheWriter(writer::write, () -> entry);
-        // fallthrough
       case LOADED: {
         V value = copyOf(requireNonNull(entry.getValue()));
+        if (entry.getAction() == Action.CREATED) {
+          publishToCacheWriter(writer::write, () -> entry);
+        }
         long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ true);
         if (expireTimeMillis == 0) {
           // A zero creation expiry means the entry is already expired and is not added, so the
@@ -958,10 +958,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         return new Expirable<>(value, expireTimeMillis);
       }
       case UPDATED: {
-        publishToCacheWriter(writer::write, () -> entry);
-        statistics.recordPuts(1L);
         requireNonNull(expirable, "Expected a previous value but was null");
         V value = copyOf(requireNonNull(entry.getValue(), "Expected a new value but was null"));
+        publishToCacheWriter(writer::write, () -> entry);
+        statistics.recordPuts(1L);
         dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), value);
         @Var long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ false);
         if (expireTimeMillis == Long.MIN_VALUE) {
