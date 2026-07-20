@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryExpiredListener;
+import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
@@ -153,10 +154,15 @@ final class CacheLoaderTest {
 
   @Test
   void reload_nullValue() {
-    // A refresh whose reload yields null drops the entry rather than storing null.
+    // A refresh whose reload yields null drops the entry rather than storing null, and publishes
+    // REMOVED (symmetric with the UPDATED/EXPIRED a non-null reload fires).
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
     CacheLoader<Integer, Integer> loader = Mockito.mock();
     when(loader.load(1)).thenReturn(-1, (Integer) null);
+
+    var removed = new AtomicInteger();
+    CacheEntryRemovedListener<Integer, Integer> removedListener =
+        events -> events.forEach(event -> removed.incrementAndGet());
 
     try (var fixture = JCacheFixture.builder()
         .loading(config -> {
@@ -165,15 +171,19 @@ final class CacheLoaderTest {
           config.setExpiryPolicyFactory(() -> expiry);
           config.setExecutorFactory(MoreExecutors::directExecutor);
           config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              () -> removedListener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
         }).build();
         var cache = fixture.jcacheLoading()) {
       assertThat(cache.get(1)).isEqualTo(-1);
       fixture.ticker().advance(java.time.Duration.ofMinutes(2));
 
-      // Trigger the refresh; the reload's null result drops the entry.
+      // Trigger the refresh; the reload's null result drops the entry and fires REMOVED.
       assertThat(cache.get(1)).isEqualTo(-1);
       verify(loader, Mockito.times(2)).load(1);
       assertThat(cache.containsKey(1)).isFalse();
+      assertThat(removed.get()).isEqualTo(1);
     }
   }
 

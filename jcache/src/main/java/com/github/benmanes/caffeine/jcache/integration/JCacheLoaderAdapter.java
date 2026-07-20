@@ -160,10 +160,13 @@ public final class JCacheLoaderAdapter<K, V>
   public @Nullable Expirable<V> reload(K key, Expirable<V> oldValue) {
     try {
       V value = delegate.load(key);
+      requireNonNull(cache);
       if (value == null) {
+        // The SoR row is gone, so the refresh removes the entry; fire REMOVED for symmetry with the
+        // UPDATED/EXPIRED a non-null reload publishes (else listeners see present -> silence -> absent)
+        dispatcher.publishRemovedQuietly(cache, key, oldValue.get());
         return null;
       }
-      requireNonNull(cache);
       V copy = copyOf(value);
       @Var long expireTime = expireTimeMillis(/* created= */ false);
       if (expireTime == Long.MIN_VALUE) {
