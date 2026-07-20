@@ -125,6 +125,15 @@ paths:
   `CacheMBStatisticsBeanTest.testIterateAndRemove` pins the hit/removal accounting
   split for iterator.next vs iterator.remove. When TCK and spec javadoc disagree,
   TCK wins.
+- **Cross-check conformance from source, never web search.** When adjudicating a spec
+  behavior or comparing sibling impls (RI, Ehcache 3, Hazelcast, cache2k, Infinispan,
+  Coherence), read the actual code — web-search summaries are unreliable and misstated two
+  impls in one session (Ehcache 3 and Coherence CE both *swallow* a synchronous listener
+  exception, the opposite of what search claimed). Get the primary source: the spec text
+  from the local `cache-api-*-sources.jar` (`javax/cache/**`); the RI and Coherence CE are
+  open on GitHub (`jsr107/RI`, `oracle/coherence`); use the GitHub contents API to find the
+  exact dispatch/notifier file before quoting it. Don't present a search result as a
+  verified fact.
 - **JDK-version-gated behavior**: the suite compiles and runs on the **minimum** JDK
   (11) by default — pass `-PjavaVersion=N` to run on a newer one. Behavior that only
   exists on a newer JDK won't reproduce on the default runner (e.g. `ExecutorService`

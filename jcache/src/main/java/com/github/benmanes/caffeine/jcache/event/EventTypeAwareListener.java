@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.Closeable;
-import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 
@@ -26,9 +24,12 @@ import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryListener;
+import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.event.EventType;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * A decorator that dispatches the event iff the listener supports that action.
@@ -37,7 +38,7 @@ import javax.cache.event.EventType;
  */
 final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K, V>,
     CacheEntryUpdatedListener<K, V>, CacheEntryRemovedListener<K, V>,
-    CacheEntryExpiredListener<K, V>, Closeable {
+    CacheEntryExpiredListener<K, V>, AutoCloseable {
   static final Logger logger = System.getLogger(EventTypeAwareListener.class.getName());
 
   final CacheEntryListener<? super K, ? super V> listener;
@@ -62,32 +63,41 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
     throw new IllegalStateException("Unknown event type: " + eventType);
   }
 
-  /** Processes the event and logs if an exception is thrown. */
-  public void dispatch(JCacheEntryEvent<K, V> event) {
+  /** Processes the event and returns an exception if one was thrown by the listener. */
+  public @Nullable CacheEntryListenerException dispatch(JCacheEntryEvent<K, V> event) {
     try {
       if (event.getSource().isClosed()) {
-        return;
+        return null;
       }
       switch (event.getEventType()) {
         case CREATED:
           onCreated(event);
-          return;
+          return null;
         case UPDATED:
           onUpdated(event);
-          return;
+          return null;
         case REMOVED:
           onRemoved(event);
-          return;
+          return null;
         case EXPIRED:
           onExpired(event);
-          return;
+          return null;
       }
       logger.log(Level.WARNING, "Unknown event type: {}",
           event.getEventType(), new IllegalStateException());
+      return null;
+    } catch (CacheEntryListenerException e) {
+      logger.log(Level.WARNING, "", e);
+      return e;
     } catch (RuntimeException e) {
       logger.log(Level.WARNING, "", e);
+      return new CacheEntryListenerException(e);
+    } catch (Error e) {
+      logger.log(Level.ERROR, "", e);
+      throw e;
     } catch (Throwable t) {
       logger.log(Level.ERROR, "", t);
+      return new CacheEntryListenerException(t);
     }
   }
 
@@ -124,9 +134,10 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
   }
 
   @Override
-  public void close() throws IOException {
-    if (listener instanceof Closeable) {
-      ((Closeable) listener).close();
+  @SuppressWarnings("try")
+  public void close() throws Exception {
+    if (listener instanceof AutoCloseable) {
+      ((AutoCloseable) listener).close();
     }
   }
 }

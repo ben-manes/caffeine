@@ -402,13 +402,127 @@ final class EventDispatcherTest {
 
   @Test
   void awaitSynchronous_failure() {
+    // an exceptionally-completed future (e.g. a rejecting executor)
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
-    var future = new CompletableFuture<@Nullable Void>();
+    var future = new CompletableFuture<@Nullable CacheEntryListenerException>();
     future.completeExceptionally(new RuntimeException());
     dispatcher.pending.get().add(future);
 
-    dispatcher.awaitSynchronous();
+    assertThrows(CacheEntryListenerException.class, dispatcher::awaitSynchronous);
     assertThat(dispatcher.pending.get()).isEmpty();
+  }
+
+  @Test
+  void awaitSynchronous_listenerException() {
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var thrown = new CacheEntryListenerException("listener");
+    dispatcher.pending.get().add(CompletableFuture.completedFuture(thrown));
+
+    var e = assertThrows(CacheEntryListenerException.class, dispatcher::awaitSynchronous);
+    assertThat(e).isSameInstanceAs(thrown);
+    assertThat(dispatcher.pending.get()).isEmpty();
+  }
+
+  @Test
+  void awaitSynchronous_listenerExceptions_suppressed() {
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var first = new CacheEntryListenerException("first");
+    var second = new CacheEntryListenerException("second");
+    dispatcher.pending.get().add(CompletableFuture.completedFuture(first));
+    dispatcher.pending.get().add(CompletableFuture.completedFuture(second));
+
+    var e = assertThrows(CacheEntryListenerException.class, dispatcher::awaitSynchronous);
+    assertThat(e).isSameInstanceAs(first);
+    assertThat(e.getSuppressed()).asList().containsExactly(second);
+    assertThat(dispatcher.pending.get()).isEmpty();
+  }
+
+  @Test
+  void put_syncListenerThrows_propagatesToCaller() {
+    var failure = new IllegalStateException("boom");
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      throw failure;
+    };
+    var jcacheFixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcache()) {
+      // the synchronous listener's exception is wrapped and propagated to the caller
+      var e = assertThrows(CacheEntryListenerException.class, () -> cache.put(KEY_1, VALUE_1));
+      assertThat(e).hasCauseThat().isSameInstanceAs(failure);
+      // but the mutation committed before the listener ran (spec: does not affect the update)
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+    }
+  }
+
+  @Test
+  void put_syncListenerThrowsError_notWrappedAsListenerException() {
+    var failure = new AssertionError("boom");
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      throw failure;
+    };
+    var jcacheFixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcache()) {
+      // an Error is not wrapped as a CacheEntryListenerException; it propagates as-is
+      var e = assertThrows(AssertionError.class, () -> cache.put(KEY_1, VALUE_1));
+      assertThat(e).isSameInstanceAs(failure);
+      // the mutation still committed before the listener ran (spec: does not affect the update)
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+    }
+  }
+
+  @Test
+  void publishCreated_asyncListenerThrows_swallowed() {
+    var delivered = new boolean[1];
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      delivered[0] = true;
+      throw new IllegalStateException("boom");
+    };
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    try (Cache<Integer, Integer> cache = Mockito.mock()) {
+      dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
+          /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ false));
+      // an asynchronous listener's exception is logged, never propagated
+      dispatcher.publishCreated(cache, 1, 2);
+      dispatcher.awaitSynchronous();
+    }
+    assertThat(delivered[0]).isTrue();
+    assertThat(dispatcher.pending.get()).isEmpty();
+  }
+
+  @Test
+  void publishCreated_syncListenerThrows_subsequentEventStillDelivered() {
+    var deliveries = new int[1];
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      deliveries[0]++;
+      throw new IllegalStateException("boom");
+    };
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    try (Cache<Integer, Integer> cache = Mockito.mock()) {
+      dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
+          /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+
+      dispatcher.publishCreated(cache, 1, 2);
+      assertThrows(CacheEntryListenerException.class, dispatcher::awaitSynchronous);
+      // a throwing listener must not break the per-key dispatch chain
+      dispatcher.publishCreated(cache, 1, 3);
+      assertThrows(CacheEntryListenerException.class, dispatcher::awaitSynchronous);
+    }
+    assertThat(deliveries[0]).isEqualTo(2);
   }
 
   @Test
@@ -492,7 +606,7 @@ final class EventDispatcherTest {
     int key = 1;
 
     var dispatchQueue = primary.dispatchQueues.values().iterator().next();
-    var queue = new CompletableFuture<@Nullable Void>();
+    var queue = new CompletableFuture<@Nullable CacheEntryListenerException>();
     dispatchQueue.put(key, queue);
 
     try (Cache<Integer, Integer> cache = Mockito.mock()) {

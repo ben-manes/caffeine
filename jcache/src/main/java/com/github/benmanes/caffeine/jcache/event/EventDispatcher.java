@@ -18,10 +18,10 @@ package com.github.benmanes.caffeine.jcache.event;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.System.Logger;
-import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -34,6 +34,7 @@ import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryListener;
+import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.EventType;
 
 import org.jspecify.annotations.Nullable;
@@ -70,8 +71,8 @@ public final class EventDispatcher<K, V> {
 
   final ConcurrentMap<
       Registration<K, V>,
-      ConcurrentMap<K, CompletableFuture<@Nullable Void>>> dispatchQueues;
-  final ThreadLocal<List<CompletableFuture<@Nullable Void>>> pending;
+      ConcurrentMap<K, CompletableFuture<@Nullable CacheEntryListenerException>>> dispatchQueues;
+  final ThreadLocal<List<CompletableFuture<@Nullable CacheEntryListenerException>>> pending;
   final Executor executor;
 
   public EventDispatcher(Executor executor) {
@@ -211,6 +212,7 @@ public final class EventDispatcher<K, V> {
    * Blocks until all of the synchronous listeners have finished processing the events this thread
    * published.
    */
+  @SuppressWarnings("PMD.PreserveStackTrace")
   public void awaitSynchronous() {
     var futures = pending.get();
     if (futures.isEmpty()) {
@@ -218,8 +220,23 @@ public final class EventDispatcher<K, V> {
     }
     try {
       CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+      var error = futures.stream()
+          .map(CompletableFuture::join)
+          .filter(Objects::nonNull)
+          .reduce((e1, e2) -> {
+            e1.addSuppressed(e2);
+            return e1;
+          }).orElse(null);
+      if (error != null) {
+        throw error;
+      }
     } catch (CompletionException e) {
-      logger.log(Level.WARNING, "", e);
+      if (e.getCause() instanceof CacheEntryListenerException) {
+        throw (CacheEntryListenerException) e.getCause();
+      } else if (e.getCause() instanceof Error) {
+        throw (Error) e.getCause();
+      }
+      throw new CacheEntryListenerException(e);
     } finally {
       futures.clear();
     }
@@ -256,11 +273,12 @@ public final class EventDispatcher<K, V> {
 
       JCacheEntryEvent<K, V> e = event;
       var dispatchQueue = entry.getValue();
+      @SuppressWarnings("PMD.CloseResource")
+      var listener = registration.getCacheEntryListener();
       var future = dispatchQueue.compute(key, (k, queue) -> {
-        Runnable action = () -> registration.getCacheEntryListener().dispatch(e);
         return (queue == null)
-            ? CompletableFuture.runAsync(action, executor)
-            : queue.thenRunAsync(action, executor);
+            ? CompletableFuture.supplyAsync(() -> listener.dispatch(e), executor)
+            : queue.thenApplyAsync(prev -> listener.dispatch(e), executor);
       });
       future.whenComplete((result, error) -> {
         // optimistic check to avoid locking if not a match

@@ -317,9 +317,34 @@ session memory for the full rationale.
   had run and after earlier-iterated registrations had already enqueued the event
   (phantom events). The RI commits the mutation and only then propagates; Hazelcast
   and cache2k evaluate filters at delivery time. `EventTypeFilter.evaluate` now logs
-  the filter failure and returns false so the dispatcher skips that listener,
-  matching the listener-exception policy. Pinned by
+  the filter failure and returns false so the dispatcher skips that listener. Unlike a
+  synchronous *listener* exception (which propagates — see the next entry), a *filter*
+  exception is swallowed because the filter runs **inside** the mutating `compute`: propagating
+  would abort the store that already committed. The listener runs *after* the commit (via
+  `awaitSynchronous`), so it can safely propagate. Pinned by
   `EventDispatcherTest.publishCreated_filterThrows`.
+- **A synchronous `CacheEntryListener` exception propagates to the caller, wrapped as a
+  `CacheEntryListenerException`** (resolved 2026-07-19, "Propagate a synchronous jcache listener
+  exception"). The `javax.cache.event` package-info mandates it (*"if the listener throws … this will
+  propagate back to the caller"* — the `{@link}` there is a spec copy-paste bug for
+  `CacheEntryListenerException`), reinforced by `CacheEntryListener` (*"caching implementations must
+  catch any other Exception from a listener, then wrap and rethrow it as a
+  `CacheEntryListenerException`"*). `EventTypeAwareListener.dispatch` returns the failure (a
+  `CacheEntryListenerException` as-is, or a listener `RuntimeException` wrapped in one) rather than
+  swallowing it — but an `Error` is logged and rethrown **as-is** (not wrapped: a JVM error is not a
+  listener contract violation, matching the RI, which catches only `Exception`); the per-key chain
+  future carries the returned exception **as its result** so a throwing listener never breaks same-key
+  ordering, and `awaitSynchronous` throws the first (extras `addSuppressed`). An **asynchronous** or
+  **`quiet`** (background refresh reload / native eviction) listener failure is logged, not propagated
+  — there is no synchronous caller. An executor-level failure (an exceptionally-completed future, e.g. a rejecting
+  executor racing close) is wrapped as a `CacheEntryListenerException`; a listener `Error` propagates to
+  the caller as-is (the mutation still commits — `awaitSynchronous` unwraps and rethrows the `Error`). **Ecosystem is split** (all source-verified):
+  spec + RI + cache2k + Hazelcast + Infinispan propagate; Ehcache 3 + Coherence — the two
+  executor-dispatch impls, like Caffeine's own prior behavior — swallow-and-log. Caffeine previously
+  swallowed; reversed to follow the spec and the RI. Pinned by
+  `EventDispatcherTest.put_syncListenerThrows_propagatesToCaller` (+ `_asyncListenerThrows_swallowed`,
+  `_subsequentEventStillDelivered`, `awaitSynchronous_listenerException{,s_suppressed}`) and
+  `EventTypeAwareListenerTest`.
 - **`invoke`/`invokeAll` UPDATED must record `CachePuts` only after
   `CacheWriter.write` succeeds** (fixed 2026-06-10). `postProcess` case UPDATED
   recorded the put before the write-through call, so a writer exception left a
