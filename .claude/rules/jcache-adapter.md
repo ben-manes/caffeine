@@ -95,6 +95,26 @@ paths:
   successor lets the next event start a fresh chain after the prior one already completed (ordering
   preserved). Don't add locking or "fix" the get-then-remove — the conditional remove is the
   authority.
+- **A `CaffeineConfiguration` extension `Weigher`/native `Expiry` that throws leaves a valid
+  notification without a persisted store — by-design, not a phantom event**: the adapter publishes
+  CREATED/UPDATED and fires the write-through `CacheWriter` *inside* the `cache.asMap().compute`
+  remapping function, but an extension `Weigher` (`setWeigherFactory`+`setMaximumWeight`) and native
+  `Expiry` (`setExpiryFactory`→`ExpiryAdapter`) run in core (`BoundedLocalCache.remap`) *after* that
+  function returns — the absent branch weighs + `expireAfterCreate`s under a bare `try`/`finally`
+  (no catch), the present branch rethrows a non-evicted throw before `setValue`. So a throwing
+  weigher/native `Expiry` aborts the store (absent: no node; present: value unchanged) though the
+  event already published and the writer already wrote. Not a defect: (1) throwing violates
+  Caffeine's own `Weigher`/`Expiry` contract — misuse, same family as the declined weigher/expiry
+  callback warnings; the JCache-*standard* `ExpiryPolicy` surface is immune (`getWriteExpireTimeMillis`
+  catches `RuntimeException` internally, so it can never abort the compute); (2) it can't be atomic —
+  a listener/writer notification can't be rolled back, and Caffeine has no post-metadata listener
+  hook to gate on; (3) the notification is *valid* — the value genuinely was created/updated, just
+  not persisted, so a listener/SoR should receive it, and any replication/mirroring already needs
+  periodic consistency reconciliation (network skew etc.) that self-corrects the un-persisted write.
+  The only residue: `put`/`getAndPut` (unlike `invoke`) don't wrap the compute in
+  `try..catch { ignoreSynchronous() }`, so a stranded synchronous future can deliver on the caller's
+  next op — not worth littering every cache write with the guard. Don't defer the event publish
+  outside the compute (breaks per-key ordering).
 - **In-flight futures**: All async operations add to `inFlight` set for close() to
   await. New async operations must add futures to this set.
 - **`close()` shuts down an *owned* `ExecutorService` — per-cache ownership is by-design**:
