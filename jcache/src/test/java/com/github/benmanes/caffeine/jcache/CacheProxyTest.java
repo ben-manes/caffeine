@@ -1444,6 +1444,25 @@ final class CacheProxyTest {
   }
 
   @Test
+  void put_nullCreationExpiry_defaultsToEternal() throws IOException {
+    // A null getExpiryForCreation() is spec-unspecified for a create (no prior duration to keep), so
+    // it defaults to eternal — parity with the read-through loader path — not the born-expired
+    // Long.MIN_VALUE sentinel (which would expire immediately under a negative ticker)
+    ExpiryPolicy expiry = Mockito.mock();
+    when(expiry.getExpiryForCreation()).thenReturn(null);
+    try (var fixture = JCacheFixture.builder().configure(config ->
+            config.setExpiryPolicyFactory(() -> expiry)).build();
+        var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      // The MIN_VALUE sentinel isn't eternal and its native deadline (MIN_VALUE - ticker) can even
+      // evict the entry born-expired under some clocks; assert presence first for a clean failure
+      var expirable = getExpirable(cache, KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(requireNonNull(expirable).isEternal()).isTrue();
+    }
+  }
+
+  @Test
   void close_alreadyClosed() {
     LoadingCache<Integer, @Nullable Expirable<Integer>> underlying = Mockito.mock();
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {

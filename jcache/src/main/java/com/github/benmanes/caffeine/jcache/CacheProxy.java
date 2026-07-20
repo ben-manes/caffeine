@@ -1301,7 +1301,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     try {
       Duration duration = created ? expiry.getExpiryForCreation() : expiry.getExpiryForUpdate();
       if (duration == null) {
-        return Long.MIN_VALUE;
+        return created ? Long.MAX_VALUE : Long.MIN_VALUE;
       } else if (duration.isZero()) {
         return 0L;
       } else if (duration.isEternal()) {
