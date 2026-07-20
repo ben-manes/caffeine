@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache.spi;
 
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -164,6 +165,37 @@ final class CaffeineCachingProviderTest {
         }
       });
     });
+  }
+
+  @Test
+  void loadClass_weakContextSnapshot_clearedIsNotResolved() throws ClassNotFoundException {
+    var savedContext = Thread.currentThread().getContextClassLoader();
+    try {
+      // A loader reachable only through the class-init TCCL snapshot (the step-3 fallback)
+      var snapshot = new ClassLoader() {
+        @Override public Class<?> loadClass(String name) {
+          return String.class;
+        }
+      };
+      Thread.currentThread().setContextClassLoader(snapshot);
+      var jcacheClassLoader = new JCacheClassLoader(Thread.currentThread().getContextClassLoader());
+      Thread.currentThread().setContextClassLoader(null);
+
+      assertThat(jcacheClassLoader.loadClass("a.b.c")).isNotNull();
+      // Clearing the weak snapshot (as GC would once the loader is undeployed) drops the fallback
+      requireNonNull(jcacheClassLoader.parent).clear();
+      assertThrows(ClassNotFoundException.class, () -> jcacheClassLoader.loadClass("a.b.c"));
+    } finally {
+      Thread.currentThread().setContextClassLoader(savedContext);
+    }
+  }
+
+  @Test
+  void getDefaultClassLoader_doesNotPinContextClassLoader() {
+    try (var provider = new CaffeineCachingProvider()) {
+      // The default loader holds the class-init TCCL weakly, not as a strong parent (undeploy pin)
+      assertThat(provider.getDefaultClassLoader().getParent()).isNull();
+    }
   }
 
   /* --------------- resource --------------- */

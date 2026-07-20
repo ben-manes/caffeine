@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache.spi;
 import static javax.cache.configuration.OptionalFeature.STORE_BY_REFERENCE;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -171,9 +172,11 @@ public final class CaffeineCachingProvider implements CachingProvider {
    * and {@code getClass().getClassLoader()}.
    */
   static class JCacheClassLoader extends ClassLoader {
+    final WeakReference<ClassLoader> parent;
 
-    public JCacheClassLoader(@Nullable ClassLoader parent) {
-      super(parent);
+    JCacheClassLoader(@Nullable ClassLoader parent) {
+      super(/* parent= */ null);
+      this.parent = new WeakReference<>(parent);
     }
 
     @Override
@@ -198,7 +201,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
         }
       }
 
-      ClassLoader parentClassLoader = getParent();
+      ClassLoader parentClassLoader = parent.get();
       if ((parentClassLoader != null)
           && (parentClassLoader != classClassLoader)
           && (parentClassLoader != contextClassLoader)) {
@@ -229,7 +232,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
         }
       }
 
-      ClassLoader parentClassLoader = getParent();
+      ClassLoader parentClassLoader = parent.get();
       if ((parentClassLoader != null)
           && (parentClassLoader != classClassLoader)
           && (parentClassLoader != contextClassLoader)) {
@@ -253,7 +256,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
         resources.addAll(Collections.list(classClassLoader.getResources(name)));
       }
 
-      ClassLoader parentClassLoader = getParent();
+      ClassLoader parentClassLoader = parent.get();
       if ((parentClassLoader != null)
           && (parentClassLoader != classClassLoader)
           && (parentClassLoader != contextClassLoader)) {
