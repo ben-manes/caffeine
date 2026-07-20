@@ -943,34 +943,36 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       }
       case CREATED:
       case LOADED: {
-        V value = copyOf(requireNonNull(entry.getValue()));
+        V value = requireNonNull(entry.getValue());
+        V copy = copyOf(value);
         if (entry.getAction() == Action.CREATED) {
-          publishToCacheWriter(writer::write, () -> entry);
+          publishToCacheWriter(writer::write, () -> new EntryProxy<>(entry.getKey(), value));
         }
         long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ true);
         if (expireTimeMillis == 0) {
           // A zero creation expiry means the entry is already expired and is not added, so the
           // create is neither counted nor published
-          dispatcher.publishExpired(this, entry.getKey(), value);
+          dispatcher.publishExpired(this, entry.getKey(), copy);
           return null;
         }
         if (entry.getAction() == Action.CREATED) {
           statistics.recordPuts(1L);
         }
-        dispatcher.publishCreated(this, entry.getKey(), value);
-        return new Expirable<>(value, expireTimeMillis);
+        dispatcher.publishCreated(this, entry.getKey(), copy);
+        return new Expirable<>(copy, expireTimeMillis);
       }
       case UPDATED: {
         requireNonNull(expirable, "Expected a previous value but was null");
-        V value = copyOf(requireNonNull(entry.getValue(), "Expected a new value but was null"));
-        publishToCacheWriter(writer::write, () -> entry);
+        V value = requireNonNull(entry.getValue(), "Expected a new value but was null");
+        V copy = copyOf(value);
+        publishToCacheWriter(writer::write, () -> new EntryProxy<>(entry.getKey(), value));
         statistics.recordPuts(1L);
-        dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), value);
+        dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), copy);
         @Var long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ false);
         if (expireTimeMillis == Long.MIN_VALUE) {
           expireTimeMillis = expirable.getExpireTimeMillis();
         }
-        return new Expirable<>(value, expireTimeMillis);
+        return new Expirable<>(copy, expireTimeMillis);
       }
       case DELETED:
         publishToCacheWriter(writer::delete, entry::getKey);

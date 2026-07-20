@@ -43,6 +43,7 @@ import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -51,6 +52,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -90,6 +92,7 @@ import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CompletionListener;
 import javax.cache.integration.CompletionListenerFuture;
 import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.MutableEntry;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.jspecify.annotations.Nullable;
@@ -1406,6 +1409,37 @@ final class CacheProxyTest {
             return null;
           }));
       verify(writer, never()).write(any());
+    }
+  }
+
+  @Test
+  void invoke_writeThrough_writerReceivesImmutableEntry() throws IOException {
+    var written = new ArrayList<Cache.Entry<? extends Integer, ? extends Integer>>();
+    try (CloseableCacheWriter writer = Mockito.mock();
+        var fixture = JCacheFixture.builder().configure(config -> {
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(true);
+        }).build();
+        var cache = fixture.jcache()) {
+      doAnswer(invocation -> {
+        written.add(invocation.getArgument(0));
+        return null;
+      }).when(writer).write(any());
+
+      // postProcess must hand the writer an immutable EntryProxy, not the live EntryProcessorEntry
+      // (a MutableEntry) the processor mutated, matching every other write-through site
+      Integer created = cache.invoke(KEY_1, (entry, args) -> { entry.setValue(VALUE_1); return VALUE_1; });
+      Integer updated = cache.invoke(KEY_1, (entry, args) -> { entry.setValue(VALUE_2); return VALUE_2; });
+      assertThat(created).isEqualTo(VALUE_1);
+      assertThat(updated).isEqualTo(VALUE_2);
+
+      assertThat(written).hasSize(2);
+      var values = new ArrayList<Integer>();
+      for (Cache.Entry<? extends Integer, ? extends Integer> entry : written) {
+        assertThat(entry).isNotInstanceOf(MutableEntry.class);
+        values.add(entry.getValue());
+      }
+      assertThat(values).containsExactly(VALUE_1, VALUE_2).inOrder();
     }
   }
 
