@@ -214,19 +214,8 @@ public final class EventDispatcher<K, V> {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public void awaitSynchronous() {
-    var futures = pending.get();
-    if (futures.isEmpty()) {
-      return;
-    }
     try {
-      CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-      var error = futures.stream()
-          .map(CompletableFuture::join)
-          .filter(Objects::nonNull)
-          .reduce((e1, e2) -> {
-            e1.addSuppressed(e2);
-            return e1;
-          }).orElse(null);
+      var error = chainSynchronous().join();
       if (error != null) {
         throw error;
       }
@@ -237,8 +226,6 @@ public final class EventDispatcher<K, V> {
         throw (Error) e.getCause();
       }
       throw new CacheEntryListenerException(e);
-    } finally {
-      futures.clear();
     }
   }
 
@@ -248,6 +235,26 @@ public final class EventDispatcher<K, V> {
    */
   public void ignoreSynchronous() {
     pending.get().clear();
+  }
+
+  /**
+   * Returns a future that completes once this thread's synchronous listeners have finished
+   * processing the events it published.
+   */
+  public CompletableFuture<@Nullable CacheEntryListenerException> chainSynchronous() {
+    var synchronous = pending.get();
+    var futures = List.copyOf(synchronous);
+    CompletableFuture<@Nullable CacheEntryListenerException> future =
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
+        .thenApply(unused -> futures.stream()
+            .map(CompletableFuture::join)
+            .filter(Objects::nonNull)
+            .reduce((e1, e2) -> {
+              e1.addSuppressed(e2);
+              return e1;
+            }).orElse(null));
+    synchronous.clear();
+    return future;
   }
 
   /** Broadcasts the event to the interested listener's dispatch queues. */

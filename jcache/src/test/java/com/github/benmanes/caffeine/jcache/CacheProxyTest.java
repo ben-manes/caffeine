@@ -415,6 +415,40 @@ final class CacheProxyTest {
   }
 
   @Test
+  void loadAll_synchronousListenerThrows_routesToOnException() {
+    // A synchronous listener throwing while loadAll publishes CREATED now propagates through
+    // onException (a CacheException — "a problem performing the load") instead of being swallowed;
+    // onCompletion is chained after the listeners rather than firing before them
+    CacheEntryCreatedListener<Integer, Integer> throwing =
+        events -> { throw new IllegalStateException("boom"); };
+    CacheLoader<Integer, Integer> loader = new CacheLoader<>() {
+      @Override public Integer load(Integer key) {
+        return key;
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        var loaded = new HashMap<Integer, Integer>();
+        keys.forEach(key -> loaded.put(key, key));
+        return loaded;
+      }
+    };
+    CompletionListener completion = Mockito.mock();
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setReadThrough(true);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setCacheLoaderFactory(() -> loader);
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              () -> throwing, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        }).build();
+        var cache = fixture.jcacheLoading()) {
+      cache.loadAll(Set.of(KEY_1), /* replaceExistingValues= */ true, completion);
+      verify(completion).onException(any());
+      verify(completion, never()).onCompletion();
+    }
+  }
+
+  @Test
   void loadAll_executorRejects_notifiesListener() {
     Executor rejecting = task -> { throw new RejectedExecutionException("test"); };
     CacheLoader<Integer, Integer> loader = Mockito.mock();

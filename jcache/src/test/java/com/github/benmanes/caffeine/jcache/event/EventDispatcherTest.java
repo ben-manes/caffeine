@@ -438,6 +438,23 @@ final class EventDispatcherTest {
   }
 
   @Test
+  void chainSynchronous_readsSnapshotAfterClear() {
+    // The future completes only after chainSynchronous drained `pending`; the deferred thenApply must
+    // read the captured snapshot, not the now-cleared (and possibly repopulated) ThreadLocal list
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var thrown = new CacheEntryListenerException("listener");
+    var future = new CompletableFuture<CacheEntryListenerException>();
+    dispatcher.pending.get().add(future);
+
+    var chain = dispatcher.chainSynchronous();
+    assertThat(dispatcher.pending.get()).isEmpty();
+    assertThat(chain.isDone()).isFalse();
+
+    future.complete(thrown);
+    assertThat(chain.join()).isSameInstanceAs(thrown);
+  }
+
+  @Test
   void put_syncListenerThrows_propagatesToCaller() {
     var failure = new IllegalStateException("boom");
     CacheEntryCreatedListener<Integer, Integer> listener = events -> {

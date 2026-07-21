@@ -281,14 +281,22 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           }
           success = true;
         } catch (CacheLoaderException e) {
+          dispatcher.ignoreSynchronous();
           listener.onException(e);
         } catch (RuntimeException e) {
-          listener.onException(new CacheLoaderException(e));
-        } finally {
           dispatcher.ignoreSynchronous();
+          listener.onException(new CacheLoaderException(e));
         }
         if (success) {
-          listener.onCompletion();
+          dispatcher.chainSynchronous().whenComplete((failure, error) -> {
+            if (error != null) {
+              listener.onException(new CacheLoaderException(error));
+            } else if (failure != null) {
+              listener.onException(failure);
+            } else {
+              listener.onCompletion();
+            }
+          });
         }
       }, executor).whenComplete((r, e) -> {
         inFlight.remove(future);
