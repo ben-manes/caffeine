@@ -164,6 +164,20 @@ final class CacheWriterTest {
   }
 
   @Test
+  void putAll_fails_propagatesSameWriterException() {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer)) {
+      var failure = new CacheWriterException("writeAll");
+      doThrow(failure).when(writer).writeAll(any());
+
+      // the writer's own exception propagates unwrapped, not re-wrapped in a fresh CacheWriterException
+      var actual = assertThrows(CacheWriterException.class,
+          () -> fixture.jcache().putAll(Map.of(KEY_1, VALUE_1)));
+      assertThat(actual).isSameInstanceAs(failure);
+    }
+  }
+
+  @Test
   void putAll_partialSuccess_storesWrittenEntriesOnly() throws IOException {
     try (CloseableCacheWriter writer = Mockito.mock();
          var fixture = jcacheFixture(writer)) {
@@ -450,6 +464,21 @@ final class CacheWriterTest {
       keys.add(KEY_1);
 
       assertThrows(CacheWriterException.class, () -> fixture.jcache().removeAll(keys));
+    }
+  }
+
+  @Test
+  void removeAll_fails_propagatesSameWriterException() {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer)) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      var failure = new CacheWriterException("deleteAll");
+      doThrow(failure).when(writer).deleteAll(any());
+
+      // the writer's own exception propagates unwrapped, not re-wrapped in a fresh CacheWriterException
+      var actual = assertThrows(CacheWriterException.class,
+          () -> fixture.jcache().removeAll(Set.of(KEY_1)));
+      assertThat(actual).isSameInstanceAs(failure);
     }
   }
 

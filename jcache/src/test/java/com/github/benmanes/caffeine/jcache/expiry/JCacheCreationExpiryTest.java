@@ -160,6 +160,22 @@ final class JCacheCreationExpiryTest {
   }
 
   /**
+   * getAndPut classifies hit/miss on prior-presence just like putIfAbsent: an absent key is a miss
+   * (not a hit), and under a zero creation expiry the value is not stored, so no put is recorded.
+   */
+  @Test
+  void getAndPut_absent_zeroCreationExpiry_recordsMissNotHit() {
+    try (var fixture = zeroCreationFixture(new AtomicInteger())) {
+      assertThat(fixture.jcache().getAndPut(KEY_1, VALUE_1)).isNull();
+
+      var stats = getStatistics(fixture.jcache());
+      assertThat(stats.getCacheMisses()).isEqualTo(1L);
+      assertThat(stats.getCacheHits()).isEqualTo(0L);
+      assertThat(stats.getCachePuts()).isEqualTo(0L);
+    }
+  }
+
+  /**
    * A read-through load inside an entry processor is a create (LOADED). Under a zero creation
    * expiry the loaded value is observed by the processor but not stored: it publishes EXPIRED and,
    * unlike a CREATED, records no put.

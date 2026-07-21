@@ -111,6 +111,27 @@ final class EventDispatcherTest {
   }
 
   @Test
+  void register_distinctButEqualConfigurations_dedupe() {
+    CacheEntryCreatedListener<Integer, Integer> createdListener = Mockito.mock();
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var first = new MutableCacheEntryListenerConfiguration<>(
+        /* listenerFactory= */ () -> createdListener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false);
+    var second = new MutableCacheEntryListenerConfiguration<>(
+        first.getCacheEntryListenerFactory(), /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false);
+
+    // Distinct config instances that are field-equal dedupe to one registration (the RI fires both).
+    // register_twice registers a single reference and cannot distinguish field- from identity-equality.
+    assertThat(first).isNotSameInstanceAs(second);
+    assertThat(first).isEqualTo(second);
+
+    dispatcher.register(first);
+    dispatcher.register(second);
+    assertThat(dispatcher.dispatchQueues).hasSize(1);
+  }
+
+  @Test
   void register_equality() {
     CacheEntryCreatedListener<Integer, Integer> createdListener = Mockito.mock();
     CacheEntryUpdatedListener<Integer, Integer> updatedListener = Mockito.mock();

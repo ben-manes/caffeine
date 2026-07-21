@@ -28,7 +28,9 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -36,10 +38,13 @@ import java.util.stream.Stream;
 
 import javax.cache.Cache;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
+import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.expiry.ModifiedExpiryPolicy;
+import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CompletionListenerFuture;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -310,6 +315,63 @@ final class JCacheUpdateExpiryTest {
         assertThat(expirable.getExpireTimeMillis())
             .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
       }
+    }
+  }
+
+  @Test
+  void loadAll_replaceExisting_present() throws Exception {
+    var created = new AtomicInteger();
+    var updated = new AtomicInteger();
+    CacheEntryCreatedListener<Integer, Integer> createdListener =
+        events -> events.forEach(event -> created.incrementAndGet());
+    CacheEntryUpdatedListener<Integer, Integer> updatedListener =
+        events -> events.forEach(event -> updated.incrementAndGet());
+    CacheLoader<Integer, Integer> loader = new CacheLoader<>() {
+      @Override public Integer load(Integer key) {
+        return VALUE_2;
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        var loaded = new HashMap<Integer, Integer>();
+        keys.forEach(key -> loaded.put(key, VALUE_2));
+        return loaded;
+      }
+    };
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setReadThrough(true);
+          config.setCacheLoaderFactory(() -> loader);
+        })
+        .configure(config -> {
+          // a distinct creation vs update expiry so the applied deadline proves the update policy ran
+          config.setExpiryPolicyFactory(() -> new JCacheExpiryPolicy(Duration.ETERNAL,
+              new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION.toMillis()), /* access= */ null));
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setStatisticsEnabled(true);
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> createdListener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              /* listenerFactory= */ () -> updatedListener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        }).build();
+        var cache = fixture.jcacheLoading()) {
+      cache.put(KEY_1, VALUE_1);
+      created.set(0); // ignore the initial put's CREATED
+      fixture.advanceHalfExpiry();
+
+      var completion = new CompletionListenerFuture();
+      cache.loadAll(Set.of(KEY_1), /* replaceExistingValues= */ true, completion);
+      completion.get();
+
+      // reloading a present key is an update: it fires UPDATED (not CREATED) and applies the update
+      // expiry (the creation policy is eternal, so a create deadline would not match)
+      assertThat(created.get()).isEqualTo(0);
+      assertThat(updated.get()).isEqualTo(1);
+      Expirable<Integer> expirable = getExpirable(cache, KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.get()).isEqualTo(VALUE_2);
+      assertThat(expirable.getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
     }
   }
 }

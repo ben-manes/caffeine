@@ -1161,6 +1161,121 @@ final class CacheProxyTest {
   }
 
   @Test
+  void writes_copyStoredValue_callerMutationDoesNotCorruptCache() {
+    var config = new MutableConfiguration<Integer, MutableInt>();
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+         var cache = fixture.cacheManager().createCache("writes-copy-stored-value", config)) {
+      // putIfAbsent stores a copy on its own compute path (not the shared put helper).
+      var putIfAbsentValue = new MutableInt(VALUE_1);
+      assertThat(cache.putIfAbsent(KEY_1, putIfAbsentValue)).isTrue();
+      putIfAbsentValue.setValue(VALUE_2);
+      assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
+
+      // getAndReplace stores a copy of the new value (and returns a copy of the old one).
+      var replaceValue = new MutableInt(VALUE_3);
+      assertThat(cache.getAndReplace(KEY_1, replaceValue)).isEqualTo(new MutableInt(VALUE_1));
+      replaceValue.setValue(VALUE_2);
+      assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_3));
+
+      // an EntryProcessor's setValue stores a copy.
+      var invokeValue = new MutableInt(VALUE_1);
+      cache.invoke(KEY_1, (entry, args) -> {
+        entry.setValue(invokeValue);
+        return nullRef();
+      });
+      invokeValue.setValue(VALUE_2);
+      assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
+    }
+  }
+
+  @Test
+  void iterator_returnsCopiedKey_callerMutationDoesNotCorruptLookup() {
+    var config = new MutableConfiguration<MutableInt, Integer>();
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+         var cache = fixture.cacheManager().createCache("iterator-copies-key", config)) {
+      cache.put(new MutableInt(1), VALUE_1);
+
+      // The iterated key is a copy: mutating it must not change the stored key's identity.
+      cache.iterator().next().getKey().setValue(2);
+      assertThat(cache.containsKey(new MutableInt(1))).isTrue();
+      assertThat(cache.containsKey(new MutableInt(2))).isFalse();
+    }
+  }
+
+  @Test
+  void invoke_priorValueIsCopy_processorMutationDoesNotCorruptCache() {
+    var config = new MutableConfiguration<Integer, MutableInt>();
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+         var cache = fixture.cacheManager().createCache("invoke-prior-copy", config)) {
+      cache.put(KEY_1, new MutableInt(VALUE_1));
+
+      // The processor sees a copy of the stored value; mutating it without setValue is discarded.
+      cache.invoke(KEY_1, (entry, args) -> {
+        requireNonNull(entry.getValue()).setValue(VALUE_2);
+        return nullRef();
+      });
+      assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
+    }
+  }
+
+  @Test
+  void storeByReference_reads_returnSameInstance() {
+    var config = new MutableConfiguration<Integer, MutableInt>().setStoreByValue(false);
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+         var cache = fixture.cacheManager().createCache("store-by-reference", config)) {
+      var stored = new MutableInt(VALUE_1);
+      cache.put(KEY_1, stored);
+
+      // Store-by-reference (the identity copier) hands back the stored instance itself. The TCK
+      // pins this for the common ops but not for iterator/invoke/getAndRemove.
+      assertThat(cache.iterator().next().getValue()).isSameInstanceAs(stored);
+      MutableInt fromInvoke = cache.invoke(KEY_1, (entry, args) -> entry.getValue());
+      assertThat(fromInvoke).isSameInstanceAs(stored);
+      assertThat(cache.getAndRemove(KEY_1)).isSameInstanceAs(stored);
+    }
+  }
+
+  @Test
+  void readThroughBulk_storesCopiedValue() {
+    CacheLoader<Integer, MutableInt> loader = Mockito.mock();
+    var loaded1 = new MutableInt(VALUE_1);
+    var loaded2 = new MutableInt(VALUE_2);
+    when(loader.loadAll(anyIterable())).thenReturn(Map.of(KEY_1, loaded1, KEY_2, loaded2));
+    var config = new MutableConfiguration<Integer, MutableInt>()
+        .setReadThrough(true)
+        .setCacheLoaderFactory(() -> loader);
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+         var cache = fixture.cacheManager().createCache("read-through-bulk-value", config)) {
+      assertThat(cache.getAll(Set.of(KEY_1, KEY_2)))
+          .containsExactly(KEY_1, new MutableInt(VALUE_1), KEY_2, new MutableInt(VALUE_2));
+
+      // The bulk read-through path copies each loaded value; mutating the loader's instance is isolated.
+      loaded1.setValue(VALUE_3);
+      loaded2.setValue(VALUE_3);
+      assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
+      assertThat(cache.get(KEY_2)).isEqualTo(new MutableInt(VALUE_2));
+    }
+  }
+
+  @Test
+  void readThroughBulk_dispatchesToLoaderLoadAll() {
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.loadAll(anyIterable())).thenReturn(Map.of(KEY_1, VALUE_1, KEY_2, VALUE_2));
+    var config = new MutableConfiguration<Integer, Integer>()
+        .setReadThrough(true)
+        .setCacheLoaderFactory(() -> loader);
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+         var cache = fixture.cacheManager().createCache("read-through-bulk-dispatch", config)) {
+      assertThat(cache.getAll(Set.of(KEY_1, KEY_2)))
+          .containsExactly(KEY_1, VALUE_1, KEY_2, VALUE_2);
+
+      // A bulk read-through dispatches once to the loader's loadAll, not per-key load.
+      verify(loader).loadAll(anyIterable());
+      verify(loader, never()).load(any());
+    }
+  }
+
+  @Test
   @SuppressFBWarnings("HES_LOCAL_EXECUTOR_SERVICE")
   void close_awaitsInFlightLoadAll() throws InterruptedException {
     @SuppressWarnings("PMD.CloseResource")

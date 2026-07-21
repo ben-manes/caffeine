@@ -290,7 +290,12 @@ session memory for the full rationale.
   refreshes into `inFlight` or await them in close(); don't re-raise M2/F1 (spec explicitly permits
   retained contents and is silent on in-progress operations).
 - **JMX `ObjectName` sanitize (`[,:=\n*?]→.`)** matches the RI/ecosystem pattern;
-  switching to `ObjectName.quote()` would break operator tooling. Intentional.
+  switching to `ObjectName.quote()` would break operator tooling. Intentional. Distinct
+  cache names or manager URIs that sanitize to the *same* string (e.g. `a:b` and `a=b` →
+  `a.b`) collide on one bean: the second `enable*` registration is skipped by the
+  `isRegistered` guard, and destroying either cache unregisters the shared name. Byte-for-byte
+  RI parity (`MBeanServerRegistrationUtility` uses the identical guard + `queryNames`
+  unregister); an inherent consequence of the sanitize decision. Informational.
 - **Exception in `getExpiryForCreation`** → ETERNAL (matches RI/Hazelcast/
   Infinispan); **`getExpiryForUpdate`/`Access`** → leave the duration unchanged.
 - **`getCacheNames` iterator `UnsupportedOperationException`**, **`getCache(String)`
@@ -489,7 +494,10 @@ session memory for the full rationale.
 - **Entry-processor `getValue()`-load followed by `remove()` calls
   `CacheWriter.delete`** (action `LOADED` → `DELETED`). The RI cancels LOAD+remove
   to a no-op. Spec-silent; Caffeine's behavior is internally consistent with
-  remove-on-absent, where both implementations invoke `delete`. Intentional.
+  remove-on-absent, where both implementations invoke `delete`. Intentional. By
+  contrast, a `getValue()`-load then `setValue(...)` then `remove()` in one invocation is a
+  **full no-op** (`LOADED` → `CREATED` → back to `NONE`): a same-invocation create+delete
+  cancels, so no writer fires and no event publishes.
 - **`getExpiryForCreation()` returning `null`** (undefined by the spec — only
   update/access document null) stores the entry with the `Long.MIN_VALUE`
   "unchanged" sentinel, which behaves as effectively eternal; `CREATED` is
@@ -614,6 +622,51 @@ session memory for the full rationale.
   for the read-through/refresh/`loadAll` flow; converging it would need a `catch (CacheException)`
   passthrough that risks the TCK's mandatory loader→`CacheLoaderException` wrapping). Pinned by
   `CacheProxyTest.copierFailure_wrappedInCacheException`.
+
+- **Non-op event bridges fire quietly.** Native size/weight eviction publishes a *quiet*
+  `REMOVED` and a `refreshAfterWrite` reload a quiet `UPDATED` (or `EXPIRED` under a zero
+  update-expiry, or `REMOVED` on a reload-miss) — `JCacheEvictionListener.onRemoval` maps
+  `EXPIRED` → quiet `EXPIRED`, every other cause → quiet `REMOVED`. "Quiet" = background, no
+  synchronous await. The ecosystem drops eviction events entirely (the RI never evicts);
+  Caffeine notifies a resource-tracking listener without blocking the evicting/refresh thread.
+  Intentional.
+- **A zero-CREATION expiry fires the `CacheWriter` although the entry is never added.**
+  `put`/`putAll`/`putIfAbsent`/`getAndPut`/`invoke`-CREATED call `writer.write`/`writeAll`
+  *before* the `expireTimeMillis == 0` store-suppression guard, so a write-through persists the
+  caller's intent even though nothing is stored, no `CREATED` fires, and no put is counted. Exact
+  RI parity (`RICache` calls `writeCacheEntry` unconditionally before `getExpiryForCreation`,
+  including its own `//todo #32`). Don't suppress the writer on zero-creation.
+- **`clear()`/`close()` over natively-expired residents emit quiet `EXPIRED` + eviction counts.**
+  Core `removeNode` attributes `RemovalCause.EXPIRED`, so purging an entry whose native expiry
+  already passed fires a quiet `EXPIRED` and increments `CacheEvictions` (cf. the
+  `CacheEvictions`-includes-expirations entry above); the RI's `clear` is fully silent. An
+  impl-timed expiry fact — don't conclude `clear` is unconditionally silent.
+- **`CaffeineConfiguration`/HOCON default `storeByValue = false`** inverts the spec's
+  `MutableConfiguration` default (`true`) on the vendor surfaces only (the shipped
+  `reference.conf` sets `store-by-value.enabled = false`). Spec-config users are unaffected —
+  `resolveConfigurationFor` re-applies the user's flag last, and the TCK's `StoreByValueTest`
+  passes. Vendor-surface-only; intentional.
+- **`enableManagement`/`enableStatistics` on an unknown cache name silently no-op** where the RI
+  raw-NPEs. The spec documents NPE only for a null name and ISE for a closed cache/manager — a
+  clause unreachable in both impls (every close path removes the cache from the registry before
+  `enable*` could observe it). TCK-blind; pinned by `CacheManagerTest.enableManagement_absent` /
+  `enableStatistics_absent`.
+- **Spec-truer-than-RI EntryProcessor corners, pinned against a "fix" toward the RI.** An
+  `{ entry.remove(); entry.getValue(); }` returns `null` without triggering a read-through load
+  (the RI resurrects the removed entry via LOAD); a read-through `load` returning `null` is
+  consumed as absent (the RI reloads). Both match the spec's EP semantics.
+- **Duplicate `EXPIRED` delivery is possible under a rejecting executor** — an already-submitted
+  listener task delivers, the reap `compute` aborts on the `RejectedExecutionException`, and the
+  next reap re-publishes (same family as the racing-close/rejecting-executor entry above). The
+  eviction stat stays exactly-once. Not a defect.
+- **`removeAll()` omits natively-expired residents from `deleteAll`.** It delegates to
+  `removeAll(cache.asMap().keySet())`, and Caffeine's `asMap` view filters natively-expired
+  entries, so an expired-but-unreaped resident is not passed to the batch writer (the RI includes
+  it). Spec-defensible both ways ("a mapping that exists"); TCK-blind.
+- **`maximumWeight` without a weigher throws `IllegalStateException`** where the `createCache`
+  javadoc's generic validation clause says `IllegalArgumentException`. Both are
+  `CaffeineConfiguration` vendor-extension properties, so the spec clause arguably doesn't govern;
+  pinned by `CacheManagerTest.maximumWeight_noWeigher`.
 
 When auditing JCache, read this list first to avoid re-deriving known
 false-positives, then run the differential on anything new.
