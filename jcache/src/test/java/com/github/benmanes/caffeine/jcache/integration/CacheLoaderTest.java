@@ -113,6 +113,19 @@ final class CacheLoaderTest {
   }
 
   @Test
+  void get_loaderThrows_recordsMiss() {
+    // A read-through get whose loader throws still records the miss (the find already failed before
+    // the load ran) -- matching the loading getAll, the RI, and core
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    when(cacheLoader.load(any())).thenThrow(new IllegalStateException("boom"));
+    try (var fixture = jcacheFixture(expiry, cacheLoader)) {
+      assertThrows(CacheLoaderException.class, () -> fixture.jcacheLoading().get(1));
+      assertThat(JCacheFixture.getStatistics(fixture.jcacheLoading()).getCacheMisses()).isEqualTo(1L);
+    }
+  }
+
+  @Test
   void refresh_publishesUpdatedNotCreated() {
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
     CacheLoader<Integer, Integer> loader = Mockito.mock();

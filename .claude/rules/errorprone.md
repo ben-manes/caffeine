@@ -1,7 +1,7 @@
 ---
 paths:
-  - "caffeine/src/main/java/**"
-  - "caffeine/src/test/java/**"
+  - "**/src/main/java/**"
+  - "**/src/test/java/**"
 ---
 
 # ErrorProne & NullAway
@@ -15,6 +15,7 @@ paths:
 ## Common Patterns
 - **Lazy initialization**: fields initialized after construction (e.g., `FrequencySketch.ensureCapacity()`) may need `@SuppressWarnings("NullAway.Init")`
 - **Nullable in non-nullable context**: intentional null returns in framework methods (e.g., CHM compute returning null to remove) may need `@SuppressWarnings({"DataFlowIssue", "NullAway"})`
+- **`var` erases `@Nullable`**: assigning an expression whose inferred type carries `@Nullable` (a stream `.reduce(...).orElse(null)`, a lambda/method result) to `var` widens it to non-null, so returning/using it where an `@Nullable` type is declared fails NullAway (`incompatible types: T cannot be converted to @Nullable T`). Give the local an explicit `@Nullable`-typed declaration, or return the expression directly instead of via a `var` local
 - **Cross-class `@GuardedBy`**: EP doesn't support it (e.g., FrequencySketch guarded by BoundedLocalCache.evictionLock). Don't add cross-class annotations; concurrency tests are the safety net
 - **`UnnecessarySemicolon`**: disabled due to upstream EP bug (google/error-prone#5548), don't re-enable
 

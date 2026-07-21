@@ -36,7 +36,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.cache.Cache;
+import javax.cache.CacheException;
 import javax.cache.configuration.CompleteConfiguration;
+import javax.cache.configuration.Configuration;
 import javax.cache.configuration.MutableConfiguration;
 import javax.management.ObjectName;
 import javax.management.OperationsException;
@@ -129,6 +131,31 @@ final class CacheManagerTest {
       var config = new CaffeineConfiguration<>().setMaximumWeight(OptionalLong.of(1_000));
       assertThrows(IllegalStateException.class, () ->
           fixture.cacheManager().createCache("absent", config));
+    }
+  }
+
+  @Test
+  void createCache_definedExternally_throws() {
+    // "test-cache" is defined in application.conf, so it cannot be created programmatically
+    try (var fixture = JCacheFixture.builder().build()) {
+      assertThrows(CacheException.class, () ->
+          fixture.cacheManager().createCache("test-cache", new MutableConfiguration<>()));
+    }
+  }
+
+  @Test
+  @SuppressFBWarnings("SIC_INNER_SHOULD_BE_STATIC_ANON")
+  void createCache_minimalConfiguration() {
+    // A plain non-CompleteConfiguration (types + storeByValue only) exercises the basic
+    // resolveConfigurationFor branch; the TCK only ever passes a MutableConfiguration
+    var config = new Configuration<Integer, Integer>() {
+      private static final long serialVersionUID = 1L;
+      @Override public Class<Integer> getKeyType() { return Integer.class; }
+      @Override public Class<Integer> getValueType() { return Integer.class; }
+      @Override public boolean isStoreByValue() { return true; }
+    };
+    try (var fixture = JCacheFixture.builder().build()) {
+      assertThat(fixture.cacheManager().createCache("minimal", config)).isNotNull();
     }
   }
 

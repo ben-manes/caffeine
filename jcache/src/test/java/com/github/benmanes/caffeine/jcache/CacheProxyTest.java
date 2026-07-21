@@ -1330,6 +1330,30 @@ final class CacheProxyTest {
   }
 
   @Test
+  @SuppressWarnings("try")
+  void clear_closed_throws() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+         var cache = fixture.jcache()) {
+      cache.close();
+      assertThrows(IllegalStateException.class, cache::clear);
+    }
+  }
+
+  @Test
+  @SuppressWarnings("try")
+  void registerAndDeregisterCacheEntryListener_closed_throws() {
+    CacheEntryCreatedListener<Integer, Integer> listener = Mockito.mock();
+    var config = new MutableCacheEntryListenerConfiguration<>(() -> listener,
+        /* filterFactory= */ null, /* isOldValueRequired= */ false, /* isSynchronous= */ false);
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+         var cache = fixture.jcache()) {
+      cache.close();
+      assertThrows(IllegalStateException.class, () -> cache.registerCacheEntryListener(config));
+      assertThrows(IllegalStateException.class, () -> cache.deregisterCacheEntryListener(config));
+    }
+  }
+
+  @Test
   void invokeAll_emptyKeys_nullProcessor_throws() {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       assertThrows(NullPointerException.class, () ->

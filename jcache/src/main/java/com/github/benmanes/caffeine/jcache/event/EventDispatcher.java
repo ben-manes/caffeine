@@ -28,6 +28,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 
 import javax.cache.Cache;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -241,18 +242,24 @@ public final class EventDispatcher<K, V> {
    * Returns a future that completes once this thread's synchronous listeners have finished
    * processing the events it published.
    */
+  @SuppressWarnings("UnnamedVariable")
   public CompletableFuture<@Nullable CacheEntryListenerException> chainSynchronous() {
     var synchronous = pending.get();
     var futures = List.copyOf(synchronous);
     CompletableFuture<@Nullable CacheEntryListenerException> future =
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
-        .thenApply(unused -> futures.stream()
-            .map(CompletableFuture::join)
-            .filter(Objects::nonNull)
-            .reduce((e1, e2) -> {
-              e1.addSuppressed(e2);
-              return e1;
-            }).orElse(null));
+            .thenApply(new Function<@Nullable Void, @Nullable CacheEntryListenerException>() {
+              @Override @SuppressWarnings("UnnamedVariable")
+              public @Nullable CacheEntryListenerException apply(@Nullable Void unused) {
+                return futures.stream()
+                    .map(CompletableFuture::join)
+                    .filter(Objects::nonNull)
+                    .reduce((e1, e2) -> {
+                      e1.addSuppressed(e2);
+                      return e1;
+                    }).orElse(null);
+              }
+            });
     synchronous.clear();
     return future;
   }
