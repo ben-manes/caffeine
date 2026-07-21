@@ -387,17 +387,16 @@ final class CacheProxyTest {
   }
 
   @Test
-  void iterator_remove_valueChangedConcurrently_doesNotRemove() {
-    // Covers the value-mismatch branch in EntryIterator.remove's lambda:
-    // value changed between next() and remove(), so the conditional remove
-    // returns false and `removed[0]` stays false.
+  void iterator_remove_valueChangedConcurrently_removesByKey() {
+    // EntryIterator.remove removes the last-returned key unconditionally (weakly-consistent
+    // iterator, RI/BLC/ULC/CHM parity), even when the value was replaced between next() and remove()
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       fixture.jcache().put(KEY_1, VALUE_1);
       var iter = fixture.jcache().iterator();
       iter.next();
       fixture.jcache().put(KEY_1, VALUE_2);
       iter.remove();
-      assertThat(fixture.jcache().get(KEY_1)).isEqualTo(VALUE_2);
+      assertThat(fixture.jcache().containsKey(KEY_1)).isFalse();
     }
   }
 

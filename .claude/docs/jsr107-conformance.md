@@ -427,10 +427,14 @@ session memory for the full rationale.
   deliberate, spec-backed divergence from the RI (whose `result=false` branch
   records a hit); TCK-blind. Pinned by
   `JCacheCreationExpiryTest.putIfAbsent_absent_zeroCreationExpiry_recordsMissNotHit`.
-- **`iterator().remove()` does not gate on expiry**: an entry that expires between
-  `next()` and `remove()` still gets `REMOVED` + a removal count (RI parity — its
-  iterator removes unconditionally, "we simply don't care"). The expired→eviction
-  gating catalogued above applies to `remove`/`removeAll`/`getAndRemove` only.
+- **`iterator().remove()` delegates to `remove(K)`**: it removes the last-returned key
+  (no value gate — a replacement between `next()` and `remove()` is still removed) and,
+  routing through `remove(K)`, gates on close (`ISE` after `close()`) and on expiry (an
+  entry that expires between `next()` and `remove()` fires `EXPIRED` + an eviction count,
+  like the other write ops, rather than `REMOVED`). This matches
+  cache2k/Infinispan/Coherence/Hazelcast, which all delegate `iterator.remove` to
+  `cache.remove(key)`; only the RI keeps an inline unconditional `REMOVED` ("we simply
+  don't care"). Verified from source 2026-07-20.
 - **`remove(K)` / `getAndRemove(K)` fire `CacheWriter.delete` under the per-key bin lock,
   atomically with the cache removal** (resolved 2026-07-14, "Serialize the jcache
   remove/getAndRemove write-through under the bin lock"). **Spec-required**, not just a nicety:
