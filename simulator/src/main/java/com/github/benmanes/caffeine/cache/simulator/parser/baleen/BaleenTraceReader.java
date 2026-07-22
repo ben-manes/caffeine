@@ -47,8 +47,8 @@ public final class BaleenTraceReader extends TextTraceReader implements KeyOnlyT
 
   @Override
   public LongStream keys() {
-    var window = Gatherer.<String, Window, long[]>ofSequential(Window::new,
-        (state, line, downstream) -> state.accept(line, downstream), Window::flush);
+    var window = Gatherer.<String, Window, long[]>ofSequential(
+        Window::new, Window::accept, Window::flush);
     return lines().gather(window).flatMapToLong(LongStream::of);
   }
 

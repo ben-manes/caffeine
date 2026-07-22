@@ -53,7 +53,7 @@ tasks.withType<JavaCompile>().configureEach {
 
   options.apply {
     errorprone {
-      enabled = isEarlyAccess().map { !it }
+      enabled = isEarlyAccess().zip(isLintEnabled()) { earlyAccess, lint -> !earlyAccess && lint }
       allDisabledChecksAsWarnings = true
       allSuggestionsAsWarnings = true
 

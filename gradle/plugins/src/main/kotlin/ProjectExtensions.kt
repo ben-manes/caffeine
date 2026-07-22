@@ -36,6 +36,8 @@ fun Project.defaultJvmArgs(): ListProperty<String> {
 
 fun Project.isEarlyAccess(): Provider<Boolean> =
   providers.gradleProperty("earlyAccess").map { it == "true" }.orElse(false)
+fun Project.isLintEnabled(): Provider<Boolean> =
+  providers.gradleProperty("lint").map { it == "true" }.orElse(true)
 fun Project.isGraalVM(): Provider<Boolean> =
   providers.gradleProperty("graalvm").map { it == "true" }.orElse(false)
 fun Project.isCI(): Provider<Boolean> =

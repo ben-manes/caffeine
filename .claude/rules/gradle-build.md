@@ -41,6 +41,27 @@ Beyond standard `main`/`test`, the build uses custom source sets:
 Enabled by default (`org.gradle.configuration-cache=true`). Some tasks are incompatible:
 `frayTest`, `jmh`, `jmhReport`, `coverallsJacoco`.
 
+## Lint toggle (`-Plint`) — ErrorProne/NullAway off the critical path
+
+`isLintEnabled()` (`ProjectExtensions.kt`, `providers.gradleProperty("lint")`, default `true`)
+gates the javac-level analysis bundle: ErrorProne + NullAway (`errorprone.caffeine`) and `-Werror`
+(`java-library.caffeine`, still additionally guarded by `isCI()`). `-Xlint:all` stays always-on
+(cheap, emit-only). A local `./gradlew build` runs the full analysis; `-Plint=false` gives a bare
+compile.
+
+In CI the `run-gradle` action defaults `lint=false` (injected as `ORG_GRADLE_PROJECT_lint`,
+mirroring `earlyAccess`), so ErrorProne/NullAway run **only** in the dedicated `analysis.yml`
+`errorprone` job (JDK 11 + 26) — parallel to the tests, like PMD/SpotBugs/ECJ. Everything else
+(build.yml compile + shards, the other analysis jobs, examples, jcstress, …) compiles bare. The
+gate is a branch-protection required check, not a `needs:` edge (cross-workflow isn't possible).
+
+**Invariant — do not break:** toggling `lint` changes each `JavaCompile`'s compiler args, hence its
+build-cache key. Any job that pulls compiled output from the remote cache must run with the *same*
+`lint` value as whoever populated it, or it silently recompiles. This is why the whole `build.yml`
+pipeline stays `lint=false`: the 40 test shards hit the bare `compile` job's cache entry. Never
+re-enable ErrorProne on `build.yml`'s compile path without also flipping the shards, or they each
+recompile with ErrorProne.
+
 ## BouncyCastle module alignment
 
 The `bc*-jdk18on` modules (`bcprov`, `bcpkix`, `bcutil`) are one release train and MUST
