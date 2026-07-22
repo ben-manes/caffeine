@@ -62,7 +62,6 @@ public final class CsvReporter extends TextReporter {
             .map(metrics()::format)
             .toList());
       }
-      writer.write(System.lineSeparator());
     }
   }
 }
