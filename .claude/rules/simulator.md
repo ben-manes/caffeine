@@ -29,3 +29,20 @@ paths:
 - Canonical trace set: bundled LIRS (`loop`, `multi1/2/3`, `2_pools`, `cpp`, `cs`, `scan` at sizes 500/1k/2k); ARC's `DS1` at 1M to 8M; `S3` at 100k to 800k; the corda_large + 5×loop + corda_large at size 512 stress test.
 - For LIRS-family bit-for-bit matching: set `non-resident-multiplier` very high (e.g. 100) so the memory bound doesn't fire — published references don't bound shadows.
 - To run a C/C++ reference side-by-side: use `simulator:rewrite --outputFormat=LIRS` to produce one-int-per-line traces, strip `*` checkpoints with `grep -v '^\*$'` if the reference reader rejects them.
+
+## Reader / Policy Test Scoping
+
+The simulator is an interpretation-heavy research tool: a trace reader encodes *our reading* of an
+often-undocumented format. A unit test asserting "parse == the keys I derived from the format" only
+locks that reading in — right or wrong. (The K5cloud reader keyed on the block alone until #1974 added
+the volume id; a parse-assertion test would have frozen the across-volumes aliasing.) So don't add
+blanket per-reader coverage.
+
+Add a reader/policy test only against a **real oracle**, folded into the specific fidelity fix:
+- a documented byte layout (byte-order / alignment — e.g. the libCacheSim struct)
+- a paper-defined behavior or arithmetic property (CAMP's `roundedCost`)
+- a boundary / robustness property that needs no oracle (don't-NPE at size 1; don't-silently-truncate
+  a corrupt trace)
+
+The real validation of an interpretation is a **hit-rate run vs a reference impl / paper**, not a unit
+test.

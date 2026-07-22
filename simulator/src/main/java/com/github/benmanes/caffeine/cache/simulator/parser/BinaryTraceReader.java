@@ -22,6 +22,7 @@ import static java.util.Spliterator.ORDERED;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -33,6 +34,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.io.Closeables;
+import com.google.common.io.CountingInputStream;
 
 /**
  * A skeletal implementation that reads the trace file as binary data.
@@ -48,22 +50,24 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
   @Override
   @SuppressWarnings("PMD.CloseResource")
   public Stream<AccessEvent> events() {
-    var input = new DataInputStream(readFile());
+    var in = readFile();
     var stream = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
-        new TraceIterator(input), ORDERED | NONNULL), /* parallel= */ false);
-    return stream.onClose(() -> Closeables.closeQuietly(input));
+        new TraceIterator(in), ORDERED | NONNULL), /* parallel= */ false);
+    return stream.onClose(() -> Closeables.closeQuietly(in));
   }
 
   /** Returns the next event from the input stream. */
   protected abstract AccessEvent readEvent(DataInputStream input) throws IOException;
 
   private final class TraceIterator implements Iterator<AccessEvent> {
+    final CountingInputStream counter;
     final DataInputStream input;
     @Nullable AccessEvent next;
     boolean ready;
 
-    TraceIterator(DataInputStream input) {
-      this.input = requireNonNull(input);
+    TraceIterator(InputStream in) {
+      this.counter = new CountingInputStream(requireNonNull(in));
+      this.input = new DataInputStream(counter);
     }
 
     @Override
@@ -71,11 +75,16 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
       if (ready) {
         return true;
       }
+      long start = counter.getCount();
       try {
         next = readEvent(input);
         ready = true;
         return true;
-      } catch (EOFException _) {
+      } catch (EOFException e) {
+        if (counter.getCount() != start) {
+          throw new UncheckedIOException(
+              "Truncated trace: partial record at the end of " + filePath, e);
+        }
         return false;
       } catch (IOException e) {
         throw new UncheckedIOException(e);
