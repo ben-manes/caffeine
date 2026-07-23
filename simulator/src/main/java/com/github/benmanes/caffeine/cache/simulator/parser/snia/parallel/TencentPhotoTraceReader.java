@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.util.Set;
 import java.util.stream.Stream;
@@ -28,7 +29,7 @@ import com.google.common.io.BaseEncoding;
 
 /**
  * A reader for the Tencent Photo Cache trace files provided by
- * <a href="https://iotta.snia.org/tracetypes/4">SNIA</a>.
+ * <a href="https://iotta.snia.org/traces/parallel/27476">SNIA</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -51,11 +52,13 @@ public final class TencentPhotoTraceReader extends TextTraceReader {
         .map(line -> line.split(" "))
         .filter(array -> array[2].equals(JPEG_FORMAT) || array[2].equals(WEBP_FORMAT))
         .map(array -> {
-          int weight = Integer.parseInt(array[4]);
+          // a photo is stored per (id, format, size category); the returned bytes are its weight
           long key = Hashing.murmur3_128().newHasher()
               .putBytes(BaseEncoding.base16().lowerCase().decode(array[1]))
-              .putInt(weight)
+              .putString(array[2], UTF_8)
+              .putString(array[3], UTF_8)
               .hash().asLong();
+          int weight = Integer.parseInt(array[4]);
           return AccessEvent.forKeyAndWeight(key, weight);
         });
   }
