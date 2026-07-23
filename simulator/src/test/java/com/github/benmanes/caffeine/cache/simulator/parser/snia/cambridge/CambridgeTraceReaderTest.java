@@ -40,4 +40,16 @@ final class CambridgeTraceReaderTest {
     assertThat(keys).hasLength(2);
     assertThat(keys[0]).isNotEqualTo(keys[1]);
   }
+
+  @Test
+  void namespacesByHostname(@TempDir Path dir) throws IOException {
+    // Disk numbers are per host (real MSR: prn, mds, proj all have a disk 0), so the same
+    // (disk, block) on two servers must stay distinct when their traces are combined.
+    var file = Files.writeString(dir.resolve("msr.csv"),
+        "0,prn,0,Read,0,512,0\n0,mds,0,Read,0,512,0\n");
+    long[] keys = new CambridgeTraceReader(file.toString()).keys().toArray();
+
+    assertThat(keys).hasLength(2);
+    assertThat(keys[0]).isNotEqualTo(keys[1]);
+  }
 }

@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Gatherer;
+import java.util.stream.Gatherer.Downstream;
+import java.util.stream.Gatherer.Integrator;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -47,8 +49,12 @@ public final class BaleenTraceReader extends TextTraceReader implements KeyOnlyT
 
   @Override
   public LongStream keys() {
+    Integrator<Window, String, long[]> integrator = (state, line, downstream) -> {
+      state.accept(line, downstream);
+      return true;
+    };
     var window = Gatherer.<String, Window, long[]>ofSequential(
-        Window::new, Window::accept, Window::flush);
+        Window::new, integrator, Window::flush);
     return lines().gather(window).flatMapToLong(LongStream::of);
   }
 
@@ -71,15 +77,15 @@ public final class BaleenTraceReader extends TextTraceReader implements KeyOnlyT
       requests = new ArrayList<>();
     }
 
-    boolean accept(String line, Gatherer.Downstream<? super long[]> downstream) {
+    void accept(String line, Downstream<? super long[]> downstream) {
       if (line.isEmpty()) {
-        return true;
+        return;
       } else if (line.charAt(0) == '#') {
         if (!formatKnown && line.contains("op_name")) {
           withPipeline = line.contains("pipeline");
           formatKnown = true;
         }
-        return true;
+        return;
       }
 
       List<String> parts = SPLITTER.splitToList(line);
@@ -89,7 +95,7 @@ public final class BaleenTraceReader extends TextTraceReader implements KeyOnlyT
         formatKnown = true;
       }
       if (!READ_OPERATIONS.contains(parts.get(4))) {
-        return true;
+        return;
       }
 
       long block = Long.parseLong(parts.getFirst());
@@ -97,7 +103,7 @@ public final class BaleenTraceReader extends TextTraceReader implements KeyOnlyT
       int size = Integer.parseInt(parts.get(2));
       if (size == 0) {
         // the reference rejects zero-sized requests
-        return true;
+        return;
       }
       double time = Double.parseDouble(parts.get(3));
       int opCount = (parts.size() >= 9) ? Integer.parseInt(parts.get(8)) : 1;
@@ -115,7 +121,6 @@ public final class BaleenTraceReader extends TextTraceReader implements KeyOnlyT
       started = true;
       second = (long) Math.floor(time);
       requests.add(new Request(segments, time, opCount));
-      return true;
     }
 
     void flush(Gatherer.Downstream<? super long[]> downstream) {

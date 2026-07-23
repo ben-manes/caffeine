@@ -19,7 +19,6 @@ import com.github.benmanes.caffeine.cache.simulator.admission.Admitter.KeyOnlyAd
 import com.github.benmanes.caffeine.cache.simulator.parser.ClairvoyantTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.ClairvoyantTraceReader.Cursor;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2LongMap;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
@@ -35,7 +34,7 @@ public final class Clairvoyant implements KeyOnlyAdmitter {
   private final PolicyStats policyStats;
   private final Cursor cursor;
 
-  public Clairvoyant(Config config, PolicyStats policyStats) {
+  public Clairvoyant(PolicyStats policyStats) {
     this.policyStats = policyStats;
     this.nextAccessTimes = new Long2LongOpenHashMap();
     this.nextAccessTimes.defaultReturnValue(Long.MAX_VALUE);
