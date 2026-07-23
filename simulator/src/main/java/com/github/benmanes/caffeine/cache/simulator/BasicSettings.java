@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
@@ -127,7 +128,9 @@ public class BasicSettings {
 
   public final class ActorSettings {
     public int mailboxSize() {
-      return config().getInt("actor.mailbox-size");
+      int mailboxSize = config().getInt("actor.mailbox-size");
+      checkArgument(mailboxSize > 0, "mailbox size %s must be positive", mailboxSize);
+      return mailboxSize;
     }
     public int batchSize() {
       return config().getInt("actor.batch-size");
