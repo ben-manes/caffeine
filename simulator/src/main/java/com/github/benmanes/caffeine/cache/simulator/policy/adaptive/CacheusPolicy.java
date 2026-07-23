@@ -118,6 +118,7 @@ public final class CacheusPolicy implements KeyOnlyPolicy {
     this.historySize = maximumSize / 2;
     this.qLimit = Math.max(1, (int) Math.round(HIRS_RATIO * maximumSize));
     this.sLimit = maximumSize - qLimit;
+    checkState(sLimit >= 1, "maximum size %s is too small to divide between its lists", maximumSize);
 
     this.wLru = 0.5;
     this.wLfu = 0.5;

@@ -76,6 +76,7 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
     maxGain = Math.min(15, settings.maximumInsertionGain());
     sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
     feedback = settings.membership().filter().create(settings.filterConfig(sampleSize));
+    checkState(sampleSize >= 2, "maximum size %s is too small for a feedback sample", maximumSize);
   }
 
   @Override

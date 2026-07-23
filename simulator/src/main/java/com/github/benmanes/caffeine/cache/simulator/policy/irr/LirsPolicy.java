@@ -88,6 +88,8 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     this.headNR = new Node();
     this.headS = new Node();
     this.headQ = new Node();
+    checkState(maximumHotSize >= 1,
+        "maximum size %s is too small for the configured percent-hot", maximumSize);
   }
 
   @Override

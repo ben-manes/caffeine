@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import org.jspecify.annotations.Nullable;
@@ -73,6 +74,8 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
     this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.maxIn = (int) (maximumSize * settings.percentIn());
     this.maxOut = (int) (maximumSize * settings.percentOut());
+    checkState(maxIn < maximumSize,
+        "The in-queue must be smaller than the maximum size %s", maximumSize);
   }
 
   @Override

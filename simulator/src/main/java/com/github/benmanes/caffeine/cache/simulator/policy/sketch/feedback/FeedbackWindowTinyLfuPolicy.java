@@ -102,6 +102,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     maxPivot = Math.min(settings.maximumWindowSize(), maxProtected);
     sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
     feedback = settings.membership().filter().create(settings.filterConfig(sampleSize));
+    checkState(sampleSize >= 2, "maximum size %s is too small for a feedback sample", maximumSize);
 
     checkState(settings.pivotIncrement() > 0, "Must increase by at least 1");
     checkState(settings.pivotDecrement() > 0, "Must decrease by at least 1");

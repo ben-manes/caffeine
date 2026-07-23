@@ -103,6 +103,8 @@ public final class Lirs2Policy implements KeyOnlyPolicy {
     this.maximumHotSize = (int) (maximumSize * settings.percentHot());
     this.maximumStackLength = maximumSize * settings.stackLengthMultiplier();
     this.maximumNonResidentSize = (int) (maximumSize * settings.nonResidentMultiplier());
+    checkState(maximumHotSize >= 1,
+        "maximum size %s is too small for the configured percent-hot", maximumSize);
   }
 
   @Override
