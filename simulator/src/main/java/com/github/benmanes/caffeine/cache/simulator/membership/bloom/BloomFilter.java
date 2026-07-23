@@ -72,11 +72,16 @@ public final class BloomFilter implements Membership {
     checkArgument(expectedInsertions >= 0);
     checkArgument(fpp > 0 && fpp < 1);
 
-    double optimalBitsFactor = -Math.log(fpp) / (Math.log(2) * Math.log(2));
-    int optimalNumberOfBits = (int) (expectedInsertions * optimalBitsFactor);
-    int optimalSize = Math.max(2, optimalNumberOfBits >>> BITS_PER_LONG_SHIFT);
-    if ((table == null) || (table.length < optimalSize)) {
-      int powerOfTwoShift = Integer.SIZE - Integer.numberOfLeadingZeros(optimalSize - 1);
+    // Sized with the standard bits-per-element formula (which assumes the optimal hash count) but
+    // probed with a fixed 4 hashes to allow future reuse if combined with the frequency sketch. The
+    // fpp is approximate as the realized rate runs at or above it for the small values used. That
+    // lean bias is intentional as this used with the doorkeeper in order to trade accuracy for a
+    // smaller footprint.
+    double bitsFactor = -Math.log(fpp) / (Math.log(2) * Math.log(2));
+    int numberOfBits = Math.toIntExact((long) (expectedInsertions * bitsFactor));
+    int tableSize = Math.max(2, numberOfBits >>> BITS_PER_LONG_SHIFT);
+    if ((table == null) || (table.length < tableSize)) {
+      int powerOfTwoShift = Integer.SIZE - Integer.numberOfLeadingZeros(tableSize - 1);
       tableShift = Integer.SIZE - powerOfTwoShift;
       table = new long[1 << powerOfTwoShift];
     }

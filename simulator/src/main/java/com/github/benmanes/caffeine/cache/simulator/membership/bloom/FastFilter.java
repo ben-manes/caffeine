@@ -40,7 +40,7 @@ public final class FastFilter implements Membership {
 
   public FastFilter(Config config) {
     var settings = new FastFilterSettings(config);
-    keys = new long[(int) settings.membership().expectedInsertions()];
+    keys = new long[Math.toIntExact(settings.membership().expectedInsertions())];
     filterType = settings.filterType();
     bitsPerKey = settings.bitsPerKey();
     reset();
