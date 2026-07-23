@@ -15,13 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.snia.enterprise;
 
-import java.math.RoundingMode;
 import java.util.function.Predicate;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
-import com.google.common.math.IntMath;
 
 /**
  * A reader for the SNIA Microsoft Enterprise trace files provided by
@@ -49,10 +47,11 @@ public final class EnterpriseTraceReader
           int size = Integer.parseInt(line[6].strip().substring(2), 16);
           int diskNum = Integer.parseInt(line[8].strip());
 
+          // reads are 512-aligned but the block is 4 KiB, so a request can span a trailing block
           long startBlock = byteOffset / BLOCK_SIZE;
-          int sequence = IntMath.divide(size, BLOCK_SIZE, RoundingMode.UP);
-          return LongStream.range(0, sequence)
-              .map(i -> (((long) diskNum) << 40) | ((startBlock + i) & 0xFFFFFFFFFFL));
+          long endBlock = (byteOffset + size - 1) / BLOCK_SIZE;
+          return LongStream.rangeClosed(startBlock, endBlock)
+              .map(block -> (((long) diskNum) << 40) | (block & 0xFFFFFFFFFFL));
         });
   }
 
