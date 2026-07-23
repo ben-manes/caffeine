@@ -15,103 +15,53 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission.clairvoyant;
 
-import static com.google.common.base.Preconditions.checkState;
-
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
-
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.jspecify.annotations.Nullable;
-
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admitter.KeyOnlyAdmitter;
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.parser.ClairvoyantTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.ClairvoyantTraceReader.Cursor;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
 
-import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.ints.IntPriorityQueue;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2LongMap;
+import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 
 /**
  * {@literal Bélády's} optimal page replacement policy applied as an admission policy by comparing
- * the keys using their next access times.
+ * the keys using their next-access times.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Clairvoyant implements KeyOnlyAdmitter {
-  private static final AtomicReference<@Nullable Long2ObjectMap<IntList>> snapshot = new AtomicReference<>();
-
-  private final Long2ObjectMap<@Nullable IntPriorityQueue> accessTimes;
+  private final Long2LongMap nextAccessTimes;
   private final PolicyStats policyStats;
+  private final Cursor cursor;
 
   public Clairvoyant(Config config, PolicyStats policyStats) {
-    @Var var readOnlyAccessTimes = snapshot.get();
-    if (readOnlyAccessTimes == null) {
-      readOnlyAccessTimes = readAccessTimes(new BasicSettings(config));
-      snapshot.set(readOnlyAccessTimes);
-    }
-    accessTimes = new Long2ObjectOpenHashMap<>(readOnlyAccessTimes.size());
-    for (var entry : readOnlyAccessTimes.long2ObjectEntrySet()) {
-      var times = new IntArrayFIFOQueue(entry.getValue().size());
-      accessTimes.put(entry.getLongKey(), times);
-      entry.getValue().forEach(times::enqueue);
-    }
     this.policyStats = policyStats;
+    this.nextAccessTimes = new Long2LongOpenHashMap();
+    this.nextAccessTimes.defaultReturnValue(Long.MAX_VALUE);
+    this.cursor = ClairvoyantTraceReader.currentCursor().orElseThrow(() -> new IllegalStateException(
+        "admission.Clairvoyant requires the clairvoyant trace reader to be installed"));
   }
 
   @Override
   public void record(long key) {
-    if (snapshot.get() != null) {
-      snapshot.set(null);
-    }
-
-    var times = accessTimes.get(key);
-    if (times == null) {
-      return;
-    }
-    times.dequeueInt();
-    if (times.isEmpty()) {
-      accessTimes.remove(key);
+    long nextAccess = cursor.next();
+    if (nextAccess == ClairvoyantTraceReader.NONE) {
+      nextAccessTimes.remove(key);
+    } else {
+      nextAccessTimes.put(key, nextAccess);
     }
   }
 
   @Override
   public boolean admit(long candidateKey, long victimKey) {
-    int candidateTime = nextAccessTime(candidateKey);
-    int victimTime = nextAccessTime(victimKey);
+    long candidateTime = nextAccessTimes.get(candidateKey);
+    long victimTime = nextAccessTimes.get(victimKey);
     if (candidateTime > victimTime) {
       policyStats.recordRejection();
       return false;
     }
     policyStats.recordAdmission();
     return true;
-  }
-
-  private int nextAccessTime(long key) {
-    var times = accessTimes.get(key);
-    return ((times == null) || times.isEmpty()) ? Integer.MAX_VALUE : times.firstInt();
-  }
-
-  private static Long2ObjectMap<IntList> readAccessTimes(BasicSettings settings) {
-    checkState(!settings.trace().isSynthetic(), "Synthetic traces cannot be predicted");
-    long skip = settings.trace().skip();
-    long limit = settings.trace().limit();
-    var accessTimes = new Long2ObjectOpenHashMap<IntList>();
-    var trace = settings.trace().traceFiles().format()
-        .readFiles(settings.trace().traceFiles().paths());
-    try (Stream<AccessEvent> events = trace.events().skip(skip).limit(limit)) {
-      var tick = new MutableInt();
-      events.forEach(event -> {
-        var times = accessTimes.computeIfAbsent(event.key(), _ -> new IntArrayList());
-        times.add(tick.incrementAndGet());
-      });
-    }
-    return Long2ObjectMaps.unmodifiable(accessTimes);
   }
 }

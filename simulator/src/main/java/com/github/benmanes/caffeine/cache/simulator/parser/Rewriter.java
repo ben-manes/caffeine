@@ -74,7 +74,7 @@ public final class Rewriter implements Runnable {
          var writer = outputFormat.writer(output)) {
       writer.writeHeader();
       var count = new MutableInt();
-      events.forEach(Failable.asConsumer(event -> {
+      events.forEachOrdered(Failable.asConsumer(event -> {
         writer.writeEvent(event);
         count.increment();
       }));

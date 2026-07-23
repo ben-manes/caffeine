@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator;
 
+import static com.github.benmanes.caffeine.cache.simulator.admission.Admission.CLAIRVOYANT;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Locale.US;
 import static java.util.stream.Gatherers.windowFixed;
@@ -27,15 +28,18 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
+import com.github.benmanes.caffeine.cache.simulator.parser.ClairvoyantTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Registry;
+import com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.MustBeClosed;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -67,27 +71,25 @@ public final class Simulator {
 
   /** Broadcast the trace events to all of the policy actors. */
   public void run() {
-    var trace = getTraceReader(settings);
-    var policies = getPolicyActors(trace.characteristics());
-    if (policies.isEmpty()) {
-      System.err.println("No active policies in the current configuration");
-      return;
-    }
-
-    try {
-      broadcast(trace, policies);
-      report(trace, policies);
-    } catch (RuntimeException e) {
-      throwError(e, policies);
+    try (var trace = getTraceReader(settings)) {
+      var policies = getPolicyActors(trace);
+      if (policies.isEmpty()) {
+        System.err.println("No active policies in the current configuration");
+        return;
+      }
+      try {
+        broadcast(trace, policies);
+        report(trace, policies);
+      } catch (RuntimeException e) {
+        throwError(e, policies);
+      }
     }
   }
 
   private void broadcast(TraceReader trace, List<PolicyActor> policies) {
-    long skip = settings.trace().skip();
-    long limit = settings.trace().limit();
     int batchSize = settings.actor().batchSize();
-    try (Stream<AccessEvent> events = trace.events().skip(skip).limit(limit)) {
-      events.gather(windowFixed(batchSize)).forEach(batch -> {
+    try (Stream<AccessEvent> events = window(trace)) {
+      events.gather(windowFixed(batchSize)).forEachOrdered(batch -> {
         for (var policy : policies) {
           policy.send(batch);
         }
@@ -106,18 +108,44 @@ public final class Simulator {
     reporter.print(results);
   }
 
-  /** Returns a trace reader for the access events. */
-  private static TraceReader getTraceReader(BasicSettings settings) {
-    if (settings.trace().isSynthetic()) {
-      return Synthetic.generate(settings.trace());
-    }
-    List<String> filePaths = settings.trace().traceFiles().paths();
-    TraceFormat format = settings.trace().traceFiles().format();
-    return format.readFiles(filePaths);
+  /** Returns the trace events, windowed by the configured skip and limit. */
+  @MustBeClosed
+  private Stream<AccessEvent> window(TraceReader trace) {
+    // The clairvoyant reader materializes the windowed range, so it must not be re-applied
+    return (trace instanceof ClairvoyantTraceReader)
+        ? trace.events()
+        : trace.events().skip(settings.trace().skip()).limit(settings.trace().limit());
   }
 
-  /** Returns the policy actors that asynchronously apply the trace events. */
-  private ImmutableList<PolicyActor> getPolicyActors(Set<Characteristic> characteristics) {
+  /** Returns a trace reader for the access events. */
+  private static TraceReader getTraceReader(BasicSettings settings) {
+    TraceReader trace = settings.trace().isSynthetic()
+        ? Synthetic.generate(settings.trace())
+        : settings.trace().traceFiles().format().readFiles(settings.trace().traceFiles().paths());
+    return isClairvoyant(settings)
+        ? new ClairvoyantTraceReader(trace, settings.trace().skip(), settings.trace().limit())
+        : trace;
+  }
+
+  /** Returns whether any configured policy or admitter needs the clairvoyant look-ahead. */
+  private static boolean isClairvoyant(BasicSettings settings) {
+    var clairvoyant = ClairvoyantPolicy.class.getAnnotation(PolicySpec.class).name();
+    return settings.admission().contains(CLAIRVOYANT)
+        || settings.policies().stream().anyMatch(clairvoyant::equalsIgnoreCase);
+  }
+
+  /**
+   * Returns the policy actors that asynchronously apply the trace events. A clairvoyant reader is
+   * installed for the scope of their construction so that its policies/admitters can take a cursor.
+   */
+  private ImmutableList<PolicyActor> getPolicyActors(TraceReader trace) {
+    var characteristics = trace.characteristics();
+    return (trace instanceof ClairvoyantTraceReader reader)
+        ? reader.scoped(() -> buildPolicyActors(characteristics))
+        : buildPolicyActors(characteristics);
+  }
+
+  private ImmutableList<PolicyActor> buildPolicyActors(Set<Characteristic> characteristics) {
     var registry = new Registry(settings, characteristics);
     return registry.policies().stream()
         .map(policy -> new PolicyActor(Thread.currentThread(), policy, settings))

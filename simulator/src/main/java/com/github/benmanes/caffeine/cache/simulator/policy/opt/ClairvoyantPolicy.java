@@ -15,72 +15,68 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
-
-import java.util.ArrayDeque;
-import java.util.Queue;
-
-import org.jspecify.annotations.Nullable;
+import static com.github.benmanes.caffeine.cache.simulator.parser.ClairvoyantTraceReader.NONE;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.parser.ClairvoyantTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.ClairvoyantTraceReader.Cursor;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
 
-import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
-import it.unimi.dsi.fastutil.ints.IntPriorityQueue;
-import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
-import it.unimi.dsi.fastutil.ints.IntSortedSet;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
+import it.unimi.dsi.fastutil.longs.LongRBTreeSet;
+import it.unimi.dsi.fastutil.longs.LongSortedSet;
 
 /**
- * Bélády's optimal page replacement policy. The upper bound of the hit rate is estimated by
- * evicting from the cache the item that will next be used farthest into the future.
+ * {@literal Bélády's} optimal page replacement policy. The upper bound of the hit rate is estimated
+ * by evicting from the cache the item that will next be used farthest into the future.
+ * <p>
+ * The next-access time of each request is supplied by the shared {@link ClairvoyantTraceReader},
+ * which precomputes it to a temporary file so only the resident set is held in memory rather than
+ * the whole trace. Residents are keyed by their next-access time, so the farthest-future victim is
+ * the last entry of a sorted set; a request whose key never recurs is keyed by a decreasing
+ * sentinel so it sorts beyond every real time.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @PolicySpec(name = "opt.Clairvoyant")
 public final class ClairvoyantPolicy implements Policy {
-  private final Long2ObjectMap<IntPriorityQueue> accessTimes;
   private final PolicyStats policyStats;
-  private final IntSortedSet data;
+  private final LongSortedSet data;
+  private final Cursor cursor;
   private final int maximumSize;
 
-  private @Nullable Recorder recorder;
-
-  private boolean isPenaltyAware;
-  private int infiniteTimestamp;
-  private int tick;
+  private long infiniteTimestamp;
+  private long tick;
 
   public ClairvoyantPolicy(Config config) {
     var settings = new BasicSettings(config);
+    cursor = ClairvoyantTraceReader.currentCursor().orElseThrow(() -> new IllegalStateException(
+        "opt.Clairvoyant requires the clairvoyant trace reader to be installed"));
     maximumSize = Math.toIntExact(settings.maximumSize());
-    accessTimes = new Long2ObjectOpenHashMap<>();
     policyStats = new PolicyStats(name());
-    infiniteTimestamp = Integer.MAX_VALUE;
-    data = new IntRBTreeSet();
+    infiniteTimestamp = Long.MAX_VALUE;
+    data = new LongRBTreeSet();
+    tick = -1;
   }
 
   @Override
   public void record(AccessEvent event) {
-    if (recorder == null) {
-      isPenaltyAware = event.isPenaltyAware();
-      recorder = isPenaltyAware ? new EventRecorder() : new KeyOnlyRecorder();
-    } else {
-      checkState(isPenaltyAware == event.isPenaltyAware(),
-          "Cannot mix penalty-aware and non-penalty-aware events");
-    }
-
     tick++;
-    recorder.add(event);
-
-    var times = accessTimes.computeIfAbsent(event.key(), _ -> new IntArrayFIFOQueue());
-    times.enqueue(tick);
+    long nextAccess = cursor.next();
+    boolean found = data.remove(tick);
+    data.add((nextAccess == NONE) ? infiniteTimestamp-- : nextAccess);
+    if (found) {
+      policyStats.recordHit();
+    } else {
+      policyStats.recordMiss();
+      if (data.size() > maximumSize) {
+        data.remove(data.lastLong());
+        policyStats.recordEviction();
+      }
+    }
   }
 
   @Override
@@ -90,80 +86,6 @@ public final class ClairvoyantPolicy implements Policy {
 
   @Override
   public void finished() {
-    policyStats.stopwatch().start();
-    if (recorder != null) {
-      recorder.process();
-    }
-    policyStats.stopwatch().stop();
-  }
-
-  /** Performs the cache operations for the given key. */
-  private void process(long key, double hitPenalty, double missPenalty) {
-    IntPriorityQueue times = requireNonNull(accessTimes.get(key));
-
-    int lastAccess = times.dequeueInt();
-    boolean found = data.remove(lastAccess);
-
-    if (times.isEmpty()) {
-      data.add(infiniteTimestamp--);
-      accessTimes.remove(key);
-    } else {
-      data.add(times.firstInt());
-    }
-    if (found) {
-      policyStats.recordHit();
-      policyStats.recordHitPenalty(hitPenalty);
-    } else {
-      policyStats.recordMiss();
-      policyStats.recordMissPenalty(missPenalty);
-      if (data.size() > maximumSize) {
-        evict();
-      }
-    }
-  }
-
-  /** Removes the entry whose next access is the farthest away into the future. */
-  private void evict() {
-    data.remove(data.lastInt());
-    policyStats.recordEviction();
-  }
-
-  /** An optimized strategy for storing the event history. */
-  private interface Recorder {
-    void add(AccessEvent event);
-    void process();
-  }
-
-  private final class KeyOnlyRecorder implements Recorder {
-    private final LongArrayFIFOQueue future;
-
-    KeyOnlyRecorder() {
-      future = new LongArrayFIFOQueue(maximumSize);
-    }
-    @Override public void add(AccessEvent event) {
-      future.enqueue(event.key());
-    }
-    @Override public void process() {
-      while (!future.isEmpty()) {
-        ClairvoyantPolicy.this.process(future.dequeueLong(), 0.0, 0.0);
-      }
-    }
-  }
-
-  private final class EventRecorder implements Recorder {
-    private final Queue<AccessEvent> future;
-
-    EventRecorder() {
-      future = new ArrayDeque<>(maximumSize);
-    }
-    @Override public void add(AccessEvent event) {
-      future.add(event);
-    }
-    @Override public void process() {
-      while (!future.isEmpty()) {
-        AccessEvent event = future.poll();
-        ClairvoyantPolicy.this.process(event.key(), event.hitPenalty(), event.missPenalty());
-      }
-    }
+    cursor.close();
   }
 }

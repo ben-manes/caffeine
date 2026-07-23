@@ -15,6 +15,62 @@ paths:
 - Run multi-size with charts: `./gradlew simulator:simulate -q --maximumSize=... --metric=...`
 - Convert trace formats: `./gradlew simulator:rewrite -q --inputFormat=... --outputFormat=...`
 
+## Trace Characteristics & Policy Matching
+
+A trace declares `characteristics()` (only `WEIGHTED` today); a policy declares what it supports via
+`@PolicySpec(characteristics = {...})`. `Registry.policies()` keeps a policy iff it supports **every**
+characteristic the trace carries (`policy ⊇ trace`) — so a weighted trace runs only weight-aware policies
+and silently drops the rest (ARC/LIRS/Clairvoyant/sketch/…). **By-design, not a bug:** a trace's features
+are interpreted *uniformly* across the panel so a report is one metric; a weight-oblivious policy is
+excluded rather than run on a weighted trace where its object hit rate isn't comparable to the others'
+byte hit rate. There is deliberately **no "treat weighted as unit" mode** (libcachesim has one, printing
+object + byte columns together — that reintroduces the apples-to-oranges we exclude for). For the
+object-hit-rate view of a weighted trace, strip the weight with `simulator:rewrite` — an explicit metric
+switch that yields a reusable narrowed trace.
+
+**If downcasting is ever wanted**, add it as a trace-side projection (an adapter reader), never a Registry
+change: narrow the declared `characteristics()` *and* re-emit narrowed events (`AccessEvent.forKey(key)`,
+dropping weight) so `policy ⊇ trace` is unchanged and the whole panel stays one metric. Re-emitting the
+narrowed event is load-bearing — narrowing only the metadata would let a weight-aware policy keep reading
+the real weight and optimize byte hit rate amid an object-hit-rate panel. Not worth building until ≥2
+routinely-mixed characteristics make a cross-capability comparison genuinely useful (the enum has a single
+value — scaffolding that never expanded).
+
+## Clairvoyant Look-Ahead (opt.Clairvoyant + admission.Clairvoyant)
+
+Bélády's MIN (`opt.Clairvoyant`) and clairvoyant admission need each request's *next-access time* — an
+inherent look-ahead. When any clairvoyant usage is enabled (`isClairvoyant` in `Simulator`:
+`opt.Clairvoyant` in `policies` or `Clairvoyant` in `admission`), the Simulator wraps the underlying
+reader with `ClairvoyantTraceReader`, which materializes the trace once, up front, to a fixed-width
+temporary file. Key invariants:
+
+- **One pointer per request, not a per-key list.** Bélády only needs the *immediate* next use, so each
+  record is `[key, (weight | penalties), nextAccess]`. A forward pass appends the records; a backward pass
+  then fills each `nextAccess` from a `nextSeen: key→position` map — O(distinct keys) heap, released before
+  the policies run (memory isolated to the pre-pass). This replaces the old O(N) in-memory buffers on both
+  policies.
+- **The materialization *is* the trace.** `events()` replays it to every policy (reconstructing the
+  minimal `AccessEvent` for the sniffed characteristics), so a non-repeatable synthetic (`ThreadLocalRandom`)
+  is frozen once and all consumers walk the identical sequence — the old admitter re-read the trace and
+  *threw* on synthetic (`"cannot be predicted"`); it now works.
+- **Consumers walk a `Cursor`, in lockstep.** `opt` and `admission` each take a sequential `Cursor` over
+  the next-access column; both call it exactly once per access (`admitter.record` fires once per access —
+  verified in every host), so cursor position tracks the trace position. The reader owns cursor lifecycle
+  (closed on `TraceReader.close()`, which is a no-op default except here). A shared static holder hands out
+  cursors because policies/admitters are built deep in the Registry from `Config` only.
+- **All I/O is sequential and buffered.** Reads are buffered sequential `DataInputStream`s; both the forward
+  append pass and the backward fill pass are block-sequential (the backward pass is what avoids the random
+  writes a forward back-fill would need, since its window can't span a long reuse distance). A key-only
+  delegate (`KeyOnlyTraceReader`, e.g. arc) is materialized straight from its `keys()` `LongStream` with no
+  per-event boxing; `TraceFormat.readFiles` preserves key-only-ness across its multi-file wrapper.
+  **Never drain the delegate via `Stream.iterator()`** — it buffers the *entire* stream before yielding
+  (internal chunking runs until the terminal op, contradicting the javadoc), silently reintroducing O(N);
+  use `forEachOrdered`. Bit-for-bit vs the prior in-memory impl (corda, DS1); on DS1 @ 4M it's ~2× faster
+  and fits ~4× less heap (512 MB vs 2 GB).
+- **`opt` records no penalties itself** — the `PolicyActor` attributes penalties from the hit/miss it
+  observes (it processes online now, unlike the old buffer-then-replay), so self-recording would
+  double-count. Unit tests drive it through the reader and mirror that attribution.
+
 ## Policy Implementation
 
 - Consecutive-duplicate-access dedup is a per-policy decision in `record()`, not a trace-reader/framework concern. Song Jiang's reference C code (`lirs.c`) and Chen Zhong's C++ port (`replace_lirs_base.cc` / `replace_lirs2.cc`) both put `if (ref == last_ref) continue;` at the top of the run loop to avoid counting "correlated references" — rapid re-accesses to the same block from one logical event; the 2Q paper (VLDB '94) discusses the same concern. Not in the published LIRS / CLOCK-Pro papers (author intent, confirmed via direct correspondence). **Key subtlety:** the reference increments its hit-rate denominator *before* that `continue` (`warm_pg_refs++` in `lirs.c`; `mTraceLength` in Zhong's), so a duplicate stays in the denominator as a guaranteed non-miss (≡ a hit). The dedup removes the duplicate from the *algorithm*, not from the rate.

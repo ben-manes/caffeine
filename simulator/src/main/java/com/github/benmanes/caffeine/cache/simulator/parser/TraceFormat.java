@@ -18,12 +18,12 @@ package com.github.benmanes.caffeine.cache.simulator.parser;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static java.util.Locale.US;
-import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.adapt_size.AdaptSizeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.address.penalties.AddressPenaltiesTraceReader;
@@ -58,9 +58,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTr
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 
 /**
  * The trace file formats.
@@ -114,24 +112,25 @@ public enum TraceFormat {
    * @return a reader for streaming the events from the file
    */
   public TraceReader readFiles(List<String> filePaths) {
-    return new TraceReader() {
+    var readers = filePaths.stream().map(path -> {
+      var parts = Splitter.on(':').limit(2).splitToList(path);
+      var format = (parts.size() == 1) ? this : named(parts.getFirst());
+      return format.factory.apply(parts.getLast());
+    }).collect(toImmutableList());
 
+    if (readers.stream().allMatch(KeyOnlyTraceReader.class::isInstance)) {
+      return (KeyOnlyTraceReader) () -> readers.stream()
+          .map(KeyOnlyTraceReader.class::cast)
+          .flatMapToLong(KeyOnlyTraceReader::keys);
+    }
+    return new TraceReader() {
       @Override public ImmutableSet<Characteristic> characteristics() {
-        return readers().stream()
+        return readers.stream()
             .flatMap(reader -> reader.characteristics().stream())
             .collect(toImmutableEnumSet());
       }
-
       @Override public Stream<AccessEvent> events() {
-        return readers().stream().flatMap(TraceReader::events);
-      }
-
-      private ImmutableList<TraceReader> readers() {
-        return filePaths.stream().map(path -> {
-          List<String> parts = Splitter.on(':').limit(2).splitToList(path);
-          TraceFormat format = (parts.size() == 1) ? TraceFormat.this : named(parts.getFirst());
-          return format.factory.apply(requireNonNull(Iterables.getLast(parts)));
-        }).collect(toImmutableList());
+        return readers.stream().flatMap(TraceReader::events);
       }
     };
   }

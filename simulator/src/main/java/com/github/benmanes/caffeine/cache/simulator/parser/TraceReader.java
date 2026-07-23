@@ -29,10 +29,13 @@ import com.google.errorprone.annotations.MustBeClosed;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface TraceReader {
+public interface TraceReader extends AutoCloseable {
 
   /** The event features that this trace supports. */
   Set<Characteristic> characteristics();
+
+  /** Releases any resources held by the reader; a no-op unless the reader materializes state. */
+  @Override default void close() {}
 
   /**
    * Creates a stream that lazily reads the trace source.
