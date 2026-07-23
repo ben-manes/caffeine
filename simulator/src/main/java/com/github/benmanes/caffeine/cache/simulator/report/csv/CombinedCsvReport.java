@@ -24,6 +24,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Stream;
@@ -64,13 +65,23 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
       try (var reader = CsvReader.builder().ofNamedCsvRecord(path)) {
         for (var record : reader) {
           var label = new Label(record.getField(POLICY_KEY), maximumSize);
-          results.put(label, record.findField(metric).orElse(""));
+          results.put(label, record.getField(resolveMetric(record.getHeader())));
         }
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
     });
     return results;
+  }
+
+  /** Resolves the metric to its column name ignoring case, or fails if it is not present. */
+  private String resolveMetric(List<String> header) {
+    return header.stream()
+        .filter(column -> column.equalsIgnoreCase(metric))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException(
+            String.format(US, "Metric '%s' not found; available: %s", metric, header.stream()
+                .filter(column -> !column.equals(POLICY_KEY)).collect(toImmutableList()))));
   }
 
   /** Writes a combined report with the headers: policy, maximumSize, and the metric. */

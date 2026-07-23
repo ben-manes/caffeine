@@ -70,8 +70,9 @@ public final class Rewriter implements Runnable {
   public void run() {
     var stopwatch = Stopwatch.createStarted();
     try (var output = new BufferedOutputStream(Files.newOutputStream(outputFile));
-         var events = inputFormat.readFiles(inputFiles).events();
-         var writer = outputFormat.writer(output)) {
+         var reader = inputFormat.readFiles(inputFiles);
+         var writer = outputFormat.writer(output);
+         var events = reader.events()) {
       writer.writeHeader();
       var count = new MutableInt();
       events.forEachOrdered(Failable.asConsumer(event -> {

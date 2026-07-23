@@ -108,27 +108,31 @@ public record PlotCsv(Path inputFile, Path outputFile, String metric,
     configureGrid(plot);
 
     plot.getRangeAxis().setAutoRange(false);
-    plot.getRangeAxis().setRange(calculateRange(plot));
+    plot.getRangeAxis().setRange(calculateRange(plot.getDataset()));
 
     for (int i = 0; i < plot.getDataset().getRowCount(); i++) {
       plot.getRenderer().setSeriesStroke(i, new BasicStroke(3.0f));
     }
   }
 
-  private static Range calculateRange(CategoryPlot plot) {
+  static Range calculateRange(CategoryDataset dataset) {
     @Var double upperBound = Double.NEGATIVE_INFINITY;
     @Var double lowerBound = Double.POSITIVE_INFINITY;
-    checkState(plot.getDataset().getRowCount() > 0, "No data points to plot");
-    for (int series = 0; series < plot.getDataset().getRowCount(); series++) {
-      for (int item = 0; item < plot.getDataset().getColumnCount(); item++) {
-        var value = plot.getDataset().getValue(series, item);
+    for (int series = 0; series < dataset.getRowCount(); series++) {
+      for (int item = 0; item < dataset.getColumnCount(); item++) {
+        var value = dataset.getValue(series, item);
         if (value != null) {
           lowerBound = Math.min(lowerBound, value.doubleValue());
           upperBound = Math.max(upperBound, value.doubleValue());
         }
       }
     }
-    double margin = 0.1 * (upperBound - lowerBound);
+    checkState(lowerBound <= upperBound, "No numeric data points to plot");
+
+    // A margin keeps the extremes off the axis; when every value is equal the span is zero, so fall
+    // back to a fixed window to avoid a degenerate (empty) range that the chart cannot render.
+    double span = upperBound - lowerBound;
+    double margin = (span > 0) ? (0.1 * span) : Math.max(1.0, 0.1 * Math.abs(upperBound));
     return new Range(lowerBound - margin, upperBound + margin);
   }
 
