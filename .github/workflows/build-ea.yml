@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: true
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-  ALLOWED_ENDPOINTS: >
+  ALLOWED_ENDPOINTS: >-
     *.actions.githubusercontent.com:443
     api.adoptium.net:443
     api.foojay.io:443

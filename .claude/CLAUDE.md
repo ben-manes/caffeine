@@ -11,7 +11,9 @@ High-performance, near-optimal caching library for Java 11+.
 ./gradlew :caffeine:compileTestJava                          # Compile tests only
 ```
 
-Run individual tests, not the full suite — it's slow and sharded across 40 CI workers.
+A single test method is fine to run even when it sweeps the full `@CacheSpec` matrix; it's whole
+classes and the full suite to avoid locally, or to narrow with the `-P` flags below. CI runs the
+full matrix sharded across 40 workers. See `.claude/rules/testing.md`.
 
 ### Test Filtering
 
@@ -50,7 +52,8 @@ Tests cannot be `@Disabled` or skipped — the build fails on any skipped test.
 .github/scripts/analyze.sh            # all
 ```
 
-ErrorProne + NullAway run on every build. Fix warnings, don't suppress them.
+ErrorProne + NullAway run on every build. Prefer fixing warnings over suppressing them; see
+`.claude/rules/errorprone.md` for the few sanctioned suppressions and how to write them.
 
 ### Benchmarks & Analysis
 

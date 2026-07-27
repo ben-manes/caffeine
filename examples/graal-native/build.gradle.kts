@@ -1,7 +1,6 @@
 plugins {
   id("application")
   alias(libs.plugins.graal)
-  alias(libs.plugins.versions)
 }
 
 dependencies {

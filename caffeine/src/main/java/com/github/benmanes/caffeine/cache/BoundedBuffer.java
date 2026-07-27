@@ -85,7 +85,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
       if (casWriteCounter(tail, tail + 1)) {
         int index = (int) (tail & MASK);
         BUFFER.setRelease(buffer, index, e);
-        return Buffer.SUCCESS;
+        return ((size + 1) >= BUFFER_SIZE) ? Buffer.FULL : Buffer.SUCCESS;
       }
       return Buffer.FAILED;
     }

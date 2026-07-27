@@ -434,6 +434,20 @@ final class EventDispatcherTest {
   }
 
   @Test
+  void awaitSynchronous_listenerError() {
+    // an Error escaping a listener is rethrown as-is rather than wrapped
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var future = new CompletableFuture<@Nullable CacheEntryListenerException>();
+    var error = new AssertionError();
+    future.completeExceptionally(error);
+    dispatcher.pending.get().add(future);
+
+    var e = assertThrows(AssertionError.class, dispatcher::awaitSynchronous);
+    assertThat(e).isSameInstanceAs(error);
+    assertThat(dispatcher.pending.get()).isEmpty();
+  }
+
+  @Test
   void awaitSynchronous_listenerException() {
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     var thrown = new CacheEntryListenerException("listener");

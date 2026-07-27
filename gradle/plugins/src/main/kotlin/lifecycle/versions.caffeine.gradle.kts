@@ -1,13 +1,11 @@
 @file:Suppress("PackageDirectoryMismatch")
 import com.github.benmanes.gradle.versions.reporter.PlainTextReporter
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-import com.github.benmanes.gradle.versions.updates.resolutionstrategy.ComponentSelectionWithCurrent
-
-plugins {
-  id("com.github.ben-manes.versions")
-}
 
 tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
+  val log4jVersion = libs.versions.log4j.get()
+  val projectPath = project.path
+
   filterConfigurations = Spec<Configuration> {
     it.attributes.keySet().none { attr -> attr.name == "dagp.internal.artifacts" }
   }
@@ -15,14 +13,18 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
   checkConstraints = true
   resolutionStrategy {
     componentSelection {
-      all(Action<ComponentSelectionWithCurrent> {
+      all(Action {
         val ignoredGroups = listOf("com.beust")
+        val kotlinGroups = listOf("org.jetbrains", "org.jetbrains.kotlin")
         val stable = setOf("com.google.protobuf", "com.hazelcast", "javax.json.bind",
           "org.jetbrains.kotlin", "org.apache.logging.log4j", "org.osgi", "org.slf4j")
         if ((candidate.group in stable) && isNonStable(candidate.version)) {
           reject("Release candidate")
         } else if ((candidate.group in ignoredGroups) && (candidate.version != currentVersion)) {
           reject("Internal dependency")
+        } else if ((candidate.group in kotlinGroups) && (candidate.module != "kotlin-bom")
+            && (candidate.version != currentVersion)) {
+          reject("Use kotlin bill of materials")
         }
       })
     }
@@ -30,9 +32,9 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
   outputFormatter {
     outdated.dependencies.removeIf {
       // Ignore Gradle's internal log4j security constraint implicitly added to projects
-      it.group == "org.apache.logging.log4j" && (it.version!! < libs.versions.log4j.get())
+      it.group == "org.apache.logging.log4j" && (it.version!! < log4jVersion)
     }
-    PlainTextReporter(project, revision, gradleReleaseChannel).write(System.out, this)
+    PlainTextReporter(projectPath, revision, gradleReleaseChannel).write(System.out, this)
   }
 }
 

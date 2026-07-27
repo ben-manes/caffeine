@@ -17,6 +17,7 @@ __pycache__/
 .opencode/
 .agents/
 .codex/
+.local/
 AGENTS*.md
 .cifuzz-corpus
 .classpath

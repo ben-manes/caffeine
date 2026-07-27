@@ -552,12 +552,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public boolean replace(K key, V oldValue, V newValue) {
-    return replace(key, oldValue, newValue, /* shouldDiscardRefresh= */ true);
-  }
-
-  @Override
-  public boolean replace(K key, V oldValue, V newValue, boolean shouldDiscardRefresh) {
+  public boolean replace(K key, V oldValue, V newValue,
+      boolean shouldDiscardRefresh, boolean quietly) {
     requireNonNull(oldValue);
     requireNonNull(newValue);
 

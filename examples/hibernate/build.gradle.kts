@@ -5,7 +5,6 @@ import org.gradle.plugins.ide.eclipse.model.SourceFolder
 plugins {
   eclipse
   `java-library`
-  alias(libs.plugins.versions)
 }
 
 dependencies {

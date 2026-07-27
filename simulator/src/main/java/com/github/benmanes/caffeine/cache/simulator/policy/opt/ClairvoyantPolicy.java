@@ -46,6 +46,7 @@ public final class ClairvoyantPolicy implements Policy {
   private final PolicyStats policyStats;
   private final LongSortedSet data;
   private final Cursor cursor;
+
   private final int maximumSize;
 
   private long infiniteTimestamp;

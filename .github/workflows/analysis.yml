@@ -6,7 +6,7 @@ concurrency:
   cancel-in-progress: true
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-  ALLOWED_ENDPOINTS: >
+  ALLOWED_ENDPOINTS: >-
     api.adoptium.net:443
     api.foojay.io:443
     api.github.com:443
@@ -54,9 +54,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    strategy:
-      matrix:
-        java: [ 11, 26 ]
+    env:
+      JAVA_VERSION: 26
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -72,9 +71,9 @@ jobs:
         uses: ./.github/actions/run-gradle
         with:
           lint: 'true'
-          java: ${{ matrix.java }}
-          arguments: resolveExternalDependencies assemble
+          java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          arguments: resolveExternalDependencies assemble -x javadoc -x javadocJar
 
   forbidden-apis:
     name: Forbidden APIs

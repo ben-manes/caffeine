@@ -15,6 +15,12 @@ paths:
 ## Future Lifecycle
 - In-flight futures receive ASYNC_EXPIRY (~220 years) to prevent premature eviction during loading
 - On completion: `handleCompletion()` calls `replace()` to update weight and expiry for the real value
+- Completion replaces are **quiet** (`replace(..., quietly=true)` from `handleCompletion` and
+  `AsyncBulkCompleter.fillProxies`): the UpdateTask does weight/expiry bookkeeping but skips the
+  sketch increment and the climber's hit counter — a completion is bookkeeping, not a usage.
+  Loud completions doubled per-load admission frequency and recorded a synthetic hit per miss,
+  measurably degrading eviction. Don't re-add access recording there, and don't flag the
+  loud-user-replace vs quiet-completion asymmetry as an inconsistency
 - Null result or failed future → entry removed; user removal listener does NOT fire
 - Refresh failures preserve the old value (not removed)
 

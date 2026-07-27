@@ -14,7 +14,6 @@ buildscript {
 
 plugins {
   `kotlin-dsl`
-  alias(libs.plugins.versions)
   alias(libs.plugins.dependency.analysis)
 }
 
@@ -69,14 +68,14 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
   resolutionStrategy {
     componentSelection {
       val ignoredGroups = listOf("com.beust", "org.apache.logging.log4j",
-        "org.jetbrains.kotlin", "org.gradle.kotlin.kotlin-dsl")
+        "org.jetbrains", "org.jetbrains.kotlin", "org.gradle.kotlin.kotlin-dsl")
       val stable = setOf("com.fasterxml.jackson", "com.google.protobuf",
         "com.squareup.okhttp3", "org.slf4j")
-      val isNonStable = "^[0-9,.v-]+(-r)?$".toRegex()
+      val isStable = "^[0-9,.v-]+(-r)?$".toRegex()
       all(Action<ComponentSelectionWithCurrent> {
         if ((candidate.group in ignoredGroups) && (candidate.version != currentVersion)) {
           reject("Internal dependency")
-        } else if ((candidate.group in stable) && !isNonStable.matches(candidate.version)) {
+        } else if ((candidate.group in stable) && !isStable.matches(candidate.version)) {
           reject("Release candidate")
         }
       })

@@ -56,6 +56,26 @@ final class BoundedBufferTest {
   }
 
   @Test
+  void offer_fillReportsFull() {
+    var buffer = new BoundedBuffer<Boolean>();
+    for (int i = 0; i < (BoundedBuffer.BUFFER_SIZE - 1); i++) {
+      assertThat(buffer.offer(true)).isEqualTo(SUCCESS);
+    }
+
+    // the insertion that fills the last free slot is recorded and signals a drain
+    assertThat(buffer.offer(true)).isEqualTo(FULL);
+    assertThat(buffer.writes()).isEqualTo(BoundedBuffer.BUFFER_SIZE);
+
+    // an insertion into a full buffer is rejected
+    assertThat(buffer.offer(true)).isEqualTo(FULL);
+    assertThat(buffer.writes()).isEqualTo(BoundedBuffer.BUFFER_SIZE);
+
+    long[] read = new long[1];
+    buffer.drainTo(e -> read[0]++);
+    assertThat(read[0]).isEqualTo(BoundedBuffer.BUFFER_SIZE);
+  }
+
+  @Test
   void drain() {
     var buffer = new BoundedBuffer<Boolean>();
     for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {

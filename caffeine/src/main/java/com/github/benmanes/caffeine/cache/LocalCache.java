@@ -26,6 +26,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * An in-memory cache providing thread safety and atomicity guarantees. This interface provides an
@@ -92,11 +93,18 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
   /** See {@link Cache#getAllPresent}. */
   Map<K, V> getAllPresent(Iterable<? extends K> keys);
 
+  @Override
+  default boolean replace(K key, V oldValue, V newValue) {
+    return replace(key, oldValue, newValue, /* shouldDiscardRefresh= */ true, /* quietly= */ false);
+  }
+
   /**
    * See {@link ConcurrentMap#replace(Object, Object, Object)}. This method differs by optionally
-   * not discarding an in-flight refresh for the entry if replaced.
+   * not discarding an in-flight refresh for the entry if replaced and, when quiet, by not
+   * recording the update as an access with the eviction policy.
    */
-  boolean replace(K key, V oldValue, V newValue, boolean shouldDiscardRefresh);
+  @CanIgnoreReturnValue
+  boolean replace(K key, V oldValue, V newValue, boolean shouldDiscardRefresh, boolean quietly);
 
   @Override
   default @Nullable V compute(K key,

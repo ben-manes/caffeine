@@ -217,6 +217,28 @@ final class CacheProxyTest {
   }
 
   @Test
+  void loadAll_listenerError() throws IOException {
+    // a synchronous entry listener failing with an Error completes the dispatcher's chain
+    // exceptionally, which is reported to the completion listener as a CacheLoaderException
+    try (CloseableCacheLoader loader = Mockito.mock();
+        var fixture = jcacheFixture(loader, Mockito.mock(), Mockito.mock())) {
+      when(loader.loadAll(anyIterable())).thenReturn(ImmutableMap.of(KEY_1, VALUE_1));
+      CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+        throw new AssertionError();
+      };
+      fixture.jcache().registerCacheEntryListener(new MutableCacheEntryListenerConfiguration<>(
+          () -> listener, /* filterFactory= */ null,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+
+      var completionListener = new CompletionListenerFuture();
+      fixture.jcache().loadAll(Set.of(KEY_1),
+          /* replaceExistingValues= */ true, completionListener);
+      var e = assertThrows(ExecutionException.class, completionListener::get);
+      assertThat(e).hasCauseThat().isInstanceOf(CacheLoaderException.class);
+    }
+  }
+
+  @Test
   @SuppressWarnings("NullableProblems")
   void loadAll_nullMapping() throws IOException, InterruptedException, ExecutionException {
     try (CloseableCacheLoader loader = Mockito.mock();

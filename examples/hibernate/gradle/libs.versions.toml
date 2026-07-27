@@ -5,7 +5,6 @@ hibernate = "8.0.0.Beta1"
 junit-jupiter = "6.1.2"
 log4j2 = "2.26.1"
 truth = "1.4.5"
-versions = "0.54.0"
 
 [libraries]
 caffeine = { module = "com.github.ben-manes.caffeine:jcache", version.ref = "caffeine" }
@@ -22,6 +21,3 @@ truth = { module = "com.google.truth:truth", version.ref = "truth" }
 [bundles]
 hibernate = ["hibernate-core", "hibernate-jcache", "hibernate-hikaricp"]
 log4j2 = ["log4j2-core", "log4j2-slf4j"]
-
-[plugins]
-versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }

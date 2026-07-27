@@ -22,6 +22,10 @@ Consider:
 - Missing failure modes (tests passing when they shouldn't)
 - Incorrect CI matrix coverage
 - Silent test skipping
+- Multi-line YAML values that get interpolated elsewhere (a `>` folded scalar
+  keeps a trailing newline; splicing one into another folded scalar embeds that
+  newline mid-string, so a consumer splitting on literal spaces mis-parses the
+  spliced-in value's last token)
 - Performance problems in the build
 - Security issues (dependency vulnerabilities, secret exposure)
 - Bad practices that could cause false confidence

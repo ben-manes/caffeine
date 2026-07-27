@@ -236,7 +236,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
         try {
           // update the weight and expiration timestamps
-          cache().replace(key, castedFuture, castedFuture, /* shouldDiscardRefresh= */ false);
+          cache().replace(key, castedFuture, castedFuture,
+              /* shouldDiscardRefresh= */ false, /* quietly= */ true);
           cache().statsCounter().recordLoadSuccess(loadTime);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during asynchronous load", t);
@@ -344,8 +345,10 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           cache.remove(key, future);
         } else {
           try {
-            // update the weight and expiration timestamps
-            cache.replace(key, future, future);
+            // update the weight and expiration timestamps; a same-instance finalization is not a
+            // mutation, so an in-flight refresh is preserved (mirrors handleCompletion)
+            cache.replace(key, future, future,
+                /* shouldDiscardRefresh= */ false, /* quietly= */ true);
           } catch (Throwable t) {
             logger.log(Level.WARNING, "Exception thrown during asynchronous load", t);
             cache.remove(key, future);

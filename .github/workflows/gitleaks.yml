@@ -9,7 +9,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 env:
-  ALLOWED_ENDPOINTS: >
+  ALLOWED_ENDPOINTS: >-
     api.github.com:443
     github.com:443
     objects.githubusercontent.com:443

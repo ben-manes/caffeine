@@ -88,9 +88,9 @@ public final class ClairvoyantTraceReader implements TraceReader {
   private final Path path;
 
   public ClairvoyantTraceReader(TraceReader delegate, long skip, long limit) {
-    var materialized = materialize(delegate, skip, limit);
     characteristics = delegate.characteristics();
     weighted = characteristics.contains(WEIGHTED);
+    var materialized = materialize(delegate, skip, limit, weighted);
     penaltyAware = materialized.penaltyAware;
     cursors = new ConcurrentLinkedQueue<>();
     recordWidth = materialized.recordWidth;
@@ -160,7 +160,8 @@ public final class ClairvoyantTraceReader implements TraceReader {
    * entry per distinct key on the heap.
    */
   @SuppressWarnings("MustBeClosedChecker")
-  private Materialized materialize(TraceReader delegate, long skip, long limit) {
+  private static Materialized materialize(TraceReader delegate,
+      long skip, long limit, boolean weighted) {
     try {
       var file = Files.createTempFile("clairvoyant", ".oracle");
       var state = new Materialized(file, /* penaltyAware= */ false, /* recordWidth= */ 0);
@@ -168,7 +169,7 @@ public final class ClairvoyantTraceReader implements TraceReader {
         if (delegate instanceof TraceReader.KeyOnlyTraceReader keyReader) {
           materializeKeys(keyReader, channel, state, skip, limit);
         } else {
-          materializeEvents(delegate, channel, state, skip, limit);
+          materializeEvents(delegate, channel, state, skip, limit, weighted);
         }
         fillNextAccess(channel, state.recordWidth, state.count);
       }
@@ -219,8 +220,8 @@ public final class ClairvoyantTraceReader implements TraceReader {
 
   /** The general path for a trace carrying weight or penalties. */
   @SuppressWarnings("MustBeClosedChecker")
-  private void materializeEvents(TraceReader delegate, FileChannel channel,
-      Materialized state, long skip, long limit) {
+  private static void materializeEvents(TraceReader delegate, FileChannel channel,
+      Materialized state, long skip, long limit, boolean weighted) {
     var writer = new MutableObject<Writer>();
     try (Stream<AccessEvent> events = delegate.events().skip(skip).limit(limit)) {
       events.forEachOrdered(event -> {

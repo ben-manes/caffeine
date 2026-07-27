@@ -12,6 +12,12 @@ paths:
 - Policy interface: `record(AccessEvent)`, `finished()`, `stats()`
 - New policies need `@PolicySpec` annotation and registration in `Registry`
 - Run single sim: `./gradlew simulator:run -q -Dcaffeine.simulator.*=...`
+- Laptop sleep kills background runs mid-sweep. `caffeinate -i` is best-effort from agent
+  shells — its IOKit assertion was observed failing in BOTH sandboxed and unsandboxed
+  sessions ("Failed to create PreventUserIdleSystemSleep assertion"; verify with
+  `pmset -g assertions`) — so for multi-hour sweeps keep a user-level awake session
+  (Amphetamine, or caffeinate in a user terminal), and ALWAYS make sweep outputs resumable
+  (append + skip-done rows) so an interruption costs nothing
 - Run multi-size with charts: `./gradlew simulator:simulate -q --maximumSize=... --metric=...`
 - Convert trace formats: `./gradlew simulator:rewrite -q --inputFormat=... --outputFormat=...`
 
@@ -82,6 +88,7 @@ temporary file. Key invariants:
 
 ## Hit-Rate Validation
 
+- **Noise floor — never count a sub-noise delta as a win.** `product.Caffeine` has randomized admission, giving a single-seed run-to-run hit-rate noise floor of **~0.1–0.8pp** (measured: `loop@101` spread 0.12, `multi3@2981` spread 0.49). A delta under **~1pp is not resolvable from noise** and must not be reported as a win — this is a *recurring* mistake (tiny wins overcounted as achievements). Report **absolute pp, not relative %** (relative exaggerates noise on low-HR cells); **multi-seed (≥3, ideally 5) any low-HR cell** where a single seed is dominated by the hashing seed. The bar for a change is **robust wins (≥~2pp, multi-seed) with no collapse**, judged cell-by-cell — never a `net +Npp` sum, which is inflated by the sea of sub-noise cells. The 2026-05 large-cache climber sweeps learned this the hard way (a "−68%" was 5,119→1,631 hits, both ~0% HR — pure noise).
 - Canonical trace set: bundled LIRS (`loop`, `multi1/2/3`, `2_pools`, `cpp`, `cs`, `scan` at sizes 500/1k/2k); ARC's `DS1` at 1M to 8M; `S3` at 100k to 800k; the corda_large + 5×loop + corda_large at size 512 stress test.
 - For LIRS-family bit-for-bit matching: set `non-resident-multiplier` very high (e.g. 100) so the memory bound doesn't fire — published references don't bound shadows.
 - To run a C/C++ reference side-by-side: use `simulator:rewrite --outputFormat=LIRS` to produce one-int-per-line traces, strip `*` checkpoints with `grep -v '^\*$'` if the reference reader rejects them.

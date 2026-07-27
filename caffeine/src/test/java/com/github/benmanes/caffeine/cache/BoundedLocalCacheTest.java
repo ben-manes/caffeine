@@ -2360,11 +2360,17 @@ final class BoundedLocalCacheTest {
     cache.frequencySketch().ensureCapacity(1);
 
     var buffer = cache.readBuffer;
-    for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {
+    for (int i = 0; i < (BoundedBuffer.BUFFER_SIZE - 1); i++) {
       int result = buffer.offer(dummy);
       assertThat(result).isEqualTo(Buffer.SUCCESS);
     }
+
+    // the offer that fills the last free slot is recorded and reports full
     @Var int result = buffer.offer(dummy);
+    assertThat(result).isEqualTo(Buffer.FULL);
+
+    // an offer on the full buffer is rejected
+    result = buffer.offer(dummy);
     assertThat(result).isEqualTo(Buffer.FULL);
 
     var refreshed = cache.afterRead(dummy, /* now= */ 0, /* recordHit= */ true);
@@ -2414,15 +2420,16 @@ final class BoundedLocalCacheTest {
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
   void drain_onRead(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var buffer = cache.readBuffer;
-    for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {
+    for (int i = 0; i < (BoundedBuffer.BUFFER_SIZE - 1); i++) {
       var value = cache.get(context.firstKey());
       assertThat(value).isEqualTo(context.original().get(context.firstKey()));
     }
 
     long pending = buffer.size();
     assertThat(buffer.writes()).isEqualTo(pending);
-    assertThat(pending).isEqualTo(BoundedBuffer.BUFFER_SIZE);
+    assertThat(pending).isEqualTo(BoundedBuffer.BUFFER_SIZE - 1);
 
+    // the read that fills the buffer is recorded and triggers the drain
     var value = cache.get(context.firstKey());
     assertThat(value).isEqualTo(context.original().get(context.firstKey()));
 
@@ -2853,6 +2860,76 @@ final class BoundedLocalCacheTest {
         CompletableFuture.completedFuture(context.absentValue()));
     assertThat(future).succeedsWith(context.absentValue());
     assertThat(localCache.refreshes()).doesNotContainKey(keyRef);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.ASYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, keys = ReferenceType.STRONG)
+  void asyncCompletion_doesNotRecordAccess(AsyncCache<Int, Int> cache, CacheContext context) {
+    var localCache = asBoundedLocalCache(cache);
+    localCache.frequencySketch().ensureCapacity(context.maximumSize());
+
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    future.complete(context.absentValue());
+    cache.synchronous().cleanUp();
+
+    assertThat(localCache.missesInSample()).isEqualTo(1);
+    assertThat(localCache.hitsInSample()).isEqualTo(0);
+    assertThat(localCache.frequencySketch().frequency(context.absentKey())).isEqualTo(1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.ASYNC, population = Population.EMPTY,
+      loader = Loader.BULK_IDENTITY, maximumSize = Maximum.FULL, keys = ReferenceType.STRONG)
+  void asyncBulkCompletion_doesNotRecordAccess(
+      AsyncLoadingCache<Int, Int> cache, CacheContext context) {
+    var localCache = asBoundedLocalCache(cache);
+    localCache.frequencySketch().ensureCapacity(context.maximumSize());
+
+    cache.getAll(context.absentKeys()).join();
+    cache.synchronous().cleanUp();
+
+    assertThat(localCache.missesInSample()).isEqualTo(context.absentKeys().size());
+    assertThat(localCache.hitsInSample()).isEqualTo(0);
+    for (var key : context.absentKeys()) {
+      assertThat(localCache.frequencySketch().frequency(key)).isEqualTo(1);
+    }
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, keys = ReferenceType.STRONG)
+  void replace_notQuietly_recordsAccess(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.frequencySketch().ensureCapacity(context.maximumSize());
+    int frequency = cache.frequencySketch().frequency(context.firstKey());
+    long hits = cache.hitsInSample();
+
+    var oldValue = requireNonNull(context.original().get(context.firstKey()));
+    cache.replace(context.firstKey(), oldValue, context.absentValue(),
+        /* shouldDiscardRefresh= */ true, /* quietly= */ false);
+    cache.cleanUp();
+
+    assertThat(cache.hitsInSample()).isEqualTo(hits + 1);
+    assertThat(cache.frequencySketch().frequency(context.firstKey())).isEqualTo(frequency + 1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, keys = ReferenceType.STRONG)
+  void replace_quietly_doesNotRecordAccess(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.frequencySketch().ensureCapacity(context.maximumSize());
+    int frequency = cache.frequencySketch().frequency(context.firstKey());
+    long hits = cache.hitsInSample();
+
+    var oldValue = requireNonNull(context.original().get(context.firstKey()));
+    cache.replace(context.firstKey(), oldValue, context.absentValue(),
+        /* shouldDiscardRefresh= */ true, /* quietly= */ true);
+    cache.cleanUp();
+
+    assertThat(cache.hitsInSample()).isEqualTo(hits);
+    assertThat(cache.frequencySketch().frequency(context.firstKey())).isEqualTo(frequency);
   }
 
   @ParameterizedTest
@@ -5092,7 +5169,7 @@ final class BoundedLocalCacheTest {
     // This changes the writeTime but keeps the value reference identical.
     context.ticker().advance(Duration.ofMillis(1));
     assertThat(cache.replace(context.firstKey(), originalValue, originalValue,
-        /* shouldDiscardRefresh= */ false)).isTrue();
+        /* shouldDiscardRefresh= */ false, /* quietly= */ true)).isTrue();
 
     // Resume the loader. The ABA check should detect the write time change
     // and discard the refreshed value.
@@ -5131,7 +5208,7 @@ final class BoundedLocalCacheTest {
     // Replace with a DIFFERENT value instance without discarding the refresh token.
     context.ticker().advance(Duration.ofMillis(1));
     assertThat(cache.replace(context.firstKey(), originalValue, context.absentValue(),
-        /* shouldDiscardRefresh= */ false)).isTrue();
+        /* shouldDiscardRefresh= */ false, /* quietly= */ true)).isTrue();
 
     var future = requireNonNull(cache.refreshes().get(node.getKeyReference()));
     context.executor().resume();

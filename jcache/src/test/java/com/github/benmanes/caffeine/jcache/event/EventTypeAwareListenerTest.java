@@ -72,8 +72,9 @@ final class EventTypeAwareListenerTest {
       when(unknown.ordinal()).thenReturn(4);
       eventTypes.when(EventType::values).thenReturn(new EventType[] {
           EventType.CREATED, EventType.UPDATED, EventType.REMOVED, EventType.EXPIRED, unknown });
-      forwarder.dispatch(new JCacheEntryEvent<>(cache, unknown,
+      var thrown = forwarder.dispatch(new JCacheEntryEvent<>(cache, unknown,
           /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2));
+      assertThat(thrown).isNull();
       verifyNoInteractions(listener);
     }
   }

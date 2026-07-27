@@ -83,7 +83,7 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
           onExpired(event);
           return null;
       }
-      logger.log(Level.WARNING, "Unknown event type: {}",
+      logger.log(Level.WARNING, "Unknown event type: {0}",
           event.getEventType(), new IllegalStateException());
       return null;
     } catch (CacheEntryListenerException e) {

@@ -46,7 +46,9 @@ interface Buffer<E> {
    * threads insert concurrently.
    *
    * @param e the element to add
-   * @return {@code Buffer.SUCCESS}, {@code Buffer.FAILED}, or {@code Buffer.FULL}
+   * @return {@code Buffer.SUCCESS}, {@code Buffer.FAILED}, or {@code Buffer.FULL}; an insertion
+   *         that fills the last free slot is recorded and reports {@code Buffer.FULL} so that the
+   *         caller drains promptly
    */
   int offer(E e);
 

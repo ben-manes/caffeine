@@ -286,11 +286,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     nodeFactory = NodeFactory.newFactory(builder, isAsync);
     evictionListener = builder.getEvictionListener(isAsync);
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
+    writeBuffer = new MpscGrowableArrayQueue<>(WRITE_BUFFER_MIN, WRITE_BUFFER_MAX);
     readBuffer = evicts() || collectKeys() || collectValues() || expiresAfterAccess()
         ? new BoundedBuffer<>()
         : Buffer.disabled();
-    accessPolicy = (evicts() || expiresAfterAccess()) ? this::onAccess : e -> {};
-    writeBuffer = new MpscGrowableArrayQueue<>(WRITE_BUFFER_MIN, WRITE_BUFFER_MAX);
+    accessPolicy = (evicts() || expiresAfterAccess())
+        ? node -> onAccess(node, /* quietly= */ false)
+        : node -> {};
 
     if (evicts()) {
       setMaximumSize(builder.getMaximum());
@@ -1894,15 +1896,24 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
-  /** Updates the node's location in the page replacement policy. */
+  /**
+   * Updates the node's location in the page replacement policy.
+   * <p>
+   * A quiet access reorders but does not record the usage with the admission filter or the adaptive
+   * climber's sample, as an asynchronous cache's load completion finalizes the entry's weight
+   * rather than conveying a usage; counting it once per load skews the admission frequencies and
+   * inflates the climber's hit sample.
+   */
   @GuardedBy("evictionLock")
-  void onAccess(Node<K, V> node) {
+  void onAccess(Node<K, V> node, boolean quietly) {
     if (evicts()) {
       var keyRef = node.getKeyReferenceOrNull();
       if ((keyRef == null) || !node.isAlive()) {
         return;
       }
-      frequencySketch().increment(keyRef);
+      if (!quietly) {
+        frequencySketch().increment(keyRef);
+      }
       if (node.inWindow()) {
         reorder(accessOrderWindowDeque(), node);
       } else if (node.inMainProbation()) {
@@ -1910,7 +1921,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       } else {
         reorder(accessOrderProtectedDeque(), node);
       }
-      setHitsInSample(hitsInSample() + 1);
+      if (!quietly) {
+        setHitsInSample(hitsInSample() + 1);
+      }
     } else if (expiresAfterAccess()) {
       reorder(accessOrderWindowDeque(), node);
     }
@@ -2085,10 +2098,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   /** Updates the weighted size. */
   final class UpdateTask implements Runnable {
     final int weightDifference;
+    final boolean quietly;
     final Node<K, V> node;
 
     public UpdateTask(Node<K, V> node, int weightDifference) {
+      this(node, weightDifference, /* quietly= */ false);
+    }
+
+    public UpdateTask(Node<K, V> node, int weightDifference, boolean quietly) {
       this.weightDifference = weightDifference;
+      this.quietly = quietly;
       this.node = node;
     }
 
@@ -2108,20 +2127,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           if (node.getPolicyWeight() > maximum()) {
             evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
           } else if (node.getPolicyWeight() <= windowMaximum()) {
-            onAccess(node);
+            onAccess(node, quietly);
           } else if (accessOrderWindowDeque().contains(node)) {
             accessOrderWindowDeque().moveToFront(node);
           }
         } else if (node.inMainProbation()) {
             if (node.getPolicyWeight() <= maximum()) {
-              onAccess(node);
+              onAccess(node, quietly);
             } else {
               evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
             }
         } else {
           setMainProtectedWeightedSize(mainProtectedWeightedSize() + weightDifference);
           if (node.getPolicyWeight() <= maximum()) {
-            onAccess(node);
+            onAccess(node, quietly);
           } else {
             evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
           }
@@ -2132,7 +2151,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           evictEntries();
         }
       } else if (expiresAfterAccess()) {
-        onAccess(node);
+        onAccess(node, quietly);
       }
     }
   }
@@ -2734,13 +2753,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  public boolean replace(K key, V oldValue, V newValue) {
-    return replace(key, oldValue, newValue, /* shouldDiscardRefresh= */ true);
-  }
-
-  @Override
   @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
-  public boolean replace(K key, V oldValue, V newValue, boolean shouldDiscardRefresh) {
+  public boolean replace(K key, V oldValue, V newValue,
+      boolean shouldDiscardRefresh, boolean quietly) {
     requireNonNull(key);
     requireNonNull(oldValue);
     requireNonNull(newValue);
@@ -2786,8 +2801,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     int weightedDifference = (weight - ctx.oldWeight);
     if (ctx.exceedsTolerance || (weightedDifference != 0)) {
-      afterWrite(new UpdateTask(node, weightedDifference));
-    } else {
+      afterWrite(new UpdateTask(node, weightedDifference, quietly));
+    } else if (!quietly) {
       afterRead(node, ctx.now, /* recordHit= */ false);
     }
 
