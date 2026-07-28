@@ -314,6 +314,60 @@ final class TimerWheelTest {
   }
 
   @Test
+  void transfer_empty() {
+    var timerWheel = new TimerWheel<Int, Int>();
+    var from = new Sentinel<Int, Int>();
+    var to = new Sentinel<Int, Int>();
+    var timer = new Timer(0);
+    timerWheel.link(to, timer);
+
+    timerWheel.transfer(from, to);
+
+    assertList(from);
+    assertList(to, timer);
+  }
+
+  @Test
+  void transfer_appendsAtTail() {
+    var timerWheel = new TimerWheel<Int, Int>();
+    var from = new Sentinel<Int, Int>();
+    var to = new Sentinel<Int, Int>();
+    var resident = new Timer(0);
+    var first = new Timer(0);
+    var second = new Timer(0);
+    timerWheel.link(to, resident);
+    timerWheel.link(from, first);
+    timerWheel.link(from, second);
+
+    timerWheel.transfer(from, to);
+
+    assertList(from);
+    assertList(to, resident, first, second);
+  }
+
+  @Test
+  void advance_exception_restoresChain() {
+    BoundedLocalCache<Int, Int> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Int, Int>();
+    when(cache.evictEntry(any(), any(), anyLong()))
+        .thenReturn(true).thenThrow(new IllegalArgumentException());
+
+    timerWheel.nanos = 0L;
+    var first = new Timer(SPANS[0]);
+    var second = new Timer(SPANS[0]);
+    var third = new Timer(SPANS[0]);
+    for (var timer : List.of(first, second, third)) {
+      timerWheel.schedule(timer);
+    }
+
+    assertThrows(IllegalArgumentException.class,
+        () -> timerWheel.advance(cache, 2 * SPANS[0], Integer.MAX_VALUE));
+
+    // the entry that threw is restored with the unprocessed remainder, links intact
+    assertList(timerWheel.wheel[0][1], third, second);
+  }
+
+  @Test
   void advance_boundedPerCycle() {
     BoundedLocalCache<Int, Int> cache = Mockito.mock();
     var timerWheel = new TimerWheel<Int, Int>();
@@ -559,6 +613,19 @@ final class TimerWheelTest {
 
     timerWheel.advance(cache, clock + TimeUnit.DAYS.toNanos(1), Integer.MAX_VALUE);
     checkEmpty(timerWheel);
+  }
+
+  /** Asserts that the sentinel's list holds exactly these entries, with both links intact. */
+  @SafeVarargs
+  private static void assertList(Node<Int, Int> sentinel, Node<Int, Int>... nodes) {
+    @Var var prev = sentinel;
+    for (var node : nodes) {
+      assertThat(prev.getNextInVariableOrder()).isSameInstanceAs(node);
+      assertThat(node.getPreviousInVariableOrder()).isSameInstanceAs(prev);
+      prev = node;
+    }
+    assertThat(prev.getNextInVariableOrder()).isSameInstanceAs(sentinel);
+    assertThat(sentinel.getPreviousInVariableOrder()).isSameInstanceAs(prev);
   }
 
   private static void checkEmpty(TimerWheel<Int, Int> timerWheel) {

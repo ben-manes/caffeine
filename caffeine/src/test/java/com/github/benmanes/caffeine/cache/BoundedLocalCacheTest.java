@@ -90,6 +90,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InaccessibleObjectException;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -353,6 +354,41 @@ final class BoundedLocalCacheTest {
 
     GcFinalization.awaitClear(task.reference);
     task.run();
+  }
+
+  @Test
+  void maintenance_recursive() {
+    // A listener that runs on the caller's thread observes the timer wheel mid-rebuild, where the
+    // bucket being expired is detached and walked by a stack reference. Descheduling the successor
+    // that the walk is holding would strand the remainder of the chain, so the reentry is rejected
+    var ticker = new FakeTicker();
+    var removed = new ArrayList<@Nullable Integer>();
+    var reentrant = new AtomicBoolean();
+    var self = new AtomicReference<Cache<Integer, Integer>>();
+
+    Cache<Integer, Integer> cache = Caffeine.newBuilder()
+        .expireAfter(Expiry.creating((Integer key, Integer value) -> Duration.ofMinutes(1)))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .<Integer, Integer>removalListener((key, value, cause) -> {
+          removed.add(key);
+          if (reentrant.compareAndSet(false, true)) {
+            var victim = requireNonNull(self.get());
+            victim.invalidate(2);
+            victim.cleanUp();
+          }
+        })
+        .build();
+    self.set(cache);
+
+    for (int i = 1; i <= 6; i++) {
+      cache.put(i, i);
+    }
+    ticker.advance(Duration.ofMinutes(2));
+    cache.cleanUp();
+
+    assertThat(removed).containsExactly(1, 2, 3, 4, 5, 6);
+    assertThat(cache.estimatedSize()).isEqualTo(0);
   }
 
   @Test

@@ -44,6 +44,7 @@ import com.google.errorprone.annotations.Var;
  */
 final class TimerWheelFuzzer {
   private static final Operation[] OPERATIONS = Operation.values();
+  private static final Reentry[] REENTRIES = Reentry.values();
   /** The maximum time span supported by the timer wheel. */
   private static final long MAX_SPAN = SPANS[SPANS.length - 1];
 
@@ -61,9 +62,27 @@ final class TimerWheelFuzzer {
     var inWheel = new HashSet<Timer>();
 
     BoundedLocalCache<Object, Object> cache = Mockito.mock();
-    var expired = new ArrayList<Node<Object, Object>>();
+
+    // An eviction notifies a removal listener, which may run on the caller's thread and re-enter
+    // the cache. The wheel is then observed while a bucket is detached, so a nested operation must
+    // leave the structure well-formed and must not strand the entries being processed
+    var suppressed = new boolean[1];
     when(cache.evictEntry(any(), any(), anyLong())).then(invocation -> {
-      expired.add(invocation.getArgument(0));
+      Node<Object, Object> node = invocation.getArgument(0);
+      long now = invocation.getArgument(2);
+      assertWithMessage("Expired entry should not be in the future (time=%s, clock=%s)",
+          node.getVariableTime(), now).that(node.getVariableTime() - now).isAtMost(0L);
+
+      inWheel.remove(node);
+
+      if (!suppressed[0]) {
+        suppressed[0] = true;
+        try {
+          reenter(data, timerWheel, allTimers, inWheel, cache);
+        } finally {
+          suppressed[0] = false;
+        }
+      }
       return true;
     });
 
@@ -81,7 +100,7 @@ final class TimerWheelFuzzer {
           break;
         }
         case ADVANCE: {
-          clock = advance(data, clock, timerWheel, inWheel, cache, expired, maxOffset);
+          clock = advance(data, clock, timerWheel, cache, maxOffset);
           break;
         }
       }
@@ -98,12 +117,9 @@ final class TimerWheelFuzzer {
     // completeness when there's enough room for a full MAX_SPAN advance, since the wheel
     // needs a full rotation to cascade and expire all levels.
     if (!inWheel.isEmpty() && (maxSafeOffset(clock) >= MAX_SPAN)) {
-      expired.clear();
+      suppressed[0] = true;
       timerWheel.advance(cache, clock + MAX_SPAN, Integer.MAX_VALUE);
 
-      for (var node : expired) {
-        inWheel.remove(node);
-      }
       assertWithMessage("All entries should be expired after advancing past MAX_SPAN")
           .that(inWheel).isEmpty();
       assertWithMessage("Wheel should be empty after final advance")
@@ -113,25 +129,47 @@ final class TimerWheelFuzzer {
   }
 
   private static long advance(FuzzedDataProvider data, long clock,
-      TimerWheel<Object, Object> timerWheel, Set<Timer> inWheel,
-      BoundedLocalCache<Object, Object> cache, List<Node<Object, Object>> expired, long maxOffset) {
+      TimerWheel<Object, Object> timerWheel, BoundedLocalCache<Object, Object> cache,
+      long maxOffset) {
     long advance = data.consumeLong(0, maxOffset);
     long newClock = clock + advance;
 
-    expired.clear();
+    // The eviction callback validates each entry against the clock that it expired at and updates
+    // the reference model, so that a nested advance is accounted for at its own clock
     timerWheel.advance(cache, newClock, Integer.MAX_VALUE);
+    return newClock;
+  }
 
-    // Validate that every expired entry must have variableTime <= newClock (no premature eviction)
-    for (var node : expired) {
-      long time = node.getVariableTime();
-      assertWithMessage(
-          "Expired entry should not be in the future (time=%s, clock=%s)", time, newClock)
-              .that(time - newClock).isAtMost(0L);
+  /**
+   * Performs a nested wheel operation from within an eviction callback, when a bucket is detached
+   * and being processed. A nested caller reaches an entry through a reference that it already
+   * holds, so descheduling one must splice its neighbors rather than strand the chain.
+   */
+  private static void reenter(FuzzedDataProvider data, TimerWheel<Object, Object> timerWheel,
+      List<Timer> allTimers, Set<Timer> inWheel, BoundedLocalCache<Object, Object> cache) {
+    long clock = timerWheel.nanos;
+    var reentry = REENTRIES[data.consumeInt(0, REENTRIES.length - 1)];
+    switch (reentry) {
+      case NONE: {
+        break;
+      }
+      case SCHEDULE: {
+        schedule(data, clock, timerWheel, allTimers, inWheel, maxSafeOffset(clock));
+        break;
+      }
+      case DESCHEDULE: {
+        deschedule(data, timerWheel, allTimers, inWheel);
+        break;
+      }
+      case ADVANCE: {
+        timerWheel.advance(cache, clock + data.consumeLong(0, maxSafeOffset(clock)),
+            Integer.MAX_VALUE);
+        break;
+      }
     }
 
-    // Update the reference model
-    inWheel.removeAll(expired);
-    return newClock;
+    // The buckets must stay well-formed while a detached bucket is being processed
+    checkLinkedListIntegrity(timerWheel);
   }
 
   private static void deschedule(FuzzedDataProvider data, TimerWheel<Object, Object> timerWheel,
@@ -152,8 +190,8 @@ final class TimerWheelFuzzer {
     long offset = data.consumeLong(0, maxOffset);
     long time = clock + offset;
     var timer = new Timer(time);
-    allTimers.add(timer);
     timerWheel.schedule(timer);
+    allTimers.add(timer);
     inWheel.add(timer);
   }
 
@@ -209,6 +247,8 @@ final class TimerWheelFuzzer {
   }
 
   private enum Operation { SCHEDULE, DESCHEDULE, ADVANCE }
+
+  private enum Reentry { NONE, SCHEDULE, DESCHEDULE, ADVANCE }
 
   @NullUnmarked
   private static final class Timer extends Node<@NonNull Object, @NonNull Object> {

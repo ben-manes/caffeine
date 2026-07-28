@@ -69,11 +69,14 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
   };
 
   final Node<K, V>[][] wheel;
+  final Node<K, V> pending;
 
+  boolean advancing;
   long nanos;
 
   @SuppressWarnings({"rawtypes", "unchecked"})
   TimerWheel() {
+    pending = new Sentinel<>();
     wheel = new Node[BUCKETS.length][];
     for (int i = 0; i < wheel.length; i++) {
       wheel[i] = new Node[BUCKETS[i]];
@@ -94,8 +97,12 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
    * @return the unused portion of the eviction budget; zero if the limit was reached
    */
   @CanIgnoreReturnValue
-  @SuppressWarnings("PMD.UnusedAssignment")
   public int advance(BoundedLocalCache<K, V> cache, long currentTimeNanos, @Var int limit) {
+    if (advancing) {
+      return limit;
+    }
+
+    advancing = true;
     long previousTimeNanos = nanos;
     nanos = currentTimeNanos;
 
@@ -123,11 +130,13 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
           break;
         }
       }
+      return limit;
     } catch (Throwable t) {
       nanos = previousTimeNanos;
       throw t;
+    } finally {
+      advancing = false;
     }
-    return limit;
   }
 
   /**
@@ -150,43 +159,48 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
 
     for (int i = start; i < end; i++) {
       Node<K, V> sentinel = timerWheel[i & mask];
-      Node<K, V> prev = sentinel.getPreviousInVariableOrder();
-      @Var Node<K, V> node = sentinel.getNextInVariableOrder();
-      sentinel.setPreviousInVariableOrder(sentinel);
-      sentinel.setNextInVariableOrder(sentinel);
-
-      while (node != sentinel) {
-        Node<K, V> next = node.getNextInVariableOrder();
-        node.setPreviousInVariableOrder(null);
-        node.setNextInVariableOrder(null);
-
-        try {
-          if ((node.getVariableTime() - nanos) > 0) {
-            schedule(node);
-          } else if (cache.evictEntry(node, RemovalCause.EXPIRED, nanos)) {
-            if (--limit == 0) {
-              // Leave the unprocessed remainder in the bucket for the next advance to process
-              if (next != sentinel) {
-                next.setPreviousInVariableOrder(sentinel.getPreviousInVariableOrder());
-                sentinel.getPreviousInVariableOrder().setNextInVariableOrder(next);
-                sentinel.setPreviousInVariableOrder(prev);
+      transfer(sentinel, pending);
+      try {
+        @Var Node<K, V> node;
+        while ((node = pending.getNextInVariableOrder()) != pending) {
+          deschedule(node);
+          try {
+            if ((node.getVariableTime() - nanos) > 0) {
+              schedule(node);
+            } else if (cache.evictEntry(node, RemovalCause.EXPIRED, nanos)) {
+              if (--limit == 0) {
+                // Leave the unprocessed remainder for the next advance to process
+                return 0;
               }
-              return 0;
+            } else {
+              schedule(node);
             }
-          } else {
-            schedule(node);
+          } catch (Throwable t) {
+            link(pending, node);
+            throw t;
           }
-          node = next;
-        } catch (Throwable t) {
-          node.setPreviousInVariableOrder(sentinel.getPreviousInVariableOrder());
-          node.setNextInVariableOrder(next);
-          sentinel.getPreviousInVariableOrder().setNextInVariableOrder(node);
-          sentinel.setPreviousInVariableOrder(prev);
-          throw t;
         }
+      } finally {
+        transfer(pending, sentinel);
       }
     }
     return limit;
+  }
+
+  /** Moves the entries held by one list to the tail of another. */
+  void transfer(Node<K, V> from, Node<K, V> to) {
+    Node<K, V> first = from.getNextInVariableOrder();
+    if (first == from) {
+      return;
+    }
+    Node<K, V> last = from.getPreviousInVariableOrder();
+    from.setPreviousInVariableOrder(from);
+    from.setNextInVariableOrder(from);
+
+    first.setPreviousInVariableOrder(to.getPreviousInVariableOrder());
+    to.getPreviousInVariableOrder().setNextInVariableOrder(first);
+    last.setNextInVariableOrder(to);
+    to.setPreviousInVariableOrder(last);
   }
 
   /**

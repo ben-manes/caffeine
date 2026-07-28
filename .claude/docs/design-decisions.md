@@ -43,9 +43,9 @@ fresh hit-rate sample," but it is the completion mechanism for a work-capped tra
 
 The symmetric give-back after the transfer loop (`mainProtectedMaximum += quota;
 windowMaximum -= quota`) keeps the partition sum (`windowMaximum + mainProtectedMaximum +
-implicit-probation == maximum`) constant and the region maxima non-negative on every
-re-application — the maxima track the *partial* transfer that actually happened (added in
-`3a217b22c`, "Fix bugs in adaptive policy"). Two consequences worth not flagging:
+implicit-probation == maximum`) constant — the maxima track the *partial* transfer that
+actually happened (added in `3a217b22c`, "Fix bugs in adaptive policy"). Three consequences
+worth not flagging:
 - **Pinned leftover.** If the carried `quota` is smaller than the policy weight of every
   candidate (e.g. `quota = 1` while all entries weigh 100), the loop moves nothing and
   re-stores the same value, so the window stays put until a real sample overwrites
@@ -54,6 +54,23 @@ re-application — the maxima track the *partial* transfer that actually happene
   protected but only decrements `mainProtectedWeightedSize` for protected moves, so probation
   absorbs the difference between the window-maximum shift and the protected weight moved
   (`Δ windowMaximum == total weight transferred` holds exactly).
+- **The quota is a soft knob, not an accounting invariant.** `quota` is how much room the
+  climber may borrow from the other region for a probabilistic guess about an unknown future;
+  taking a little too much or too little is meaningless. A node carrying a transient negative
+  `policyWeight` (a same-key `UpdateTask` reordered against its predecessor — see "Two weight
+  fields") passes `quota < weight` and *inflates* the quota via `quota -= weight`, so the
+  give-back can overshoot and move `windowMaximum` / `mainProtectedMaximum` opposite to the
+  commanded direction, or out of `[0, maximum]`. That is not a defect and must not be clamped:
+  the partition sum still holds, the region *weighted sizes* stay exact (they debit the same
+  snapshot they credited), a negative `windowMaximum` / `mainProtectedMaximum` only makes
+  `evictFromWindow` / `demoteFromMainProtected` drain that region — a policy-quality wobble the
+  next climb walks back — and an out-of-range maximum re-clamps on the next call
+  (`min(adjustment, donor)`, the `<= 1` and `max(0, …)` guards). The invariant that matters is
+  that `policyWeight` *converges*, so a region's size keeps reflecting the entries inside it;
+  how a mid-flight snapshot lands on the quota does not. Clamping the quota also would not
+  restore a reservation — it just relocates the inaccuracy from the maxima to the transfer
+  volume. Re-derived four times (arithmetic F4 → adversarial-input F1 → adaptivity L1/F1);
+  adjudicated NOT-A-BUG by Ben 2026-07-27.
 
 The hardening companion to this: `determineAdjustment` guards the small-cache sample-period
 `ratio` against a `0/0` NaN (when both the maximum and step size are zero). The NaN would
@@ -705,6 +722,46 @@ maps to the "last" bucket of a wheel are
 visited on the next full wheel cycle (~68s for `wheel[0]`), which is within
 expiration's documented best-effort amortization. Read-path `hasExpired` also
 evicts on access.
+
+**`expire` detaches a bucket onto the `pending` sentinel, not into the stack frame.** The bucket
+being expired is moved off the wheel so that a recursive call cannot find those entries — that
+detachment is deliberate and load-bearing (a rescheduled node can otherwise land back in the bucket
+being drained, notably the catch-all `wheel[length][0]`, and be reprocessed). What it does *not*
+protect against is a nested operation that reaches an entry by a reference it **already holds**,
+e.g. a `RemovalTask` calling `deschedule`; hiding the bucket only defeats traversal-based access.
+Before the `pending` sentinel the detached chain was reachable only from `expire`'s stack frame, and
+its ends still pointed at the live bucket sentinel, so a nested `deschedule` of the successor the
+walk was carrying nulled that node's links and stranded the rest of the chain (permanently — those
+timers never fire again, and the walk NPE'd at the capture line *outside* the per-node restore
+catch). Reproduced as a real defect; latent since "Variable expiration support (fixes #70, #75,
+#141)" in 2017. Three properties keep it correct now, don't regress any of them:
+- Detaching itself is **not** about recursion: it stops `schedule()` re-linking a not-yet-due entry
+  into the list being drained and reprocessing it, which is unavoidable on the last wheel (a single
+  bucket). Don't justify the detach by "hides entries from a recursive advance" — `advancing`
+  covers that, and the reprocessing hazard is what the detach actually earns its keep on.
+- The chain lives on a **field** (`pending.next`), not a local, so a nested `unlink` of the head
+  repairs the walk's anchor through the ordinary path with no special case. The loop must re-read
+  `pending.getNextInVariableOrder()` each iteration rather than carry `next` across the callback.
+  This is the leg `advancing` cannot cover: a nested `deschedule`/`reschedule` arrives via
+  `drainWriteBuffer` → `RemovalTask`/`UpdateTask` and never calls `advance`. Verified by keeping
+  `advancing` while restoring the stack-frame detach — the regression test fails identically.
+- Both lists stay **circular**. A linear or sentinel-less chain breaks `reschedule`'s
+  `getNextInVariableOrder() != null` scheduled-check (a tail with a null `next` reads as
+  unscheduled, so it gets linked into a bucket while still chained) and makes `unlink` a silent
+  no-op on the tail. The invariant is *scheduled ⟺ non-null links*, which is also why the in-flight
+  node's links are nulled before it is processed. A self-closing ring fixes the live-bucket splice
+  but **not** the stranding — verified by building it and watching the regression test still fail.
+- `advance` **defers while `advancing`**. A recursive advance would append its bucket to the same
+  list and splice the combination into its own bucket, and — the leg that matters more — it moves
+  `nanos` forward underneath the in-progress caller, which then rewinds or skips buckets and leaves
+  entries permanently unexpired. It returns before touching `nanos`, so the nested call is a true
+  no-op rather than skipping a time span. The predicate must be the explicit flag, **not** "is
+  `pending` non-empty": the outer walk empties `pending` the moment it unlinks its last node, so
+  the inferred version lets a nested advance through in exactly that window. That was a real
+  defect in the first cut of this fix, found by the fuzzer in 559 runs.
+
+Pinned by `BoundedLocalCacheTest.maintenance_recursive` (a removal listener on a same-thread
+executor invalidating a sibling and calling `cleanUp()`).
 
 **Interner `drainKeyReferences` does not need a value-identity check.** Unlike
 `drainValueReferences`, which guards against the value being replaced on the
