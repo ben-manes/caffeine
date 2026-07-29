@@ -480,6 +480,27 @@ final class TimerWheelTest {
     assertThat(timerWheel.getExpirationDelay()).isLessThan(SPANS[1]);
   }
 
+  @Test
+  void getExpirationDelay_occupiedCurrentBucket() {
+    BoundedLocalCache<Int, Int> cache = Mockito.mock();
+    var timerWheel = new TimerWheel<Int, Int>();
+
+    long clock = SPANS[1];
+    timerWheel.nanos = clock;
+
+    // due at the next wheel[1] tick, so held one bucket ahead of the current one
+    timerWheel.schedule(new Timer(clock + SPANS[1]));
+
+    // advance to just shy of that tick, leaving the event SPANS[0] away
+    long offset = SPANS[1] - SPANS[0];
+    timerWheel.advance(cache, clock + offset, Integer.MAX_VALUE);
+
+    // a timer a full wheel[1] revolution out wraps onto the current bucket
+    timerWheel.schedule(new Timer(clock + offset + SPANS[2] - 1));
+
+    assertThat(timerWheel.getExpirationDelay()).isAtMost(SPANS[1] - offset);
+  }
+
   @ParameterizedTest @MethodSource("clock")
   void getExpirationDelay_hierarchy(long clock) {
     BoundedLocalCache<Int, Int> cache = Mockito.mock();
@@ -516,36 +537,30 @@ final class TimerWheelTest {
     }
     timerWheel.advance(cache, duration, Integer.MAX_VALUE);
 
-    @Var long minDelay = Long.MAX_VALUE;
-    @Var int minSpan = Integer.MAX_VALUE;
-    @Var int minBucket = Integer.MAX_VALUE;
-    for (int i = 0; i < timerWheel.wheel.length; i++) {
+    assertWithMessage("clock=%s, duration=%s", clock, duration)
+        .that(timerWheel.getExpirationDelay()).isEqualTo(nextFlushDelay(timerWheel));
+  }
+
+  /**
+   * Returns when the wheel will next flush a bucket that holds a timer, which either expires the
+   * entry or cascades it towards a finer resolution, or {@link Long#MAX_VALUE} if the wheel is
+   * empty. A bucket is flushed when the wheel reaches its tick, so a current bucket, whose tick
+   * has already passed, is flushed by the next tick.
+   */
+  private static long nextFlushDelay(TimerWheel<Int, Int> timerWheel) {
+    @Var long delay = Long.MAX_VALUE;
+    for (int i = 0; i < SHIFT.length; i++) {
+      long ticks = (timerWheel.nanos >>> SHIFT[i]);
+      int mask = timerWheel.wheel[i].length - 1;
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
-        var timers = getTimers(timerWheel.wheel[i][j]);
-        for (long delay : timers) {
-          if (delay < minDelay) {
-            minDelay = delay;
-            minBucket = j;
-            minSpan = i;
-          }
+        if (getTimers(timerWheel.wheel[i][j]).isEmpty()) {
+          continue;
         }
+        long buckets = Math.max(1, (j - ticks) & mask);
+        delay = Math.min(delay, (buckets << SHIFT[i]) - (timerWheel.nanos & (SPANS[i] - 1)));
       }
     }
-
-    long delay = timerWheel.getExpirationDelay();
-    if (minDelay == Long.MAX_VALUE) {
-      assertWithMessage(
-          "delay=%s but minDelay=%s, minSpan=%s, minBucket=%s", delay, minDelay, minSpan, minBucket)
-          .that(delay).isEqualTo(Long.MAX_VALUE);
-      return;
-    }
-
-    long maxError = minDelay + SPANS[minSpan];
-    if (maxError > delay) {
-      assertWithMessage(
-          "delay=%s but minDelay=%s, minSpan=%s, minBucket=%s", delay, minDelay, minSpan, minBucket)
-          .that(delay).isLessThan(maxError);
-    }
+    return delay;
   }
 
   private static LongStream clock() {

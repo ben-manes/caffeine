@@ -763,6 +763,33 @@ catch). Reproduced as a real defect; latent since "Variable expiration support (
 Pinned by `BoundedLocalCacheTest.maintenance_recursive` (a removal listener on a same-thread
 executor invalidating a sibling and calling `cleanUp()`).
 
+**`getExpirationDelay` returns when a bucket is next *flushed*, not when an entry is due.** A flush
+either expires the entry or **cascades it towards a finer resolution**, so the wake-up is needed even
+when nothing is due at it. `expire` covers ticks `[previousTicks, previousTicks + delta]`, so a bucket
+at offset *b* flushes at `(b << SHIFT[i]) - (nanos & spanMask)` and the **current** bucket — whose tick
+has already passed — flushes at offset **1**, one tick out, *not* a full `SPANS[i]`. Both places that
+compute this must use that offset-by-one:
+- The main scan clamps with `Math.max(1, j - start)`. It previously fell back to a whole `SPANS[i]`
+  when the current bucket was occupied *and* returned before probing `start + 1`, hiding an event one
+  bucket ahead that then fired up to a span late (68.7s / 1.22h / 1.63d on wheels 1–3; wheel 0 is
+  absorbed because both values are ≤ `Pacer.TOLERANCE`). Reachable because `findBucket` chooses the
+  **wheel by duration** but the **index by absolute time**: a duration within `nanos & spanMask` of
+  `SPANS[i+1]` wraps a full revolution onto the current bucket, so a far-future entry masks an
+  imminent one. Don't restore the `delay > 0 ? delay : SPANS[i]` ternary — with `buckets >= 1` the
+  result is always positive, so the guard is dead.
+- `peekAhead` checks the higher wheel's **current** bucket as well as `ticks + 1`; both flush at the
+  same instant. This leg is benign on its own — only wrap-arounds land in a wheel ≥ 1 current bucket
+  (measured: over 300 random wheels no entry there is ever due before that wheel's next tick), so the
+  missed flush would only re-file an alias. It is honored anyway so the derivation "current bucket ⇒
+  only aliases" isn't load-bearing, and so the contract is assertable.
+
+Partial-drain remainders are **not** affected — `expireVariableEntries` re-arms via
+`PROCESSING_TO_REQUIRED`, so the backlog never depends on this delay. Pinned by
+`TimerWheelTest.getExpirationDelay_occupiedCurrentBucket` and by `getExpirationDelay_fuzzy`, which
+asserts **exact equality** against an oracle scanning every bucket of every wheel. That fuzzy
+assertion was previously vacuous — it guarded the assert with its own condition and compared an
+absolute `variableTime` against a relative delay — which is why the defect survived the fuzzer.
+
 **Interner `drainKeyReferences` does not need a value-identity check.** Unlike
 `drainValueReferences`, which guards against the value being replaced on the
 same node, keys on Interned nodes never rebind. If two hash-colliding weak keys

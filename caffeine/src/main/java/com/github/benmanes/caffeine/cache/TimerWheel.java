@@ -296,9 +296,9 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
         if (next == sentinel) {
           continue;
         }
-        long buckets = (j - start);
+        // an occupied current bucket is revisited when the wheel next ticks
+        long buckets = Math.max(1, j - start);
         @Var long delay = (buckets << SHIFT[i]) - (nanos & spanMask);
-        delay = (delay > 0) ? delay : SPANS[i];
 
         for (int k = i + 1; k < SHIFT.length; k++) {
           long nextDelay = peekAhead(k);
@@ -323,10 +323,11 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
 
     long spanMask = SPANS[index] - 1;
     int mask = timerWheel.length - 1;
-    int probe = (int) ((ticks + 1) & mask);
-    Node<K, V> sentinel = timerWheel[probe];
-    Node<K, V> next = sentinel.getNextInVariableOrder();
-    return (next == sentinel) ? Long.MAX_VALUE : (SPANS[index] - (nanos & spanMask));
+    Node<K, V> current = timerWheel[(int) (ticks & mask)];
+    Node<K, V> upcoming = timerWheel[(int) ((ticks + 1) & mask)];
+    boolean empty = (current.getNextInVariableOrder() == current)
+        && (upcoming.getNextInVariableOrder() == upcoming);
+    return empty ? Long.MAX_VALUE : (SPANS[index] - (nanos & spanMask));
   }
 
   /**
