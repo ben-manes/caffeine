@@ -3536,7 +3536,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     private final long limit;
 
     SizeLimiter(int expectedSize, long limit) {
-      requireArgument(limit >= 0);
+      requireArgument(limit >= 0, "limit cannot be negative: %s", limit);
       this.expectedSize = expectedSize;
       this.limit = limit;
     }
@@ -3556,7 +3556,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     long weightedSize;
 
     WeightLimiter(long weightLimit) {
-      requireArgument(weightLimit >= 0);
+      requireArgument(weightLimit >= 0, "weight limit cannot be negative: %s", weightLimit);
       this.weightLimit = weightLimit;
     }
 
@@ -4538,7 +4538,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return unit.convert(cache.expiresAfterAccessNanos(), TimeUnit.NANOSECONDS);
       }
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
-        requireArgument(duration >= 0);
+        requireArgument(duration >= 0, "duration cannot be negative: %s %s", duration, unit);
         cache.setExpiresAfterAccessNanos(unit.toNanos(duration));
         cache.scheduleAfterWrite();
       }
@@ -4580,7 +4580,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return unit.convert(cache.expiresAfterWriteNanos(), TimeUnit.NANOSECONDS);
       }
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
-        requireArgument(duration >= 0);
+        requireArgument(duration >= 0, "duration cannot be negative: %s %s", duration, unit);
         cache.setExpiresAfterWriteNanos(unit.toNanos(duration));
         cache.scheduleAfterWrite();
       }
@@ -4623,7 +4623,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @Override public void setExpiresAfter(K key, long duration, TimeUnit unit) {
         requireNonNull(key);
         requireNonNull(unit);
-        requireArgument(duration >= 0);
+        requireArgument(duration >= 0, "duration cannot be negative: %s %s", duration, unit);
         Object lookupKey = cache.nodeFactory.newLookupKey(key);
         Node<K, V> node = cache.data.get(lookupKey);
         if (node != null) {
@@ -4643,7 +4643,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @Override public @Nullable V put(K key, V value, long duration, TimeUnit unit) {
         requireNonNull(unit);
         requireNonNull(value);
-        requireArgument(duration >= 0);
+        requireArgument(duration >= 0, "duration cannot be negative: %s %s", duration, unit);
         return cache.isAsync
             ? putAsync(key, value, duration, unit)
             : putSync(key, value, duration, unit, /* onlyIfAbsent= */ false);
@@ -4651,7 +4651,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @Override public @Nullable V putIfAbsent(K key, V value, long duration, TimeUnit unit) {
         requireNonNull(unit);
         requireNonNull(value);
-        requireArgument(duration >= 0);
+        requireArgument(duration >= 0, "duration cannot be negative: %s %s", duration, unit);
         return cache.isAsync
             ? putIfAbsentAsync(key, value, duration, unit)
             : putSync(key, value, duration, unit, /* onlyIfAbsent= */ true);

@@ -336,7 +336,7 @@ public final class Caffeine<K, V> {
   public Caffeine<K, V> initialCapacity(int initialCapacity) {
     requireState(this.initialCapacity == UNSET_INT,
         "initial capacity was already set to %s", this.initialCapacity);
-    requireArgument(initialCapacity >= 0);
+    requireArgument(initialCapacity >= 0, "initial capacity must not be negative");
     this.initialCapacity = initialCapacity;
     return this;
   }

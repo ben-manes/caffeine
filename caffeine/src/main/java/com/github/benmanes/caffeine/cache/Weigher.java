@@ -91,7 +91,7 @@ final class BoundedWeigher<K, V> implements Weigher<K, V>, Serializable {
   @Override
   public int weigh(K key, V value) {
     int weight = delegate.weigh(key, value);
-    requireArgument(weight >= 0);
+    requireArgument(weight >= 0, "weight cannot be negative: %s", weight);
     return weight;
   }
 

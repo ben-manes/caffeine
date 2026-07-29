@@ -292,7 +292,9 @@ final class CaffeineTest {
 
   @Test
   void initialCapacity_negative() {
-    assertThrows(IllegalArgumentException.class, () -> Caffeine.newBuilder().initialCapacity(-1));
+    var exception = assertThrows(IllegalArgumentException.class,
+        () -> Caffeine.newBuilder().initialCapacity(-1));
+    assertThat(exception).hasMessageThat().isEqualTo("initial capacity must not be negative");
   }
 
   @Test

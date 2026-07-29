@@ -219,6 +219,39 @@ the explicit `preserveTimestamps` path. A reader expecting
 surprised; the source does not call this out, so this entry is the canonical
 place the behavior is documented (preferred over a source comment).
 
+**A contract-violating user component is the user's problem — Caffeine breaks reasonably and
+pushes back, it does not add defensive ceremony.** This covers a throwing `Ticker`, `Weigher`,
+`Expiry`, or loader; a broken `equals`/`hashCode`; a hostile `CompletableFuture`; and `Error`/OOME.
+Repeatedly re-derived — it has been raised as a fresh finding in at least seven audit runs, so the
+reasoning is pinned here rather than re-argued:
+- **The guarded/unguarded split is deliberate, not an oversight.** `StatsCounter`
+  (`GuardedStatsCounter`), `Scheduler` (`GuardedScheduler`), and the removal/eviction listeners are
+  wrapped in catch-`Throwable` because they are *fire-and-forget* — there is a sensible default to
+  fall back to (do nothing, `CacheStats.empty()`, `DisabledFuture`). `Ticker`, `Weigher`, `Expiry`,
+  and the loader are **value-bearing**: they return something the cache must have, so there is no
+  default to recover from and propagating is correct. `Ticker` is not "the asymmetry" — it is on the
+  correct side of the line.
+- **The recurring finding shape** is that a value-bearing throw lands *after* a commit and leaves
+  skewed state: `AddTask.run`/`UpdateTask.run` advance `weightedSize`/`windowWeightedSize`/
+  `mainProtectedWeightedSize`/`policyWeight` before an `expirationTicker().read()` argument to
+  `evictEntry` (permanent telescoping-sum skew, node linked into no deque); completion prologues in
+  `refreshIfNeeded`/`handleCompletion`/`getAll` read `statsTicker()` before their cleanup (orphaned
+  `refreshes` token, stranded async proxies). The mechanisms are **real and present** — confirm them
+  and close, don't propose containment. Hoisting the reads or adding try/finally is ceremony against
+  a cache whose clock is already broken, and the containment op is usually throw-prone on the same
+  trigger.
+- **Ben's precedent:** Quarkus shipped a broken `CompletableFuture`; Caffeine pushed back and Quarkus
+  fixed it — a better outcome than defensive code would have produced. Don't add a must-not-throw
+  clause to `Ticker`'s javadoc either; that was considered and declined.
+- **A throw inside `maintenance` does not lose work.** The `finally` CASes `PROCESSING_TO_IDLE → IDLE`
+  on a clean exit *and* on a throw (only a racing writer's `PROCESSING_TO_REQUIRED` forces `REQUIRED`),
+  so the un-drained buffer entries are **deferred, not dropped**: they stay in the write buffer, the
+  next write's `scheduleAfterWrite` re-arms from `IDLE`, and a full buffer forces `afterWrite`'s
+  inline `maintenance` fallback. `performCleanUp` skipping `rescheduleCleanUpIfIncomplete` on the
+  throw path is the same benign deferral. Don't "fix" the exception path to force `REQUIRED`.
+  (The one leg here that *was* a real defect — the inline fallback skipping the write's own task —
+  is already fixed by the `try { drains } finally { task.run(); }` in `maintenance`; keep it.)
+
 ## References
 
 **Non-volatile keyReference in WeakValueReference** is a plain field. It is set
