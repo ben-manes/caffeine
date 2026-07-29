@@ -90,6 +90,15 @@ final class CaffeinatedGuavaTest {
   }
 
   @Test
+  @SuppressWarnings({"DataFlowIssue", "NullAway"})
+  void nativeLoader_nullValue() {
+    com.github.benmanes.caffeine.cache.CacheLoader<Integer, Integer> loader = key -> null;
+    var cache = CaffeinatedGuava.build(Caffeine.newBuilder(), loader);
+    assertThrows(InvalidCacheLoadException.class, () -> cache.get(1));
+    assertThrows(InvalidCacheLoadException.class, () -> cache.getUnchecked(1));
+  }
+
+  @Test
   void hasMethod_notFound() {
     assertThat(CaffeinatedGuava.hasMethod(CacheLoader.from(k -> k), "abc")).isFalse();
   }

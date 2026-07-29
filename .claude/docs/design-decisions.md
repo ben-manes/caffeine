@@ -10,6 +10,13 @@ these, stop — they're load-bearing.
 API (inherited from ConcurrentLinkedHashMap where weight was >=1, Guava's Cache where >= 0).
 Used internally for in-flight async futures.
 
+*The re-scan cost is accepted.* `evictFromWindow` restarts at the deque head each cycle and
+never relocates a zero-weight node, and `evictFromMain` skips its victim inline, so cold
+pinned entries at the LRU end are re-traversed whenever the region is over budget — O(pinned)
+per cycle in the worst case. A dedicated zero-weight queue to hold them out of the scan was
+explored and rejected: it made the eviction paths messier for little value. Don't propose it
+again without a measurement showing the scan actually costs something.
+
 **Transient negative weightedSize is acceptable.** `maximumSize` allows eviction
 before/after threshold. Eventual consistency is fine given documented promises.
 Weight convergence is guaranteed by the telescoping sum property across all write
@@ -496,9 +503,15 @@ a concurrent writer refills during the drain) on a cache whose next expiration i
 distant, that then goes idle: the buffered policy tasks — LRU/weight bookkeeping over
 CHM mappings that are *already committed and visible* — wait for that distant fire or
 any later write / read-stripe / `cleanUp`. Worst observable is a transient over-
-`maximumSize` on an idle cache, the documented async-eviction contract. Best-effort
-amortized maintenance; don't drop the gate to force a ~1s reschedule (it churns the
-distant fire's cancel+reschedule for a narrow, self-healing transient).
+`maximumSize` on an idle cache, the documented async-eviction contract — plus, under
+*variable* expiry, a deferred **expiration notification**: an entry whose `AddTask` is
+still buffered is not yet in the timer wheel, so it was invisible to the
+`getExpirationDelay` that armed the pending fire, and its removal listener waits for that
+fire (which can exceed the entry's own TTL, since the armed time came from the
+policy-visible entries) or the next cache operation. Reads stay correct throughout — lazy
+`hasExpired` gates every read. Best-effort amortized maintenance; don't drop the gate to
+force a ~1s reschedule (it churns the distant fire's cancel+reschedule for a narrow,
+self-healing transient).
 
 ## Refresh
 
@@ -532,6 +545,17 @@ refresh discards whatever token is in `refreshes` without trying to prove it's
 the same generation. Any refresh in flight was launched against a pre-mutation
 snapshot, so killing it is correct for linearizability even if it happens to be
 a "newer" generation from a later reader.
+
+**A rejected reload is notified even though it was never in the cache.** When the
+completion's `compute` declines to install the reloaded value it sets a cause and calls
+`notifyRemoval(key, value, cause)` — `EXPLICIT` on the absent exit, `REPLACED` on the reject
+exit (a same-instance reload is not notified). So a `RemovalListener` can see a value that was
+never a mapping. That is intentional and follows from linearizability: the value was produced,
+the cache decided not to keep it, and the listener is the disposal hook, so *not* notifying
+would be the surprise — the value would be dropped with no chance to release what it holds.
+Deliberately not spelled out in the public javadoc: the surrounding refresh ordering is
+vague there (Guava was not linearizable either), and pinning this corner would over-specify it.
+Don't "fix" the notification away, and don't treat the two causes as interchangeable.
 
 The one exception is a **query-style no-op**, flagged with `RemapHints.preserveRefresh`:
 `putIfAbsent` on a present key, a non-matching conditional `remove`/`replace`, or a
@@ -848,4 +872,4 @@ zero-duration fix). When touching proxy fields, remember that streams from
 ≤ 3.2.3 carry literal `0` for unset durations, and that a field *absent* from an
 old stream deserializes to the JVM default (`0`/`null`) — field initializers do
 not run during deserialization. Golden streams written by real released jars
-live under `.claude/reports/audit-serialization-repro/`.
+live under `.local/audits/<model>/audit-serialization-repro/`.

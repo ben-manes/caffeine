@@ -36,6 +36,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import javax.cache.CacheException;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
@@ -474,5 +475,19 @@ final class TypesafeConfigurationTest {
       loaded.add(name);
       return super.loadClass(name, resolve);
     }
+  }
+
+  @Test
+  void from_malformedSetting() {
+    // A parser-typed failure would escape createCache/getCache uncaught, so it is reported as the
+    // specification's configuration failure type instead
+    var config = ConfigFactory
+        .parseString("caffeine.jcache.malformed.policy.maximum.size = abc")
+        .withFallback(ConfigFactory.load());
+
+    var error = assertThrows(CacheException.class,
+        () -> TypesafeConfigurator.from(config, "malformed"));
+    assertThat(error).hasCauseThat().isInstanceOf(ConfigException.class);
+    assertThat(error).hasMessageThat().contains("malformed");
   }
 }

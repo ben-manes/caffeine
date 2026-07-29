@@ -41,7 +41,7 @@ The temporal walker addresses these by walking commit-by-commit:
 ```
 walker.py + per-commit.txt
     ├── git log --reverse → list commits
-    ├── ensure detached worktree at .claude/reports/.../worktree/
+    ├── ensure detached worktree at .local/audits/.../worktree/
     ├── git show <sha> -- <scope> → diff per commit
     ├── git checkout <sha> in the worktree (snapshot at commit time)
     ├── claude -p (per commit, cwd=worktree, tools=Read/Glob/Grep)
@@ -159,11 +159,12 @@ one-active-script discipline keeps quota and logs sane.
 | `invariant-ledger.txt` | Variant: forward-tracked invariant ledger |
 
 Mutable state, the snapshot worktree, and reports live under
-`.claude/reports/audit-temporal-walk-<module>/` — the suffix is derived
+`.local/audits/<model>/audit-temporal-walk-<module>/` (see
+`.claude/rules/audit-output.md`; export `AUDIT_MODEL`) — the suffix is derived
 from the first segment of `WALKER_SCOPE`, plus a `-test` discriminator for a
 test-tree scope, so caffeine/jcache and main/test audits don't clobber each
 other. A `--run-name` variant suffixes its state/log/worktree within that dir.
-The whole `.claude/reports/` tree is gitignored at the project root. State
+The whole `.local/` tree is gitignored at the project root. State
 files are local to a developer's run; the worktree is reusable across walks.
 
 ## Tuning

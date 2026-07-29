@@ -35,6 +35,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import audit_paths
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[2]
 MAIN_SCOPE = "caffeine/src/main/java/com/github/benmanes/caffeine/cache/"
@@ -61,7 +63,7 @@ COMBINED_NAME = "findings-ALL.md"
 
 
 def reports_dir(scope: str) -> Path:
-    return REPO_ROOT / ".claude" / "reports" / f"audit-temporal-walk-{module_of(scope)}"
+    return audit_paths.reports_dir(REPO_ROOT, module_of(scope))
 
 
 def findings_path(name: str, scope: str) -> Path:

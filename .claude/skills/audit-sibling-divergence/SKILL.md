@@ -116,7 +116,7 @@ agent gets the prompt below, adapted to its group. Run them in a single
 message so they execute in parallel.
 
 Tell each subagent to write its report to a group-suffixed path
-(`.claude/reports/audit-sibling-divergence-group<letter>.md`), never to the
+(`.local/audits/<model>/audit-sibling-divergence-group<letter>.md`), never to the
 canonical `audit-sibling-divergence.md` — that path is reserved for the
 orchestrator's consolidated report (Step 5), and parallel groups writing it
 clobber each other. If a group returns its report inline instead, persist it
@@ -267,7 +267,8 @@ Tag each confirmed finding with the divergence axis:
   underlying Caffeine method it delegates to, or the external spec/reference it claims
   to match
 
-Write the full report to `.claude/reports/audit-sibling-divergence.md`.
+Write the full report to `.local/audits/<model>/audit-sibling-divergence.md`
+(see `.claude/rules/audit-output.md`).
 
 Format:
 

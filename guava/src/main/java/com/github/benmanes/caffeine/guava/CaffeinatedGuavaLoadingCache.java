@@ -38,6 +38,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.UncheckedExecutionException;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
  * A Caffeine-backed loading cache through a Guava facade.
@@ -62,7 +63,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   public V get(K key) throws ExecutionException {
     requireNonNull(key);
     try {
-      return cache.get(key);
+      return requireLoaded(cache.get(key));
     } catch (InvalidCacheLoadException e) {
       throw e;
     } catch (CacheLoaderException e) {
@@ -79,7 +80,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   public V getUnchecked(K key) {
     requireNonNull(key);
     try {
-      return cache.get(key);
+      return requireLoaded(cache.get(key));
     } catch (InvalidCacheLoadException e) {
       throw e;
     } catch (CacheLoaderException e) {
@@ -130,6 +131,15 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   @SuppressWarnings("FutureReturnValueIgnored")
   public void refresh(K key) {
     cache.refresh(key);
+  }
+
+  /** Returns the loaded value, or throws if absent. */
+  @CanIgnoreReturnValue
+  private static <V> V requireLoaded(@Nullable V value) {
+    if (value == null) {
+      throw new InvalidCacheLoadException("null value");
+    }
+    return value;
   }
 
   abstract static class CaffeinatedLoader<K, V> implements CacheLoader<K, V>, Serializable {

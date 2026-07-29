@@ -1,6 +1,6 @@
 version: "1.0"
 projectJDK: "corretto-26"
-linter: jetbrains/qodana-jvm-community:2026.1
+linter: jetbrains/qodana-jvm-community:2026.2
 profile:
   name: qodana.recommended
 licenseRules:

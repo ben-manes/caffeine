@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
+import static java.nio.charset.CodingErrorAction.REPORT;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.BufferedReader;
@@ -42,7 +43,8 @@ public abstract class TextTraceReader extends AbstractTraceReader {
   @SuppressWarnings("PMD.CloseResource")
   protected Stream<String> lines() {
     InputStream input = readFile();
-    var reader = new BufferedReader(new InputStreamReader(input, UTF_8));
+    var reader = new BufferedReader(new InputStreamReader(input,
+        UTF_8.newDecoder().onMalformedInput(REPORT).onUnmappableCharacter(REPORT)));
     return reader.lines().map(String::trim).onClose(() -> Closeables.closeQuietly(reader));
   }
 }

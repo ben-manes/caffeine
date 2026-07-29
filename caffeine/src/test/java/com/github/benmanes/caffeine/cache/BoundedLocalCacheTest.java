@@ -2730,6 +2730,29 @@ final class BoundedLocalCacheTest {
     assertThat(cache.adjustment()).isEqualTo(0);
   }
 
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
+  void adapt_resizeSeedsDirectionFromFreshBaseline(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    prepareForAdaption(cache, context, /* recencyBias= */ false);
+    cache.setPreviousSampleHitRate(0.80);
+    cache.setAdjustment(-cache.maximum());
+
+    cache.setMaximumSize(cache.maximum() / 2);
+    assertThat(cache.adjustment()).isEqualTo(0);
+    assertThat(cache.previousSampleHitRate()).isEqualTo(0);
+
+    int sampleSize = cache.frequencySketch().sampleSize;
+    cache.setMissesInSample(sampleSize / 2);
+    cache.setHitsInSample(sampleSize - cache.missesInSample());
+    cache.determineAdjustment();
+
+    // Judged against no baseline the sample is an improvement, so the climb follows the direction
+    // that stepSize seeds instead of reversing against the prior geometry's high-water mark
+    assertThat(cache.adjustment()).isGreaterThan(0);
+  }
+
   private static void prepareForAdaption(BoundedLocalCache<Int, Int> cache,
       CacheContext context, boolean recencyBias) {
     cache.setStepSize((recencyBias ? 1 : -1) * Math.abs(cache.stepSize()));
@@ -3406,6 +3429,26 @@ final class BoundedLocalCacheTest {
         .filter(n -> n.getCause() == EXPIRED)
         .collect(toImmutableList());
     assertThat(expiredNotifications).hasSize(1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON, weigher = CacheWeigher.TEN,
+      maximumSize = Maximum.FULL, expireAfterWrite = Expire.ONE_MINUTE,
+      removalListener = Listener.CONSUMING)
+  void compute_expiredEntry_mappingThrows_evictionCommitted(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // The weighted expired-entry variant runs parameterized so the validation listener also proves
+    // that weightedSize converges, which the hand-built sibling cannot observe
+    context.ticker().advance(Duration.ofMinutes(2));
+
+    assertThrows(IllegalStateException.class, () ->
+        cache.compute(context.firstKey(), (k, v) -> {
+          throw new IllegalStateException("compute failure");
+        }));
+
+    assertThat(cache).doesNotContainKey(context.firstKey());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.firstKey(), context.original().get(context.firstKey())).exclusively();
   }
 
   @ParameterizedTest

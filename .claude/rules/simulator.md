@@ -42,6 +42,31 @@ the real weight and optimize byte hit rate amid an object-hit-rate panel. Not wo
 routinely-mixed characteristics make a cross-capability comparison genuinely useful (the enum has a single
 value — scaffolding that never expanded).
 
+## Reporting Fidelity
+
+- **"Evictions" is each policy's own accounting, not a normalized framework counter.** For an entry
+  the policy never admits, `CAMP`/`GDWheel` count an eviction, `S3FIFO`/`Sieve` count nothing, and
+  `GDSF` reports a rejection. Don't reconcile them: how an *oversized* entry interacts with eviction
+  is part of the algorithm's design, and a policy that flushes its LRU to admit one is its designer's
+  choice. Classic LRU simply is not size-aware — the answer is to not run it on such a trace (see
+  Trace Characteristics), or to implement a size-aware variant as its own policy, not to retrofit
+  size-awareness into a published algorithm on its author's behalf.
+- **The rewriter's output is best-effort for an external tool, and knowingly loose.** A `.gz`
+  output name writes an *uncompressed* file under that name (nothing gzips it), `LirsTraceWriter`
+  emits the full 64-bit key where the reference C readers parse one signed int per line, and
+  CloudPhysics folds keys into its 32-bit format so distinct keys can collide. None of this is
+  fixed: the rewriter exists to hand a trace to another tool, and that tool fails loudly on input
+  it cannot read, so the cost of the looseness is a confusing minute rather than a wrong result.
+  Don't add compression, range checks, or collision warnings here without a concrete need — it was
+  tried and reverted as more machinery than the export path deserves.
+- **Text traces must be valid UTF-8.** `TextTraceReader` decodes with `CodingErrorAction.REPORT`.
+  Silent replacement would map distinct malformed byte sequences onto U+FFFD and alias their keys —
+  invisible in a hit rate, and real for readers whose key is derived from a text field (the MSR
+  hostname, the Baleen shard).
+- **Disclosed chart/sampling limitations** (not defects, don't "fix" silently): the JFreeChart size
+  axis is *categorical*, so an exponential size sweep renders equidistant rather than to scale; and
+  GUESS sampling is with-replacement, so a sample may draw the same entry twice.
+
 ## Clairvoyant Look-Ahead (opt.Clairvoyant + admission.Clairvoyant)
 
 Bélády's MIN (`opt.Clairvoyant`) and clairvoyant admission need each request's *next-access time* — an

@@ -707,11 +707,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     double stepSize = Math.max(HILL_CLIMBER_STEP_PERCENT * max, HILL_CLIMBER_MIN_INITIAL_STEP);
 
     setMaximum(max);
-    setWindowMaximum(window);
-    setMainProtectedMaximum(mainProtected);
-
+    setAdjustment(0);
     setHitsInSample(0);
     setMissesInSample(0);
+    setWindowMaximum(window);
+    setPreviousSampleHitRate(0.0);
+    setMainProtectedMaximum(mainProtected);
     setStepSize((max <= SMALL_CACHE_THRESHOLD) ? stepSize : -stepSize);
 
     if ((frequencySketch() != null) && !isWeighted() && (weightedSize() >= (max >>> 1))) {

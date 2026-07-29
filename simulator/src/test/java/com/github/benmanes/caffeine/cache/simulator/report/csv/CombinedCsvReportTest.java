@@ -52,10 +52,24 @@ final class CombinedCsvReportTest {
   @Test
   void failsOnUnknownMetric(@TempDir Path dir) throws IOException {
     Path input = Files.writeString(dir.resolve("in.csv"), "Policy,Hit Rate\nLru,50.0\n");
-    var report = new CombinedCsvReport(ImmutableMap.of(512L, input), "Bogus", dir.resolve("out.csv"));
+    var report = new CombinedCsvReport(
+        ImmutableMap.of(512L, input), "Bogus", dir.resolve("out.csv"));
 
     var error = assertThrows(IllegalArgumentException.class, report::run);
     assertThat(error).hasMessageThat().contains("Bogus");
     assertThat(error).hasMessageThat().contains("Hit Rate");
+  }
+
+  @Test
+  void failsOnDuplicatePolicyName(@TempDir Path dir) throws IOException {
+    // Two policies reported under one display name would collapse into a single row, silently
+    // dropping one of them from the comparison
+    Path input = Files.writeString(dir.resolve("in.csv"),
+        "Policy,Hit Rate\nLru,50.0\nLru,40.0\n");
+    var report = new CombinedCsvReport(
+        ImmutableMap.of(512L, input), "Hit Rate", dir.resolve("out.csv"));
+
+    var error = assertThrows(IllegalStateException.class, report::run);
+    assertThat(error).hasMessageThat().contains("Lru");
   }
 }

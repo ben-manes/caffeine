@@ -20,6 +20,8 @@ import sys
 import time
 from pathlib import Path
 
+import audit_paths
+
 DEFAULT_SCOPE = "caffeine/src/main/java/com/github/benmanes/caffeine/cache/"
 SCOPE = os.environ.get("WALKER_SCOPE", DEFAULT_SCOPE)
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -35,7 +37,7 @@ def derive_module(scope: str) -> str:
 
 
 _MODULE = derive_module(SCOPE)
-REPORTS_DIR = REPO_ROOT / ".claude" / "reports" / f"audit-temporal-walk-{_MODULE}"
+REPORTS_DIR = audit_paths.reports_dir(REPO_ROOT, _MODULE)
 DEFAULT_STATE = REPORTS_DIR / "state.json"
 DEFAULT_VERIFIED = REPORTS_DIR / "verified.json"
 DEFAULT_FINDINGS_MD = REPORTS_DIR / "findings.md"

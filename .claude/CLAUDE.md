@@ -172,4 +172,8 @@ When to read which doc:
 | JSR-107 (JCache) spec conformance of the adapter | `/audit-jcache-conformance` |
 | Third-party/JDK API contract misuse (adapters, simulator, examples) | `/audit-third-party-contracts` |
 
+**Audit output**: reports go to `.local/audits/<model>/<skill-name>.md` — one directory per
+producing model (`opus-5`, `gpt-5-codex`, …) plus `shared` for cross-model working documents like
+the consolidated backlog. Gitignored but kept long-term; see `.claude/rules/audit-output.md`.
+
 **Review vs Audit**: `/review-change` is for pre-commit code review — reads design docs and filters known-intentional patterns. `/audit-*` skills are for correctness doubts — independent, no design context filtering. Use review for routine changes, audit when you need fresh-eyes analysis. `/audit-temporal-walk` is a third category (heavyweight, rare-run history-mining) — see its `SKILL.md` for invocation.

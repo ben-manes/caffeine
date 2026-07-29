@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
+import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
@@ -121,6 +122,8 @@ public final class TypesafeConfigurator {
     } catch (ConfigException.BadPath e) {
       logger.log(Level.WARNING, "Failed to load cache configuration", e);
       return Optional.empty();
+    } catch (ConfigException e) {
+      throw new CacheException("Failed to load the configuration for cache " + cacheName, e);
     }
   }
 

@@ -23,6 +23,8 @@ import time
 from collections import Counter
 from pathlib import Path
 
+import audit_paths
+
 DEFAULT_SCOPE = "caffeine/src/main/java/com/github/benmanes/caffeine/cache/"
 SCOPE = os.environ.get("WALKER_SCOPE", DEFAULT_SCOPE)
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -43,7 +45,7 @@ def derive_module(scope: str) -> str:
 # modules (and the main-vs-test split) write to disjoint trees and don't clobber
 # each other's state.json / log / worktree.
 _MODULE = derive_module(SCOPE)
-REPORTS_DIR = REPO_ROOT / ".claude" / "reports" / f"audit-temporal-walk-{_MODULE}"
+REPORTS_DIR = audit_paths.reports_dir(REPO_ROOT, _MODULE)
 DEFAULT_STATE = REPORTS_DIR / "state.json"
 DEFAULT_PROMPT = SCRIPT_DIR / "per-commit.txt"
 DEFAULT_LOG_DIR = REPORTS_DIR / "log"
@@ -194,7 +196,7 @@ def list_commits(grep: str | None = None) -> list[str]:
 
 
 def ensure_worktree(worktree_dir: Path) -> Path:
-    """Create or reuse a detached worktree under .claude/reports/.
+    """Create or reuse a detached worktree under the walk's reports dir.
 
     Used to materialize per-commit code so the inner model can Read/Glob/Grep
     at that commit's state without seeing newer code from the main worktree.

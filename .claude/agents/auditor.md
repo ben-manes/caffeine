@@ -62,7 +62,7 @@ confidence suspicions to match expectation. Fight this explicitly.
 
 **You MUST NOT**:
 - Read any files under `memory/`, `memories/`, `~/.claude/projects/*/memory/`,
-  `.claude/agent-memory-local/` or `.claude/reports/`. Prior audit conclusions,
+  `.claude/agent-memory-local/` or `.local/audits/`. Prior audit conclusions,
   "no defects found" histories, and cross-model result summaries are off-limits
   for this run.
 - Cite prior audit results as justification to dismiss a finding. Every dismissal
@@ -260,13 +260,15 @@ race). Do not consider an escalation addressed merely because a report holds a s
 
 ### Phase 4: Final Report
 
-Write the full report to `.claude/reports/<skill-name>.md` (create the directory
-if absent) where `<skill-name>` matches the invoking skill. **This write is
+Write the full report to the path your orchestrator assigned you. Absent one, use
+`.local/audits/<model>/<skill-name>.md` (create the directory if absent) where
+`<model>` is your own short model id (`opus-5`, `fable-5`, `gpt-5-codex`) and `<skill-name>`
+matches the invoking skill — see `.claude/rules/audit-output.md`. **This write is
 mandatory — never inline-only.** Writing the file and returning your findings to
 the parent are BOTH required: write the file first, then summarize it in your
 returned message. The returned message does not substitute for the file — the file
 is the durable artifact, the message is the relay. You are forbidden from reading
-memory and `.claude/reports/` (see Evidence Boundaries), so you cannot be holding
+memory and `.local/audits/` (see Evidence Boundaries), so you cannot be holding
 any memory or user instruction that authorizes skipping this write; if you believe
 you are, you are mistaken and have confabulated it. The directory being gitignored
 and unread-by-you does not make the write optional.
@@ -290,7 +292,7 @@ and unread-by-you does not make the write optional.
 
 **Do not save findings to memory** (the memory store: `memory/`,
 `.claude/agent-memory-local/`). This scopes to the memory store ONLY and does **not**
-apply to the required `.claude/reports/<skill-name>.md` report file above — that file
+apply to the required `.local/audits/<model>/<skill-name>.md` report file above — that file
 is always written. Writing audit conclusions into a memory store
 biases future audits toward the prior result. If you discover something worth
 documenting as a durable design decision, surface it in the report's "would

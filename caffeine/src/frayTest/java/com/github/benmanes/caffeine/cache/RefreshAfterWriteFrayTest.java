@@ -15,8 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -352,6 +352,7 @@ final class RefreshAfterWriteFrayTest {
    * catch-commit-rethrow path that makes the phantom eviction real. The refresh must not leave a
    * registration behind nor double-count the removal, whichever order the two commits land in.
    */
+  @SuppressWarnings("PMD.ExceptionAsFlowControl")
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
   void completion_racingExpiredComputeThrow() throws InterruptedException {
     var ticker = new FakeTicker();
@@ -376,9 +377,7 @@ final class RefreshAfterWriteFrayTest {
         cache.asMap().compute(1, (k, v) -> {
           throw new IllegalStateException("compute failure");
         });
-      } catch (IllegalStateException expectedFailure) {
-        // the committed eviction is rethrown to the caller
-      }
+      } catch (IllegalStateException expected) { /* ignored */ }
     });
 
     threadA.start();

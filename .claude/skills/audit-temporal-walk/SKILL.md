@@ -48,9 +48,10 @@ running it in a session on the strongest model available.
 # Walk (long-running; safe to interrupt — resumable):
 python3 .claude/skills/audit-temporal-walk/walker.py
 
-# In tmux/nohup for multi-hour reliability:
+# In tmux/nohup for multi-hour reliability (the redirect needs the dir to exist):
+mkdir -p .local/audits/$AUDIT_MODEL/audit-temporal-walk-<module>
 nohup python3 .claude/skills/audit-temporal-walk/walker.py \
-  > .claude/reports/audit-temporal-walk-<module>/walk.log 2>&1 &
+  > .local/audits/$AUDIT_MODEL/audit-temporal-walk-<module>/walk.log 2>&1 &
 
 # Process N commits then stop cleanly (useful for chunked runs):
 python3 .claude/skills/audit-temporal-walk/walker.py --max-commits 200
@@ -66,7 +67,7 @@ python3 .claude/skills/audit-temporal-walk/walker.py --summary
 python3 .claude/skills/audit-temporal-walk/verify.py
 
 # Read the verified findings:
-cat .claude/reports/audit-temporal-walk-<module>/findings.md
+cat .local/audits/$AUDIT_MODEL/audit-temporal-walk-<module>/findings.md
 ```
 
 Wall clock depends on model and effort and is dominated by model latency:
@@ -96,8 +97,9 @@ is the entry point to prefer — one command runs everything and reports on it.
 ```bash
 R=.claude/skills/audit-temporal-walk/run.py
 python3 $R --list                       # show the battery
+mkdir -p .local/audits/$AUDIT_MODEL/audit-temporal-walk-caffeine
 nohup python3 $R --all --effort max \   # whole battery, quality config, in tmux/nohup
-  > .claude/reports/audit-temporal-walk-caffeine/battery.log 2>&1 &
+  > .local/audits/$AUDIT_MODEL/audit-temporal-walk-caffeine/battery.log 2>&1 &
 python3 $R --variants fix-audit,lens-sibling   # a chosen subset
 python3 $R --all --report-only          # just rebuild findings-ALL.md
 ```
@@ -153,7 +155,7 @@ it flows through verification like any other finding.
 
 For each substantive commit (skipping doc/style/dep-bump only), the walker:
 1. Checks out the commit into a managed detached worktree under
-   `.claude/reports/audit-temporal-walk-<module>/worktree/`
+   `.local/audits/<model>/audit-temporal-walk-<module>/worktree/`
 2. Invokes `claude -p` with `cwd=worktree` and `--tools "Read,Glob,Grep"`,
    so the inner model can verify hypotheses against the codebase **at that
    commit's state**, not HEAD
@@ -196,12 +198,16 @@ already attached to each finding.
 
 ## Output
 
-The reports directory is auto-derived from `WALKER_SCOPE`: the first path
+The output directory is `.local/audits/<model>/audit-temporal-walk-<module>/` (see
+`.claude/rules/audit-output.md`) — **export `AUDIT_MODEL` with your own short model id** before
+launching, since a shell-run walk cannot know it. `audit_paths.reports_dir` prefers an existing
+tree for the module, so a walk resumed the next day still finds its `state.json`.
+The `<module>` suffix is auto-derived from `WALKER_SCOPE`: the first path
 segment (the module name) plus a `-test` discriminator when the scope is a
 test tree. So `caffeine/src/main/...` writes to
-`.claude/reports/audit-temporal-walk-caffeine/`, `caffeine/src/test/...` to
+`…/audit-temporal-walk-caffeine/`, `caffeine/src/test/...` to
 `audit-temporal-walk-caffeine-test/`, jcache to `audit-temporal-walk-jcache/`,
-etc. All outputs are gitignored via `.claude/reports/`:
+etc. All outputs are gitignored via `.local/`:
 
 - `state.json` — walker's issue database (and the invariant ledger, when used)
 - `verified.json` — per-issue verdicts

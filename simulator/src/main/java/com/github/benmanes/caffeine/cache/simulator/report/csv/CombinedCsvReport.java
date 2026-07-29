@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.report.csv;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
@@ -29,9 +30,11 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Multiset;
 
 import de.siegmar.fastcsv.reader.CsvReader;
 import de.siegmar.fastcsv.writer.CsvWriter;
@@ -108,9 +111,16 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
   private ImmutableList<String> policies() {
     Path input = inputFiles.values().iterator().next();
     try (var reader = CsvReader.builder().ofNamedCsvRecord(input)) {
-      return reader.stream()
+      var policies = reader.stream()
           .map(record -> record.getField(POLICY_KEY))
           .collect(toImmutableList());
+      var duplicates = HashMultiset.create(policies).entrySet().stream()
+          .filter(entry -> entry.getCount() > 1)
+          .map(Multiset.Entry::getElement)
+          .collect(toImmutableList());
+      checkState(duplicates.isEmpty(),
+          "Policies share a display name so their rows would collapse: %s", duplicates);
+      return policies;
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
