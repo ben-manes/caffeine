@@ -70,14 +70,14 @@ public interface Scheduler {
   }
 
   /**
-   * Returns a scheduler that delegates to the a {@link ScheduledExecutorService}.
+   * Returns a scheduler that delegates to a {@link ScheduledExecutorService}.
    * <p>
    * Note that this implementation will ignore scheduling the task if the executor was shutdown or
    * the submission was rejected. Consider implementing your own adapter if different behavior is
    * required.
    *
    * @param scheduledExecutorService the executor to schedule on
-   * @return a scheduler that delegates to the a {@link ScheduledExecutorService}
+   * @return a scheduler that delegates to a {@link ScheduledExecutorService}
    */
   static Scheduler forScheduledExecutorService(ScheduledExecutorService scheduledExecutorService) {
     return new ExecutorServiceScheduler(scheduledExecutorService);

@@ -58,7 +58,6 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
       ceilingPowerOfTwo(TimeUnit.HOURS.toNanos(1)),   // 1.22h
       ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)),    // 1.63d
       BUCKETS[3] * ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)), // 6.5d
-      BUCKETS[3] * ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)), // 6.5d
   };
   static final long[] SHIFT = {
       Long.numberOfTrailingZeros(SPANS[0]),

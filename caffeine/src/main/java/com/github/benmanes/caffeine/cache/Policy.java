@@ -193,7 +193,7 @@ public interface Policy<K, V> {
     /**
      * Specifies the maximum total size of this cache. This value may be interpreted as the weighted
      * or unweighted threshold size based on how this cache was constructed. If the cache currently
-     * exceeds the new maximum size this operation eagerly evict entries until the cache shrinks to
+     * exceeds the new maximum size this operation eagerly evicts entries until the cache shrinks to
      * the appropriate size.
      * <p>
      * Note that some implementations may have an internal inherent bound on the maximum total size.
@@ -538,7 +538,7 @@ public interface Policy<K, V> {
      * incomplete then the duration may be extended into the distant future.
      *
      * @param key the key for the entry being queried
-     * @param unit the unit that {@code age} is expressed in
+     * @param unit the unit that {@code duration} is expressed in
      * @return the duration if the entry is present in the cache
      * @throws NullPointerException if the specified key or unit is null
      */
@@ -888,7 +888,7 @@ public interface Policy<K, V> {
      * Returns the entry's weight. If the cache was not configured with a maximum weight then this
      * value is always {@code 1}.
      *
-     * @return the weight if the entry
+     * @return the entry's weight
      */
     int weight();
 

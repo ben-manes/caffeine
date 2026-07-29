@@ -24,6 +24,7 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.pastalab.fray.junit.junit5.FrayTestExtension;
 import org.pastalab.fray.junit.junit5.annotations.FrayTest;
@@ -342,6 +343,53 @@ final class RefreshAfterWriteFrayTest {
     threadB.join();
     cache.cleanUp();
 
+    assertThat(cache).isValid();
+  }
+
+  /**
+   * A refresh races a user {@code compute} that throws on an entry the remap sees as expired. The
+   * remap notifies the eviction before invoking the mapping function, so the throw takes the
+   * catch-commit-rethrow path that makes the phantom eviction real. The refresh must not leave a
+   * registration behind nor double-count the removal, whichever order the two commits land in.
+   */
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void completion_racingExpiredComputeThrow() throws InterruptedException {
+    var ticker = new FakeTicker();
+    var expired = new AtomicInteger();
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .evictionListener((@Nullable Integer key, @Nullable Integer value, RemovalCause cause) -> {
+          if (cause == RemovalCause.EXPIRED) {
+            expired.incrementAndGet();
+          }
+        })
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(10)
+        .build(key -> key * 10);
+    cache.get(1);
+    ticker.advance(Duration.ofMinutes(2));
+
+    var threadA = new Thread(() -> cache.refresh(1));
+    var threadB = new Thread(() -> {
+      try {
+        cache.asMap().compute(1, (k, v) -> {
+          throw new IllegalStateException("compute failure");
+        });
+      } catch (IllegalStateException expectedFailure) {
+        // the committed eviction is rethrown to the caller
+      }
+    });
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+    cache.cleanUp();
+
+    assertWithMessage("the expired entry must be evicted exactly once, but was %s", expired.get())
+        .that(expired.get()).isEqualTo(1);
+    assertThat(cache.policy().refreshes()).isEmpty();
     assertThat(cache).isValid();
   }
 

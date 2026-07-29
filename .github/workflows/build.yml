@@ -186,7 +186,7 @@ jobs:
     if: >
       github.event_name == 'push'
       && github.event.repository.fork == false
-      && endsWith(github.ref, github.event.repository.default_branch)
+      && github.ref_name == github.event.repository.default_branch
     permissions:
       contents: read
     strategy:
@@ -313,7 +313,7 @@ jobs:
           github.event_name == 'push'
           && github.event.repository.fork == false
           && (steps.check_files.outputs.files_exists == 'true')
-          && endsWith(github.ref, github.event.repository.default_branch)
+          && github.ref_name == github.event.repository.default_branch
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -373,7 +373,7 @@ jobs:
           github.event_name == 'push'
           && github.event.repository.fork == false
           && steps.test-badge.outcome == 'success'
-          && endsWith(github.ref, github.event.repository.default_branch)
+          && github.ref_name == github.event.repository.default_branch
         with:
           gist_title: badge.svg
           github_file: badge.svg
@@ -385,7 +385,7 @@ jobs:
         if: >
           github.event_name == 'push'
           && github.event.repository.fork == false
-          && endsWith(github.ref, github.event.repository.default_branch)
+          && github.ref_name == github.event.repository.default_branch
         with:
           report_type: test_results
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -396,7 +396,7 @@ jobs:
     if: >
       github.event_name == 'push'
       && github.event.repository.fork == false
-      && endsWith(github.ref, github.event.repository.default_branch)
+      && github.ref_name == github.event.repository.default_branch
     permissions:
       contents: read
     steps:
@@ -429,7 +429,7 @@ jobs:
     if: >
       github.event_name == 'push'
       && github.event.repository.fork == false
-      && endsWith(github.ref, github.event.repository.default_branch)
+      && github.ref_name == github.event.repository.default_branch
     permissions:
       contents: read
       id-token: write # Needed for signing
