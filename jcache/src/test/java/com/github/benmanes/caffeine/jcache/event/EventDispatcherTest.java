@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.OptionalLong;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
@@ -46,6 +47,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
@@ -64,6 +66,7 @@ import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CacheWriterException;
+import javax.cache.processor.EntryProcessorException;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AutoClose;
@@ -73,6 +76,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
+import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.copy.Copier;
 import com.google.common.collect.Iterables;
 import com.google.common.testing.EqualsTester;
@@ -121,8 +125,8 @@ final class EventDispatcherTest {
         first.getCacheEntryListenerFactory(), /* filterFactory= */ null,
         /* isOldValueRequired= */ false, /* isSynchronous= */ false);
 
-    // Distinct config instances that are field-equal dedupe to one registration (the RI fires both).
-    // register_twice registers a single reference and cannot distinguish field- from identity-equality.
+    // Distinct config instances that are field-equal dedupe to one registration: register_twice
+    // registers a single reference and cannot distinguish between field / identity equality.
     assertThat(first).isNotSameInstanceAs(second);
     assertThat(first).isEqualTo(second);
 
@@ -655,6 +659,136 @@ final class EventDispatcherTest {
       assertThrows(CacheException.class, () -> cache.putAll(entries));
       assertThat(JCacheFixture.getDispatcher(cache).pending.get()).isEmpty();
     }
+  }
+
+  @Test
+  void awaitSynchronous_dispatchFailed_listenerException() {
+    // a dispatch that completes exceptionally, rather than returning the failure, still surfaces
+    // the listener's own exception instead of wrapping it a second time
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var future = new CompletableFuture<@Nullable CacheEntryListenerException>();
+    var thrown = new CacheEntryListenerException("listener");
+    future.completeExceptionally(thrown);
+    dispatcher.pending.get().add(future);
+
+    var e = assertThrows(CacheEntryListenerException.class, dispatcher::awaitSynchronous);
+    assertThat(e).isSameInstanceAs(thrown);
+    assertThat(dispatcher.pending.get()).isEmpty();
+  }
+
+  @Test
+  void invoke_syncListenerThrows_propagatesToCaller() {
+    var failure = new IllegalStateException("listener");
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      throw failure;
+    };
+    try (var fixture = syncListenerFixture(listener).build();
+         var cache = fixture.jcache()) {
+      // the processor succeeded, so the listener's failure is what reaches the caller
+      var e = assertThrows(CacheEntryListenerException.class, () ->
+          cache.invoke(KEY_1, (entry, arguments) -> {
+            entry.setValue(VALUE_1);
+            return null;
+          }));
+      assertThat(e).hasCauseThat().isSameInstanceAs(failure);
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+    }
+  }
+
+  @Test
+  void invoke_expiredAndProcessorThrows_retainsListenerFailure() {
+    var listenerFailure = new IllegalStateException("listener");
+    var processorFailure = new IllegalStateException("processor");
+    CacheEntryExpiredListener<Integer, Integer> listener = events -> {
+      throw listenerFailure;
+    };
+    var jcacheFixture = syncListenerFixture(listener, config -> {
+      config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(Duration.ONE_MINUTE));
+      // a long native expiry keeps the entry resident so that invoke reconciles it lazily,
+      // rather than the eviction listener publishing EXPIRED before the processor runs
+      config.setExpireAfterWrite(OptionalLong.of(TimeUnit.HOURS.toNanos(1)));
+    });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      fixture.ticker().advance(java.time.Duration.ofMinutes(2));
+
+      // the lazily expired prior is reconciled, firing the throwing listener, before the processor
+      // runs and throws; the operation's own failure is preferred and the listener's is retained
+      var e = assertThrows(EntryProcessorException.class, () ->
+          cache.invoke(KEY_1, (entry, arguments) -> {
+            throw processorFailure;
+          }));
+      assertThat(e).hasCauseThat().isSameInstanceAs(processorFailure);
+      assertThat(e.getSuppressed()).hasLength(1);
+    }
+  }
+
+  @Test
+  void putAll_copierFailsMidway_retainsListenerFailure() {
+    var listenerFailure = new IllegalStateException("listener");
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      throw listenerFailure;
+    };
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        if (Objects.equals(object, VALUE_2)) {
+          throw new CacheException("copy failed");
+        }
+        return object;
+      }
+    };
+    var jcacheFixture = syncListenerFixture(listener, config -> {
+      config.setStoreByValue(true);
+      config.setCopierFactory(() -> copier);
+    });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcache()) {
+      // KEY_1 commits and its listener throws; KEY_2's copy then aborts the loop. The copier's
+      // failure is the one the caller needs, with the listener's retained as suppressed
+      var entries = new LinkedHashMap<Integer, Integer>();
+      entries.put(KEY_1, VALUE_1);
+      entries.put(KEY_2, VALUE_2);
+
+      var e = assertThrows(CacheException.class, () -> cache.putAll(entries));
+      assertThat(e).hasMessageThat().isEqualTo("copy failed");
+      assertThat(e.getSuppressed()).hasLength(1);
+      assertThat(JCacheFixture.getDispatcher(cache).pending.get()).isEmpty();
+    }
+  }
+
+  @Test
+  void readThrough_syncListenerThrows_propagatesToCaller() {
+    var failure = new IllegalStateException("listener");
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      throw failure;
+    };
+    try (var fixture = syncListenerFixture(listener).build();
+         var cache = fixture.jcacheLoading()) {
+      // a read-through load publishes CREATED, so the listener's failure reaches the caller on
+      // both the single-key and the bulk path
+      var single = assertThrows(CacheEntryListenerException.class, () -> cache.get(KEY_1));
+      assertThat(single).hasCauseThat().isSameInstanceAs(failure);
+
+      var bulk = assertThrows(CacheEntryListenerException.class, () -> cache.getAll(Set.of(KEY_2)));
+      assertThat(bulk).hasCauseThat().isSameInstanceAs(failure);
+    }
+  }
+
+  /** Returns a fixture whose caches dispatch to the listener synchronously. */
+  private static JCacheFixture.Builder syncListenerFixture(CacheEntryListener<Integer, Integer> l) {
+    return syncListenerFixture(l, config -> {});
+  }
+
+  private static JCacheFixture.Builder syncListenerFixture(CacheEntryListener<Integer, Integer> l,
+      Consumer<CaffeineConfiguration<Integer, Integer>> configurator) {
+    return JCacheFixture.builder().configure(config -> {
+      config.setExecutorFactory(MoreExecutors::directExecutor);
+      config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+          /* listenerFactory= */ () -> l, /* filterFactory= */ null,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+      configurator.accept(config);
+    });
   }
 
   @Test

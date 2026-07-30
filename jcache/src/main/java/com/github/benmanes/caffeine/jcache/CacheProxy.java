@@ -958,11 +958,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Waits for the synchronous listeners and suppresses any failures onto the existing error. */
+  @SuppressWarnings("CheckReturnValue")
   protected final void awaitAndSuppressFailure(Throwable error) {
-    var listenerFailure = awaitSynchronousFailure();
-    if ((listenerFailure != null) && (listenerFailure != error)) {
-      error.addSuppressed(listenerFailure);
-    }
+    suppress(error, awaitSynchronousFailure());
   }
 
   /** Returns the exception to rethrow on an entry processor failure. */

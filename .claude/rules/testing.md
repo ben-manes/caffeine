@@ -89,5 +89,23 @@ e.g., `ReferenceTest` needs `values=weak/soft`.
   regardless of heap size (`mainProcessJvmArgs` doesn't effectively bump the forked JVM).
   Line coverage on those classes is already 100% via JaCoCo, and concurrency bugs aren't
   caught by mutation testing anyway
+- `./gradlew :guava:pitest` runs it on the whole adapter package, which is at 120/120 killed
+  (100% test strength) — a confirmation that the translation logic is asserted rather than
+  merely executed, so re-running it can only show a regression
+- **`testSourceSets` must name every suite that covers the target.** PIT runs the `test` task
+  only, so a forked or spec suite registered as its own `JvmTestSuite` is invisible to it and
+  everything that suite covers reports as `NO_COVERAGE` — a report full of phantoms rather than
+  gaps. Scoped to `test` alone the guava adapter scored 85% with 17 "uncovered" cache methods;
+  adding `compatibilityTest` gave 100%. The `pitest` block must also sit **after**
+  `testing.suites` in the build file, or the source set does not exist yet
+- **jcache is deliberately not wired up.** Its TCK sets `testClassesDirs` to a jar unzipped into
+  `build/tck` rather than to a source set's output, so `testSourceSets` has nothing to point at
+  and the TCK's ~493 tests cannot run under PIT: a run without them scores a misleading 77% (no
+  kill is attributed to `org.jsr107.tck.*`), and roughly a quarter of the survivors are the
+  statistics and JMX calls that are best-effort by policy. It also needs `skipFailingTests`,
+  since a few tests reach unknown-enum branches through Mockito's static mocking, which fights
+  PIT's agent. If jcache signal is ever wanted, scope `targetClasses` to the classes the unit
+  suite owns outright (`CaffeineConfiguration`, `Expirable`, `EntryProcessorEntry`,
+  `TypesafeConfigurator`), where the absent TCK does not distort the result
 - Runtime: ~30-60 minutes. Use for ad-hoc runs, not CI
 - Concurrency bugs aren't caught by mutation testing — rely on Fray/LinCheck/JCStress for that

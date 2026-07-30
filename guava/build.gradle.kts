@@ -6,6 +6,7 @@ import org.gradle.plugins.ide.eclipse.model.SourceFolder
 import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
 
 plugins {
+  id("info.solidsoft.pitest")
   id("java-library.caffeine")
   id("roseau.caffeine")
 }
@@ -18,8 +19,12 @@ dependencies {
   api(project(":caffeine"))
   api(libs.guava)
 
+  pitest(libs.pitest.junit5)
+  pitest(libs.pitest)
+
   caffeineOsgiBundle(project(":caffeine", "osgiBundleElements"))
 }
+
 
 tasks.named<JavaCompile>("compileJava").configure {
   options.compilerArgs.add("-Xlint:-exports")
@@ -113,4 +118,14 @@ eclipse.classpath.file.whenMerged {
   if (this is EclipseClasspath) {
     entries.removeIf { (it is SourceFolder) && it.path.contains("moduleTest") }
   }
+}
+
+pitest {
+  testSourceSets.set(listOf(sourceSets["test"], sourceSets["compatibilityTest"]))
+  targetClasses = setOf("com.github.benmanes.caffeine.guava.*")
+  targetTests = setOf("com.github.benmanes.caffeine.guava.*")
+  threads = Runtime.getRuntime().availableProcessors()
+  junit5PluginVersion = libs.versions.pitest.junit5
+  pitestVersion = libs.versions.pitest.asProvider()
+  timestampedReports = false
 }
