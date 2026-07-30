@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_3;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.getNativeExpiresAfter;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
@@ -264,6 +265,7 @@ final class JCacheAccessExpiryTest {
       // native timer is rescheduled by the compute's expiry, not a bin-lock-held setExpiresAfter.
       Integer result = fixture.jcache().invoke(KEY_1, (entry, args) -> entry.getValue());
       assertThat(result).isEqualTo(VALUE_1);
+      assertNativeExpiryExtended(fixture);
       fixture.ticker().advance(EXPIRY_DURATION.multipliedBy(3).dividedBy(4));
 
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNotNull();
@@ -343,6 +345,7 @@ final class JCacheAccessExpiryTest {
       // under the bin lock, so the entry survives past its original deadline instead of being
       // evicted early.
       assertThat(fixture.jcache().remove(KEY_1, VALUE_2)).isFalse();
+      assertNativeExpiryExtended(fixture);
       fixture.ticker().advance(EXPIRY_DURATION.multipliedBy(3).dividedBy(4));
 
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNotNull();
@@ -393,6 +396,7 @@ final class JCacheAccessExpiryTest {
       // As with a failed conditional remove, the native timer is rescheduled by the compute's
       // expiry rather than a bin-lock-held setExpiresAfter.
       assertThat(fixture.jcache().replace(KEY_1, VALUE_2, VALUE_3)).isFalse();
+      assertNativeExpiryExtended(fixture);
       fixture.ticker().advance(EXPIRY_DURATION.multipliedBy(3).dividedBy(4));
 
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNotNull();
@@ -419,5 +423,19 @@ final class JCacheAccessExpiryTest {
       assertThat(fixture.jcache().replace(KEY_1, VALUE_1, VALUE_2)).isTrue();
       assertThat(getStatistics(fixture.jcache()).getAveragePutTime()).isEqualTo(0);
     }
+  }
+
+  /**
+   * Asserts that the access extended the native (Caffeine) timer to the full access duration, not
+   * merely that the entry is still resident. The adapter holds its deadline in milliseconds while
+   * the native timer is in nanoseconds, so the round trip loses a fraction of a millisecond.
+   */
+  private static void assertNativeExpiryExtended(JCacheFixture fixture) {
+    var nativeExpiry = getNativeExpiresAfter(fixture.jcache(), KEY_1);
+    assertThat(nativeExpiry).isNotNull();
+    assertThat(requireNonNull(nativeExpiry).toMillis())
+        .isAtLeast(EXPIRY_DURATION.toMillis() - 1);
+    assertThat(requireNonNull(nativeExpiry).toMillis())
+        .isAtMost(EXPIRY_DURATION.toMillis());
   }
 }

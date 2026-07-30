@@ -49,6 +49,7 @@ import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Configuration;
+import javax.cache.event.CacheEntryListenerException;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
@@ -271,7 +272,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       inFlight.add(future);
     }
     try {
-      CompletableFuture.runAsync(() -> {
+      CompletableFuture.<CompletableFuture<@Nullable Void>>supplyAsync(() -> {
         @Var boolean success = false;
         try {
           if (replaceExistingValues) {
@@ -281,24 +282,29 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           }
           success = true;
         } catch (CacheLoaderException e) {
-          dispatcher.ignoreSynchronous();
           listener.onException(e);
         } catch (RuntimeException e) {
-          dispatcher.ignoreSynchronous();
           listener.onException(new CacheLoaderException(e));
+        } finally {
+          if (!success) {
+            dispatcher.ignoreSynchronous();
+          }
         }
-        if (success) {
-          dispatcher.chainSynchronous().whenComplete((failure, error) -> {
-            if (error != null) {
-              listener.onException(new CacheLoaderException(error));
-            } else if (failure != null) {
-              listener.onException(failure);
-            } else {
-              listener.onCompletion();
-            }
-          });
+        if (!success) {
+          return CompletableFuture.completedFuture(null);
         }
-      }, executor).whenComplete((r, e) -> {
+        // the tracked future spans the notification so that close() awaits the listener's callback
+        return dispatcher.chainSynchronous().<@Nullable Void>handle((failure, error) -> {
+          if (error != null) {
+            listener.onException(new CacheLoaderException(error));
+          } else if (failure != null) {
+            listener.onException(failure);
+          } else {
+            listener.onCompletion();
+          }
+          return null;
+        });
+      }, executor).thenCompose(chain -> chain).whenComplete((r, e) -> {
         inFlight.remove(future);
         future.complete(null);
       });
@@ -460,16 +466,19 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           }
         }
       }
-    } finally {
-      dispatcher.awaitSynchronous();
+    } catch (Throwable t) {
+      awaitAndSuppressFailure(t);
+      throw t;
     }
+    var listenerFailure = awaitSynchronousFailure();
 
     if (statsEnabled && (puts > 0)) {
       statistics.recordPuts(puts);
       statistics.recordPutTime(ticker.read() - start);
     }
-    if (error != null) {
-      throw error;
+    var failure = suppress(error, listenerFailure);
+    if (failure != null) {
+      throw failure;
     }
   }
 
@@ -828,16 +837,19 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           removed++;
         }
       }
-    } finally {
-      dispatcher.awaitSynchronous();
+    } catch (Throwable t) {
+      awaitAndSuppressFailure(t);
+      throw t;
     }
+    var listenerFailure = awaitSynchronousFailure();
 
     if (statsEnabled && (removed > 0)) {
       statistics.recordRemovals(removed);
       statistics.recordRemoveTime(ticker.read() - start);
     }
-    if (error != null) {
-      throw error;
+    var failure = suppress(error, listenerFailure);
+    if (failure != null) {
+      throw failure;
     }
   }
 
@@ -915,14 +927,42 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       dispatcher.ignoreSynchronous();
       throw t;
     }
-    dispatcher.awaitSynchronous();
+    var listenerFailure = awaitSynchronousFailure();
     if (failure[0] != null) {
-      throw processorFailure(failure[0]);
+      var error = processorFailure(failure[0]);
+      if (listenerFailure != null) {
+        error.addSuppressed(listenerFailure);
+      }
+      throw error;
+    }
+    if (listenerFailure != null) {
+      throw listenerFailure;
     }
 
     @SuppressWarnings("unchecked")
     var castedResult = (T) result[0];
     return castedResult;
+  }
+
+  /**
+   * Waits for the synchronous listeners and returns their failure instead of throwing it. An
+   * {@code Error} is not captured and propagates.
+   */
+  protected final @Nullable CacheEntryListenerException awaitSynchronousFailure() {
+    try {
+      dispatcher.awaitSynchronous();
+      return null;
+    } catch (CacheEntryListenerException e) {
+      return e;
+    }
+  }
+
+  /** Waits for the synchronous listeners and suppresses any failures onto the existing error. */
+  protected final void awaitAndSuppressFailure(Throwable error) {
+    var listenerFailure = awaitSynchronousFailure();
+    if ((listenerFailure != null) && (listenerFailure != error)) {
+      error.addSuppressed(listenerFailure);
+    }
   }
 
   /** Returns the exception to rethrow on an entry processor failure. */
@@ -1040,22 +1080,22 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
     synchronized (configuration) {
       if (!isClosed()) {
+        @Var Throwable thrown = null;
+        thrown = tryClose((AutoCloseable) () -> enableManagement(false), thrown);
+        thrown = tryClose((AutoCloseable) () -> enableStatistics(false), thrown);
+
         closed = true;
         try {
           cacheManager.destroyCache(name, this);
         } catch (IllegalStateException ignored) { /* manager already closed */ }
 
-        @Var var thrown = shutdownExecutor();
+        thrown = shutdownExecutor(thrown);
         thrown = tryClose(expiry, thrown);
         thrown = tryClose(writer, thrown);
         thrown = tryClose(cacheLoader.orElse(null), thrown);
         for (Registration<K, V> registration : dispatcher.registrations()) {
           thrown = tryClose(registration.getCacheEntryListener(), thrown);
         }
-        thrown = tryClose((AutoCloseable) () ->
-            JmxRegistration.unregisterMxBean(this, MBeanType.STATISTICS), thrown);
-        thrown = tryClose((AutoCloseable) () ->
-            JmxRegistration.unregisterMxBean(this, MBeanType.CONFIGURATION), thrown);
         if (thrown != null) {
           logger.log(Level.WARNING, "Failure when closing cache resources", thrown);
         }
@@ -1065,23 +1105,22 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  private @Nullable Throwable shutdownExecutor() {
+  private @Nullable Throwable shutdownExecutor(@Var @Nullable Throwable thrown) {
     if (executor instanceof ExecutorService) {
       @SuppressWarnings("PMD.CloseResource")
       var es = (ExecutorService) executor;
       es.shutdown();
     }
 
-    @Var Throwable thrown = null;
     try {
       CompletableFuture
           .allOf(inFlight.toArray(CompletableFuture[]::new))
           .get(10, TimeUnit.SECONDS);
     } catch (ExecutionException | TimeoutException e) {
-      thrown = e;
+      thrown = suppress(thrown, e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      thrown = e;
+      thrown = suppress(thrown, e);
     }
     inFlight.clear();
 
@@ -1104,12 +1143,22 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       try {
         ((AutoCloseable) o).close();
       } catch (Throwable t) {
-        if (outer == null) {
-          return t;
-        } else if (outer != t) {
-          outer.addSuppressed(t);
-        }
+        return suppress(outer, t);
       }
+    }
+    return outer;
+  }
+
+  /** Returns the outermost error, retaining the error as suppressed if one is already set. */
+  private static <T extends Throwable> @Nullable T suppress(@Nullable T outer, @Nullable T t) {
+    if (t == null) {
+      return outer;
+    }
+    if (outer == null) {
+      return t;
+    }
+    if (outer != t) {
+      outer.addSuppressed(t);
     }
     return outer;
   }

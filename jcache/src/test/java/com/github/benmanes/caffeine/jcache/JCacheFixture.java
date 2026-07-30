@@ -134,6 +134,19 @@ public final class JCacheFixture implements AutoCloseable {
     return cache.cache.getIfPresent(key);
   }
 
+  /**
+   * Returns the entry's native expiration, rather than the adapter's {@link Expirable} deadline, or
+   * {@code null} if absent. An access that extends the JCache expiry must reschedule the native
+   * timer too, or the entry is evicted at its original deadline.
+   */
+  public static @Nullable Duration getNativeExpiresAfter(
+      CacheProxy<Integer, Integer> cache, Integer key) {
+    return cache.cache.policy().expireVariably()
+        .orElseThrow(() -> new IllegalStateException("Not configured for variable expiration"))
+        .getExpiresAfter(key)
+        .orElse(null);
+  }
+
   /** Returns a configured {@link ConditionFactory} that polls at a short interval. */
   public static ConditionFactory await() {
     return Awaitility.with()

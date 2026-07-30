@@ -222,8 +222,8 @@ final class CacheFactory {
     /** Creates a cache that reads through on a cache miss. */
     private CacheProxy<K, V> newLoadingCacheProxy() {
       CacheLoader<K, V> cacheLoader = requireNonNull(config.getCacheLoaderFactory()).create();
-      var adapter = new JCacheLoaderAdapter<>(cacheLoader, dispatcher, expiryPolicy, ticker,
-          statistics, copier, requireNonNull(cacheManager.getClassLoader()));
+      var adapter = new JCacheLoaderAdapter<>(cacheManager, cacheLoader,
+          dispatcher, expiryPolicy, ticker, statistics, copier);
       var cache = caffeine.build(adapter);
       var jcache = new LoadingCacheProxy<>(cacheName, executor, cacheManager, config,
           cache, dispatcher, cacheLoader, expiryPolicy, ticker, statistics, copier);

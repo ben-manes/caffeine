@@ -31,20 +31,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[2]
 
 
-def derive_module(scope: str) -> str:
-    """Reports-dir suffix for a scope. The first path segment (caffeine,
-    jcache, ...) keeps different modules disjoint; a '-test' discriminator
-    keeps a test-history walk (caffeine/src/test/...) from clobbering the
-    main-source walk (caffeine/src/main/...), since both share the leading
-    'caffeine' segment."""
-    base = scope.split("/", 1)[0] if "/" in scope else "default"
-    return f"{base}-test" if "/src/test/" in scope else base
-
-
 # Derive the reports directory from the configured SCOPE so audits of different
 # modules (and the main-vs-test split) write to disjoint trees and don't clobber
 # each other's state.json / log / worktree.
-_MODULE = derive_module(SCOPE)
+_MODULE = audit_paths.derive_module(SCOPE)
 REPORTS_DIR = audit_paths.reports_dir(REPO_ROOT, _MODULE)
 DEFAULT_STATE = REPORTS_DIR / "state.json"
 DEFAULT_PROMPT = SCRIPT_DIR / "per-commit.txt"

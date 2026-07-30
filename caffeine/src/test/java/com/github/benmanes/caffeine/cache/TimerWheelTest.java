@@ -733,7 +733,7 @@ final class TimerWheelTest {
 
   private static List<Arguments> cascading() {
     var params = new ArrayList<Arguments>();
-    for (int i = 1; i < SPANS.length - 1; i++) {
+    for (int i = 1; i < SPANS.length; i++) {
       long span = SPANS[i];
       long timeout = ThreadLocalRandom.current().nextLong(span + 1, 2 * span);
       long duration = ThreadLocalRandom.current().nextLong(span + 1, timeout - 1);

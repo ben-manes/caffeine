@@ -88,7 +88,13 @@ temporary file. Key invariants:
   the next-access column; both call it exactly once per access (`admitter.record` fires once per access —
   verified in every host), so cursor position tracks the trace position. The reader owns cursor lifecycle
   (closed on `TraceReader.close()`, which is a no-op default except here). A shared static holder hands out
-  cursors because policies/admitters are built deep in the Registry from `Config` only.
+  cursors because policies/admitters are built deep in the Registry from `Config` only. **No
+  decorator forwards `close()`** — neither `ClairvoyantTraceReader` (it keeps no reference to the
+  delegate it consumed) nor `TraceFormat.readFiles`' composites (both are lambdas). That is inert
+  because the clairvoyant reader is the only one that materializes state and `getTraceReader`
+  always installs it *outermost*, so every possible delegate inherits the no-op default. A second
+  materializing reader must therefore not be nested beneath a wrapper without adding the
+  forwarding; don't add it speculatively.
 - **All I/O is sequential and buffered.** Reads are buffered sequential `DataInputStream`s; both the forward
   append pass and the backward fill pass are block-sequential (the backward pass is what avoids the random
   writes a forward back-fill would need, since its window can't span a long reuse distance). A key-only

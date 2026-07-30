@@ -4638,7 +4638,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             }
             node.setVariableTime(now + Math.min(durationNanos, MAXIMUM_EXPIRY));
           }
-          cache.afterWrite(cache.new UpdateTask(node, 0));
+          cache.afterWrite(cache.new UpdateTask(node, 0, /* quietly= */ true));
         }
       }
       @Override public @Nullable V put(K key, V value, long duration, TimeUnit unit) {

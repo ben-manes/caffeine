@@ -24,6 +24,7 @@ import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.management.ManagementFactory;
+import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.util.EnumSet;
 import java.util.List;
@@ -40,6 +41,7 @@ import javax.cache.CacheException;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
 import javax.cache.configuration.MutableConfiguration;
+import javax.cache.spi.CachingProvider;
 import javax.management.ObjectName;
 import javax.management.OperationsException;
 
@@ -51,6 +53,7 @@ import org.mockito.Mockito;
 import com.facebook.infer.annotation.SuppressLint;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
+import com.google.common.testing.GcFinalization;
 import com.typesafe.config.ConfigFactory;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -198,6 +201,31 @@ final class CacheManagerTest {
       task.get();
       assertThat(manager.isClosed()).isTrue();
     }
+  }
+
+  @Test
+  void classLoader_readThrough_notRetained() {
+    try (var fixture = JCacheFixture.builder().build()) {
+      var reference = abandonReadThroughCache(fixture.cachingProvider());
+      GcFinalization.awaitClear(reference);
+    }
+  }
+
+  /**
+   * Creates a read-through cache under its own class loader and returns a weak reference to that
+   * loader, retaining no strong reference of its own. The provider holds the manager in a
+   * {@link java.util.WeakHashMap} keyed by the loader, so any strong path from the cache back to
+   * the loader would pin the entry for the life of the provider.
+   */
+  private static WeakReference<ClassLoader> abandonReadThroughCache(CachingProvider provider) {
+    var classLoader = new ClassLoader() {};
+    @SuppressWarnings("PMD.CloseResource")
+    var cacheManager = provider.getCacheManager(
+        URI.create("retained-" + CacheManagerTest.class.getName()), classLoader);
+    cacheManager.createCache("read-through", new MutableConfiguration<>()
+        .setCacheLoaderFactory(Mockito::mock)
+        .setReadThrough(true));
+    return new WeakReference<>(classLoader);
   }
 
   @Test

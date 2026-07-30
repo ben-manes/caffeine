@@ -93,9 +93,10 @@ public final class IndexedCache<K, V> {
         return null;
       }
 
-      checkState(buildIndex(value).contains(key),
+      var index = buildIndex(value);
+      checkState(index.contains(key),
           "The loaded value is not indexed by the requested key '%s'", key);
-      put(value);
+      put(value, index);
       return value;
     } finally {
       lock.unlock();
@@ -105,7 +106,11 @@ public final class IndexedCache<K, V> {
   /** Associates the {@code value} with its keys, replacing the old value and keys if present. */
   public void put(V value) {
     requireNonNull(value);
-    var index = buildIndex(value);
+    put(value, buildIndex(value));
+  }
+
+  /** Associates the {@code value} with the index already derived from it. */
+  private void put(V value, SequencedSet<K> index) {
     store.asMap().compute(index.getFirst(), (key, oldValue) -> {
       for (var indexKey : index) {
         var existing = indexes.get(indexKey);

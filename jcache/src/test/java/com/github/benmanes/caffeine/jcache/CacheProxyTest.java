@@ -1638,7 +1638,7 @@ final class CacheProxyTest {
   }
 
   @Test
-  void put_nullCreationExpiry_defaultsToEternal() throws IOException {
+  void put_nullCreationExpiry_defaultsToEternal() {
     // A null getExpiryForCreation() is spec-unspecified for a create (no prior duration to keep), so
     // it defaults to eternal — parity with the read-through loader path — not the born-expired
     // Long.MIN_VALUE sentinel (which would expire immediately under a negative ticker)

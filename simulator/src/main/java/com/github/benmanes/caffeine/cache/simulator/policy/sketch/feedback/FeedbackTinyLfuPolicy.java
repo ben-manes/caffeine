@@ -25,6 +25,7 @@ import org.jspecify.annotations.Nullable;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admitter;
+import com.github.benmanes.caffeine.cache.simulator.admission.clairvoyant.Clairvoyant;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -77,6 +78,8 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
     sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
     feedback = settings.membership().filter().create(settings.filterConfig(sampleSize));
     checkState(sampleSize >= 2, "maximum size %s is too small for a feedback sample", maximumSize);
+    checkState(!(admitter instanceof Clairvoyant), "%s raises the frequency of an arrival by "
+        + "recording it repeatedly, so it cannot use the clairvoyant sketch", name());
   }
 
   @Override

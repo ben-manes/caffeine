@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.sim;
 
+import static com.github.benmanes.caffeine.cache.simulator.admission.Admission.CLAIRVOYANT;
+import static com.google.common.base.Preconditions.checkState;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy.WindowTinyLfuSettings;
@@ -48,6 +51,9 @@ public final class MiniSimClimber implements HillClimber {
 
   public MiniSimClimber(double percentMain, Config config) {
     var settings = new MiniSimSettings(config);
+    checkState(!CLAIRVOYANT.name().equalsIgnoreCase(settings.tinyLfu().sketch()),
+        "minisim records only a sampled subset of the accesses, so it cannot use the "
+            + "clairvoyant sketch");
     this.cacheSize = Math.toIntExact(settings.maximumSize());
     samplingRate = Math.max(1, (cacheSize / 1000) > 100 ? 1000 : (cacheSize / 100));
     var simulationSettings = new WindowTinyLfuSettings(ConfigFactory

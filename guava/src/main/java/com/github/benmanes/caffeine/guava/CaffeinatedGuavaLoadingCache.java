@@ -275,9 +275,9 @@ final class CaffeinatedGuavaLoadingCache<K, V>
       if (loaded == null) {
         throw new InvalidCacheLoadException("null map");
       }
-      for (var value : loaded.values()) {
-        if (value == null) {
-          throw new InvalidCacheLoadException("null value");
+      for (var entry : loaded.entrySet()) {
+        if ((entry.getKey() == null) || (entry.getValue() == null)) {
+          throw new InvalidCacheLoadException("null key or value");
         }
       }
       return loaded;

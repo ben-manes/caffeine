@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Duration;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
@@ -121,6 +122,23 @@ final class IndexedCacheTest {
     // key's mapping, silently reloading on every lookup; the get must fail fast instead
     assertThrows(IllegalStateException.class, () -> cache.get(new UserByLogin("ghost")));
     assertThat(cache.getIfPresent(new UserByLogin("ghost"))).isNull();
+  }
+
+  @Test
+  void get_absent_indexesValueOnce() {
+    var invocations = new AtomicInteger();
+    var cache = new IndexedCache.Builder<UserKey, User>()
+        .addSecondaryKey(user -> new UserByLogin(user.login()))
+        .addSecondaryKey(user -> new UserByPhone(user.phone()))
+        .primaryKey(user -> {
+          invocations.incrementAndGet();
+          return new UserById(user.id());
+        })
+        .build(this::findUser);
+
+    // The indexers are supplied by the caller, so a load must not derive the index twice
+    assertThat(cache.get(new UserByLogin("john.doe"))).isNotNull();
+    assertThat(invocations.get()).isEqualTo(1);
   }
 
   /** Returns the user found in the system of record. */

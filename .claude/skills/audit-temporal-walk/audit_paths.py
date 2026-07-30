@@ -17,6 +17,18 @@ import os
 from pathlib import Path
 
 
+def derive_module(scope: str) -> str:
+    """Returns the reports-dir suffix for a scope.
+
+    The first path segment (caffeine, jcache, ...) keeps different modules disjoint, and a
+    '-test' discriminator keeps a test-history walk (caffeine/src/test/...) from clobbering the
+    main-source walk (caffeine/src/main/...), since both share the leading 'caffeine' segment.
+    All three CLIs derive it here so a verify run reads the tree its walk wrote.
+    """
+    base = scope.split("/", 1)[0] if "/" in scope else "default"
+    return f"{base}-test" if "/src/test/" in scope else base
+
+
 def audits_root(repo_root: Path) -> Path:
     """Returns `.local/audits/<model>` for this run."""
     model = os.environ.get("AUDIT_MODEL") or "unspecified-model"

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.report.csv;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Locale.US;
@@ -25,8 +26,10 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
@@ -64,27 +67,28 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
   /** Returns the results for the (policy, maximumSize) to the metric value being compared. */
   private Map<Label, String> tabulate() {
     var results = new TreeMap<Label, String>();
+    var columns = new LinkedHashSet<String>();
     inputFiles.forEach((maximumSize, path) -> {
       try (var reader = CsvReader.builder().ofNamedCsvRecord(path)) {
         for (var record : reader) {
+          var column = resolveMetric(record.getHeader());
           var label = new Label(record.getField(POLICY_KEY), maximumSize);
-          results.put(label, record.getField(resolveMetric(record.getHeader())));
+          results.put(label, column.map(record::getField).orElse(""));
+          columns.addAll(record.getHeader());
         }
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
     });
+    checkArgument(columns.stream().anyMatch(column -> column.equalsIgnoreCase(metric)),
+        "Metric '%s' not found; available: %s", metric, columns.stream()
+            .filter(column -> !column.equals(POLICY_KEY)).collect(toImmutableList()));
     return results;
   }
 
-  /** Resolves the metric to its column name ignoring case, or fails if it is not present. */
-  private String resolveMetric(List<String> header) {
-    return header.stream()
-        .filter(column -> column.equalsIgnoreCase(metric))
-        .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException(
-            String.format(US, "Metric '%s' not found; available: %s", metric, header.stream()
-                .filter(column -> !column.equals(POLICY_KEY)).collect(toImmutableList()))));
+  /** Returns the metric's column name ignoring case, or empty if this report omitted it. */
+  private Optional<String> resolveMetric(Collection<String> header) {
+    return header.stream().filter(column -> column.equalsIgnoreCase(metric)).findFirst();
   }
 
   /** Writes a combined report with the headers: policy, maximumSize, and the metric. */
@@ -93,9 +97,10 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
     var headers = Stream
         .concat(Stream.of(POLICY_KEY), inputFiles.keySet().stream().map(formatter::format))
         .collect(toImmutableList());
+    var policies = policies();
     try (var writer = CsvWriter.builder().build(outputFile)) {
       writer.writeRecord(headers);
-      for (var policy : policies()) {
+      for (var policy : policies) {
         var values = new ArrayList<String>();
         values.add(policy);
         for (long size : inputFiles.keySet()) {

@@ -164,6 +164,8 @@ public final class ClairvoyantTraceReader implements TraceReader {
       long skip, long limit, boolean weighted) {
     try {
       var file = Files.createTempFile("clairvoyant", ".oracle");
+      file.toFile().deleteOnExit();
+
       var state = new Materialized(file, /* penaltyAware= */ false, /* recordWidth= */ 0);
       try (var channel = FileChannel.open(file, READ, WRITE)) {
         if (delegate instanceof TraceReader.KeyOnlyTraceReader keyReader) {

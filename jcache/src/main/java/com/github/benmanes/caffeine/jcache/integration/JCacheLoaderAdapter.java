@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import javax.cache.CacheManager;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
@@ -51,19 +52,19 @@ public final class JCacheLoaderAdapter<K, V>
   private final JCacheStatisticsMXBean statistics;
   private final EventDispatcher<K, V> dispatcher;
   private final CacheLoader<K, V> delegate;
-  private final ClassLoader classLoader;
+  private final CacheManager cacheManager;
   private final ExpiryPolicy expiry;
   private final Copier copier;
   private final Ticker ticker;
 
   private @Nullable CacheProxy<K, V> cache;
 
-  public JCacheLoaderAdapter(CacheLoader<K, V> delegate, EventDispatcher<K, V> dispatcher,
-      ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics,
-      Copier copier, ClassLoader classLoader) {
+  public JCacheLoaderAdapter(CacheManager cacheManager, CacheLoader<K, V> delegate,
+      EventDispatcher<K, V> dispatcher, ExpiryPolicy expiry, Ticker ticker,
+      JCacheStatisticsMXBean statistics, Copier copier) {
+    this.cacheManager = requireNonNull(cacheManager);
     this.dispatcher = requireNonNull(dispatcher);
     this.statistics = requireNonNull(statistics);
-    this.classLoader = requireNonNull(classLoader);
     this.delegate = requireNonNull(delegate);
     this.copier = requireNonNull(copier);
     this.expiry = requireNonNull(expiry);
@@ -93,9 +94,6 @@ public final class JCacheLoaderAdapter<K, V>
         V copy = copyOf(value);
         long expireTime = expireTimeMillis(/* created= */ true);
         if (expireTime == 0L) {
-          // Per JSR-107 1.1.1 p.55: ZERO duration → entry is already expired
-          // and will not be added to the Cache. Match the put-path convention
-          // of publishing EXPIRED in place of CREATED.
           dispatcher.publishExpired(cache, key, copy);
         } else {
           expirable = new Expirable<>(copy, expireTime);
@@ -104,7 +102,6 @@ public final class JCacheLoaderAdapter<K, V>
       }
 
       if (statsEnabled) {
-        // Subtracts the load time from the get time
         statistics.recordGetTime(start - ticker.read());
       }
       return expirable;
@@ -134,7 +131,6 @@ public final class JCacheLoaderAdapter<K, V>
         V copy = copyOf(value);
         long expireTime = expireTimeMillis(/* created= */ true);
         if (expireTime == 0L) {
-          // ZERO → already expired and not added; match the put-path convention.
           dispatcher.publishExpired(cache, key, copy);
         } else {
           result.put(key, new Expirable<>(copy, expireTime));
@@ -145,7 +141,6 @@ public final class JCacheLoaderAdapter<K, V>
       }
 
       if (statsEnabled) {
-        // Subtracts the load time from the get time
         statistics.recordGetTime(start - ticker.read());
       }
       return result;
@@ -162,8 +157,6 @@ public final class JCacheLoaderAdapter<K, V>
       V value = delegate.load(key);
       requireNonNull(cache);
       if (value == null) {
-        // The SoR row is gone, so the refresh removes the entry; fire REMOVED for symmetry with the
-        // UPDATED/EXPIRED a non-null reload publishes (else listeners see present -> silence -> absent)
         dispatcher.publishRemovedQuietly(cache, key, oldValue.get());
         return null;
       }
@@ -187,7 +180,7 @@ public final class JCacheLoaderAdapter<K, V>
 
   /** Returns a copy of the value if value-based caching is enabled. */
   private V copyOf(V value) {
-    return requireNonNull(copier.copy(value, classLoader));
+    return requireNonNull(copier.copy(value, requireNonNull(cacheManager.getClassLoader())));
   }
 
   private long expireTimeMillis(boolean created) {
@@ -204,8 +197,6 @@ public final class JCacheLoaderAdapter<K, V>
       long expireTime = duration.getAdjustedTime(millis);
       return ((expireTime == 0L) || (expireTime == Long.MAX_VALUE)) ? (expireTime - 1) : expireTime;
     } catch (RuntimeException e) {
-      // Per JSR-107 1.1.1 p.55 a throwing policy uses an implementation default: creation falls
-      // back to eternal so the entry is not lost, an update leaves the expiration unchanged
       logger.log(Level.WARNING, "Exception thrown by expiry policy", e);
       return created ? Long.MAX_VALUE : Long.MIN_VALUE;
     }

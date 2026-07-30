@@ -60,15 +60,22 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   @Override
   public @Nullable V get(K key) {
     requireNotClosed();
+    @Nullable V value;
     try {
-      return getOrLoad(key);
+      value = getOrLoad(key);
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
+      awaitAndSuppressFailure(e);
       throw e;
     } catch (RuntimeException e) {
-      throw new CacheException(e);
-    } finally {
-      dispatcher.awaitSynchronous();
+      var error = new CacheException(e);
+      awaitAndSuppressFailure(error);
+      throw error;
     }
+    var listenerFailure = awaitSynchronousFailure();
+    if (listenerFailure != null) {
+      throw listenerFailure;
+    }
+    return value;
   }
 
   /** Retrieves the value from the cache, loading it if necessary. */
@@ -119,6 +126,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     requireNotClosed();
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
+    Map<K, V> result;
     try {
       Map<K, Expirable<V>> entries = getAndFilterExpiredEntries(keys);
 
@@ -130,17 +138,22 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
         entries.putAll(cache.getAll(keysToLoad));
       }
 
-      Map<K, V> result = copyMap(entries);
+      result = copyMap(entries);
       if (statsEnabled) {
         statistics.recordGetTime(ticker.read() - start);
       }
-      return result;
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
+      awaitAndSuppressFailure(e);
       throw e;
     } catch (RuntimeException e) {
-      throw new CacheException(e);
-    } finally {
-      dispatcher.awaitSynchronous();
+      var error = new CacheException(e);
+      awaitAndSuppressFailure(error);
+      throw error;
     }
+    var listenerFailure = awaitSynchronousFailure();
+    if (listenerFailure != null) {
+      throw listenerFailure;
+    }
+    return result;
   }
 }

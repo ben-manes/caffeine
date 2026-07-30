@@ -44,11 +44,6 @@ TEST_SCOPE = "caffeine/src/test/java/com/github/benmanes/caffeine/cache/"
 FIX_GREP = "fix|bug|regression|NPE|race|leak|incorrect|wrong|revert"
 
 
-def module_of(scope: str) -> str:
-    base = scope.split("/", 1)[0] if "/" in scope else "default"
-    return f"{base}-test" if "/src/test/" in scope else base
-
-
 # name -> (prompt, scope, grep, description). Order is the run order.
 VARIANTS: dict[str, tuple[str, str, str | None, str]] = {
     "main":          ("per-commit.txt",       MAIN_SCOPE, None,     "Broad bug hunt (the default walk)"),
@@ -63,7 +58,7 @@ COMBINED_NAME = "findings-ALL.md"
 
 
 def reports_dir(scope: str) -> Path:
-    return audit_paths.reports_dir(REPO_ROOT, module_of(scope))
+    return audit_paths.reports_dir(REPO_ROOT, audit_paths.derive_module(scope))
 
 
 def findings_path(name: str, scope: str) -> Path:

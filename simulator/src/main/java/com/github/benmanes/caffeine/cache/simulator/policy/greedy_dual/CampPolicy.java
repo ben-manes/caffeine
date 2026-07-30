@@ -100,7 +100,7 @@ public final class CampPolicy implements Policy {
       size += (event.weight() - node.weight);
       node.weight = event.weight();
       onHit(node);
-      if (size > maximumSize) {
+      while (size > maximumSize) {
         evict();
       }
     }

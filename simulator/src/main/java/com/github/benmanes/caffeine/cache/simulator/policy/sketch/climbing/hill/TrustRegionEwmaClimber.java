@@ -64,6 +64,14 @@ public final class TrustRegionEwmaClimber extends AbstractClimber {
 
   @Override
   protected double adjust(double hitRate) {
+    if (firstSample) {
+      // There is no previous hit rate to difference against, so the absolute rate would be consumed
+      // as a ΔHR, seeding the EWMA at ~100x its true scale and forcing a shrink on the next sample
+      // regardless of the workload. Probe upward instead, as a small cache grows the window first.
+      increaseWindow = true;
+      return stepSize;
+    }
+
     double delta = (hitRate - previousHitRate);
     double absPrev = previousAbsDelta;
     double absCur = Math.abs(delta);

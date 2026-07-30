@@ -286,9 +286,21 @@ session memory for the full rationale.
   commits before `invalidateAll` is purged by it). `inFlight` deliberately awaits only *explicit*
   user `loadAll` (which carries a `CompletionListener` the user expects to fire), not implicit
   best-effort refresh; blocking close() to drain `policy().refreshes()` would stall on the user's
-  executor (their hook). Don't add op-vs-close locking or a synchronous REE guard; don't funnel
-  refreshes into `inFlight` or await them in close(); don't re-raise M2/F1 (spec explicitly permits
-  retained contents and is silent on in-progress operations).
+  executor (their hook). **That await spans the `CompletionListener` notification** (2026-07-29):
+  the load body returns the `dispatcher.chainSynchronous()` continuation and the tracked future is
+  `thenCompose`d onto it, so the callback is inside the barrier rather than racing past it (it had
+  briefly escaped, the notification having moved to an untracked `whenComplete`). It stays
+  **non-blocking** — the load body must not `join()` the chain, because the synchronous dispatches
+  run on the same executor the load is on and a single-threaded executor would self-deadlock; the
+  body queues them, returns the thread, and the chain's `handle` notifies on whichever thread
+  completes it. A stuck listener is bounded by the 10s await, which reports a `TimeoutException`.
+  Note the one **mandatory** clause here — no events delivered to a closed `CacheEntryListener` —
+  is enforced by `EventTypeAwareListener.dispatch`'s `event.getSource().isClosed()` early-return
+  plus the shut-down executor's rejection, *not* by this barrier, so a queued dispatch that runs
+  after close delivers nothing. Don't add op-vs-close locking or a synchronous REE guard; don't
+  funnel refreshes into `inFlight` or await them in close(); don't move the `loadAll` notification
+  back outside the tracked future, and don't "simplify" the compose into a `join`; don't re-raise
+  M2/F1 (spec explicitly permits retained contents and is silent on in-progress operations).
 - **JMX `ObjectName` sanitize (`[,:=\n*?]→.`)** matches the RI/ecosystem pattern;
   switching to `ObjectName.quote()` would break operator tooling. Intentional. Distinct
   cache names or manager URIs that sanitize to the *same* string (e.g. `a:b` and `a=b` →
@@ -499,10 +511,13 @@ session memory for the full rationale.
   **full no-op** (`LOADED` → `CREATED` → back to `NONE`): a same-invocation create+delete
   cancels, so no writer fires and no event publishes.
 - **`getExpiryForCreation()` returning `null`** (undefined by the spec — only
-  update/access document null) stores the entry with the `Long.MIN_VALUE`
-  "unchanged" sentinel, which behaves as effectively eternal; `CREATED` is
-  published and the put counted, consistently across all creation paths. The RI
-  would NPE. Implementation-defined input; not a defect.
+  update/access document null) stores the entry as eternal: `getWriteExpireTimeMillis(created)`
+  and `JCacheLoaderAdapter.expireTimeMillis(created)` return `Long.MAX_VALUE` on the creation
+  leg, and the `Long.MIN_VALUE` "unchanged" sentinel is reserved for the *update* leg. `CREATED`
+  is published and the put counted, consistently across all creation paths. The RI would NPE.
+  Implementation-defined input; not a defect. (Earlier revisions returned the `MIN_VALUE`
+  sentinel here too, which read as effectively eternal via `hasExpired`'s wrapping subtraction —
+  same observable behavior, but the explicit `MAX_VALUE` is now the mechanism.)
 - **Access-expiry touch runs lock-free; a concurrent replace races it loosely —
   adjudicated benign (2026-07-12 with Ben; J3 ≡ adversarial F3/F4).** `get`,
   `getAll` (`getAndFilterExpiredEntries`), `EntryIterator.hasNext`, and
@@ -553,15 +568,19 @@ session memory for the full rationale.
   for the one case it would help (an explicit-CL manager outside OSGi), which `FactoryBuilder`
   doesn't help either. Match the TCCL idiom; don't add a manager-CL parameter to `FactoryCreator`.
   Pinned by `TypesafeConfigurationTest.resolvesTypesViaContextClassLoader`.
-- **`TypesafeConfigurator.from` swallows only `ConfigException.BadPath`; other
-  `ConfigException`s bubble up raw — intentional** (adjudicated 2026-07-12 with Ben).
-  `BadPath` is the mandatory no-op for a JCache cache name that isn't representable as a
-  Typesafe config path (Typesafe's path grammar is stricter than JCache names), returning
-  `Optional.empty()`. Every other `ConfigException` (Missing/WrongType) is a real
-  misconfiguration and *should* surface — don't wrap creation failures in `CacheException`
-  here. (`addKeyValueTypes` CNFE → `IllegalStateException` likewise surfaces as a real
-  config error; the `FactoryBuilder` bare-`RuntimeException` on a bad factory class is the
-  spec's own code, `javax.cache.configuration.FactoryBuilder`, not Caffeine's to rewrap.)
+- **`TypesafeConfigurator.from` swallows only `ConfigException.BadPath`; every other
+  `ConfigException` is wrapped as `CacheException`** (reversed 2026-07-29; superseded the
+  2026-07-12 adjudication that had them bubble up raw). `BadPath` remains the mandatory no-op
+  for a JCache cache name that isn't representable as a Typesafe config path (Typesafe's path
+  grammar is stricter than JCache names), returning `Optional.empty()`. The other
+  `ConfigException`s (Missing/WrongType) are still real misconfigurations that must surface —
+  the change is only to their *type*: a raw `ConfigException` is a Typesafe-specific class
+  escaping uncaught through the spec's own `getCacheManager`/`createCache`/`getCache` surface,
+  which declares `CacheException` as the configuration-failure type. The cause is preserved, so
+  no diagnostic detail is lost. Pinned by `TypesafeConfigurationTest.from_malformedSetting`.
+  (`addKeyValueTypes` CNFE → `IllegalStateException` still surfaces as-is; the `FactoryBuilder`
+  bare-`RuntimeException` on a bad factory class is the spec's own code,
+  `javax.cache.configuration.FactoryBuilder`, not Caffeine's to rewrap.)
 
 - **`invokeAll` isolates a per-key failure instead of aborting the batch** (fixed 2026-07-12).
   The per-key catch was `EntryProcessorException`-only, so a non-EPE failure — e.g. a

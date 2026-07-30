@@ -133,7 +133,7 @@ public class AccessEvent {
     WeightedAccessEvent(long key, int weight) {
       super(key);
       this.weight = weight;
-      checkArgument(weight >= 0);
+      checkArgument(weight > 0, "weight must be positive: %s", weight);
     }
     @Override public int weight() {
       return weight;

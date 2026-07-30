@@ -215,6 +215,9 @@ public final class EventDispatcher<K, V> {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public void awaitSynchronous() {
+    if (pending.get().isEmpty()) {
+      return;
+    }
     try {
       var error = chainSynchronous().join();
       if (error != null) {
@@ -255,7 +258,9 @@ public final class EventDispatcher<K, V> {
                     .map(CompletableFuture::join)
                     .filter(Objects::nonNull)
                     .reduce((e1, e2) -> {
-                      e1.addSuppressed(e2);
+                      if (e1 != e2) {
+                        e1.addSuppressed(e2);
+                      }
                       return e1;
                     }).orElse(null);
               }
@@ -292,7 +297,7 @@ public final class EventDispatcher<K, V> {
       var future = dispatchQueue.compute(key, (k, queue) -> {
         return (queue == null)
             ? CompletableFuture.supplyAsync(() -> listener.dispatch(e), executor)
-            : queue.thenApplyAsync(prev -> listener.dispatch(e), executor);
+            : queue.handleAsync((prev, error) -> listener.dispatch(e), executor);
       });
       future.whenComplete((result, error) -> {
         // optimistic check to avoid locking if not a match

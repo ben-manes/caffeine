@@ -349,6 +349,27 @@ final class CaffeinatedGuavaTest {
   }
 
   @Test
+  void cacheLoader_bulkLoad_null() throws Exception {
+    // The caffeinate direction must reject a null key as well as a null value, as the Guava loader
+    // may return either and neither can be stored
+    for (boolean nullKey : new boolean[] { true, false }) {
+      var caffeine = CaffeinatedGuava.caffeinate(new CacheLoader<Integer, Integer>() {
+        @Override public Integer load(Integer key) {
+          throw new UnsupportedOperationException();
+        }
+        @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+          var result = new HashMap<Integer, Integer>();
+          for (var key : keys) {
+            result.put(nullKey ? null : key, nullKey ? key : null);
+          }
+          return result;
+        }
+      });
+      assertThrows(InvalidCacheLoadException.class, () -> caffeine.loadAll(Set.of(1, 2, 3)));
+    }
+  }
+
+  @Test
   void cacheLoader_exception() {
     runCacheLoaderExceptionTest(new InterruptedException());
     runCacheLoaderExceptionTest(new RuntimeException());

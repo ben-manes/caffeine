@@ -36,6 +36,23 @@ paths:
   mutation). The compute already refreshes the native timer via its own `Expiry` on commit
   (`expireAfterUpdate` fires even on a same-instance return, reading the just-written
   timestamp). Don't add `setVariableExpiration` to a write path.
+- **A query-style op that returns the same `Expirable` still counts as a native write — accepted
+  best-effort divergence**: core's `remap` has no way to hear "this was a no-op" from outside its
+  package (`RemapHints` is package-private), so the adapter's query paths — a *failed*
+  `putIfAbsent` (hence `loadAll(replaceExistingValues=false)` too), a NONE-action entry processor,
+  and under an eternal `ExpiryPolicy`, where `setAccessExpireTime` no-ops, the non-matching
+  conditional `remove`/`replace` and `invoke` READ — all reach `remap`'s metadata block:
+  `exceedsWriteTimeTolerance` resets the node's native `writeTime` and `discardRefresh` cancels any
+  in-flight reload. So with `policy.refresh.after-write` a polled `putIfAbsent` on a live key can
+  starve that key's refresh, and with an eternal policy plus `policy.eager-expiration.after-write`
+  it can hold the entry past its native TTL. **Won't be fixed** (adjudicated 2026-07-29): those are
+  Caffeine knobs bolted onto a JCache cache, and JCache semantics come from `ExpiryPolicy` — mixing
+  the two is the user's call, and the adapter is best-effort. Both repairs were rejected: teaching
+  core that an unchanged value is not a write changes `asMap().compute` for every caller (and the
+  trailing `UpdateTask`'s `reorder(writeOrderDeque(), ...)` would then push a stale-`writeTime` node
+  behind newer entries, expiring it *later*), while routing `putIfAbsent` through `computeIfAbsent`
+  with an expired-prior fallback splits an atomic op and never reaches `invoke`. Don't re-raise it,
+  and don't add a public no-op hint for it.
 - **EntryProcessor state machine**: `EntryProcessorEntry.Action` tracks the dominant
   operation (NONE → READ/CREATED/UPDATED/LOADED/DELETED). `getValue()` is stateful —
   first call triggers loading. Action transitions have strict rules. `remove()` from
@@ -116,7 +133,12 @@ paths:
   next op — not worth littering every cache write with the guard. Don't defer the event publish
   outside the compute (breaks per-key ordering).
 - **In-flight futures**: All async operations add to `inFlight` set for close() to
-  await. New async operations must add futures to this set.
+  await. New async operations must add futures to this set — including a continuation that still
+  owes the user a callback: `loadAll`'s tracked future is `thenCompose`d onto its
+  `chainSynchronous()` notification so the `CompletionListener` is inside the barrier, and the load
+  body must not `join()` that chain (the synchronous dispatches share its executor). The separate
+  "no events to a closed listener" guarantee comes from `dispatch`'s `isClosed()` early-return, not
+  from this barrier. See `jsr107-conformance.md`.
 - **`close()` shuts down an *owned* `ExecutorService` — per-cache ownership is by-design**:
   `shutdownExecutor()` calls `es.shutdown()` when `executor instanceof ExecutorService` (the
   `PMD.CloseResource` suppression marks it deliberate). The `Factory<Executor>` contract means

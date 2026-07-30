@@ -131,6 +131,7 @@ public final class Simulator {
   private static boolean isClairvoyant(BasicSettings settings) {
     var clairvoyant = ClairvoyantPolicy.class.getAnnotation(PolicySpec.class).name();
     return settings.admission().contains(CLAIRVOYANT)
+        || CLAIRVOYANT.name().equalsIgnoreCase(settings.tinyLfu().sketch())
         || settings.policies().stream().anyMatch(clairvoyant::equalsIgnoreCase);
   }
 

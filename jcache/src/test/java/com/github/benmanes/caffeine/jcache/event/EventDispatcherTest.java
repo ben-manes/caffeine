@@ -473,6 +473,21 @@ final class EventDispatcherTest {
   }
 
   @Test
+  void awaitSynchronous_listenerExceptions_sameInstance() {
+    // A listener that rethrows a stored exception yields the same instance for both events, which
+    // Throwable.addSuppressed rejects as self-suppression
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var thrown = new CacheEntryListenerException("listener");
+    dispatcher.pending.get().add(CompletableFuture.completedFuture(thrown));
+    dispatcher.pending.get().add(CompletableFuture.completedFuture(thrown));
+
+    var e = assertThrows(CacheEntryListenerException.class, dispatcher::awaitSynchronous);
+    assertThat(e).isSameInstanceAs(thrown);
+    assertThat(e.getSuppressed()).isEmpty();
+    assertThat(dispatcher.pending.get()).isEmpty();
+  }
+
+  @Test
   void chainSynchronous_readsSnapshotAfterClear() {
     // The future completes only after chainSynchronous drained `pending`; the deferred thenApply must
     // read the captured snapshot, not the now-cleared (and possibly repopulated) ThreadLocal list

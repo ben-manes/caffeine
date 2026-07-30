@@ -28,15 +28,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[2]
 
 
-def derive_module(scope: str) -> str:
-    """Reports-dir suffix for a scope; mirrors walker.py so verify reads the
-    matching tree. First path segment plus a '-test' discriminator so the
-    test-history walk stays disjoint from the main-source walk."""
-    base = scope.split("/", 1)[0] if "/" in scope else "default"
-    return f"{base}-test" if "/src/test/" in scope else base
-
-
-_MODULE = derive_module(SCOPE)
+_MODULE = audit_paths.derive_module(SCOPE)
 REPORTS_DIR = audit_paths.reports_dir(REPO_ROOT, _MODULE)
 DEFAULT_STATE = REPORTS_DIR / "state.json"
 DEFAULT_VERIFIED = REPORTS_DIR / "verified.json"
