@@ -25,8 +25,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import org.apache.commons.text.TextStringBuilder;
-
 import com.github.benmanes.caffeine.cache.node.AddConstructors;
 import com.github.benmanes.caffeine.cache.node.AddDeques;
 import com.github.benmanes.caffeine.cache.node.AddExpiration;
@@ -88,7 +86,7 @@ public final class NodeFactoryGenerator {
 
   /** Returns an encoded form of the class name for compact use. */
   private static String encode(String className) {
-    return new TextStringBuilder(Feature.makeEnumName(className))
+    return Feature.makeEnumName(className)
         .replaceFirst("STRONG_KEYS", /* puissant */ "P")
         .replaceFirst("WEAK_KEYS", /* faible */ "F")
         .replaceFirst("STRONG_VALUES", "S")
@@ -100,8 +98,7 @@ public final class NodeFactoryGenerator {
         .replaceFirst("MAXIMUM", "M")
         .replaceFirst("WEIGHT", "W")
         .replaceFirst("SIZE", "S")
-        .deleteAll("_")
-        .toString();
+        .replace("_", "");
   }
 
   public static void main(String[] args) throws IOException {

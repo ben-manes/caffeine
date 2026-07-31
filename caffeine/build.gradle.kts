@@ -88,7 +88,6 @@ dependencies {
   javaPoetImplementation(libs.guava)
   javaPoetImplementation(libs.javapoet)
   javaPoetImplementation(libs.jspecify)
-  javaPoetImplementation(libs.commons.text)
   javaPoetImplementation(libs.commons.lang3)
   javaPoetImplementation(libs.spotbugs.annotations)
 

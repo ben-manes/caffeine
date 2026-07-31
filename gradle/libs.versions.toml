@@ -13,7 +13,6 @@ commons-collections4 = "4.5.0"
 commons-compress = "1.28.0"
 commons-lang3 = "3.20.0"
 commons-math3 = "3.6.1"
-commons-text = "1.15.0"
 concurrentlinkedhashmap = "1.4.2"
 config = "1.4.9"
 coveralls = "1.2.20"
@@ -123,7 +122,6 @@ commons-collections4 = { module = "org.apache.commons:commons-collections4", ver
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang3" }
 commons-math3 = { module = "org.apache.commons:commons-math3", version.ref = "commons-math3" }
-commons-text = { module = "org.apache.commons:commons-text", version.ref = "commons-text" }
 concurrentlinkedhashmap = { module = "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru", version.ref = "concurrentlinkedhashmap" }
 config = { module = "com.typesafe:config", version.ref = "config" }
 ecj = { module = "org.eclipse.jdt:ecj", version.ref = "ecj" }
@@ -225,7 +223,7 @@ zstd = { module = "com.github.luben:zstd-jni", version.ref = "zstd" }
 [bundles]
 coherence = ["coherence", "json-bind"]
 constraints = ["bcel", "bouncycastle-jdk18on", "bouncycastle-pkix-jdk18on",
-  "bouncycastle-util-jdk18on", "commons-compress", "commons-lang3", "commons-text",
+  "bouncycastle-util-jdk18on", "commons-compress", "commons-lang3",
   "h2", "httpclient", "jcommander", "jgit", "junit", "jsoup", "log4j",
   "protobuf", "testng"]
 errorprone-support = ["errorprone-support", "errorprone-support-refaster"]
