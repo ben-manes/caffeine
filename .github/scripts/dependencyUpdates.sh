@@ -14,7 +14,7 @@ find . -type d -name .claude -prune -o -type f -name "settings.gradle.kts" -prin
 
   gradle=$( [[ -f "$project_dir/gradlew" ]] && echo "./$project_dir/gradlew" || echo "./gradlew" )
   output=$(JAVA_VERSION=25 \
-    $gradle --project-dir "$project_dir" dependencyUpdates --refresh-dependencies -q "$@" | \
+    $gradle --project-dir "$project_dir" dependencyUpdates --refresh-dependencies "$@" | \
     sed -e '/^------------------------------------------------------------/,/^$/d' \
         -e '/The following dependencies are using the latest milestone version:/,/^$/d' \
         -e '/Gradle release-candidate updates:/d' \

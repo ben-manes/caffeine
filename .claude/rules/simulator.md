@@ -59,10 +59,12 @@ value — scaffolding that never expanded).
   it cannot read, so the cost of the looseness is a confusing minute rather than a wrong result.
   Don't add compression, range checks, or collision warnings here without a concrete need — it was
   tried and reverted as more machinery than the export path deserves.
-- **Text traces must be valid UTF-8.** `TextTraceReader` decodes with `CodingErrorAction.REPORT`.
-  Silent replacement would map distinct malformed byte sequences onto U+FFFD and alias their keys —
-  invisible in a hit rate, and real for readers whose key is derived from a text field (the MSR
-  hostname, the Baleen shard).
+- **Text traces decode as ISO-8859-1 — key identity, not display.** Every byte maps to its own
+  char, so a dirty real-world trace (wikibench holds raw Latin-1 bytes) parses, and distinct
+  malformed byte sequences cannot alias onto a shared U+FFFD — the lenient-UTF-8 hazard, real for
+  readers whose key is derived from a text field (the MSR hostname, the Baleen shard). All field
+  parsing and filtering is ASCII, so clean traces are byte-for-byte unaffected. A strict REPORT
+  decoder was tried and reverted: it closed the aliasing hole by refusing real traces outright.
 - **Disclosed chart/sampling limitations** (not defects, don't "fix" silently): the JFreeChart size
   axis is *categorical*, so an exponential size sweep renders equidistant rather than to scale; and
   GUESS sampling is with-replacement, so a sample may draw the same entry twice.

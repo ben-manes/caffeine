@@ -16,11 +16,8 @@
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.MalformedInputException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -37,19 +34,17 @@ final class TextTraceReaderTest {
 
   @Test
   @SuppressWarnings("Varifier")
-  void failsOnMalformedInput(@TempDir Path dir) throws IOException {
-    // A reader that derives its key from a text field (here the MSR hostname) would decode two
+  void keepsMalformedInputDistinct(@TempDir Path dir) throws IOException {
+    // A reader that derives its key from a text field (here the MSR hostname) must not decode two
     // distinct malformed byte sequences to the same replacement character and silently alias their
-    // keys, so a trace that is not valid UTF-8 must fail rather than be guessed at
+    // keys; the ISO-8859-1 decode keeps every byte its own char, so a trace that is not valid
+    // UTF-8 (wikibench) is read faithfully rather than refused or guessed at
     byte c1 = (byte) 0xC3;
     byte c2 = (byte) 0xC4;
     Path file = Files.write(dir.resolve("msr.csv"), new byte[] {
         '0', ',', c1, ',', '0', ',', 'R', 'e', 'a', 'd', ',', '0', ',', '5', '1', '2', '\n',
         '0', ',', c2, ',', '0', ',', 'R', 'e', 'a', 'd', ',', '0', ',', '5', '1', '2', '\n'});
-
-    var error = assertThrows(UncheckedIOException.class,
-        () -> new CambridgeTraceReader(file.toString()).keys().count());
-    assertThat(error).hasCauseThat().isInstanceOf(MalformedInputException.class);
+    assertThat(new CambridgeTraceReader(file.toString()).keys().distinct().count()).isEqualTo(2);
   }
 
   @Test
