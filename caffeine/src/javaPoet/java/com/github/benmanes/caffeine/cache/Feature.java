@@ -15,15 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.stream.Collectors.joining;
-
 import java.util.Collections;
 import java.util.Set;
 
-import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Streams;
 
 /**
  * The features that may be code generated.
@@ -52,17 +48,6 @@ public enum Feature {
   private static final ImmutableSet<Feature> fastPathIncompatible = Sets.immutableEnumSet(
       Feature.EXPIRE_ACCESS, Feature.WEAK_KEYS, Feature.INFIRM_VALUES,
       Feature.WEAK_VALUES, Feature.SOFT_VALUES);
-
-  public static String makeEnumName(String enumName) {
-    return CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, enumName);
-  }
-
-  public static String makeClassName(Iterable<Feature> features) {
-    String enumName = Streams.stream(features)
-        .map(Feature::name)
-        .collect(joining("_"));
-    return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
-  }
 
   public static boolean usesWriteOrderDeque(Set<Feature> features) {
     return features.contains(Feature.EXPIRE_WRITE);

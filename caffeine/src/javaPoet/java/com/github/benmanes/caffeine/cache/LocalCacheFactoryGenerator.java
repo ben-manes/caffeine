@@ -41,6 +41,7 @@ import com.github.benmanes.caffeine.cache.local.AddSubtype;
 import com.github.benmanes.caffeine.cache.local.Finalize;
 import com.github.benmanes.caffeine.cache.local.LocalCacheContext;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.ParameterizedTypeName;
@@ -53,6 +54,22 @@ import com.palantir.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LocalCacheFactoryGenerator {
+
+  private static final ImmutableMap<Feature, String> ENCODING_MAP =
+      ImmutableMap.<Feature, String>builder()
+          .put(Feature.STRONG_KEYS, "S")
+          .put(Feature.WEAK_KEYS, "W")
+          .put(Feature.STRONG_VALUES, "S")
+          .put(Feature.INFIRM_VALUES, "I")
+          .put(Feature.LISTENING, "L")
+          .put(Feature.STATS, "S")
+          .put(Feature.MAXIMUM_SIZE, "MS")
+          .put(Feature.MAXIMUM_WEIGHT, "MW")
+          .put(Feature.EXPIRE_ACCESS, "A")
+          .put(Feature.EXPIRE_WRITE, "W")
+          .put(Feature.REFRESH_WRITE, "R")
+          .buildOrThrow();
+
   private final ImmutableList<Rule<LocalCacheContext>> rules;
   private final ImmutableList<ImmutableSet<Optional<Feature>>> dimensions;
 
@@ -71,7 +88,7 @@ public final class LocalCacheFactoryGenerator {
 
   private void generate(Path directory) throws IOException {
     var generator = new FactoryGenerator(directory, dimensions,
-        LocalCacheFactoryGenerator::encode, this::makeLocalCacheSpec);
+        ENCODING_MAP, this::makeLocalCacheSpec);
     generator.generate();
   }
 
@@ -86,24 +103,6 @@ public final class LocalCacheFactoryGenerator {
       rule.run(context);
     }
     return context.build();
-  }
-
-  /** Returns an encoded form of the class name for compact use. */
-  private static String encode(String className) {
-    return Feature.makeEnumName(className)
-        .replaceFirst("STRONG_KEYS", "S")
-        .replaceFirst("WEAK_KEYS", "W")
-        .replaceFirst("STRONG_VALUES", "S")
-        .replaceFirst("INFIRM_VALUES", "I")
-        .replaceFirst("LISTENING", "L")
-        .replaceFirst("STATS", "S")
-        .replaceFirst("MAXIMUM", "M")
-        .replaceFirst("WEIGHT", "W")
-        .replaceFirst("SIZE", "S")
-        .replaceFirst("EXPIRE_ACCESS", "A")
-        .replaceFirst("EXPIRE_WRITE", "W")
-        .replaceFirst("REFRESH_WRITE", "R")
-        .replace("_", "");
   }
 
   public static void main(String[] args) throws IOException {

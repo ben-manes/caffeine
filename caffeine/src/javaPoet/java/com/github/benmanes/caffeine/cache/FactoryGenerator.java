@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,11 +31,11 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
-import java.util.function.UnaryOperator;
 import java.util.spi.ToolProvider;
 import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Sets;
@@ -50,12 +51,12 @@ import com.palantir.javapoet.TypeSpec;
 final class FactoryGenerator {
   private final ImmutableList<ImmutableSet<Feature>> featureCombinations;
   private final ImmutableList<Feature> canonicalOrder;
-  private final UnaryOperator<String> encode;
+  private final ImmutableMap<Feature, String> encoding;
   private final SpecFactory specFactory;
   private final Path directory;
 
   FactoryGenerator(Path directory, ImmutableList<ImmutableSet<Optional<Feature>>> dimensions,
-      UnaryOperator<String> encode, SpecFactory specFactory) {
+      ImmutableMap<Feature, String> encoding, SpecFactory specFactory) {
     requireNonNull(dimensions);
     this.featureCombinations = Sets.cartesianProduct(dimensions).stream()
         .map(FactoryGenerator::toFeatures).collect(toImmutableList());
@@ -65,7 +66,7 @@ final class FactoryGenerator {
         .flatMap(Optional::stream)
         .collect(toImmutableList());
     this.directory = requireNonNull(directory);
-    this.encode = requireNonNull(encode);
+    this.encoding = requireNonNull(encoding);
   }
 
   void generate() throws IOException {
@@ -101,7 +102,8 @@ final class FactoryGenerator {
 
   /** Returns the encoded class name, naming the features in canonical (not set iteration) order. */
   private String classNameOf(ImmutableSet<Feature> features) {
-    return encode.apply(Feature.makeClassName(canonical(features)));
+    var ordered = canonical(features);
+    return ordered.stream().map(encoding::get).collect(joining());
   }
 
   /** Orders the present features by the matrix dimension order, regardless of the set's own order. */
