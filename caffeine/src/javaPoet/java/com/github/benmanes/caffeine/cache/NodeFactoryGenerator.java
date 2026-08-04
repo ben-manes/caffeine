@@ -37,6 +37,7 @@ import com.github.benmanes.caffeine.cache.node.AddValue;
 import com.github.benmanes.caffeine.cache.node.Finalize;
 import com.github.benmanes.caffeine.cache.node.NodeContext;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.ParameterizedTypeName;
@@ -50,6 +51,19 @@ import com.palantir.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class NodeFactoryGenerator {
+
+  private static final ImmutableMap<Feature, String> ENCODING_MAP = ImmutableMap.of(
+      Feature.STRONG_KEYS, /* puissant */ "P",
+      Feature.WEAK_KEYS, /* faible */ "F",
+      Feature.STRONG_VALUES, "S",
+      Feature.WEAK_VALUES, "W",
+      Feature.SOFT_VALUES, /* doux */ "D",
+      Feature.EXPIRE_ACCESS, "A",
+      Feature.EXPIRE_WRITE, "W",
+      Feature.REFRESH_WRITE, "R",
+      Feature.MAXIMUM_SIZE, "MS",
+      Feature.MAXIMUM_WEIGHT, "MW");
+
   private final ImmutableList<Rule<NodeContext>> rules;
   private final ImmutableList<ImmutableSet<Optional<Feature>>> dimensions;
 
@@ -65,8 +79,7 @@ public final class NodeFactoryGenerator {
   }
 
   private void generate(Path directory) throws IOException {
-    var generator = new FactoryGenerator(directory, dimensions,
-        NodeFactoryGenerator::encode, this::makeNodeSpec);
+    var generator = new FactoryGenerator(directory, dimensions, ENCODING_MAP, this::makeNodeSpec);
     generator.generate();
   }
 
@@ -82,23 +95,6 @@ public final class NodeFactoryGenerator {
       rule.run(context);
     }
     return context.build();
-  }
-
-  /** Returns an encoded form of the class name for compact use. */
-  private static String encode(String className) {
-    return Feature.makeEnumName(className)
-        .replaceFirst("STRONG_KEYS", /* puissant */ "P")
-        .replaceFirst("WEAK_KEYS", /* faible */ "F")
-        .replaceFirst("STRONG_VALUES", "S")
-        .replaceFirst("WEAK_VALUES", "W")
-        .replaceFirst("SOFT_VALUES", /* doux */ "D")
-        .replaceFirst("EXPIRE_ACCESS", "A")
-        .replaceFirst("EXPIRE_WRITE", "W")
-        .replaceFirst("REFRESH_WRITE", "R")
-        .replaceFirst("MAXIMUM", "M")
-        .replaceFirst("WEIGHT", "W")
-        .replaceFirst("SIZE", "S")
-        .replace("_", "");
   }
 
   public static void main(String[] args) throws IOException {
