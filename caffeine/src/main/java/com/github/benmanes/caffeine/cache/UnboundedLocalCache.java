@@ -776,10 +776,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   /** An adapter to safely externalize the key spliterator. */
-  static final class KeySpliterator<K, V> implements Spliterator<K> {
+  static final class KeySpliterator<K> implements Spliterator<K> {
     final Spliterator<K> spliterator;
 
-    KeySpliterator(UnboundedLocalCache<K, V> cache) {
+    KeySpliterator(UnboundedLocalCache<K, ?> cache) {
       this(cache.data.keySet().spliterator());
     }
 
@@ -800,7 +800,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public @Nullable KeySpliterator<K, V> trySplit() {
+    public @Nullable KeySpliterator<K> trySplit() {
       Spliterator<K> split = spliterator.trySplit();
       return (split == null) ? null : new KeySpliterator<>(split);
     }
@@ -969,10 +969,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   /** An adapter to safely externalize the value spliterator. */
-  static final class ValueSpliterator<K, V> implements Spliterator<V> {
+  static final class ValueSpliterator<V> implements Spliterator<V> {
     final Spliterator<V> spliterator;
 
-    ValueSpliterator(UnboundedLocalCache<K, V> cache) {
+    ValueSpliterator(UnboundedLocalCache<?, V> cache) {
       this(cache.data.values().spliterator());
     }
 
@@ -993,7 +993,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public @Nullable ValueSpliterator<K, V> trySplit() {
+    public @Nullable ValueSpliterator<V> trySplit() {
       Spliterator<V> split = spliterator.trySplit();
       return (split == null) ? null : new ValueSpliterator<>(split);
     }

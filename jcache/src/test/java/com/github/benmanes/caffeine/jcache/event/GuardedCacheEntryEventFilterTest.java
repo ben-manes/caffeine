@@ -17,18 +17,13 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import javax.cache.Cache;
-import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEventFilter;
-import javax.cache.event.CacheEntryListener;
-import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.event.EventType;
 
 import org.apache.commons.lang3.concurrent.UncheckedExecutionException;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
@@ -41,13 +36,12 @@ import com.google.common.testing.EqualsTester;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @ExtendWith(TestLoggerFactoryExtension.class)
-final class EventTypeFilterTest {
+final class GuardedCacheEntryEventFilterTest {
 
   @Test
-  void evaluate_compatible() {
+  void evaluate() {
     CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
-    CacheEntryCreatedListener<Integer, Integer> listener = Mockito.mock();
-    var filter = new EventTypeFilter<>(listener, underlying);
+    var filter = new GuardedCacheEntryEventFilter<>(underlying);
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
       when(underlying.evaluate(any()))
           .thenReturn(false)
@@ -56,49 +50,13 @@ final class EventTypeFilterTest {
           /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2);
       assertThat(filter.evaluate(event)).isFalse();
       assertThat(filter.evaluate(event)).isTrue();
-      verifyNoInteractions(listener);
-    }
-  }
-
-  @Test
-  void evaluate_incompatible() {
-    CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
-    CacheEntryListener<Integer, Integer> listener = Mockito.mock();
-    var filter = new EventTypeFilter<>(listener, underlying);
-    try (Cache<Integer, Integer> cache = Mockito.mock()) {
-      var event = new JCacheEntryEvent<>(cache, EventType.CREATED,
-          /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2);
-      assertThat(filter.evaluate(event)).isFalse();
-      verifyNoInteractions(cache, listener, underlying);
-    }
-  }
-
-  @Test @Tag("isolated")
-  @SuppressWarnings({"CheckReturnValue", "EnumOrdinal"})
-  void evaluate_unknownEventType() {
-    CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
-    CacheEntryListener<Integer, Integer> listener = Mockito.mock();
-    var filter = new EventTypeFilter<>(listener, underlying);
-    try (var eventTypes = Mockito.mockStatic(EventType.class);
-         Cache<Integer, Integer> cache = Mockito.mock()) {
-      var unknown = Mockito.mock(EventType.class);
-      when(unknown.ordinal()).thenReturn(4);
-      eventTypes.when(EventType::values).thenReturn(new EventType[] {
-          EventType.CREATED, EventType.UPDATED, EventType.REMOVED, EventType.EXPIRED, unknown });
-      var event = new JCacheEntryEvent<>(cache, unknown,
-          /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2);
-
-      assertThat(filter.evaluate(event)).isFalse();
-      verifyNoInteractions(cache, listener, underlying);
-      assertThat(TestLoggerFactory.getLoggingEvents()).hasSize(1);
     }
   }
 
   @Test
   void evaluate_throwsException() {
     CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
-    CacheEntryCreatedListener<Integer, Integer> listener = Mockito.mock();
-    var filter = new EventTypeFilter<>(listener, underlying);
+    var filter = new GuardedCacheEntryEventFilter<>(underlying);
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
       when(underlying.evaluate(any()))
           .thenThrow(AssertionError.class)
@@ -108,20 +66,18 @@ final class EventTypeFilterTest {
       assertThat(filter.evaluate(event)).isFalse();
       assertThat(filter.evaluate(event)).isFalse();
       assertThat(TestLoggerFactory.getLoggingEvents()).hasSize(2);
-      verifyNoInteractions(listener);
     }
   }
 
   @Test
   void equals() {
-    CacheEntryCreatedListener<Integer, Integer> create = events -> {};
-    CacheEntryUpdatedListener<Integer, Integer> update = events -> {};
     CacheEntryEventFilter<Integer, Integer> none = event -> false;
     CacheEntryEventFilter<Integer, Integer> all = event -> true;
     new EqualsTester()
-        .addEqualityGroup(new EventTypeFilter<>(create, none), new EventTypeFilter<>(create, none))
-        .addEqualityGroup(new EventTypeFilter<>(create, all), new EventTypeFilter<>(create, all))
-        .addEqualityGroup(new EventTypeFilter<>(update, all), new EventTypeFilter<>(update, all))
+        .addEqualityGroup(new GuardedCacheEntryEventFilter<>(none),
+            new GuardedCacheEntryEventFilter<>(none))
+        .addEqualityGroup(new GuardedCacheEntryEventFilter<>(all),
+            new GuardedCacheEntryEventFilter<>(all))
         .testEquals();
   }
 }

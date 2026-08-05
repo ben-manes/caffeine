@@ -32,6 +32,10 @@ import static com.github.benmanes.caffeine.cache.BoundedLocalCache.SMALL_CACHE_S
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.SMALL_CACHE_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WARN_AFTER_LOCK_WAIT_NANOS;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WRITE_BUFFER_MAX;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.isRefreshing;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.markRefreshing;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.toWriteTime;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.writeTimeOf;
 import static com.github.benmanes.caffeine.cache.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_ACCESS;
@@ -2136,7 +2140,7 @@ final class BoundedLocalCacheTest {
       assertThat(node.getAccessTime()).isEqualTo(expected);
     }
     if (context.expiresAfterWrite() || context.refreshes()) {
-      assertThat(node.getWriteTime()).isEqualTo(expected & ~1L);
+      assertThat(node.getWriteTime()).isEqualTo(toWriteTime(expected));
     }
     if (context.expiresVariably()) {
       assertThat(node.getVariableTime()).isEqualTo(expected);
@@ -2281,11 +2285,13 @@ final class BoundedLocalCacheTest {
     var accessOrderProtectedDeque = new AccessOrderDeque<Node<Object, Object>>();
     var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {
+      long mainProtectedWeightedSize = 100_000;
+
       @Override protected long mainProtectedMaximum() {
         return 1;
       }
       @Override protected long mainProtectedWeightedSize() {
-        return 100_000;
+        return mainProtectedWeightedSize;
       }
       @Override protected AccessOrderDeque<Node<Object, Object>> accessOrderProbationDeque() {
         return accessOrderProbationDeque;
@@ -2294,7 +2300,7 @@ final class BoundedLocalCacheTest {
         return accessOrderProtectedDeque;
       }
       @Override protected void setMainProtectedWeightedSize(long weightedSize) {
-        assertThat(weightedSize).isEqualTo(mainProtectedWeightedSize() - QUEUE_TRANSFER_THRESHOLD);
+        this.mainProtectedWeightedSize = weightedSize;
       }
     };
 
@@ -2305,6 +2311,7 @@ final class BoundedLocalCacheTest {
     cache.demoteFromMainProtected();
     assertThat(accessOrderProbationDeque).hasSize(QUEUE_TRANSFER_THRESHOLD);
     assertThat(accessOrderProtectedDeque).hasSize(9 * QUEUE_TRANSFER_THRESHOLD);
+    assertThat(cache.mainProtectedWeightedSize).isEqualTo(100_000 - QUEUE_TRANSFER_THRESHOLD);
   }
 
   @ParameterizedTest
@@ -4166,8 +4173,8 @@ final class BoundedLocalCacheTest {
     long now = Long.MIN_VALUE + duration;
     var newestNode = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(newest)));
     var oldestNode = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(oldest)));
-    newestNode.setWriteTime((Long.MIN_VALUE + (duration / 2)) & ~1L);
-    oldestNode.setWriteTime((Long.MAX_VALUE - (duration / 2)) & ~1L);
+    newestNode.setWriteTime(toWriteTime(Long.MIN_VALUE + (duration / 2)));
+    oldestNode.setWriteTime(toWriteTime(Long.MAX_VALUE - (duration / 2)));
 
     cache.expireAfterWriteEntries(now);
     assertThat(cache.data.get(cache.nodeFactory.newLookupKey(oldest))).isNull();
@@ -4526,7 +4533,7 @@ final class BoundedLocalCacheTest {
     // the stored writeTime (rather than wall-clock now) is what surfaces the transition.
     var inFlight = new CompletableFuture<Int>();
     cache.put(context.absentKey(), inFlight);
-    long expected = (context.ticker().read() + ASYNC_EXPIRY) & ~1L;
+    long expected = toWriteTime(context.ticker().read() + ASYNC_EXPIRY);
     assertThat(node.getWriteTime()).isEqualTo(expected);
     assertThat(node.getWriteTime()).isNotEqualTo(realWriteTime);
     inFlight.complete(context.absentKey());
@@ -5084,7 +5091,7 @@ final class BoundedLocalCacheTest {
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     var node = requireNonNull(cache.data.get(
         cache.nodeFactory.newLookupKey(context.firstKey())));
-    node.setWriteTime(node.getWriteTime() | 1L);
+    node.setWriteTime(markRefreshing(node.getWriteTime()));
 
     context.ticker().advance(Duration.ofMinutes(2));
     assertThat(cache.refreshIfNeeded(node, context.ticker().read())).isNull();
@@ -5434,7 +5441,7 @@ final class BoundedLocalCacheTest {
       var caller = CompletableFuture.supplyAsync(() -> cache.get(context.absentKey()), executor);
 
       await().untilTrue(reloading);
-      assertThat(node.getWriteTime() & 1L).isEqualTo(1);
+      assertThat(isRefreshing(node.getWriteTime())).isTrue();
 
       localCache.refreshes = null;
       var value = cache.get(context.absentKey());
@@ -5444,7 +5451,7 @@ final class BoundedLocalCacheTest {
       refresh.set(true);
       assertThat(caller).succeedsWith(context.absentValue());
       assertThat(refreshes).isNotEmpty();
-      assertThat(node.getWriteTime() & 1L).isEqualTo(0);
+      assertThat(isRefreshing(node.getWriteTime())).isFalse();
 
       localCache.refreshes = refreshes;
       future.complete(newValue);
@@ -5728,26 +5735,6 @@ final class BoundedLocalCacheTest {
   @Test
   void removalCause_size_wasEvicted() {
     assertThat(RemovalCause.SIZE.wasEvicted()).isTrue();
-  }
-
-  @Test
-  void toUncheckedException_checkedException() {
-    var exception = BoundedLocalCache.toUncheckedException(new IOException("test"));
-    assertThat(exception).isInstanceOf(CompletionException.class);
-    assertThat(exception).hasCauseThat().isInstanceOf(IOException.class);
-    assertThat(exception).hasCauseThat().hasMessageThat().isEqualTo("test");
-  }
-
-  @Test
-  void toUncheckedException_runtimeException() {
-    var original = new IllegalStateException("test");
-    assertThat(BoundedLocalCache.toUncheckedException(original)).isSameInstanceAs(original);
-  }
-
-  @Test
-  void toUncheckedException_error() {
-    assertThrows(AssertionError.class, () ->
-        BoundedLocalCache.toUncheckedException(new AssertionError("test")));
   }
 
   @Test
@@ -6075,14 +6062,44 @@ final class BoundedLocalCacheTest {
     var node = requireNonNull(cache.data.get(
         cache.nodeFactory.newLookupKey(context.firstKey())));
     long writeTime = node.getWriteTime();
-    assertThat(node.casWriteTime(writeTime, writeTime | 1L)).isTrue();
+    assertThat(node.casWriteTime(writeTime, markRefreshing(writeTime))).isTrue();
 
     // ageOf should mask the tag bit — age should be 2ns, not 1ns or 3ns
     assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS)).hasValue(2);
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS)).hasValue(2);
 
     // Clean up corrupted state
-    assertThat(node.casWriteTime(writeTime | 1L, writeTime)).isTrue();
+    assertThat(node.casWriteTime(markRefreshing(writeTime), writeTime)).isTrue();
+  }
+
+  @Test
+  void toWriteTime_truncatesToGranularity() {
+    assertThat(toWriteTime(0L)).isEqualTo(0L);
+    assertThat(toWriteTime(1L)).isEqualTo(0L);
+    assertThat(toWriteTime(2L)).isEqualTo(2L);
+    assertThat(toWriteTime(-1L)).isEqualTo(-2L);
+    assertThat(toWriteTime(Long.MIN_VALUE)).isEqualTo(Long.MIN_VALUE);
+    assertThat(toWriteTime(Long.MAX_VALUE)).isEqualTo(Long.MAX_VALUE - 1);
+  }
+
+  @Test
+  void refreshMarker_roundTrips() {
+    long writeTime = toWriteTime(100L);
+    assertThat(isRefreshing(writeTime)).isFalse();
+    assertThat(isRefreshing(markRefreshing(writeTime))).isTrue();
+    assertThat(markRefreshing(markRefreshing(writeTime))).isEqualTo(markRefreshing(writeTime));
+    assertThat(toWriteTime(markRefreshing(writeTime))).isEqualTo(writeTime);
+  }
+
+  @Test
+  void writeTimeOf_stripsTheRefreshMarker() {
+    var node = new PSW<Object, Object>();
+    node.setWriteTime(toWriteTime(100L));
+    assertThat(writeTimeOf(node)).isEqualTo(100L);
+
+    node.setWriteTime(markRefreshing(node.getWriteTime()));
+    assertThat(node.getWriteTime()).isEqualTo(101L);
+    assertThat(writeTimeOf(node)).isEqualTo(100L);
   }
 
   @Test

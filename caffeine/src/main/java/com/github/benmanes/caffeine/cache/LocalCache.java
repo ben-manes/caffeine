@@ -262,5 +262,11 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
 
     /** Additionally, leave any in-flight refresh intact so that no-op paths do not interfere. */
     boolean preserveRefresh;
+
+    /** Signals that the remapping did not modify the entry. */
+    void preserveEntry() {
+      preserveTimestamps = true;
+      preserveRefresh = true;
+    }
   }
 }

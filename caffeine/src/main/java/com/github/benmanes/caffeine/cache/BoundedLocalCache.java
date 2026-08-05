@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapaci
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.toNanosSaturated;
+import static com.github.benmanes.caffeine.cache.Caffeine.toUnchecked;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
 import static com.github.benmanes.caffeine.cache.Node.PROBATION;
@@ -66,7 +67,6 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -321,14 +321,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         + "contract can lead to non-deterministic behavior (key: %s, key type: %s, "
         + "node type: %s, cache type: %s).", key, key.getClass().getName(),
         node.getClass().getSimpleName(), getClass().getSimpleName());
-  }
-
-  /** Returns the exception as unchecked, wrapping checked exceptions in a CompletionException. */
-  static RuntimeException toUncheckedException(Throwable t) {
-    if (t instanceof Error) {
-      throw (Error) t;
-    }
-    return (t instanceof RuntimeException) ? (RuntimeException) t : new CompletionException(t);
   }
 
   /* --------------- Shared --------------- */
@@ -748,15 +740,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
 
       Node<K, V> next = node.getNextInAccessOrder();
-      if (node.getPolicyWeight() != 0) {
-        node.makeMainProbation();
-        accessOrderWindowDeque().remove(node);
-        accessOrderProbationDeque().offerLast(node);
+      int weight = node.getPolicyWeight();
+      if (weight != 0) {
+        transfer(node, weight, WINDOW, PROBATION);
         if (first == null) {
           first = node;
         }
-
-        setWindowWeightedSize(windowWeightedSize() - node.getPolicyWeight());
       }
       node = next;
     }
@@ -821,22 +810,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       // Evict immediately if only one of the entries is present
       if (victim == null) {
         requireNonNull(candidate);
-        Node<K, V> previous = candidate.getNextInAccessOrder();
-        Node<K, V> evict = candidate;
-        candidate = previous;
-        evictEntry(evict, RemovalCause.SIZE, 0L);
+        candidate = evictAndAdvance(candidate, RemovalCause.SIZE);
         continue;
       } else if (candidate == null) {
-        Node<K, V> evict = victim;
-        victim = victim.getNextInAccessOrder();
-        evictEntry(evict, RemovalCause.SIZE, 0L);
+        victim = evictAndAdvance(victim, RemovalCause.SIZE);
         continue;
       }
 
       // Evict immediately if both selected the same entry
       if (candidate == victim) {
-        victim = victim.getNextInAccessOrder();
-        evictEntry(candidate, RemovalCause.SIZE, 0L);
+        victim = evictAndAdvance(victim, RemovalCause.SIZE);
         candidate = null;
         continue;
       }
@@ -845,50 +828,44 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       var victimKeyRef = victim.getKeyReferenceOrNull();
       var candidateKeyRef = candidate.getKeyReferenceOrNull();
       if (victimKeyRef == null) {
-        Node<K, V> evict = victim;
-        victim = victim.getNextInAccessOrder();
-        evictEntry(evict, RemovalCause.COLLECTED, 0L);
+        victim = evictAndAdvance(victim, RemovalCause.COLLECTED);
         continue;
       } else if (candidateKeyRef == null) {
-        Node<K, V> evict = candidate;
-        candidate = candidate.getNextInAccessOrder();
-        evictEntry(evict, RemovalCause.COLLECTED, 0L);
+        candidate = evictAndAdvance(candidate, RemovalCause.COLLECTED);
         continue;
       }
 
       // Evict immediately if an entry was removed
       if (!victim.isAlive()) {
-        Node<K, V> evict = victim;
-        victim = victim.getNextInAccessOrder();
-        evictEntry(evict, RemovalCause.SIZE, 0L);
+        victim = evictAndAdvance(victim, RemovalCause.SIZE);
         continue;
       } else if (!candidate.isAlive()) {
-        Node<K, V> evict = candidate;
-        candidate = candidate.getNextInAccessOrder();
-        evictEntry(evict, RemovalCause.SIZE, 0L);
+        candidate = evictAndAdvance(candidate, RemovalCause.SIZE);
         continue;
       }
 
       // Evict immediately if the candidate's weight exceeds the maximum
       if (candidate.getPolicyWeight() > maximum()) {
-        Node<K, V> evict = candidate;
-        candidate = candidate.getNextInAccessOrder();
-        evictEntry(evict, RemovalCause.SIZE, 0L);
+        candidate = evictAndAdvance(candidate, RemovalCause.SIZE);
         continue;
       }
 
       // Evict the entry with the lowest frequency
       if (admit(candidateKeyRef, victimKeyRef)) {
-        Node<K, V> evict = victim;
-        victim = victim.getNextInAccessOrder();
-        evictEntry(evict, RemovalCause.SIZE, 0L);
+        victim = evictAndAdvance(victim, RemovalCause.SIZE);
         candidate = candidate.getNextInAccessOrder();
       } else {
-        Node<K, V> evict = candidate;
-        candidate = candidate.getNextInAccessOrder();
-        evictEntry(evict, RemovalCause.SIZE, 0L);
+        candidate = evictAndAdvance(candidate, RemovalCause.SIZE);
       }
     }
+  }
+
+  /** Evicts the entry and returns its successor, or {@code null} if it was the last. */
+  @GuardedBy("evictionLock")
+  @Nullable Node<K, V> evictAndAdvance(Node<K, V> node, RemovalCause cause) {
+    Node<K, V> next = node.getNextInAccessOrder();
+    evictEntry(node, cause, 0L);
+    return next;
   }
 
   /**
@@ -1155,20 +1132,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     // the addition that triggered this eviction. The victim is eagerly unlinked and the size
     // decremented before the removal task so that if an eviction is still required then a new
     // victim will be chosen for removal.
-    if (node.inWindow() && (evicts() || expiresAfterAccess())) {
-      accessOrderWindowDeque().remove(node);
-    } else if (evicts()) {
-      if (node.inMainProbation()) {
-        accessOrderProbationDeque().remove(node);
-      } else {
-        accessOrderProtectedDeque().remove(node);
-      }
-    }
-    if (expiresAfterWrite()) {
-      writeOrderDeque().remove(node);
-    } else if (expiresVariable()) {
-      timerWheel().deschedule(node);
-    }
+    unlink(node);
 
     synchronized (node) {
       logIfAlive(node);
@@ -1281,15 +1245,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
 
       quota -= weight;
-      if (probation) {
-        accessOrderProbationDeque().remove(candidate);
-      } else {
-        setMainProtectedWeightedSize(mainProtectedWeightedSize() - weight);
-        accessOrderProtectedDeque().remove(candidate);
-      }
-      setWindowWeightedSize(windowWeightedSize() + weight);
-      accessOrderWindowDeque().offerLast(candidate);
-      candidate.makeWindow();
+      transfer(candidate, weight, probation ? PROBATION : PROTECTED, WINDOW);
     }
 
     setMainProtectedMaximum(mainProtectedMaximum() + quota);
@@ -1321,10 +1277,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
 
       quota -= weight;
-      setWindowWeightedSize(windowWeightedSize() - weight);
-      accessOrderWindowDeque().remove(candidate);
-      accessOrderProbationDeque().offerLast(candidate);
-      candidate.makeMainProbation();
+      transfer(candidate, weight, WINDOW, PROBATION);
     }
 
     setMainProtectedMaximum(mainProtectedMaximum() - quota);
@@ -1336,25 +1289,47 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @GuardedBy("evictionLock")
   void demoteFromMainProtected() {
     long mainProtectedMaximum = mainProtectedMaximum();
-    @Var long mainProtectedWeightedSize = mainProtectedWeightedSize();
-    if (mainProtectedWeightedSize <= mainProtectedMaximum) {
-      return;
-    }
-
     for (int i = 0; i < QUEUE_TRANSFER_THRESHOLD; i++) {
-      if (mainProtectedWeightedSize <= mainProtectedMaximum) {
+      if (mainProtectedWeightedSize() <= mainProtectedMaximum) {
         break;
       }
 
-      Node<K, V> demoted = accessOrderProtectedDeque().pollFirst();
+      Node<K, V> demoted = accessOrderProtectedDeque().peekFirst();
       if (demoted == null) {
         break;
       }
-      demoted.makeMainProbation();
-      accessOrderProbationDeque().offerLast(demoted);
-      mainProtectedWeightedSize -= demoted.getPolicyWeight();
+      transfer(demoted, demoted.getPolicyWeight(), PROTECTED, PROBATION);
     }
-    setMainProtectedWeightedSize(mainProtectedWeightedSize);
+  }
+
+  /**
+   * Moves the node into another region of the eviction policy, adjusting the weighted size of each
+   * region that tracks its own.
+   */
+  @GuardedBy("evictionLock")
+  void transfer(Node<K, V> node, int weight, int from, int to) {
+    if (from == WINDOW) {
+      setWindowWeightedSize(windowWeightedSize() - weight);
+      accessOrderWindowDeque().remove(node);
+    } else if (from == PROBATION) {
+      accessOrderProbationDeque().remove(node);
+    } else {
+      setMainProtectedWeightedSize(mainProtectedWeightedSize() - weight);
+      accessOrderProtectedDeque().remove(node);
+    }
+
+    if (to == WINDOW) {
+      setWindowWeightedSize(windowWeightedSize() + weight);
+      accessOrderWindowDeque().offerLast(node);
+      node.makeWindow();
+    } else if (to == PROBATION) {
+      accessOrderProbationDeque().offerLast(node);
+      node.makeMainProbation();
+    } else {
+      setMainProtectedWeightedSize(mainProtectedWeightedSize() + weight);
+      accessOrderProtectedDeque().offerLast(node);
+      node.makeMainProtected();
+    }
   }
 
   /**
@@ -1399,11 +1374,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     V oldValue;
     Object keyReference;
     long writeTime = node.getWriteTime();
-    long refreshWriteTime = writeTime | 1L;
+    long refreshWriteTime = markRefreshing(writeTime);
     ConcurrentMap<Object, CompletableFuture<?>> refreshes;
     if (((now - writeTime) > refreshAfterWriteNanos())
         && ((key = node.getKey()) != null) && ((oldValue = node.getValue()) != null)
-        && !isComputingAsync(oldValue) && ((writeTime & 1L) == 0L)
+        && !isComputingAsync(oldValue) && !isRefreshing(writeTime)
         && !(refreshes = refreshes()).containsKey(keyReference = node.getKeyReference())
         && node.isAlive() && node.casWriteTime(writeTime, refreshWriteTime)) {
       long[] startTime = new long[1];
@@ -1480,7 +1455,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
               hints.preserveRefresh = !owned;
               return null;
             }
-            if ((currentValue == oldValue) && ((node.getWriteTime() & ~1L) == writeTime) && owned) {
+            if ((currentValue == oldValue) && (writeTimeOf(node) == writeTime) && owned) {
               // If the entry was not modified while in-flight (no ABA) then replace, refreshing the
               // metadata even when the reloaded value is the same instance
               return value;
@@ -1496,7 +1471,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             if ((value != null) && !sameInstance) {
               cause[0] = RemovalCause.REPLACED;
             }
-            if ((currentValue != oldValue) || ((node.getWriteTime() & ~1L) != writeTime)) {
+            if ((currentValue != oldValue) || (writeTimeOf(node) != writeTime)) {
               hints.preserveTimestamps = true;
             }
             hints.preserveRefresh = !owned;
@@ -1537,7 +1512,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (expiresVariable()) {
       requireNonNull(expiry);
       long duration = Math.max(0L, expiry.expireAfterCreate(key, value, now));
-      return isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
+      return expiresAt(now, duration);
     }
     return 0L;
   }
@@ -1558,7 +1533,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       requireNonNull(expiry);
       long currentDuration = Math.max(1, node.getVariableTime() - now);
       long duration = Math.max(0L, expiry.expireAfterUpdate(key, value, now, currentDuration));
-      return isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
+      return expiresAt(now, duration);
     }
     return 0L;
   }
@@ -1577,7 +1552,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (expiresVariable()) {
       long currentDuration = Math.max(0L, node.getVariableTime() - now);
       long duration = Math.max(0L, expiry.expireAfterRead(key, value, now, currentDuration));
-      return isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
+      return expiresAt(now, duration);
     }
     return 0L;
   }
@@ -1605,22 +1580,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     long tolerance = EXPIRE_TOLERANCE;
     long duration = Math.max(0L, expiry.expireAfterRead(key, value, now, currentDuration));
-    long expirationTime = isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
+    long expirationTime = expiresAt(now, duration);
     if (((duration <= tolerance) || (Math.abs(expirationTime - variableTime) > tolerance))
         && (node.getValue() == value)) {
       node.casVariableTime(variableTime, expirationTime);
-    }
-  }
-
-  void setVariableTime(Node<K, V> node, long expirationTime) {
-    if (expiresVariable()) {
-      node.setVariableTime(expirationTime);
-    }
-  }
-
-  void setWriteTime(Node<K, V> node, long now) {
-    if (expiresAfterWrite() || refreshAfterWrite()) {
-      node.setWriteTime(now & ~1L);
     }
   }
 
@@ -1635,6 +1598,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
+  void setWriteTime(Node<K, V> node, long now) {
+    if (expiresAfterWrite() || refreshAfterWrite()) {
+      // The write time reserves its low bit to mark that a refresh is in flight, so a recorded time
+      // is always even and an age must be measured against an evenly truncated clock
+      node.setWriteTime(toWriteTime(now));
+    }
+  }
+
+  void setVariableTime(Node<K, V> node, long expirationTime) {
+    if (expiresVariable()) {
+      node.setVariableTime(expirationTime);
+    }
+  }
+
   /** Returns if the entry's write time would exceed the minimum expiration reorder threshold. */
   boolean exceedsWriteTimeTolerance(Node<K, V> node, long varTime, long now) {
     long variableTime = node.getVariableTime();
@@ -1646,6 +1623,36 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         || (refreshAfterWrite()
             && ((refreshAfterWriteNanos() <= tolerance) || (Math.abs(now - writeTime) > tolerance)))
         || (expiresVariable() && (Math.abs(varTime - variableTime) > tolerance));
+  }
+
+  /** Returns the expiration time for a duration. */
+  long expiresAt(long now, long duration) {
+    return isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
+  }
+
+  /** Returns the time to record on the entry. */
+  long expirationTimeFor(@Nullable V value, long now) {
+    return isComputingAsync(value) ? (now + ASYNC_EXPIRY) : now;
+  }
+
+  /** Returns the time truncated to the write time's granularity. */
+  static long toWriteTime(long time) {
+    return (time & ~1L);
+  }
+
+  /** Returns the entry's write time, with the refresh marker removed. */
+  static long writeTimeOf(Node<?, ?> node) {
+    return toWriteTime(node.getWriteTime());
+  }
+
+  /** Returns if a refresh is in flight for the entry that recorded this write time. */
+  static boolean isRefreshing(long writeTime) {
+    return ((writeTime & 1L) != 0L);
+  }
+
+  /** Returns the write time marked as having a refresh in flight. */
+  static long markRefreshing(long writeTime) {
+    return (writeTime | 1L);
   }
 
   /**
@@ -1946,10 +1953,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     // If the protected space exceeds its maximum, the LRU items are demoted to the probation space.
     // This is deferred to the adaption phase at the end of the maintenance cycle.
-    setMainProtectedWeightedSize(mainProtectedWeightedSize() + node.getPolicyWeight());
-    accessOrderProbationDeque().remove(node);
-    accessOrderProtectedDeque().offerLast(node);
-    node.makeMainProtected();
+    transfer(node, node.getPolicyWeight(), PROBATION, PROTECTED);
   }
 
   /** Updates the node's location in the policy's deque. */
@@ -1973,6 +1977,25 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       task.run();
     }
     setDrainStatusOpaque(PROCESSING_TO_REQUIRED);
+  }
+
+  /** Removes the node from the policy's queues. */
+  @GuardedBy("evictionLock")
+  void unlink(Node<K, V> node) {
+    if (node.inWindow() && (evicts() || expiresAfterAccess())) {
+      accessOrderWindowDeque().remove(node);
+    } else if (evicts()) {
+      if (node.inMainProbation()) {
+        accessOrderProbationDeque().remove(node);
+      } else {
+        accessOrderProtectedDeque().remove(node);
+      }
+    }
+    if (expiresAfterWrite()) {
+      writeOrderDeque().remove(node);
+    } else if (expiresVariable()) {
+      timerWheel().deschedule(node);
+    }
   }
 
   /**
@@ -2078,20 +2101,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @GuardedBy("evictionLock")
     public void run() {
       // add may not have been processed yet
-      if (node.inWindow() && (evicts() || expiresAfterAccess())) {
-        accessOrderWindowDeque().remove(node);
-      } else if (evicts()) {
-        if (node.inMainProbation()) {
-          accessOrderProbationDeque().remove(node);
-        } else {
-          accessOrderProtectedDeque().remove(node);
-        }
-      }
-      if (expiresAfterWrite()) {
-        writeOrderDeque().remove(node);
-      } else if (expiresVariable()) {
-        timerWheel().deschedule(node);
-      }
+      unlink(node);
       makeDead(node);
     }
   }
@@ -2261,20 +2271,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
     });
 
-    if (node.inWindow() && (evicts() || expiresAfterAccess())) {
-      accessOrderWindowDeque().remove(node);
-    } else if (evicts()) {
-      if (node.inMainProbation()) {
-        accessOrderProbationDeque().remove(node);
-      } else {
-        accessOrderProtectedDeque().remove(node);
-      }
-    }
-    if (expiresAfterWrite()) {
-      writeOrderDeque().remove(node);
-    } else if (expiresVariable()) {
-      timerWheel().deschedule(node);
-    }
+    unlink(node);
 
     synchronized (node) {
       logIfAlive(node);
@@ -2469,7 +2466,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           long now = expirationTicker().read();
           keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
           node = nodeFactory.newNode(keyRef, value, valueReferenceQueue(), newWeight, now);
-          long expirationTime = isComputingAsync(value) ? (now + ASYNC_EXPIRY) : now;
+          long expirationTime = expirationTimeFor(value, now);
           setVariableTime(node, expireAfterCreate(key, value, expiry, now));
           setAccessTime(node, expirationTime);
           setWriteTime(node, expirationTime);
@@ -2566,9 +2563,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           varTime = expireAfterUpdate(prior, key, value, expiry, now);
         }
 
-        long expirationTime = isComputingAsync(mayUpdate ? value : oldValue)
-            ? (now + ASYNC_EXPIRY)
-            : now;
+        long expirationTime = expirationTimeFor(mayUpdate ? value : oldValue, now);
         if (mayUpdate) {
           exceedsTolerance = exceedsWriteTimeTolerance(prior, varTime, expirationTime);
           if (expired || exceedsTolerance) {
@@ -2723,7 +2718,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         n.setValue(value, valueReferenceQueue());
         n.setWeight(weight);
 
-        long expirationTime = isComputingAsync(value) ? (ctx.now + ASYNC_EXPIRY) : ctx.now;
+        long expirationTime = expirationTimeFor(value, ctx.now);
         ctx.exceedsTolerance = exceedsWriteTimeTolerance(n, varTime, expirationTime);
         if (ctx.exceedsTolerance) {
           setWriteTime(n, expirationTime);
@@ -2778,7 +2773,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         n.setValue(newValue, valueReferenceQueue());
         n.setWeight(weight);
 
-        long expirationTime = isComputingAsync(newValue) ? (ctx.now + ASYNC_EXPIRY) : ctx.now;
+        long expirationTime = expirationTimeFor(newValue, ctx.now);
         ctx.exceedsTolerance = exceedsWriteTimeTolerance(n, varTime, expirationTime);
         if (ctx.exceedsTolerance) {
           setWriteTime(n, expirationTime);
@@ -2869,9 +2864,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         ctx.newWeight = weigher.weigh(key, ctx.newValue);
         var created = nodeFactory.newNode(k, ctx.newValue,
             valueReferenceQueue(), ctx.newWeight, ctx.now);
-        long expirationTime = isComputingAsync(ctx.newValue)
-            ? ctx.now + ASYNC_EXPIRY
-            : ctx.now;
+        long expirationTime = expirationTimeFor(ctx.newValue, ctx.now);
         setVariableTime(created, expireAfterCreate(key, ctx.newValue, expiry(), ctx.now));
         setAccessTime(created, expirationTime);
         setWriteTime(created, expirationTime);
@@ -2911,8 +2904,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           n.setValue(ctx.newValue, valueReferenceQueue());
           n.setWeight(ctx.newWeight);
 
-          long expirationTime = isComputingAsync(ctx.newValue)
-              ? (ctx.now + ASYNC_EXPIRY) : ctx.now;
+          long expirationTime = expirationTimeFor(ctx.newValue, ctx.now);
           setAccessTime(n, expirationTime);
           setWriteTime(n, expirationTime);
           setVariableTime(n, varTime);
@@ -2938,7 +2930,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         afterWrite(new RemovalTask(ctx.removed));
       }
       if (ctx.exception != null) {
-        throw toUncheckedException(ctx.exception);
+        throw toUnchecked(ctx.exception);
       }
       return null;
     }
@@ -3060,9 +3052,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           var created = nodeFactory.newNode(keyRef, ctx.newValue,
               valueReferenceQueue(), ctx.newWeight, ctx.now);
 
-          long expirationTime = isComputingAsync(ctx.newValue)
-              ? ctx.now + ASYNC_EXPIRY
-              : ctx.now;
+          long expirationTime = expirationTimeFor(ctx.newValue, ctx.now);
           setAccessTime(created, expirationTime);
           setWriteTime(created, expirationTime);
           setVariableTime(created, varTime);
@@ -3138,9 +3128,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           }
           n.setWeight(ctx.newWeight);
 
-          long expirationTime = isComputingAsync(ctx.newValue)
-              ? ctx.now + ASYNC_EXPIRY
-              : ctx.now;
+          long expirationTime = expirationTimeFor(ctx.newValue, ctx.now);
           ctx.exceedsTolerance = exceedsWriteTimeTolerance(n, varTime, expirationTime);
           if (((ctx.cause != null) && ctx.cause.wasEvicted()) || ctx.exceedsTolerance) {
             setWriteTime(n, expirationTime);
@@ -3196,7 +3184,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     if (ctx.exception != null) {
-      throw toUncheckedException(ctx.exception);
+      throw toUnchecked(ctx.exception);
     }
     return ctx.newValue;
   }
@@ -3471,14 +3459,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
     if (expiresAfterWrite()) {
       expiresAfter = Math.min(expiresAfter,
-          expiresAfterWriteNanos() - ((now & ~1L) - (node.getWriteTime() & ~1L)));
+          expiresAfterWriteNanos() - (toWriteTime(now) - writeTimeOf(node)));
     }
     if (expiresVariable()) {
       expiresAfter = node.getVariableTime() - now;
     }
 
     long refreshableAt = refreshAfterWrite()
-        ? (node.getWriteTime() & ~1L) + refreshAfterWriteNanos()
+        ? writeTimeOf(node) + refreshAfterWriteNanos()
         : now + Long.MAX_VALUE;
     return SnapshotEntry.forEntry(key, value, now, weight, now + expiresAfter, refreshableAt);
   }
@@ -4575,7 +4563,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return cache.hasExpired(node, now, value)
             ? OptionalLong.empty()
             : OptionalLong.of(unit.convert(
-                (now & ~1L) - (node.getWriteTime() & ~1L), TimeUnit.NANOSECONDS));
+                toWriteTime(now) - writeTimeOf(node), TimeUnit.NANOSECONDS));
       }
       @Override public long getExpiresAfter(TimeUnit unit) {
         return unit.convert(cache.expiresAfterWriteNanos(), TimeUnit.NANOSECONDS);
@@ -4691,8 +4679,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             if (added[0]) {
               return asyncValue;
             }
-            hints.preserveTimestamps = true;
-            hints.preserveRefresh = true;
+            hints.preserveEntry();
             return oldValue;
           }, expiry, /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
 
@@ -4746,8 +4733,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           CompletableFuture<V> valueFuture = delegate.compute(
               key, (K k, @Nullable CompletableFuture<V> oldValueFuture) -> {
                 if ((oldValueFuture != null) && !oldValueFuture.isDone()) {
-                  hints.preserveTimestamps = true;
-                  hints.preserveRefresh = true;
+                  hints.preserveEntry();
                   return oldValueFuture;
                 }
 
@@ -4822,7 +4808,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return cache.hasExpired(node, now, value)
             ? OptionalLong.empty()
             : OptionalLong.of(unit.convert(
-                (now & ~1L) - (node.getWriteTime() & ~1L), TimeUnit.NANOSECONDS));
+                toWriteTime(now) - writeTimeOf(node), TimeUnit.NANOSECONDS));
       }
       @Override public long getRefreshesAfter(TimeUnit unit) {
         return unit.convert(cache.refreshAfterWriteNanos(), TimeUnit.NANOSECONDS);

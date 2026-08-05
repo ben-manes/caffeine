@@ -6,15 +6,16 @@ BOLD="\033[1m"
 RESET="\033[0m"
 UNDERLINE="\033[4m"
 
-find . -type d -name .claude -prune -o -type f -name "settings.gradle.kts" -print | while read -r gradle_file; do
+find . -type d -name .local -prune -o -type f -name "settings.gradle.kts" -print | while read -r gradle_file; do
   project_dir=$(dirname "${gradle_file#./}")
   project=$( [[ "$project_dir" == "." ]] && echo "caffeine" || echo "$project_dir" )
   echo -e "\n${BOLD}${UNDERLINE}${project}${RESET}"
   echo -e "${BOLD}Evaluating...${RESET}"
 
   gradle=$( [[ -f "$project_dir/gradlew" ]] && echo "./$project_dir/gradlew" || echo "./gradlew" )
-  output=$(JAVA_VERSION=25 \
-    $gradle --project-dir "$project_dir" dependencyUpdates --refresh-dependencies "$@" | \
+  output=$(JAVA_VERSION=26 \
+    $gradle --project-dir "$project_dir" dependencyUpdates --refresh-dependencies --warning-mode=none "$@" | \
+    awk '/^-+$/ { report = 1 } /^(Generated report file|BUILD )/ { report = 0 } report' | \
     sed -e '/^------------------------------------------------------------/,/^$/d' \
         -e '/The following dependencies are using the latest milestone version:/,/^$/d' \
         -e '/Gradle release-candidate updates:/d' \

@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
@@ -208,6 +209,18 @@ public final class Caffeine<K, V> {
     if (!expression) {
       throw new IllegalStateException(String.format(US, template, args));
     }
+  }
+
+  /** Returns the throwable as unchecked, wrapping a checked exceptions in a CompletionException. */
+  static RuntimeException toUnchecked(Throwable t) {
+    if (t instanceof Error) {
+      throw (Error) t;
+    } else if (t instanceof RuntimeException) {
+      return (RuntimeException) t;
+    } else if (t instanceof InterruptedException) {
+      Thread.currentThread().interrupt();
+    }
+    return new CompletionException(t);
   }
 
   /** Returns the smallest power of two greater than or equal to {@code x}, else the maximum. */
@@ -866,7 +879,7 @@ public final class Caffeine<K, V> {
   public Caffeine<K, V> refreshAfterWrite(long duration, TimeUnit unit) {
     requireNonNull(unit);
     requireState(refreshAfterWriteNanos == UNSET_INT,
-        "refreshAfterWriteNanos was already set to %s ns", refreshAfterWriteNanos);
+        "refreshAfterWrite was already set to %s ns", refreshAfterWriteNanos);
     requireArgument(duration > 0, "duration must be positive: %s %s", duration, unit);
     this.refreshAfterWriteNanos = unit.toNanos(duration);
     return this;

@@ -103,7 +103,7 @@ public final class EventDispatcher<K, V> {
     var factory = configuration.getCacheEntryEventFilterFactory();
     CacheEntryEventFilter<K, V> filter = (factory == null)
         ? event -> true
-        : new EventTypeFilter<>(listener, factory.create());
+        : new GuardedCacheEntryEventFilter<>(factory.create());
 
     var registration = new Registration<>(configuration, filter, listener);
     dispatchQueues.putIfAbsent(registration, new ConcurrentHashMap<>());

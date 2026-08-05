@@ -15,12 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.toUnchecked;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
@@ -107,13 +107,8 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
     return CompletableFuture.supplyAsync(() -> {
       try {
         return load(key);
-      } catch (RuntimeException e) {
-        throw e;
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new CompletionException(e);
       } catch (Exception e) {
-        throw new CompletionException(e);
+        throw toUnchecked(e);
       }
     }, executor);
   }
@@ -146,13 +141,8 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
     return CompletableFuture.supplyAsync(() -> {
       try {
         return loadAll(keys);
-      } catch (RuntimeException e) {
-        throw e;
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new CompletionException(e);
       } catch (Exception e) {
-        throw new CompletionException(e);
+        throw toUnchecked(e);
       }
     }, executor);
   }
@@ -206,13 +196,8 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
     return CompletableFuture.supplyAsync(() -> {
       try {
         return reload(key, oldValue);
-      } catch (RuntimeException e) {
-        throw e;
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new CompletionException(e);
       } catch (Exception e) {
-        throw new CompletionException(e);
+        throw toUnchecked(e);
       }
     }, executor);
   }

@@ -124,22 +124,26 @@ public final class AddExpiration implements Rule<NodeContext> {
   }
 
   private static void addWriteExpiration(NodeContext context) {
-    if (!Feature.useWriteTime(context.parentFeatures)
-        && Feature.useWriteTime(context.generateFeatures)) {
-      context.classSpec
-          .addField(long.class, "writeTime", Modifier.VOLATILE)
-          .addMethod(context.newGetter(Strength.STRONG,
-              TypeName.LONG, "writeTime", Visibility.OPAQUE))
-          .addMethod(context.newSetter(TypeName.LONG, "writeTime", Visibility.PLAIN));
-      context.addVarHandle(NODE_FACTORY.rawType(), "writeTime", TypeName.get(long.class));
-      addTimeConstructorAssignment(context.constructorByKeyRef, "writeTime", "now & ~1L");
+    if (Feature.useWriteTime(context.parentFeatures)
+        || !Feature.useWriteTime(context.generateFeatures)) {
+      return;
     }
+
+    context.classSpec
+        .addField(long.class, "writeTime", Modifier.VOLATILE)
+        .addMethod(context.newGetter(Strength.STRONG,
+            TypeName.LONG, "writeTime", Visibility.OPAQUE))
+        .addMethod(context.newSetter(TypeName.LONG, "writeTime", Visibility.PLAIN));
+    context.addVarHandle(NODE_FACTORY.rawType(), "writeTime", TypeName.get(long.class));
+    addTimeConstructorAssignment(context.constructorByKeyRef,
+        "writeTime", "BoundedLocalCache.toWriteTime(now)");
   }
 
   private static void addRefreshExpiration(NodeContext context) {
     if (!context.generateFeatures.contains(Feature.REFRESH_WRITE)) {
       return;
     }
+
     context.classSpec.addMethod(MethodSpec.methodBuilder("casWriteTime")
         .addModifiers(context.publicFinalModifiers())
         .addParameter(long.class, "expect")

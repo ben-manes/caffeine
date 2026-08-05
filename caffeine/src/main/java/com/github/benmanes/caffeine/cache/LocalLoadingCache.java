@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.Caffeine.hasMethodOverride;
+import static com.github.benmanes.caffeine.cache.Caffeine.toUnchecked;
 import static com.github.benmanes.caffeine.cache.LocalAsyncCache.composeResult;
 import static java.util.Objects.requireNonNull;
 
@@ -28,7 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
@@ -123,13 +123,8 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
             : cacheLoader().asyncReload(key, oldValue[0], cache().executor());
         reloading[0] = requireNonNull(refreshFuture, "Null future");
         return refreshFuture;
-      } catch (RuntimeException e) {
-        throw e;
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new CompletionException(e);
       } catch (Exception e) {
-        throw new CompletionException(e);
+        throw toUnchecked(e);
       }
     });
 
@@ -201,13 +196,8 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     return key -> {
       try {
         return cacheLoader.load(key);
-      } catch (RuntimeException e) {
-        throw e;
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new CompletionException(e);
       } catch (Exception e) {
-        throw new CompletionException(e);
+        throw toUnchecked(e);
       }
     };
   }
@@ -223,13 +213,8 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
         @SuppressWarnings("unchecked")
         var loaded = (Map<K, V>) cacheLoader.loadAll(keysToLoad);
         return loaded;
-      } catch (RuntimeException e) {
-        throw e;
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new CompletionException(e);
       } catch (Exception e) {
-        throw new CompletionException(e);
+        throw toUnchecked(e);
       }
     };
   }

@@ -66,6 +66,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -106,6 +107,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.testing.EqualsTester;
+import com.google.common.testing.FakeTicker;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.testing.SerializableTester;
 import com.google.errorprone.annotations.Var;
@@ -1302,6 +1304,28 @@ final class CacheTest {
     assertThat(cache.policy().refreshes().containsValue(null)).isFalse();
     assertThat(cache.policy().refreshes().containsKey(null)).isFalse();
     assertThat(cache.policy().refreshes().get(null)).isNull();
+  }
+
+  @Test
+  @CheckMaxLogLevel(WARN)
+  void get_expired_throwsInterruptedException() {
+    // Recomputing an evicted entry is catch-commit-rethrow: the eviction has already been notified,
+    // so the mapping function's throwable is converted rather than propagated. A language without
+    // checked exceptions may throw an InterruptedException through the Function, and the JDK
+    // cleared the interrupt status when it was thrown, so the conversion must restore it.
+    var ticker = new FakeTicker();
+    Cache<Int, Int> cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .build();
+    cache.put(Int.valueOf(1), Int.valueOf(1));
+    ticker.advance(Duration.ofMinutes(2));
+
+    var error = assertThrows(CompletionException.class, () -> cache.get(Int.valueOf(1),
+        key -> { throw uncheckedThrow(new InterruptedException()); }));
+    assertThat(error).hasCauseThat().isInstanceOf(InterruptedException.class);
+    assertThat(Thread.interrupted()).isTrue();
   }
 
   @SuppressWarnings({"TypeParameterUnusedInFormals", "unchecked"})

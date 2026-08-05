@@ -53,6 +53,8 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.google.common.testing.FakeTicker;
 import com.google.common.testing.NullPointerTester;
+import java.io.IOException;
+import java.util.concurrent.CompletionException;
 
 /**
  * A test for the builder methods.
@@ -1194,5 +1196,36 @@ final class CaffeineTest {
   void buildAsync_loader_refreshAfterWrite_returnsBoundedAsyncLoadingCache() {
     var cache = Caffeine.newBuilder().refreshAfterWrite(Duration.ofMinutes(1)).buildAsync(loader);
     assertThat(cache).isInstanceOf(BoundedLocalCache.BoundedLocalAsyncLoadingCache.class);
+  }
+
+  @Test
+  void toUnchecked_checkedException() {
+    var exception = Caffeine.toUnchecked(new IOException("test"));
+    assertThat(exception).isInstanceOf(CompletionException.class);
+    assertThat(exception).hasCauseThat().isInstanceOf(IOException.class);
+    assertThat(exception).hasCauseThat().hasMessageThat().isEqualTo("test");
+  }
+
+  @Test
+  void toUnchecked_runtimeException() {
+    var original = new IllegalStateException("test");
+    assertThat(Caffeine.toUnchecked(original)).isSameInstanceAs(original);
+  }
+
+  @Test
+  void toUnchecked_error() {
+    assertThrows(AssertionError.class, () ->
+        Caffeine.toUnchecked(new AssertionError("test")));
+  }
+
+  @Test
+  void toUnchecked_interruptedException_restoresTheInterrupt() {
+    // A language without checked exceptions may throw one through a functional interface, and the
+    // JDK clears the interrupt status when it throws, so the conversion must restore it
+    var original = new InterruptedException("test");
+    var exception = Caffeine.toUnchecked(original);
+    assertThat(exception).isInstanceOf(CompletionException.class);
+    assertThat(exception).hasCauseThat().isSameInstanceAs(original);
+    assertThat(Thread.interrupted()).isTrue();
   }
 }

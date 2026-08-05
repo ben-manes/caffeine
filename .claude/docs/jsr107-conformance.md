@@ -333,7 +333,7 @@ session memory for the full rationale.
   entry; previously a throwing filter aborted the store *after* `CacheWriter.write`
   had run and after earlier-iterated registrations had already enqueued the event
   (phantom events). The RI commits the mutation and only then propagates; Hazelcast
-  and cache2k evaluate filters at delivery time. `EventTypeFilter.evaluate` now logs
+  and cache2k evaluate filters at delivery time. `GuardedCacheEntryEventFilter.evaluate` now logs
   the filter failure and returns false so the dispatcher skips that listener. Unlike a
   synchronous *listener* exception (which propagates — see the next entry), a *filter*
   exception is swallowed because the filter runs **inside** the mutating `compute`: propagating
