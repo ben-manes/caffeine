@@ -69,6 +69,11 @@ public final class TinyLfu implements KeyOnlyAdmitter {
   }
 
   @Override
+  public void ensureCapacity(long maximumSize) {
+    sketch.ensureCapacity(maximumSize);
+  }
+
+  @Override
   public boolean admit(long candidateKey, long victimKey) {
     sketch.reportMiss();
 

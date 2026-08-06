@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.local;
 import static com.github.benmanes.caffeine.cache.RuleContext.varHandleName;
 import static com.github.benmanes.caffeine.cache.Specifications.FREQUENCY_SKETCH;
 import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACTORY;
+import static com.github.benmanes.caffeine.cache.Specifications.WINDOW_CLIMBER;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 
 import javax.lang.model.element.Modifier;
@@ -68,11 +69,17 @@ public final class AddMaximum implements Rule<LocalCacheContext> {
   }
 
   private static void addHillClimber(LocalCacheContext context) {
-    addField(context, double.class, "stepSize");
-    addField(context, long.class, "adjustment");
-    addField(context, long.class, "hitsInSample");
-    addField(context, long.class, "missesInSample");
-    addField(context, double.class, "previousSampleHitRate");
+    context.classSpec.addField(FieldSpec.builder(
+        WINDOW_CLIMBER, "climber", Modifier.FINAL).build());
+    context.constructor.addCode(CodeBlock.builder()
+        .addStatement("this.climber = new $T()", WINDOW_CLIMBER)
+        .addStatement("this.climber.resized(maximum())")
+        .build());
+    context.classSpec.addMethod(MethodSpec.methodBuilder("climber")
+        .addModifiers(context.protectedFinalModifiers())
+        .addStatement("return climber")
+        .returns(WINDOW_CLIMBER)
+        .build());
   }
 
   private static void addFrequencySketch(LocalCacheContext context) {

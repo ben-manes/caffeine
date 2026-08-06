@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.jupiter.api.Nested;
@@ -55,8 +56,76 @@ final class FrequencySketchTest {
     int size = sketch.table.length;
     sketch.ensureCapacity(size / 2);
     assertThat(sketch.table).hasLength(size);
-    assertThat(sketch.sampleSize).isEqualTo(10 * size);
+    assertThat(sketch.sampleSize).isEqualTo(10 * size / 2);
     assertThat(sketch.blockMask).isEqualTo((size >> 3) - 1);
+  }
+
+  @Test
+  void ensureCapacity_shrink_resetReachable() {
+    var sketch = makeSketch(1_024);
+    sketch.size = 5_000;
+
+    // The table is retained but the aging period tracks the new maximum, with the observed
+    // count clamped so that the equality reset test remains reachable
+    sketch.ensureCapacity(256);
+    assertThat(sketch.table).hasLength(1_024);
+    assertThat(sketch.sampleSize).isEqualTo(2_560);
+    assertThat(sketch.size).isEqualTo(2_559);
+
+    // the next observed addition reaches the sample threshold and triggers the aging cycle
+    sketch.increment(item);
+    assertThat(sketch.size).isEqualTo(1_279);
+  }
+
+  @Test
+  void ensureCapacity_shrink_denseTable_agesOnSchedule() {
+    var sketch = makeSketch(1_024);
+    Arrays.fill(sketch.table, FrequencySketch.ONE_MASK);
+    sketch.size = 5_000;
+
+    sketch.ensureCapacity(256);
+    assertThat(sketch.size).isEqualTo(2_559);
+
+    // The retained table's counter mass is denominated in the old maximum and outweighs the
+    // observations the reset corrects against it. An underflow here stalls aging for as many
+    // additions as it went negative by, restoring the old size's cadence that the retrack removes.
+    sketch.increment(item);
+    assertThat(sketch.size).isEqualTo(0);
+    assertThat(sketch.frequency(item)).isEqualTo(1);
+  }
+
+  @Test
+  void ensureCapacity_repeatedRetrack_resetReachable() {
+    var sketch = makeSketch(1_024);
+    for (int i = 0; i < 15; i++) {
+      sketch.increment(item);
+    }
+    assertThat(sketch.frequency(item)).isEqualTo(15);
+
+    // A weighted cache retracks on every addition as its entry count wobbles, so a repeated
+    // clamp must not discard the aging progress and starve the periodic reset
+    for (int i = 0; i < 15_000; i++) {
+      sketch.increment(i);
+      sketch.ensureCapacity(1_024 - (i & 1));
+    }
+    assertThat(sketch.frequency(item)).isLessThan(15);
+  }
+
+  @Test
+  void ensureCapacity_retrack_keepsAgingProgress() {
+    var sketch = makeSketch(1_024);
+    for (int i = 0; i < 15; i++) {
+      sketch.increment(item);
+    }
+    int size = sketch.size;
+
+    // a retrack may only clamp the observed count to keep the reset reachable, never advance it
+    // towards the sample threshold, else a weighted cache's per-addition retracks age the sketch
+    // on nearly every increment and admission degrades towards random
+    sketch.ensureCapacity(512);
+    assertThat(sketch.sampleSize).isEqualTo(5_120);
+    assertThat(sketch.size).isEqualTo(size);
+    assertThat(sketch.frequency(item)).isEqualTo(15);
   }
 
   @Test

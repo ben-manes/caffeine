@@ -37,6 +37,7 @@ public abstract class CountMin4 implements Frequency {
       0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
   static final long RESET_MASK = 0x7777777777777777L;
 
+  protected final double countersMultiplier;
   protected final boolean conservative;
 
   protected int tableMask;
@@ -52,9 +53,8 @@ public abstract class CountMin4 implements Frequency {
     var settings = new BasicSettings(config);
     conservative = settings.tinyLfu().conservative();
 
-    double countersMultiplier = settings.tinyLfu().countMin4().countersMultiplier();
-    long counters = (long) (countersMultiplier * settings.maximumSize());
-    ensureCapacity(counters);
+    countersMultiplier = settings.tinyLfu().countMin4().countersMultiplier();
+    ensureCapacity(settings.maximumSize());
   }
 
   /**
@@ -64,10 +64,12 @@ public abstract class CountMin4 implements Frequency {
    *
    * @param maximumSize the maximum size of the cache
    */
+  @Override
   @SuppressWarnings("Varifier")
-  protected void ensureCapacity(long maximumSize) {
+  public void ensureCapacity(long maximumSize) {
     checkArgument(maximumSize >= 0);
-    int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
+    long counters = (long) (countersMultiplier * maximumSize);
+    int maximum = (int) Math.min(counters, Integer.MAX_VALUE >>> 1);
     if ((table != null) && (table.length >= maximum)) {
       return;
     }

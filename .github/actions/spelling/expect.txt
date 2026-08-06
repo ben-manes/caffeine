@@ -23,7 +23,6 @@ CDDL
 CDPATH
 CHECKPOINTNUM
 classloader
-claude
 clockpro
 clockproplus
 coalescer
@@ -109,7 +108,6 @@ jni
 jre
 jspecify
 JVMs
-jvmti
 kaggle
 klazz
 kotlin
@@ -132,6 +130,9 @@ MEMSIZE
 metacharacter
 mfu
 minisim
+misattributes
+misconfirm
+mispricing
 mockito
 msb
 multimap
@@ -146,9 +147,11 @@ osgi
 OSSRH
 outbrain
 pgs
+phasey
 pinact
 pmd
 prescreened
+pricings
 proactively
 qls
 qlty
@@ -194,6 +197,7 @@ temurin
 tencent
 testlib
 testng
+thesios
 timestep
 tinycache
 TINYLFU

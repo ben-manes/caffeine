@@ -42,7 +42,27 @@ it as a static contract.
 - `UnboundedLocalCache` internals — `UnboundedLocalCacheTest`
 - Data structures — `FrequencySketchTest`, `TimerWheelTest`, `BoundedBufferTest`,
   `StripedBufferTest`, `MpscGrowableArrayQueueTest`, `LinkedDequeTest`, `PacerTest`,
-  `InternerTest`
+  `InternerTest`, `WindowClimberTest`
+- Climber behavioral pins — `WindowClimberGateTest`: a three-cell deterministic subset of the
+  `/climber-gate` battery (whisper escape, position-jam control, demoflood adjudication) run as
+  plain JUnit in the standard suite (~5s, seeded synthetic streams, generous bars). It exists so
+  audit-clock liveness, trap escape, and probe-adjudication regressions fail CI; the full
+  battery, its sentinels, and the real corpus remain `/climber-gate` (manual). Kept separate
+  from `WindowClimberTest` on purpose: pitest's `targetTests` allowlist names that class, so
+  folding the workload cells in would run them against every WindowClimber mutant (tens of
+  minutes) and distort the calibrated ~88% kill baseline (396/451 over the nested-class scope,
+  re-baselined 2026-08-07). The survivor population is five documented equivalence classes
+  (min/max/abs boundary mutants; unreachable float-threshold edges; veto band comparisons
+  shadowed by the on-band resync; ±1 divide-vs-multiply; removed layer `reset()`s that are
+  no-ops on an already-reset machine) plus three honest soft spots queued for a pinning pass:
+  mid-flight state across `resized`, the starvation confirm's release, and the reactive
+  tier's period read. `WindowClimberFuzzer` scenarios: random samples, teleporting positions,
+  fuzzed region geometry, partial adjustment application, cross-tier resizes
+- `WindowClimber` state or schedule changes must ALSO run
+  `./gradlew :caffeine:fuzzTest --tests 'WindowClimberFuzzer'` — its oracle (mirrored by
+  `LocalCacheSubject.checkHillClimber`) pins the state-machine invariants and CI runs it; a
+  stale bound there shipped as a red CI job in 2026-07 because class-scoped `test` runs never
+  touch the `fuzzTest` source set
 
 ### Regressions and stress
 - Issue-specific regression tests live under `issues/` (e.g., `Issue568Test`) — search
@@ -83,7 +103,8 @@ e.g., `ReferenceTest` needs `values=weak/soft`.
 
 - `./gradlew :caffeine:pitest` runs mutation testing on self-contained data structures:
   TimerWheel, FrequencySketch, Pacer, BoundedBuffer, StripedBuffer, MpscGrowableArrayQueue,
-  AbstractLinkedDeque, Interner, Async, Scheduler, Caffeine (builder), CaffeineSpec (parser)
+  AbstractLinkedDeque, Interner, Async, Scheduler, Caffeine (builder), CaffeineSpec (parser),
+  WindowClimber
 - `BoundedLocalCache` and `UnboundedLocalCache` are NOT in scope — the `@CacheSpec`
   parameterized test suite makes PIT's main process OOM during coverage collection,
   regardless of heap size (`mainProcessJvmArgs` doesn't effectively bump the forked JVM).

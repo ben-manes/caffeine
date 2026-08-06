@@ -99,7 +99,12 @@ assertThat(cache).containsExactlyKeys(list);
 ```
 
 Custom subjects: `CacheSubject`, `AsyncCacheSubject`, `CacheContextSubject`,
-`MapSubject`, `CollectionSubject`, `FutureSubject`.
+`MapSubject`, `CollectionSubject`, `FutureSubject`. `LocalCacheSubject` (reached via
+`CacheSubject.isValid()`) is the deep internal oracle; its climber checks assert the probe-state
+invariants — ladder bounds, `refractoryLeft ≤ starvation.rung` and the walk budget it was split
+from (`Walk.samples`, on an object that exists only while walking), sample-counter sanity
+including `sample.probationHits ≤ sample.hits − sample.windowHits`, and a finite, non-negative
+frozen probation baseline.
 
 ### Removal listener verification
 

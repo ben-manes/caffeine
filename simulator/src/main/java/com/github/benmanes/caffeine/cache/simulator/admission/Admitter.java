@@ -57,6 +57,14 @@ public interface Admitter {
     return admit(AccessEvent.forKey(candidateKey), AccessEvent.forKey(victimKey));
   }
 
+  /**
+   * Grows the admission filter, if necessary, to estimate popularity for the given number of
+   * entries, as the cache does on every addition to a weighted maximum.
+   *
+   * @param maximumSize the maximum number of entries in the cache
+   */
+  default void ensureCapacity(long maximumSize) {}
+
   /** Returns an admitter that admits every candidate. */
   static Admitter always() {
     return AlwaysAdmit.INSTANCE;

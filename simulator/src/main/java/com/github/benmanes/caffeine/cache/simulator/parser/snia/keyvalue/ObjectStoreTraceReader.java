@@ -49,7 +49,7 @@ public final class ObjectStoreTraceReader extends TextTraceReader {
         .filter(array -> array[1].equals("REST.GET.OBJECT"))
         .map(array -> {
           long key = Long.parseUnsignedLong(array[2], 16);
-          int weight = Ints.saturatedCast(Long.parseLong(array[3]));
+          int weight = Math.max(Ints.saturatedCast(Long.parseLong(array[3])), 1);
           return AccessEvent.forKeyAndWeight(key, weight);
         });
   }

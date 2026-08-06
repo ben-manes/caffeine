@@ -91,13 +91,18 @@ final class FrequencySketch {
   public void ensureCapacity(long maximumSize) {
     requireArgument(maximumSize >= 0);
     int maximum = Math.max((int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1), MIN_SKETCH_SIZE);
+    int sample = (int) Math.min(10L * maximum, Integer.MAX_VALUE);
     if ((table != null) && (table.length >= maximum)) {
+      if (sample != sampleSize) {
+        sampleSize = sample;
+        size = Math.min(size, sampleSize - 1);
+      }
       return;
     }
 
-    sampleSize = (int) Math.min(10L * maximum, Integer.MAX_VALUE);
     table = new long[Caffeine.ceilingPowerOfTwo(maximum)];
     blockMask = (table.length >>> 3) - 1;
+    sampleSize = sample;
     size = 0;
   }
 
@@ -221,6 +226,6 @@ final class FrequencySketch {
       count += Long.bitCount(table[i] & ONE_MASK);
       table[i] = (table[i] >>> 1) & RESET_MASK;
     }
-    size = (int) ((size - (count >>> 2)) >>> 1);
+    size = Math.max(0, (int) ((size - (count >>> 2)) >>> 1));
   }
 }

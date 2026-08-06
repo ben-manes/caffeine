@@ -26,20 +26,206 @@ buffer task orderings.
 time. The weight is not recalculated afterward — relative weights don't influence
 eviction ordering, only total capacity accounting.
 
-**Small-cache climber adaptation (≤512 entries).** At small cache sizes, the
-per-sample hit-rate signal is noisy and the default window (1% of max) is so tiny
-that the climber's initial shrink is a no-op, locking it into a direction that
-never flips. Three coordinated fixes: (1) positive initial step — small caches
-grow the window first instead of shrinking; (2) slower step decay (0.995 vs 0.98)
-so the step stays large enough for HR shifts to trip the restart threshold on
-workload transitions; (3) min initial step floor (2 entries) so very small caches
-can move the integer window. The sample-period growth (proportional to step decay,
-capped at 4×) reduces noise when fine-tuning near the optimum.
+**Slow-adapt tuning of the hit-rate climber (at/below `SLOW_ADAPT_THRESHOLD`, 512
+entries).** At that size the window is only a few integer entries — the default 1%-of-max window is so
+tiny that the climber's initial shrink is a no-op, locking it into a direction that never flips — and the
+per-sample hit-rate signal is noisy. Three coordinated fixes: (1) positive initial step — grow the
+window first instead of shrinking; (2) slower step decay (`SLOW_ADAPT_DECAY_RATE`, 0.995
+vs 0.98) so the step stays large enough for HR shifts to trip the restart threshold on workload
+transitions; (3) min initial step floor (2 entries) so the integer window can still move. The
+sample-period growth (proportional to step decay, capped at `SLOW_ADAPT_RATIO_CAP`, 4×)
+reduces noise when fine-tuning near the optimum.
+
+**The climber has two algorithmic modes gated by two size thresholds.** `determineAdjustment` runs the
+**hit-rate climber** below `DENSITY_THRESHOLD` (4096) and the **density climber** above it;
+the hit-rate climber additionally switches to a **slow-adapt tuning** at/below
+`SLOW_ADAPT_THRESHOLD` (512). The two thresholds are distinct concerns — 512 is where the
+window shrinks to only a few integer entries and a single sample is too noisy to trust (the hit-rate
+climber then grows-first, stretches its period, and decays slowly), while 4096 is where the density climber's
+within-sample gains begin to exceed the hit-rate climber's. Density is scoped to large caches deliberately: it is **~neutral below ~2048 on
+real workloads** (mean Δ +0.12–0.24pp vs reactive) yet, being resident-only, it is *unreliable and
+prone to pinning at an extreme* when a region is small — so on the corda+loop phase-shift stress it
+regressed the reactive climber by up to −10pp at 513–1024 while adding nothing. Scoping keeps the
+reactive climber's small/medium robustness ("no worse than before") and adds density's large-cache wins
+(+~125pp across the >4096 cells of the 48-trace set). The gate compares the configured maximum in its
+**native units** — weight units when a weigher is present — deliberately: the risky direction (a cache
+holding few huge entries routed into density/probes) was attack-tested on the weighted track (wfew:
+~200 entries of 25–100MB in a 10GB capacity; the weighted battery scored 14W/0L), while the inverse
+misroute (many tiny entries under a small weight bound) lands on the reactive tier, which is safe
+everywhere. The entry-vs-weight comparison is not a unit bug. The density climber and its escapes (kickoff,
+regret, anneal, wide-start) could not be made robust at small sizes — every symptom-patch traded the
+corda trap for a frequency-trace regression, because the density signal is **biased and bistable**: it
+measures *average* density, not *marginal* value, so its equilibrium depends on the starting window
+(start small → under-value → floor trap; start wide → over-value → frequency traces stuck wide). Only a
+marginal/ghost signal removes that, and ghosts were rejected (heavy, don't pay off as caches grow, and
+critical caches are large). A size cutoff is the honest fix: minor accepted regressions on large
+frequency traces, big wins on large recency workloads, and the small/medium climbers untouched.
+
+Within the large tier, `determineAdjustment` reads the **within-sample hit density** of the two regions —
+`hitsInWindow / windowMaximum` versus `hitsInMain / (maximum − windowMaximum)`, where
+`sample.windowHits` is a counter incremented on window hits alongside `sample.hits`. The signed
+error is `ln(windowDensity / mainDensity)`: positive means the admission window earns more hits per
+entry, so capacity is more valuable there and the window grows; negative shrinks it. Two workloads
+motivated the switch: (1) a **flat hit-rate curve** — when HR barely changes with window size, the
+cross-sample HR gradient is buried under the ±10pp swings a phasey workload imposes, so the reactive
+climber churns; the density is computed *inside* one sample, so it is immune to those swings. (2) The
+**window→0 cliff** (the corda scan-plus-loop stress trace): the reactive climber could drive the
+window to zero and crash the hit rate. The step is **proportional** — `|error| × DENSITY_GAIN
+× maximum`, capped at `MAX_STEP_FRACTION × maximum` — so a tiny window on a recency-heavy
+workload takes a large step and reaches a large optimum in a few samples, while near the balance point
+the step shrinks to zero and the window settles.
+
+**The large tier is starvation-guarded ("the probe machine") — density is never trusted on a starved
+sample.** The density signal is resident-only, so a region earning ~nothing in a sample (fewer than
+`requestCount >> MIN_SIGNAL_SHIFT` hits, 0.1%) is the signal's blind state: it cannot see
+what a different split would earn, and holding a blind position can pin the window at an extreme
+forever. This is not hypothetical above the tier threshold — a steady-state mixture (Zipf hot-set
+defending the main region, twice-accessed items at a reuse distance between the floor and ~25% of the
+maximum) pins the pure density climber at the floor with ~28pp lost below LRU, at any cache size. The
+guard: a starved sample at a **blind corner** — the starved region is the *small* one (≤¼ of the
+maximum), or the whole sample is dead — launches a **probe**: a bold-driver walk seeded away from the
+blind bound at the restart magnitude and **scaled by the refractory rung** (×2 at rung 32, ×4 at
+64, capped at the 30% max step — deep rungs once bought committed depth but not reach, so stray
+walls calibrated wider than a flat stride were absorbing), reversing only on a
+hit-rate drop past the **walk-interior bar**, so plateau crossings persist through workload
+jitter. For a starvation probe that bar is priced against the workload's own scatter —
+`min(max(5pp, 3·rateDeviationEma), 15pp)` (adv3 2026-08-01: the fixed 5pp aborted blind-corner
+escapes inside real per-sample noise, crash-cycling the dosed mixture trap at the floor, healed
++8.2 by the pricing; the 15pp cap re-aborts genuinely damaging walks, without which all-blind
+families let walks roam, metronome −0.6) — while an **audit's walk keeps the absolute 5pp in DEPTH**
+(pricing the depth lets audits survive to confirm and park more, the R4-F1 amplification dial —
+every depth-pricing form measured holdout- or mixnoise-fatal) **and prices persistence in
+TIME** (2026-08-02 crash-semantics study): a FIRST audit crash aborts on its first below-bar
+sample exactly like a starvation probe, while the RETRY of an equilibrium that already crashed
+one audit (`audit.crashStreak ≥ 1`) tolerates `AUDIT_CRASH_PERSISTENCE − 1` = 2 below-bar
+samples — holding its committed direction at a decayed stride while the dip is adjudicated,
+since letting the unbelieved dip drive the bold-driver reversal converted cheap crashes into
+rung-doubling completed failures — and aborts on the third. Two samples of tolerance cross
+the terrain valley that a one-sample abort made an absorbing horizon at every rung (the moat,
+F1-adv4: healed 41.97 → 44.3, constructed-only per a 0/22 real-corpus scan) and absorb
+single-sample exogenous pulses; a sustained collapse still aborts at 5pp, and first aborts
+stay cheap everywhere (every-walk tolerance failed `mixture_d025`/`mixmod`'s bars — short
+traces pay longer failed excursions). The probe ends four ways: a **crash-abort** (hit rate
+fell below the probe's start by the walk-interior bar → undone in full, and the refractory
+re-arms at its current length WITHOUT doubling —
+an exogenous workload shift is indistinguishable from probe damage here; consecutive crashes
+escalate like failures on the walk's OWN ladder — audit crashes on `audit.crashStreak`/
+`audit.rung`, starvation crashes on `starvation.crashStreak`/`starvation.rung`, never
+each other's: on the shared form three token-preserving pulses paired three lone audit
+crashes into rung 64 / clock wait 128, a 130-sample floor pin −6.0 below LRU — Terra H4-C1,
+and audit endings alone drove the shared ladder's stride/commitment to their deepest forms —
+F2-adv4; a crash, lone or escalated, NEVER takes the audit clock's failure doubling); a
+**reversal through the
+probe's own start** (a failed experiment: undone in full, ladder doubles); **budget expiry**
+(likewise undone in full, ladder doubles); or an **adjudication** once the watched region earns ≥4×
+the starvation bar and the walk has met its committed depth (**escalating commitment**: a
+first-round probe may adjudicate immediately — stray and transferred hits scale with a region's
+size and reach the bar on workloads whose small window is correct, so cheap early exits protect
+thin-signal floors — while each adjudicated failure lengthens the ladder, whose deeper rungs
+commit the next walk 2 then 10 samples past the stray zone, turning deep silent reuse bands from
+absorbing pins into bounded dips). Ledger ownership binds every ending, not just crashes: a
+non-crash ending retires only the crash streak of the layer that owns the walk. Both
+non-crash sites once cleared both streaks, which disarmed the other layer's escalation and —
+since `AUDIT_CRASH_PERSISTENCE` arms at a streak of one — its tolerance as well, so a
+starvation probe ending between two audit crashes restored the one-sample abort the moat and
+the H4-C1 train need it not to have; the crash-semantics fix was reachable around by an
+interleaved blind corner (fixed 2026-08-02, pinned by
+`audit_budgetExpiry_leavesTheStarvationLedger` and
+`walkStep_reversalThroughBase_leavesTheOtherLayersLedger`). The single sanctioned cross-write
+is the audit *confirm*, which clears `starvation.crashStreak` alongside the starvation-ladder reset
+it already performs, because a ladder reset to one carrying a live streak re-escalates on the
+very next crash. The verdict prices an up-probe at
+main's *margin*: it confirms iff the window's density beats the **probation density frozen when
+the probe armed** (`ln((windowDensity+ε)/(walk.baseProbationDensity+ε)) > 0`). Capacity claimed
+from main squeezes protected into probation and expels probation's coldest, so probation is what
+the grow actually taxes; main's *average* is protected-core-dominated and vetoed
+genuinely-winning positions (the trickle family sat 14–17pp below its own engine on the old
+average confirm). The baseline is frozen at arm because the walk's own demotions enrich live
+probation into an absorbing false-veto (demoflood: the live variant pins at the floor with zero
+confirms); each re-arm re-snapshots, so a cold-start-transient baseline self-heals. Down-probes
+keep the average-density sign test — the window has no marginal substructure to price against.
+Confirmation keeps the position (a reuse band was found) and resets the ladder to 1; anything
+else fails and is undone in full, ladder doubled. The one priced trade — lowmix, a low-hit-rate
+bistable family where the frozen baseline vetoes an LRU-ward escape the diluted average confirms
+by seed-luck — is a `/climber-gate` sentinel with no real-trace echo across the defended set.
+Until an ending fires, the walk keeps walking. Failed probes back
+off exponentially
+(`PROBE_BACKOFF_INITIAL` 16 → `_MAX` 64 samples), so workloads whose small window is
+genuinely correct (w50/S1-class thin-signal floors) pay one bounded exploration cost — about −1pp on a
+short benchmark trace, amortizing to ~0 in production — and then hold still. Three hard-won
+asymmetries: a starved *large* region must NOT probe (density can see it; probing "for" a scan-filled
+main destroys the one working region — corda); a probe's success must require the verdict to
+*confirm* (a merely-neutral verdict lets density walk the window home and the probe refire
+endlessly — S3); and the crash veto is evaluated *before* adjudication, so a walk that has
+destroyed the hit rate can never reach a confirming verdict (a destroyed region would otherwise
+"win" a density ratio by earning against ~nothing — the stress trace's window once collapsed to a
+single entry and the ratio called it success; there is deliberately NO separate absolute-HR check
+inside the adjudication branch — the crash-first ordering is that veto). Rejected probe-exit variants (a small entry step with absolute exits — stray hits
+scale linearly with window size and end probes just short of the band; density-competitive exits with
+travel budgets — deep walks damage healthy-main workloads like w50 by −2pp) are recorded with data in
+the hill-climber-fable workspace (local-only archive; the re-runnable trap
+generators are committed in the `/climber-gate` skill). Extending the guarded tier below 4096 was
+measured and rejected
+(it is trap-safe there but breaks the historically fragile `cs@563` by −1.3pp). `setMaximumSize`
+resets the probe state and the sample baseline (`sample.previousHitRate`), so the first sample of a
+new geometry is never judged against a hit rate the old one earned. The below-floor clamp **lifts** a sub-floor window up to the 2% floor — the
+initial window is 1% of the maximum, and without the lift it can wedge permanently below the
+"signal-capable" floor the design documents.
+
+**The window floor is *signal-capable* (`WINDOW_FLOOR_FRACTION = 2%`, not 0.5%) — a
+secondary safeguard within the large tier.** The density signal is resident-only: a window collapsed
+too small catches ~no hits, reads `windowDensity ≈ 0`, and would pin at "shrink" forever, unable to
+recover when a recency phase arrives. This is the trap the `corda + 5×loop + corda` phase-shift stress
+exposes; it is *severe* at small/medium sizes (a 0.5% floor is 3 entries at size 600 → the recency phase
+collapsed to ~23% vs 44% optimal), which is the main reason density is scoped to large caches (the
+reactive climber owns those sizes and does not trap). At large sizes the same signal is far less
+fragile, but the 2% floor remains as a cheap safeguard — it keeps enough entries resident to estimate
+density, at ≤0.35pp cost to frequency-optimal workloads. Symptom-patch escapes (a non-density *kickoff*,
+an EWMA-*regret* trigger) were built and rejected — they false-fire on variable frequency traces (w50
+−8pp) or only transiently nudge before the EWMA catches up and density re-traps. Don't lower the floor
+below 2% without re-running the corda+loop stress at 4097–8192, and don't try to make density robust
+*below* `DENSITY_THRESHOLD` with escapes — that path was exhausted; the size cutoff is the fix.
+
+**The sketch's shrink retrack and `reset()`'s zero clamp are a matched pair.** `ensureCapacity`
+keeps the table (it is grow-only, since reallocating wipes the counts and blacks out admission)
+but re-points `sampleSize` at the new maximum, so a shrunken cache does not age on its old size's
+cadence; the observed count is clamped to just below the sample to keep the equality reset test
+reachable. That retrack breaks the precondition `reset()` was written under: `count/4 < size` held
+only while the table matched the sample (`count/4 ≤ 8·maximum < 10·maximum = sampleSize`), so
+without a floor at zero the correction underflows to a large negative `size` and no counter is
+halved until `++size` climbs back — restoring exactly the old-size cadence the retrack removes,
+and doing it for roughly `4 × tableLength` additions across successive resets. Measured
+(2026-08-07, audit-arithmetic F1): a 64K-entry cache shrunk to 256 lands at `size = −62,579`,
+about 25 sample periods, and recovery is driven only by *novel* traffic — 1M requests against
+saturated counters advanced it by 932. Reachable with no `Policy` call: a weighted cache retracks
+on every addition, so updating resident entries to heavy weights collapses the entry count
+(200,000 → 20 measured) and drives it. During the stall `admit()` degrades to tie-breaking, so a
+post-shrink working set cannot displace stale survivors. The clamp is inert whenever the table
+matches the maximum, so it costs nothing on the normal path. Don't remove either half. Pinned by
+`FrequencySketchTest.ensureCapacity_shrink_denseTable_agesOnSchedule` — note its neighbour
+`_shrink_resetReachable` exercises the same flow on an *empty* table, where the correction is 1,
+which is why the underflow shipped.
+
+The large-cache **sample period is `SAMPLE_MULTIPLIER × maximum` (4×), decoupled from the
+frequency sketch's own 10× reset** (they use separate counters — `sample.hits`/`sample.misses`
+gate
+the climber, `FrequencySketch.size` gates the sketch reset). At 10× a large cache gets only one to
+three adaptations over a finite benchmark trace and never reaches a large (20–50%) optimal window; 4×
+gives it enough steps to converge. It is kept at 4× rather than lower because a shorter period makes
+the density estimate near a small converged window noisy enough to jitter a frequency-friendly
+workload off its optimum — the `cs` trace craters at 2×. The density signal is inherently
+recency-biased (it over-values the window), so frequency-optimal traces (`fiu_madmax`, `cs`,
+`fiu_webmail`, several ARC traces) give back ~0.5–2pp versus the reactive climber; on every one they
+still beat LRU and match/beat Merlin and stay near-optimal, and the trade buys large recency-workload
+gains (corda's cliff, `OLTP`/`fiu_ikki`/`metaCDN`/`fiu_homes` converging to their ceiling). An
+*adaptive* period (short while moving, long once settled) was tried and **rejected**: starting short
+made dup-heavy/phasey traces jitter persistently and never lengthen, cratering `cs` worse than a fixed
+2×. Don't reintroduce it.
 
 **Climber `adjustment` is a multi-cycle carry-over, not stale state.** `increaseWindow` /
 `decreaseWindow` transfer at most `QUEUE_TRANSFER_THRESHOLD` (e.g. 1000) nodes per maintenance
-cycle, then store the *unfulfilled* remainder back via `setAdjustment(quota)` /
-`setAdjustment(-quota)` — the leftover, not zero. On a large cache the per-decision step
+cycle, then store the *unfulfilled* remainder back into the climber's `adjustment`
+(`quota` / `-quota`) — the leftover, not zero. On a large cache the per-decision step
 (`≈ 0.0625 × maximum`, e.g. 62,500 at a 1M maximum) dwarfs the (e.g 1000) node cap, so a single
 climber decision is deliberately drained across many later cycles. Each of those cycles
 `determineAdjustment` early-returns at `requestCount < effectiveSampleSize` (the sample was
@@ -51,7 +237,7 @@ fresh hit-rate sample," but it is the completion mechanism for a work-capped tra
 The symmetric give-back after the transfer loop (`mainProtectedMaximum += quota;
 windowMaximum -= quota`) keeps the partition sum (`windowMaximum + mainProtectedMaximum +
 implicit-probation == maximum`) constant — the maxima track the *partial* transfer that
-actually happened (added in `3a217b22c`, "Fix bugs in adaptive policy"). Three consequences
+actually happened (added by "Fix bugs in adaptive policy"). Three consequences
 worth not flagging:
 - **Pinned leftover.** If the carried `quota` is smaller than the policy weight of every
   candidate (e.g. `quota = 1` while all entries weigh 100), the loop moves nothing and
@@ -79,11 +265,47 @@ worth not flagging:
   volume. Re-derived four times (arithmetic F4 → adversarial-input F1 → adaptivity L1/F1);
   adjudicated NOT-A-BUG by Ben 2026-07-27.
 
-The hardening companion to this: `determineAdjustment` guards the small-cache sample-period
+The hardening companion to this: `ReactiveClimber.samplePeriod` guards the small-cache
 `ratio` against a `0/0` NaN (when both the maximum and step size are zero). The NaN would
-otherwise zero `effectiveSampleSize`, defeat the sample guard, and poison
-`previousSampleHitRate`. The state is unreachable in practice (the step size never decays to
-exactly `0.0`), so this is defense-in-depth, not a live fix.
+otherwise zero the effective sample size, defeat the sample guard, and poison
+`sample.previousHitRate`. Decay never produces the state (a positive step size never rounds
+to exactly `0.0`), but construction does: with `maximumSize(0)` the constructor's
+`setMaximumSize(0)` early-returns on `maximum == maximum()` (the field default), leaving
+`step.size` at its `0.0` default. The guard is live for that configuration — covered by
+`adapt_smallCache_zeroMagnitudeDoesNotPoisonHitRate` — not just defense-in-depth.
+
+**Async load completions replace quietly.** A completed future's `handleCompletion` (and the
+bulk `fillProxies`) calls `replace(..., quietly= true)`: the UpdateTask finalizes the weight and
+expiration but skips `onAccess`'s sketch increment and climber hit counters. The entry already
+paid its miss at insertion; counting the completion as an access doubled the key's per-load
+admission frequency and window-attributed one synthetic, write-buffer-lossless hit per miss —
+measured at up to −38.6pp (w50) on the density climber and −12.7pp (corda+loop stress @ 512) on
+the reactive climber (the async-completion-noise workspace report, local-only). A
+material quiet update (weight changed, or the write time moved beyond the 1s tolerance) routes
+through the UpdateTask and still reorders the deques; an immaterial one (same weight, within
+tolerance — the common fast completion) skips policy work entirely, which is sound because the
+entry's position and write time are at most tolerance-stale from its insertion. User-initiated
+writes remain loud by design. Don't re-add access recording to the completion path, and don't
+flag the immaterial-completion skip as a missing reorder/refresh.
+
+The `refreshIfNeeded` completion's remap is quiet the same way (`RemapHints.quietly`, honored at
+`remap`'s update dispatch): the triggering read already recorded its access, so a loud reload
+completion double-counted every refresh-eligible read into the sketch and the climber's hit
+sample (1000 reads → 2000 of each once past the refresh interval). A reload finalization —
+including the value-preserving debounce write on an externally discarded refresh — is
+bookkeeping, not a usage. Manual `LoadingCache.refresh` / async `tryComputeRefresh` completions
+are unchanged (explicit per-call API action, no read-stream amplification); revisit only with a
+measured skew. Pinned by `BoundedLocalCacheTest.refreshCompletion_doesNotRecordAccess`.
+
+A refresh completion always takes the material branch, so `remap`'s immaterial one is
+quiet-capable but unreached in production. `refreshIfNeeded` requires `refreshAfterWrite`, which
+makes `exceedsWriteTimeTolerance`'s refresh disjunct true at every completion: either the
+configured duration is within the 1s tolerance, or the refresh fired because the entry aged past a
+duration longer than the tolerance. The `quietly` guard on that branch is not defense-in-depth, it
+is the same contract `replace` implements for the async completions, whose callers do not require
+`refreshAfterWrite` and do settle immaterially. Don't delete it as dead code; it is pinned through
+the `compute(..., hints)` seam by `BoundedLocalCacheTest.remap_quietly_doesNotRecordAccess` and its
+loud twin.
 
 **~1% random admission of rejected candidates.** The TinyLFU admission filter
 randomly admits ~1% of candidates that would otherwise be rejected. This provides
@@ -157,7 +379,7 @@ climber's `QUEUE_TRANSFER_THRESHOLD`. The cap is high enough that normal traffic
 reaches it; it only bounds the abnormal spike where a cache with no `Scheduler` goes idle,
 lets a large population expire logically, then returns to traffic — one maintenance cycle
 would otherwise evict the whole backlog under `evictionLock`, stalling any writer that
-overflows the write buffer and assists (post-`b52a3d5df`). The work isn't reduced, only
+overflows the write buffer and assists (post "Assist maintenance directly when the write buffer is full"). The work isn't reduced, only
 sliced, and since eviction runs async by default the slicing keeps a single cycle from
 blocking a thread too long. The **timer wheel** rewinds `nanos` to `previousTimeNanos` when
 its budget is exhausted (reusing the exception-rewind path) and re-links the unprocessed
@@ -293,6 +515,22 @@ testing (Fray, LinCheck, JCStress) and static analysis (ErrorProne `@GuardedBy`)
 **nanoTime is monotonic.** Per JVM spec, `System.nanoTime()` is monotonic. Backward
 movement would be a JVM bug, not a cache issue.
 
+**`scheduleAfterWrite`'s IDLE arm retries its failed swap rather than acting on what it read.**
+The status can advance between the opaque read and the compare-and-swap, so a writer that read
+`IDLE` may find `PROCESSING_TO_IDLE`. Dropping the failed swap and calling `scheduleDrainBuffers`
+anyway leaves that write with no driver: the guard sees a drain in flight and returns, while the
+drain has already passed the task's slot, and its exit swap then settles the machine at `IDLE`
+with the task still buffered. Retrying against the observed status routes to the processing arm,
+which converts the exit to `PROCESSING_TO_REQUIRED` — the same shape the processing arm has always
+used, and why the two arms now look alike. The end state it prevents was benign (the task is not
+lost; the next write, a `cleanUp`, or a read that fills a stripe drains it, which is the deferral
+already priced for the maintenance-throw path and the `WRITE_BUFFER_MAX` cap) and reaching it
+needs the entry store's visibility to lag the drain's loads, so this is a tidiness fix, not a
+correctness one — recorded because three audit runs have now reached for this machine. `IDLE` is
+written in exactly one place, the value-checked `casDrainStatus(PROCESSING_TO_IDLE, IDLE)`, so no
+`REQUIRED` is ever swallowed. Don't collapse the arm back to an unconditional swap. Pinned by
+`BoundedLocalCacheTest.scheduleAfterWrite_staleIdle_retriesAgainstTheObservedStatus`.
+
 **skipReadBuffer optimization.** When the cache is less than half full with strong
 keys/values and no expiration, `skipReadBuffer()` returns true, avoiding read buffer
 overhead entirely. This means frequency tracking is disabled until the cache is
@@ -303,6 +541,21 @@ sufficiently populated — the eviction policy bootstraps without frequency data
 **Two weight fields**: `weight` (entry's perspective, guarded by `synchronized(node)`)
 and `policyWeight` (policy's perspective, guarded by evictionLock). They're correlated
 but updated at different times — this is intentional for the telescoping sum to work.
+
+`makeDead` subtracting the finalized `getWeight()` (not `policyWeight`) and `UpdateTask.run`
+being deliberately dead-guard-free are a **matched pair**: a late-applied `UpdateTask` adds back
+exactly the δ that `makeDead` over-subtracted. Don't add an `isDead` guard to `UpdateTask` and
+don't switch `makeDead` to `policyWeight` — either one alone breaks the cancellation.
+Because racing updates offer their `UpdateTask`s outside the node lock, out-of-order
+drains can leave a live node's `policyWeight` transiently negative; the climb transfer
+loops then charge that weight to their quota and over-shift the region caps beyond the
+commanded adjustment (the net can even invert the commanded direction). Adjudicated
+tolerated, not guarded (2026-07, audit-adaptivity F1): the caps are the controller's
+policy targets, not capacity enforcement — eviction and the total bound ride on the
+telescoping `weightedSize`/`maximum` — and the split coerces back on its own: the next
+completed sample overwrites the inflated carry-over, the below-floor lift is not
+step-capped, and the excursion is bounded by a single weigher swing on one key. Don't
+clamp the transfer quota against negative weights, and don't "fix" the offer ordering.
 
 **Queue type constants** are plain ints, not enums: WINDOW=0, PROBATION=1, PROTECTED=2.
 The field is plain (not volatile), guarded by evictionLock.
@@ -703,6 +956,11 @@ async-view no-ops set `preserveRefresh` so a stale completion can't steal a succ
 all). The absent *user-function* throw row was made uniform by B1-1 (ULC's `remap` catch narrowed to
 `value != null`).
 
+The **jcache adapter deliberately does not get this narrowing**: `RemapHints` does not cross the
+package boundary, so the adapter's query-style operations (a failed `putIfAbsent`, a NONE-action
+entry processor) do discard an in-flight refresh and reset the write time. Adjudicated won't-fix —
+see `.claude/rules/jcache-adapter.md`.
+
 ## Async Synchronous View
 
 **`AsyncCache.synchronous().asMap()` queries are logical, mutations are
@@ -712,7 +970,20 @@ entries as absent (`Async.isReady` / `Async.getIfReady`). But `KeySet.remove`,
 raw delegate map without blocking on in-flight futures. Blocking everywhere
 would invite deadlock and non-linearizable observations; the split is the
 inherent sync-over-async tradeoff. `keySet().contains(k) != keySet().remove(k)`
-on a loading entry is accepted.
+on a loading entry is accepted. `size()`/`isEmpty()` are physical too — they delegate straight to
+the backing map and count in-flight entries.
+
+**Value-conditional CAS ops are the exception to "raw", and it is CHM-faithful.** `remove(k,v)`,
+`replace(k,v)`, `replace(k,old,new)` and the `compute`/`merge` family **block** on an in-flight
+future (resolved *outside* the `compute`, then CAS inside), mirroring CHM where a mutation must
+take the bin lock an in-flight `compute` holds: in-flight is absent to *reads* but blocks
+*mutations* as if present. Only the key-based removals above are raw. Bulk collection-view ops
+split along the same line: `values().removeAll`/`remove`/`retainAll` are value-searches that skip
+in-flight via the `getIfReady` filter (like CHM `ValuesView.remove`) so they never block, while
+`entrySet().removeAll`'s iterate-argument branch routes through the blocking `remove(k,v)` (like
+CHM `EntrySetView.remove` → `map.remove(k,v)` → bin lock) so it can. Don't "fix" that asymmetry —
+and a test on the blocking path must coordinate threads (complete the future off-thread), as the
+`_async` conditional `remove`/`replace` tests do.
 
 **A logical read can return the value of a superseded future — the synchronous
 view is not linearizable.** Each read is a two-step composite (map read, then
@@ -872,4 +1143,4 @@ zero-duration fix). When touching proxy fields, remember that streams from
 ≤ 3.2.3 carry literal `0` for unset durations, and that a field *absent* from an
 old stream deserializes to the JVM default (`0`/`null`) — field initializers do
 not run during deserialization. Golden streams written by real released jars
-live under `.local/audits/<model>/audit-serialization-repro/`.
+are kept with the serialization audit's local records (`audit-serialization-repro`).

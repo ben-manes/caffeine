@@ -99,6 +99,7 @@ public final class Specifications {
       ClassName.get(PACKAGE_NAME, "TimerWheel"), kTypeVar, vTypeVar);
 
   public static final TypeName FREQUENCY_SKETCH = ClassName.get(PACKAGE_NAME, "FrequencySketch");
+  public static final TypeName WINDOW_CLIMBER = ClassName.get(PACKAGE_NAME, "WindowClimber");
 
   private Specifications() {}
 }

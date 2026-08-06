@@ -201,11 +201,12 @@ pitest {
   targetClasses = setOf(fqcn("AbstractLinkedDeque"), fqcn("Async"), fqcn("BoundedBuffer"),
     fqcn("Caffeine"), fqcn("CaffeineSpec"), fqcn("FrequencySketch"), fqcn("Interner"),
     fqcn("MpscGrowableArrayQueue"), fqcn("Pacer"), fqcn("Scheduler"),
-    fqcn("StripedBuffer"), fqcn("TimerWheel"))
+    fqcn("StripedBuffer"), fqcn("TimerWheel"), fqcn("WindowClimber") + "*")
   targetTests = setOf(fqcn("AsyncTest"), fqcn("BoundedBufferTest"),
     fqcn("CaffeineSpecTest"), fqcn("CaffeineTest"), fqcn("FrequencySketchTest"),
     fqcn("InternerTest"), fqcn("LinkedDequeTest"), fqcn("MpscGrowableArrayQueueTest"),
-    fqcn("PacerTest"), fqcn("SchedulerTest"), fqcn("StripedBufferTest"), fqcn("TimerWheelTest"))
+    fqcn("PacerTest"), fqcn("SchedulerTest"), fqcn("StripedBufferTest"), fqcn("TimerWheelTest"),
+    fqcn("WindowClimberTest"))
   threads = Runtime.getRuntime().availableProcessors()
   junit5PluginVersion = libs.versions.pitest.junit5
   pitestVersion = libs.versions.pitest.asProvider()

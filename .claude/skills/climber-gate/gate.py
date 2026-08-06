@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""Run the climber-gate battery and write a per-cell CSV.
+
+The runnable form of SKILL.md's gate table — update both together. Cells reference the
+trace filenames the SKILL.md generation block produces; missing traces are skipped with
+a notice, so a partial regeneration still yields a usable sweep. Runs-per-cell follows
+the table (N=8 on the bimodal families). The tree defaults to this repository; set
+CAF_TREE for an experiment worktree, where `--variants` beyond `hybrid` need the
+skill's harness (`harness.py apply <worktree>`).
+
+Usage:
+  gate.py <traces-dir> [variants] [out.csv]     # variants default: hybrid
+  gate.py <traces-dir> hybrid,reactive out.csv  # refresh the reactive anchor column
+
+`hybrid` alone is right for verifying a change. `hybrid,reactive` refreshes the table's
+reactive anchor — the "is the density machine earning its complexity here" column, which
+these density-built families otherwise hide behind an LRU comparison. That anchor is a
+property of the trace instance, so it is measured on a regeneration or a shared-state
+change, not on every run. See SKILL.md's Harness section.
+"""
+import csv, os, statistics, sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import run as R  # noqa: E402
+
+# (label, filename, size, runs) — bimodal families get more runs
+CELLS = [
+    ("mixture_d010", "mixture_8192_d010.lirs", 8192, 2),
+    ("mixture_d025", "mixture_8192_d025.lirs", 8192, 6),
+    ("mixture_d025@32k", "mixture_32768_d025.lirs", 32768, 2),
+    ("mixture_d050", "mixture_8192_d050.lirs", 8192, 2),
+    ("mixture_d050_long", "mixture_8192_d050_long.lirs", 8192, 2),
+    # The --lengthmult 640 steady-state companions (2026-08-05): the short parents price warmup
+    ("mixture_d010_long", "mixture_8192_d010_long.lirs", 8192, 2),
+    ("mixture_d025_long", "mixture_8192_d025_long.lirs", 8192, 2),
+    ("mixture_d025@32k_long", "mixture_32768_d025_long.lirs", 32768, 2),
+    ("phases_d050", "phases_8192_d050.lirs", 8192, 8),
+    ("phases_d050@32k", "phases_32768_d050.lirs", 32768, 5),
+    ("deadphase", "deadphase_8192.lirs", 8192, 2),
+    ("widepin", "widepin_8192.lirs", 8192, 8),
+    ("straywall2", "straywall2_8192_d050.lirs", 8192, 4),
+    ("straywall2@16k", "straywall2_16384_d050.lirs", 16384, 2),
+    ("demoflood", "demoflood_8192.lirs", 8192, 2),
+    ("trickle_s7", "trickle_8192_s7.lirs", 8192, 2),
+    ("trickle_s11", "trickle_8192_s11.lirs", 8192, 2),
+    ("lowmix_s7", "lowmix_16384_s7.lirs", 16384, 4),
+    ("bandtrap2", "blind_bandtrap2.lirs", 8192, 2),
+    ("balloonflip", "blind_balloonflip.lirs", 8192, 8),
+    ("whisper", "attack_whisper.lirs", 8192, 2),
+    ("whisper_quarter", "attack_whisper_quarter.lirs", 8192, 2),
+    ("whisper_mod_p6", "whisper_a0.08_p6.lirs", 8192, 2),
+    ("whisper_mod_p12", "whisper_a0.08_p12.lirs", 8192, 2),
+    ("whisper_mod_a12", "whisper_a0.12_p12.lirs", 8192, 2),
+    ("mixmod_a010", "mixmod_32768_a010.lirs", 32768, 2),
+    ("metronome", "metronome_8192_r1.lirs", 8192, 2),
+    ("regimeramp", "regimeramp_8192.lirs", 8192, 3),
+    ("esc_jam", "esc_jam.lirs", 8192, 2),
+    ("tenant_s10", "tenant_s10.lirs", 8192, 2),
+    ("zigzag_s7", "zigzag_8192_s7.lirs", 8192, 2),
+    ("rungflip_s7", "rungflip_8192_s7.lirs", 8192, 2),
+    ("resphase_k1_s7", "resphase_8192_k1_s7.lirs", 8192, 2),
+    ("posjam_flat", "posjam_flat_8192.lirs", 8192, 2),
+    ("posjam_j50", "jam_j50.lirs", 8192, 2),
+    ("posjam_d25", "jam_d25.lirs", 8192, 2),
+    ("posjam_d0", "jam_d0.lirs", 8192, 2),
+    ("shieldtrap_s7", "shieldtrap_8192.lirs", 8192, 8),
+    ("shieldtrap_s11", "shieldtrap_s11.lirs", 8192, 8),
+    ("shieldtrap_s13", "shieldtrap_s13.lirs", 8192, 8),
+    ("saw_p40", "saw_p40.lirs", 8192, 5),
+    ("loopcliff", "loopcliff_8192.lirs", 8192, 2),
+    ("climbtrend_up", "climbtrend_8192.lirs", 8192, 3),
+    ("climbtrend_dn", "climbtrend_dn_8192.lirs", 8192, 3),
+    ("crashnoise_flat", "cn_flat.lirs", 8192, 2),
+    ("crashnoise_a12", "cn_sine_a12.lirs", 8192, 2),
+    ("mixnoise_flat", "mn8_flat.lirs", 8192, 2),
+    ("mixnoise_a10", "mn8_sine_a10.lirs", 8192, 2),
+    ("h4c1_attack", "h4c1_p4_attack_long.lirs", 8192, 2),
+    ("h4c1_reverse", "h4c1_p4_control_long.lirs", 8192, 2),
+    ("moat_h7800", "moat_h7800_long.lirs", 8192, 2),
+    ("moat_h3000", "moat_h3000_b4000.lirs", 8192, 2),
+    # The slowswap pair is bimodal on which of two audit defects binds, so an unseeded mean here
+    # is uninterpretable. These rows only sanity-check the ramp control; adjudicate the step arm
+    # with `seedrun`-style seeded runs (SKILL.md's row), never from this CSV.
+    ("slowswap_ramp", "slowswap_r20.lirs", 8192, 2),
+    ("slowswap_step", "slowswap_r1.lirs", 8192, 4),
+    # nullchurn is the battery's only sub-5% cell, so it is where the audit bar's proportional
+    # cap binds hardest — the regime the 2026-08-04 change alters most.
+    ("nullchurn", "blind_nullchurn.lirs", 8192, 2),
+    # One terrain, two arms: the rider is window-irrelevant (the anchors match), so the only
+    # difference is whether hasBlindCorner() fires. The sighted arm is the control.
+    ("blindlock_blind", "blindlock_blind.lirs", 8192, 2),
+    ("blindlock_sighted", "blindlock_sighted.lirs", 8192, 2),
+    # The D2 tier-cliff straddle: one trace, both sides of the boundary; a fix must move the
+    # pair together. The corda+5xloop+corda ladder row stays outside this table (multi-path).
+    ("strad_p8@4096", "strad_p8.lirs", 4096, 2),
+    ("strad_p8@4097", "strad_p8.lirs", 4097, 2),
+]
+
+
+def main():
+    if len(sys.argv) < 2:
+        sys.exit(__doc__)
+    traces = sys.argv[1]
+    variants = sys.argv[2].split(",") if len(sys.argv) > 2 else ["hybrid"]
+    out = sys.argv[3] if len(sys.argv) > 3 else "gate.csv"
+    with open(out, "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["cell", "size", "runs"] + list(variants))
+        for label, name, size, runs in CELLS:
+            path = os.path.join(traces, name)
+            if not os.path.exists(path):
+                print(f"SKIP {label}: missing {path}", flush=True)
+                continue
+            # Rotate the arms INSIDE each run rather than running them in blocks: SKILL.md's
+            # pairing rule ("interleaved runs ... rather than comparing across sweeps") applies
+            # within a cell too, so the arms see the same machine state and basin draws.
+            got = {v: [] for v in variants}
+            for _ in range(runs):
+                for v in variants:
+                    hr = R.variant(path, size, v)[0]
+                    if hr is not None:
+                        got[v].append(hr)
+            achieved = min((len(got[v]) for v in variants), default=0)
+            if achieved != runs:
+                print(f"DROPOUT {label}: " + " ".join(
+                    f"{v}={len(got[v])}/{runs}" for v in variants), flush=True)
+            row = [label, size, achieved]
+            for v in variants:
+                row.append(round(statistics.mean(got[v]), 2) if got[v] else "")
+            w.writerow(row)
+            fh.flush()
+            print(" ".join(str(x) for x in row), flush=True)
+
+
+if __name__ == "__main__":
+    main()

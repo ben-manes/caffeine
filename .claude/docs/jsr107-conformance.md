@@ -419,15 +419,15 @@ session memory for the full rationale.
   immutable MCELC (whose `equals` is spec-defined over the listener/filter factories +
   `isOldValueRequired`/`isSynchronous`), and both `register` and `deregister` key the dispatch-queue map
   by it (`deregister` wraps its lookup the same way — commit "Wrap EventDispatcher.deregister key to match
-  Registration's defensive copy", `20ef40f9`). So two *distinct* configs that are field-equal (share the
+  Registration's defensive copy"). So two *distinct* configs that are field-equal (share the
   same factories/flags) but report `equals == false` under a **custom** `equals` register **once**, not
   twice — the RI fires both. Intentional and the more defensible reading: it dedups an accidental
   double-register (vs the RI firing the same listener twice), the MCELC copy gives a stable, well-defined
   key immune to a caller mutating its config after registering (commit "jcache should return an immutable
-  configuration", `790aa330`), and the only divergent input is absurdly contrived (two *distinct* config
+  configuration"), and the only divergent input is absurdly contrived (two *distinct* config
   objects sharing one listener factory *and* a custom `equals` that reports them unequal — a plain
   `MutableCacheEntryListenerConfiguration` is field-equal, so the config list itself rejects the second as
-  a duplicate). Don't re-key `Registration`/`deregister` by the raw config (it reintroduces `20ef40f9`).
+  a duplicate). Don't re-key `Registration`/`deregister` by the raw config (it reintroduces the deregister-key mismatch that commit fixed).
 - **`invoke` `remove()` on an absent entry records no removal and fires no
   `REMOVED` event** (only `CacheWriter.delete` is called). The RI unconditionally
   counts a removal and fires REMOVED-with-null-value, contradicting its own
@@ -492,7 +492,7 @@ session memory for the full rationale.
 - **`JCacheLoaderAdapter.expireTimeMillis` applies the same ±1 sentinel-collision
   adjustment** as `CacheProxy.getWriteExpireTimeMillis`/`setAccessExpireTime` when
   a finite adjusted time lands exactly on `0` or `Long.MAX_VALUE` (treated as
-  already-expired / eternal). Resolved by 9905bf070 and pinned by
+  already-expired / eternal). Resolved by "Clamp the jcache loader's computed creation expiry" and pinned by
   `CacheLoaderTest.load_adjustedTimeSentinelZero`/`...Max`; earlier revisions of
   this list recorded the adjustment as missing — do not re-derive that gap.
 - **Synchronous-listener exceptions are logged and swallowed**, not wrapped in

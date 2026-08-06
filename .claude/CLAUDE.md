@@ -73,6 +73,8 @@ Google Java Style. Contributors must sign a CLA.
 - Stay focused on the specific task requested. Don't produce unsolicited broad recommendation plans or premature "ready for engineer follow-up" conclusions.
 - Lossy/best-effort semantics (read buffer drops, approximate frequency counts, eventual consistency) are intentional design trade-offs in the cache — not defects. Read `.claude/docs/design-decisions.md` before flagging these.
 - When fixing a bug or making a design change, update or create `.claude/` files (docs, rules, skills, agents) to keep them in sync with the change.
+- Work that will span sessions gets a `LEDGER.md` work queue (itemized rows, status updated in place) alongside its scripts and data under `.local/experiments/<topic>/`. Being gitignored, that workspace survives the branch resets and rebases that remove checked-in artifacts — a narrative report on its own is not a handoff. It is ephemeral and machine-local, though: checked-in files must not reference `.local/` paths (the tree may be purged, and other clones don't have it). Distill durable conclusions into `.claude/` docs; workspace pointers belong in other `.local` files or in memory.
+- When parallel workstreams report conflicting values for the same measurement, re-measure it directly rather than averaging them or trusting the more confident one. The conflict is usually an instrumentation artifact in one of them, and it otherwise ships as a finding.
 - Don't blindly suggest committing after writing code. Actually run the tests and verify the output before proposing to commit.
 
 ## Architecture
@@ -83,6 +85,7 @@ Core: `caffeine/src/main/java/com/github/benmanes/caffeine/cache/`
 |------|---------|
 | `BoundedLocalCache.java` | Main cache logic: eviction, expiration, compute |
 | `FrequencySketch.java` | TinyLFU admission frequency counters |
+| `WindowClimber.java` | Adaptive hill climber sizing the admission window |
 | `BoundedBuffer.java` | Striped ring buffer for read recording |
 | `MpscGrowableArrayQueue.java` | Write buffer (multi-producer single-consumer) |
 | `TimerWheel.java` | Hierarchical timer wheel for variable expiration |
@@ -119,6 +122,8 @@ For deep dives, read these on demand (not auto-loaded to save context):
 - `.claude/docs/synchronization.md` — lock hierarchy, access modes, callback invocation points
 - `.claude/docs/testing.md` — CacheSpec parameterization, Truth subjects, test utilities
 - `.claude/docs/research-foundations.md` — papers mapped to implementation (TinyLFU, BP-Wrapper, etc.)
+- `.claude/docs/hill-climber.md` — the adaptive window climber: goal, adversarial cases, the probe machine, and the graveyard of alternatives
+- `.claude/docs/adaptive-window.html` — THE climber document (problem → control theory → design space → the shipped machine → evidence → appendix); the retired research-record HTMLs are archived in the local climber-failure-modes workspace
 - `.claude/docs/finding-taxonomy.md` — standard severity/category schema for audit and review findings
 - `.claude/docs/jsr107-conformance.md` — JSR-107 (JCache) conformance
 
@@ -127,6 +132,7 @@ When to read which doc:
 - Auditing or reviewing code → `design-decisions.md` first (prevents false positives)
 - Writing or modifying tests → `testing.md`
 - Understanding algorithm choices → `research-foundations.md`
+- Touching the window climber / `determineAdjustment` → `hill-climber.md` (new to the area → `adaptive-window.html` first)
 - Interpreting or writing audit findings → `finding-taxonomy.md`
 - Auditing JSR-107 conformance of the jcache adapter → `jsr107-conformance.md`
 
@@ -140,6 +146,7 @@ When to read which doc:
 - **Skills** (`/audit-jcache-conformance`): JSR-107 1.1.1 spec-conformance verification for the jcache adapter.
 - **Skills** (`/audit-third-party-contracts`): external-library and JDK contract misuse across adapters, simulator, and examples — verifies call-site assumptions (error paths, duplicate/empty inputs, disposal) against upstream docs
 - **Skills** (`/sim-*`): simulator workflow automation — `/sim-compare` for policy comparison charts, `/sim-analyze` for trace characterization
+- **Skills** (`/climber-gate`): regenerate the window climber's adversarial trap traces (deterministic generators, committed) and run the behavioral gate vs LRU/ceiling anchors in the simulator — run after any `WindowClimber` change; companion to `/audit-adaptivity`
 - **Auditor agent** (`.claude/agents/`): multi-pass — analysis → reflection → evaluator challenge → targeted re-audit
 
 ### Audit Selection Guide

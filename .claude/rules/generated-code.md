@@ -13,8 +13,11 @@ paths:
 - To regenerate: `./gradlew :caffeine:generateNodes :caffeine:generateLocalCaches`
 - The `AddKey`, `AddValue`, `AddExpiration`, `AddMaximum`, `AddDeques`, `AddHealth` classes each add one feature dimension to nodes
 - When auditing a field that appears in a generated class but does not exist
-  in `BoundedLocalCache.java` (e.g., `hitsInSample`, `missesInSample`,
-  `weightedSize`, `policyWeight`, `queueType`, deque links), trace it back to
-  the corresponding `Add*.java` generator before reasoning about its type or
-  storage. The protected accessors in `BoundedLocalCache` only declare the
-  signatures; the actual fields and types are emitted by the generators.
+  in `BoundedLocalCache.java` (e.g., `weightedSize`, `policyWeight`,
+  `queueType`, `climber`, deque links), trace it back to the corresponding
+  `Add*.java` generator before reasoning about its type or storage. The
+  protected accessors in `BoundedLocalCache` only declare the signatures; the
+  actual fields and types are emitted by the generators.
+- Hill-climber state is not generated: it lives in plain fields on the
+  package-private `WindowClimber`, reached via the generated `climber` field
+  (`AddMaximum`)

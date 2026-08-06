@@ -97,6 +97,7 @@ jobs:
           ADDITIONAL_SUITES: |
             caffeine:fuzzTest --tests FrequencySketchFuzzer
             caffeine:fuzzTest --tests CaffeineSpecFuzzer*
+            caffeine:fuzzTest --tests WindowClimberFuzzer
             caffeine:fuzzTest --tests LinkedDequeFuzzer
             caffeine:fuzzTest --tests TimerWheelFuzzer
             caffeine:fuzzTest --tests PacerFuzzer*

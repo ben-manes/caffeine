@@ -285,16 +285,18 @@
   </Match>
   <Match>
     <Or>
-      <Field name="stepSize"/>
-      <Field name="adjustment"/>
-      <Field name="hitsInSample"/>
       <Field name="windowMaximum"/>
-      <Field name="missesInSample"/>
       <Field name="windowWeightedSize"/>
       <Field name="mainProtectedMaximum"/>
-      <Field name="previousSampleHitRate"/>
       <Field name="mainProtectedWeightedSize"/>
     </Or>
+    <Bug pattern="
+      AT_NONATOMIC_64BIT_PRIMITIVE,
+      AT_STALE_THREAD_WRITE_OF_PRIMITIVE"/>
+  </Match>
+  <Match>
+    <!-- The climber's state lives in its nested layer classes, all guarded by the eviction lock -->
+    <Class name="~com\.github\.benmanes\.caffeine\.cache\.WindowClimber(\$.*)?"/>
     <Bug pattern="
       AT_NONATOMIC_64BIT_PRIMITIVE,
       AT_STALE_THREAD_WRITE_OF_PRIMITIVE"/>

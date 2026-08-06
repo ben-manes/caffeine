@@ -47,8 +47,13 @@ approach. The hill climber adjusts the partition size to adapt to workload chang
 without manual configuration.
 
 **Implementation:**
-- `HillClimberWindowTinyLfu` in simulator — research prototype
-- `BoundedLocalCache.java` — production hill climber (`climb()` method)
+- `HillClimberWindowTinyLfu` in simulator — the paper's reactive climber (research prototype)
+- `WindowClimber.java` — the production climber (applied by `BoundedLocalCache.climb()`). The
+  shipped design has advanced beyond the paper: reactive below 4096, and above it a
+  within-sample density signal with a starvation-guarded probe machine whose up-probe verdict
+  prices capacity at main's probation margin (see `hill-climber.md` and
+  `adaptive-window.html`). The simulator deliberately carries no faithful reference of it —
+  `product.Caffeine` (the real cache) is the arbiter
 - Adjusts window percentage up/down based on observed hit rate changes
 
 ### Lightweight Robust Size Aware Cache Management

@@ -157,13 +157,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * window is favored by recency-biased workloads, while a small one favors frequency-biased
    * workloads. When the window is too small, then recent arrivals are prematurely evicted, but when
    * it is too large, then they pollute the cache and force the eviction of more popular entries.
-   * The optimal configuration is dynamically determined by using hill climbing to walk the hit rate
-   * curve. This is achieved by sampling the hit rate and adjusting the window size in the direction
-   * that is improving (making positive or negative steps). At each interval, the step size is
-   * decreased until the hit rate climber converges at the optimal setting. For small caches the
-   * sample period grows as its step decays to avoid getting stuck at a poor initial configuration.
-   * The process is restarted when the hit rate changes over a threshold, indicating that the
-   * workload altered, and a new setting may be required.
+   * The optimal configuration is dynamically determined by using hill climbing to walk the hit
+   * rate curve. For modestly sized caches this samples the hit rate and adjusts the window size
+   * in the direction that is improving, decaying the step until the climber converges and
+   * restarting when a large change indicates that the workload altered. Tiny caches allow the
+   * sample period to grow as its step decays to avoid getting stuck at a poor configuration.
+   * Larger caches instead compare the regions' hit densities within a single sample, which is
+   * immune to the hit rate swings of a phasey workload, and take a proportional step towards the
+   * balance point. As that signal only observes the hits that the current split earns, a region
+   * that earns almost nothing cannot measure what a different split would, so those samples are
+   * never trusted to hold position: the climber probes out of the blind state by hit rate,
+   * accepts the new position if the density signal validates it, and otherwise undoes the probe
+   * with exponentially longer pauses between attempts.
    *
    * The historic usage is retained in a compact popularity sketch, which uses hashing to
    * probabilistically estimate an item's frequency. This exposes a flaw where an adversary could
@@ -219,20 +224,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final double PERCENT_MAIN = 0.99d;
   /** The percent of the maximum weighted capacity dedicated to the main's protected space. */
   static final double PERCENT_MAIN_PROTECTED = 0.80d;
-  /** The difference in hit rates that restarts the climber. */
-  static final double HILL_CLIMBER_RESTART_THRESHOLD = 0.05d;
-  /** The percent of the total size to adapt the window by. */
-  static final double HILL_CLIMBER_STEP_PERCENT = 0.0625d;
-  /** The rate to decrease the step size to adapt by. */
-  static final double HILL_CLIMBER_STEP_DECAY_RATE = 0.98d;
-  /** Lower bound on the initial step size so that small caches have an opportunity to adapt. */
-  static final double HILL_CLIMBER_MIN_INITIAL_STEP = 2.0d;
-  /** The threshold below which the climber's sample period grows as its step size decays. */
-  static final long SMALL_CACHE_THRESHOLD = 512L;
-  /** Maximum factor by which the climber's sample period may grow. */
-  static final double SMALL_CACHE_SAMPLE_RATIO_CAP = 4.0d;
-  /** The step decay rate for small caches, slower to keep the step large enough for restarts. */
-  static final double SMALL_CACHE_STEP_DECAY_RATE = 0.995d;
   /** The minimum popularity for allowing randomized admission. */
   static final int ADMIT_HASHDOS_THRESHOLD = 6;
   /** The maximum number of entries that can be transferred between queues. */
@@ -561,6 +552,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     throw new UnsupportedOperationException();
   }
 
+  protected WindowClimber climber() {
+    throw new UnsupportedOperationException();
+  }
+
   /** Returns if an access to an entry can skip notifying the eviction policy. */
   protected boolean fastpath() {
     return false;
@@ -636,51 +631,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     throw new UnsupportedOperationException();
   }
 
-  protected long hitsInSample() {
-    throw new UnsupportedOperationException();
-  }
-
-  protected long missesInSample() {
-    throw new UnsupportedOperationException();
-  }
-
-  protected double stepSize() {
-    throw new UnsupportedOperationException();
-  }
-
-  protected double previousSampleHitRate() {
-    throw new UnsupportedOperationException();
-  }
-
-  protected long adjustment() {
-    throw new UnsupportedOperationException();
-  }
-
-  @GuardedBy("evictionLock")
-  protected void setHitsInSample(long hitCount) {
-    throw new UnsupportedOperationException();
-  }
-
-  @GuardedBy("evictionLock")
-  protected void setMissesInSample(long missCount) {
-    throw new UnsupportedOperationException();
-  }
-
-  @GuardedBy("evictionLock")
-  protected void setStepSize(double stepSize) {
-    throw new UnsupportedOperationException();
-  }
-
-  @GuardedBy("evictionLock")
-  protected void setPreviousSampleHitRate(double hitRate) {
-    throw new UnsupportedOperationException();
-  }
-
-  @GuardedBy("evictionLock")
-  protected void setAdjustment(long amount) {
-    throw new UnsupportedOperationException();
-  }
-
   /**
    * Sets the maximum weighted size of the cache. The caller may need to perform a maintenance cycle
    * to eagerly evicts entries until the cache shrinks to the appropriate size.
@@ -696,16 +646,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     long max = Math.min(maximum, MAXIMUM_CAPACITY);
     long window = max - (long) (PERCENT_MAIN * max);
     long mainProtected = (long) (PERCENT_MAIN_PROTECTED * (max - window));
-    double stepSize = Math.max(HILL_CLIMBER_STEP_PERCENT * max, HILL_CLIMBER_MIN_INITIAL_STEP);
 
     setMaximum(max);
-    setAdjustment(0);
-    setHitsInSample(0);
-    setMissesInSample(0);
     setWindowMaximum(window);
-    setPreviousSampleHitRate(0.0);
     setMainProtectedMaximum(mainProtected);
-    setStepSize((max <= SMALL_CACHE_THRESHOLD) ? stepSize : -stepSize);
+
+    if (climber() != null) {
+      // null during the super constructor's initial sizing; the generated constructor replays this
+      climber().resized(maximum());
+    }
 
     if ((frequencySketch() != null) && !isWeighted() && (weightedSize() >= (max >>> 1))) {
       // Lazily initialize when close to the maximum size
@@ -725,17 +674,24 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /**
    * Evicts entries from the window space into the main space while the window size exceeds a
-   * maximum.
+   * maximum, transferring at most a bounded number of entries per maintenance cycle.
    *
    * @return the first candidate promoted into the probation space
    */
   @GuardedBy("evictionLock")
   @Nullable Node<K, V> evictFromWindow() {
     @Var Node<K, V> first = null;
+    @Var int remaining = QUEUE_TRANSFER_THRESHOLD;
     @Var Node<K, V> node = accessOrderWindowDeque().peekFirst();
     while (windowWeightedSize() > windowMaximum()) {
       // The pending operations will adjust the size to reflect the correct weight
       if (node == null) {
+        break;
+      }
+      if (remaining == 0) {
+        // A resize can leave the window arbitrarily oversized, so the transfer is bounded per
+        // maintenance cycle and re-armed to drain the backlog across cycles
+        setDrainStatusOpaque(PROCESSING_TO_REQUIRED);
         break;
       }
 
@@ -746,6 +702,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if (first == null) {
           first = node;
         }
+        remaining--;
       }
       node = next;
     }
@@ -1155,9 +1112,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (!evicts()) {
       return;
     }
-    determineAdjustment();
+
+    if (frequencySketch().isNotInitialized()) {
+      climber().resetSample();
+    } else {
+      climber().determineAdjustment(maximum(), windowMaximum(),
+          mainProtectedMaximum(), frequencySketch().sampleSize);
+    }
+
     demoteFromMainProtected();
-    long amount = adjustment();
+    long amount = climber().adjustment();
     if (amount == 0) {
       return;
     } else if (amount > 0) {
@@ -1165,48 +1129,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     } else {
       decreaseWindow();
     }
-  }
-
-  /** Calculates the amount to adapt the window by and sets {@link #adjustment()} accordingly. */
-  @GuardedBy("evictionLock")
-  @SuppressWarnings("MathClampDouble")
-  void determineAdjustment() {
-    if (frequencySketch().isNotInitialized()) {
-      setPreviousSampleHitRate(0.0);
-      setMissesInSample(0);
-      setHitsInSample(0);
-      return;
-    }
-
-    long requestCount = hitsInSample() + missesInSample();
-    @Var double stepDecayRate = HILL_CLIMBER_STEP_DECAY_RATE;
-    @Var long effectiveSampleSize = frequencySketch().sampleSize;
-    if (maximum() <= SMALL_CACHE_THRESHOLD) {
-      // Grows the sample period as the step size decays to avoid converging near the initial ratio
-      double initialStep = HILL_CLIMBER_STEP_PERCENT * maximum();
-      double magnitude = Math.max(initialStep / SMALL_CACHE_SAMPLE_RATIO_CAP, Math.abs(stepSize()));
-      double ratio = (magnitude == 0.0)
-          ? 1.0
-          : Math.max(1.0, Math.min(SMALL_CACHE_SAMPLE_RATIO_CAP, initialStep / magnitude));
-      effectiveSampleSize = (long) (effectiveSampleSize * ratio);
-      stepDecayRate = SMALL_CACHE_STEP_DECAY_RATE;
-    }
-    if (requestCount < effectiveSampleSize) {
-      return;
-    }
-
-    double hitRate = (double) hitsInSample() / requestCount;
-    double hitRateChange = hitRate - previousSampleHitRate();
-    double amount = (hitRateChange >= 0) ? stepSize() : -stepSize();
-    double nextStepSize = (Math.abs(hitRateChange) >= HILL_CLIMBER_RESTART_THRESHOLD)
-        ? Math.copySign(
-            Math.max(HILL_CLIMBER_STEP_PERCENT * maximum(), HILL_CLIMBER_MIN_INITIAL_STEP), amount)
-        : (stepDecayRate * amount);
-    setPreviousSampleHitRate(hitRate);
-    setAdjustment((long) amount);
-    setStepSize(nextStepSize);
-    setMissesInSample(0);
-    setHitsInSample(0);
   }
 
   /**
@@ -1223,7 +1145,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @SuppressWarnings("MathClampLong")
-    @Var long quota = Math.min(adjustment(), mainProtectedMaximum());
+    @Var long quota = Math.min(climber().adjustment(), mainProtectedMaximum());
     setMainProtectedMaximum(mainProtectedMaximum() - quota);
     setWindowMaximum(windowMaximum() + quota);
     demoteFromMainProtected();
@@ -1250,7 +1172,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     setMainProtectedMaximum(mainProtectedMaximum() + quota);
     setWindowMaximum(windowMaximum() - quota);
-    setAdjustment(quota);
+    climber().carryOver(quota);
   }
 
   /** Decreases the size of the admission window and increases the main's protected region. */
@@ -1261,7 +1183,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @SuppressWarnings("MathClampLong")
-    @Var long quota = Math.min(-adjustment(), Math.max(0, windowMaximum() - 1));
+    @Var long quota = Math.min(-climber().adjustment(), Math.max(0, windowMaximum() - 1));
     setMainProtectedMaximum(mainProtectedMaximum() + quota);
     setWindowMaximum(windowMaximum() - quota);
 
@@ -1282,7 +1204,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     setMainProtectedMaximum(mainProtectedMaximum() - quota);
     setWindowMaximum(windowMaximum() + quota);
-    setAdjustment(-quota);
+    climber().carryOver(-quota);
   }
 
   /** Transfers the nodes from the protected to the probation region if it exceeds the maximum. */
@@ -1440,6 +1362,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         V value = (isAsync && (newValue != null)) ? (V) refreshFuture[0] : newValue;
         @Nullable RemovalCause[] cause = new RemovalCause[1];
         var hints = new RemapHints();
+        hints.quietly = true;
         @Nullable V result;
         try {
           result = compute(key, (K k, @Nullable V currentValue) -> {
@@ -1531,7 +1454,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @Nullable Expiry<? super K, ? super V> expiry, long now) {
     if (expiresVariable()) {
       requireNonNull(expiry);
-      long currentDuration = Math.max(1, node.getVariableTime() - now);
+      long currentDuration = Math.max(0L, node.getVariableTime() - now);
       long duration = Math.max(0L, expiry.expireAfterUpdate(key, value, now, currentDuration));
       return expiresAt(now, duration);
     }
@@ -1572,7 +1495,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     long variableTime = node.getVariableTime();
-    long currentDuration = Math.max(1, variableTime - now);
+    long currentDuration = Math.max(0L, variableTime - now);
     if (isAsync && (currentDuration > MAXIMUM_EXPIRY)) {
       // expireAfterCreate has not yet set the duration after completion
       return;
@@ -1726,9 +1649,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     for (;;) {
       switch (drainStatus) {
         case IDLE:
-          casDrainStatus(IDLE, REQUIRED);
-          scheduleDrainBuffers();
-          return;
+          if (casDrainStatus(IDLE, REQUIRED)) {
+            scheduleDrainBuffers();
+            return;
+          }
+          drainStatus = drainStatusAcquire();
+          continue;
         case REQUIRED:
           scheduleDrainBuffers();
           return;
@@ -1910,7 +1836,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * A quiet access reorders but does not record the usage with the admission filter or the adaptive
    * climber's sample, as an asynchronous cache's load completion finalizes the entry's weight
    * rather than conveying a usage; counting it once per load skews the admission frequencies and
-   * inflates the climber's hit sample.
+   * misattributes window hits.
    */
   @GuardedBy("evictionLock")
   void onAccess(Node<K, V> node, boolean quietly) {
@@ -1922,15 +1848,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if (!quietly) {
         frequencySketch().increment(keyRef);
       }
-      if (node.inWindow()) {
+      boolean inWindow = node.inWindow();
+      boolean inProbation = !inWindow && node.inMainProbation();
+      if (inWindow) {
         reorder(accessOrderWindowDeque(), node);
-      } else if (node.inMainProbation()) {
+      } else if (inProbation) {
         reorderProbation(node);
       } else {
         reorder(accessOrderProtectedDeque(), node);
       }
-      if (!quietly) {
-        setHitsInSample(hitsInSample() + 1);
+      if (!quietly && (node.getPolicyWeight() != 0)) {
+        // a zero-weight entry (an in-flight async load, a pinned entry) earns hits with no
+        // capacity, so it must not steer the sizing; the sketch still observes the key
+        climber().recordHit(inWindow, inProbation);
       }
     } else if (expiresAfterAccess()) {
       reorder(accessOrderWindowDeque(), node);
@@ -2055,7 +1985,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           }
         }
 
-        setMissesInSample(missesInSample() + 1);
+        climber().recordMiss();
       }
 
       // ignore out-of-order write operations
@@ -3138,7 +3068,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           discardRefresh(kr);
           return n;
         } catch (Throwable e) {
-          discardRefresh(kr);
+          if ((ctx.hints == null) || !ctx.hints.preserveRefresh) {
+            discardRefresh(kr);
+          }
           if (!wasEvicted) {
             throw e;
           }
@@ -3172,11 +3104,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     } else if ((ctx.oldValue == null) && (ctx.cause == null)) {
       afterWrite(new AddTask(node, ctx.newWeight));
     } else {
+      boolean quietly = (ctx.hints != null) && ctx.hints.quietly;
       int weightedDifference = ctx.newWeight - ctx.oldWeight;
       if (ctx.exceedsTolerance || (weightedDifference != 0)) {
-        afterWrite(new UpdateTask(node, weightedDifference));
+        afterWrite(new UpdateTask(node, weightedDifference, quietly));
       } else {
-        afterRead(node, ctx.now, /* recordHit= */ false);
+        if (!quietly) {
+          afterRead(node, ctx.now, /* recordHit= */ false);
+        }
         if ((ctx.cause != null) && ctx.cause.wasEvicted()) {
           scheduleDrainBuffers();
         }

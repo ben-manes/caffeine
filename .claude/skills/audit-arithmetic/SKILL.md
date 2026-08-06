@@ -20,7 +20,10 @@ Audit for:
   over a long-running cache?)
 - Timer wheel bucket arithmetic (modular arithmetic, wrap-around)
 - Frequency sketch counter saturation and reset arithmetic
-- Hill climber / adaptive sizing: window vs main partition adjustment
+- Hill climber / adaptive sizing: window vs main partition adjustment; the density and
+  probe-verdict log-ratios (`ln((x+ε)/(y+ε))`), the probation-capacity denominator
+  (`max(1, maximum − windowMaximum − mainProtectedMaximum)`), the saturated `4·maximum`
+  sample period, and the stride/commitment rung tables
   (percentage calculations, rounding, overshoot, oscillation)
 - FrequencySketch table size calculation (ensureCapacity rounding to
   power of two, interaction with maximumSize)

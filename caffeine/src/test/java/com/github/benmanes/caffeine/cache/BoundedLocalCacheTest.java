@@ -24,12 +24,9 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIR
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.ADMIT_HASHDOS_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRATION_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_TOLERANCE;
-import static com.github.benmanes.caffeine.cache.BoundedLocalCache.HILL_CLIMBER_STEP_PERCENT;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.MAXIMUM_EXPIRY;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.QUEUE_TRANSFER_THRESHOLD;
-import static com.github.benmanes.caffeine.cache.BoundedLocalCache.SMALL_CACHE_SAMPLE_RATIO_CAP;
-import static com.github.benmanes.caffeine.cache.BoundedLocalCache.SMALL_CACHE_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WARN_AFTER_LOCK_WAIT_NANOS;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WRITE_BUFFER_MAX;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.isRefreshing;
@@ -48,6 +45,14 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.SIZE;
+import static com.github.benmanes.caffeine.cache.WindowClimber.DensityClimber.DENSITY_THRESHOLD;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_INITIAL;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_MAX;
+import static com.github.benmanes.caffeine.cache.WindowClimber.ReactiveClimber.SLOW_ADAPT_RATIO_CAP;
+import static com.github.benmanes.caffeine.cache.WindowClimber.ReactiveClimber.SLOW_ADAPT_THRESHOLD;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Reading.WINDOW_FLOOR_FRACTION;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Step.STEP_PERCENT;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Walk.PROBE_WALK_BUDGET;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.Awaits.awaitFullGc;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
@@ -181,6 +186,7 @@ import com.google.common.testing.FakeTicker;
 import com.google.common.testing.GcFinalization;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.Var;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -447,6 +453,28 @@ final class BoundedLocalCacheTest {
   }
 
   @Test
+  void scheduleAfterWrite_staleIdle_retriesAgainstTheObservedStatus() {
+    // The status may advance between the read and the compare-and-swap. Dropping the failed swap
+    // leaves the write with no driver when the drain in flight has already passed its task, so the
+    // arm retries against what it observed rather than acting on what it read, as processing does
+    var drained = new AtomicBoolean();
+    var cache = new BoundedLocalCache<>(
+        Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {
+      @Override void scheduleDrainBuffers() {
+        drained.set(true);
+      }
+      @Override int drainStatusOpaque() {
+        return IDLE;
+      }
+    };
+
+    cache.drainStatus = PROCESSING_TO_IDLE;
+    cache.scheduleAfterWrite();
+    assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_REQUIRED);
+    assertThat(drained.get()).isFalse();
+  }
+
+  @Test
   void scheduleAfterWrite_invalidDrainStatus() {
     var cache = new BoundedLocalCache<>(
         Caffeine.newBuilder(), /* cacheLoader= */ null, /* isAsync= */ false) {};
@@ -505,6 +533,122 @@ final class BoundedLocalCacheTest {
 
     done.set(true);
     await().untilAsserted(() -> assertThat(cache.drainStatus).isAnyOf(REQUIRED, IDLE));
+  }
+
+  @Test
+  void evictFromWindow_capped() {
+    var cache = asBoundedLocalCache(Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .maximumSize(100_000)
+        .build());
+    cache.evictionLock.lock();
+    try {
+      cache.setWindowMaximum(cache.maximum());
+    } finally {
+      cache.evictionLock.unlock();
+    }
+    for (int i = 0; i < 2_500; i++) {
+      var prior = cache.put(Int.valueOf(i), Int.valueOf(i));
+      assertThat(prior).isNull();
+    }
+
+    cache.evictionLock.lock();
+    try {
+      assertThat(cache.accessOrderWindowDeque()).hasSize(2_500);
+
+      // A resize can leave the window arbitrarily oversized; the transfer is bounded per
+      // maintenance cycle and re-arms itself to drain the backlog
+      cache.setWindowMaximum(0);
+      var first = cache.evictFromWindow();
+      assertThat(first).isNotNull();
+      assertThat(cache.accessOrderWindowDeque()).hasSize(1_500);
+      assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_REQUIRED);
+    } finally {
+      cache.evictionLock.unlock();
+    }
+
+    cache.cleanUp();
+    cache.cleanUp();
+    assertThat(cache.accessOrderWindowDeque()).isEmpty();
+  }
+
+  @Test
+  void evictFromWindow_cappedByTransfers() {
+    var cache = asBoundedLocalCache(Caffeine.newBuilder()
+        .weigher((Int key, Int value) -> value.intValue())
+        .executor(Runnable::run)
+        .maximumWeight(100_000)
+        .build());
+    cache.evictionLock.lock();
+    try {
+      cache.setWindowMaximum(cache.maximum());
+    } finally {
+      cache.evictionLock.unlock();
+    }
+    for (int i = 0; i < 1_100; i++) {
+      var prior = cache.put(Int.valueOf(i), Int.valueOf(0));
+      assertThat(prior).isNull();
+    }
+    for (int i = 1_100; i < 1_110; i++) {
+      var prior = cache.put(Int.valueOf(i), Int.valueOf(1));
+      assertThat(prior).isNull();
+    }
+
+    cache.evictionLock.lock();
+    try {
+      assertThat(cache.accessOrderWindowDeque()).hasSize(1_110);
+      assertThat(cache.windowWeightedSize()).isEqualTo(10);
+
+      // A pinned entry is skipped rather than transferred, so it must not spend the budget; else a
+      // prefix longer than the threshold consumes every cycle and the backlog never drains
+      cache.setWindowMaximum(0);
+      var first = cache.evictFromWindow();
+      assertThat(first).isNotNull();
+      assertThat(cache.windowWeightedSize()).isEqualTo(0);
+      assertThat(cache.accessOrderWindowDeque()).hasSize(1_100);
+      assertThat(cache.drainStatus).isNotEqualTo(PROCESSING_TO_REQUIRED);
+    } finally {
+      cache.evictionLock.unlock();
+    }
+  }
+
+  @Test
+  void evictFromWindow_cappedBacklog_underCapacityPressure() {
+    var cache = asBoundedLocalCache(Caffeine.newBuilder()
+        .weigher((Int key, Int value) -> value.intValue())
+        .executor(Runnable::run)
+        .maximumWeight(100_000)
+        .build());
+    cache.evictionLock.lock();
+    try {
+      cache.setWindowMaximum(cache.maximum());
+    } finally {
+      cache.evictionLock.unlock();
+    }
+    for (int i = 0; i < 1_500; i++) {
+      var prior = cache.put(Int.valueOf(i), Int.valueOf(1));
+      assertThat(prior).isNull();
+    }
+
+    cache.evictionLock.lock();
+    try {
+      assertThat(cache.accessOrderWindowDeque()).hasSize(1_500);
+
+      // both pressures in one cycle: the budgeted transfer re-arms for its remaining backlog
+      cache.setWindowMaximum(0);
+      cache.setMaximum(1_200);
+      var candidate = cache.evictFromWindow();
+      assertThat(candidate).isNotNull();
+      assertThat(cache.accessOrderWindowDeque()).hasSize(500);
+      assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_REQUIRED);
+
+      // and the capacity eviction still restores the bound, drawing further candidates from the
+      // window when admission rejects the transferred ones
+      cache.evictFromMain(candidate);
+      assertThat(cache.weightedSize()).isEqualTo(1_200);
+    } finally {
+      cache.evictionLock.unlock();
+    }
   }
 
   @ParameterizedTest
@@ -1462,7 +1606,7 @@ final class BoundedLocalCacheTest {
         .collect(toImmutableList());
     cache.setMainProtectedMaximum(0L);
     cache.setWindowMaximum(0L);
-    cache.setMaximum(0L);
+    cache.setMaximumSize(0L);
     cache.evictEntries();
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
@@ -1548,6 +1692,31 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
+  void onAccess_probationHitAttributedBeforePromotion(BoundedLocalCache<Int, Int> cache) {
+    // The climber attributes a hit to the region that earned it: onAccess captures the node's
+    // membership before reorderProbation can promote it, so the promoting access counts toward
+    // the probation sample and only the next access counts as a protected hit.
+    cache.evictionLock.lock();
+    try {
+      var node = cache.accessOrderProbationDeque().getFirst();
+      cache.climber().resetSample();
+
+      cache.onAccess(node, /* quietly= */ false);
+      assertThat(node.inMainProtected()).isTrue();
+      assertThat(cache.climber().sample.probationHits).isEqualTo(1);
+      assertThat(cache.climber().sample.hits).isEqualTo(1);
+
+      cache.onAccess(node, /* quietly= */ false);
+      assertThat(cache.climber().sample.probationHits).isEqualTo(1);
+      assertThat(cache.climber().sample.hits).isEqualTo(2);
+    } finally {
+      cache.evictionLock.unlock();
+    }
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
   void reorderProbation_staleAccess(BoundedLocalCache<Int, Int> cache) {
     // A node that is not in the probation deque (e.g., in the window deque) should be ignored
     // by reorderProbation, leaving the probation deque unchanged.
@@ -1616,6 +1785,19 @@ final class BoundedLocalCacheTest {
 
     assertThat(cache.weightedSize()).isEqualTo(0);
     assertThat(cache).containsExactly(victim.getKey(), victim.getValue());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
+  void frequencySketch_sampleIsEntryDenominated(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // The add task lazily initializes the sketch with the entry count. A weighted cache passes
+    // its mapping count, not the weight-denominated maximum, so the mean entry weight cannot
+    // inflate the aging period (and this is the only path that retracks a weighted shrink)
+    cache.maintenance(/* ignored */ null);
+    assertThat(cache.frequencySketch().sampleSize)
+        .isEqualTo(10 * FrequencySketch.MIN_SKETCH_SIZE);
   }
 
   @ParameterizedTest
@@ -2615,18 +2797,594 @@ final class BoundedLocalCacheTest {
     long hits = (long) Integer.MAX_VALUE + 1;
     long misses = (long) Integer.MAX_VALUE + 1;
 
-    cache.setPreviousSampleHitRate(0.80);
-    cache.setHitsInSample(hits);
-    cache.setMissesInSample(misses);
+    cache.climber().sample.hits = hits;
+    cache.climber().sample.misses = misses;
+    cache.climber().sample.previousHitRate = 0.80;
 
     long windowMaximum = cache.windowMaximum();
     long protectedMaximum = cache.mainProtectedMaximum();
     cache.climb();
 
+    assertThat(cache.climber().sample.hits).isEqualTo(0);
+    assertThat(cache.climber().sample.misses).isEqualTo(0);
     assertThat(cache.windowMaximum()).isNotEqualTo(windowMaximum);
     assertThat(cache.mainProtectedMaximum()).isNotEqualTo(protectedMaximum);
-    assertThat(cache.hitsInSample()).isEqualTo(0);
-    assertThat(cache.missesInSample()).isEqualTo(0);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_increaseWindowOnWindowDensity(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Above the small-cache threshold the climber directs the window by the within-sample hit
+    // density of the two regions. Forcing all sampled hits into the admission window makes its
+    // density dominate the (hitless) main region, so the signed error is positive and the window
+    // grows. A large sample count guarantees the adjustment runs and the counters reset.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    cache.setWindowMaximum(cache.maximum() / 10);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.windowHits = hits;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().sample.windowHits).isEqualTo(0);
+    assertThat(cache.climber().adjustment()).isGreaterThan(0);
+    assertThat(cache.climber().sample.misses).isEqualTo(0);
+    assertThat(cache.climber().sample.hits).isEqualTo(0);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_decreaseWindowOnMainDensity(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // The mirror case: all sampled hits land in the main region, so its density dominates and the
+    // signed error is negative, shrinking the window. The window sits far above its floor, so the
+    // proportional step is applied unclamped.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    cache.setWindowMaximum(cache.maximum() / 2);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.windowHits = 0;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    long windowMaximum = cache.windowMaximum();
+    determineAdjustment(cache);
+
+    long floor = Math.round(WINDOW_FLOOR_FRACTION * cache.maximum());
+    assertThat(windowMaximum + cache.climber().adjustment()).isGreaterThan(floor);
+    assertThat(cache.climber().adjustment()).isLessThan(0);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
+  void adapt_largeCache_weighted_climbsByDensity(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // The tier gate reads the configured maximum in its native weight units, so a weighted cache
+    // climbs by density even though its entry count sits far below the threshold, and the step
+    // it commands is denominated in those same units
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    cache.setWindowMaximum(cache.maximum() / 10);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.windowHits = hits;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().adjustment()).isGreaterThan(0);
+    assertThat(cache.climber().sample.windowHits).isEqualTo(0);
+    assertThat(cache.climber().sample.hits).isEqualTo(0);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_climbAppliesProbeEntryStride(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A starved window at a blind corner arms an up probe, and climb() must carry the entry
+    // stride through the region transfer: the window and protected maxima shift by the stride
+    // with their sum conserved.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    cache.setWindowMaximum(cache.maximum() / 10);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.windowHits = 0;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    long stride = Math.round(STEP_PERCENT * cache.maximum());
+    long protectedMaximum = cache.mainProtectedMaximum();
+    long windowMaximum = cache.windowMaximum();
+    cache.climb();
+
+    // The transfer applies as much of the stride as resident entries cover and gives the
+    // remainder back into the climber's adjustment as the multi-cycle carry-over, so the applied
+    // movement plus the carried remainder always equals the probe's entry stride.
+    long moved = cache.windowMaximum() - windowMaximum;
+    assertThat(walkOf(cache).down).isFalse();
+    assertThat(moved).isAtLeast(0);
+    assertThat(moved + cache.climber().adjustment()).isEqualTo(stride);
+    assertThat(cache.mainProtectedMaximum()).isEqualTo(protectedMaximum - moved);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_climbAppliesDownProbeStride(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // The mirror: a starved main behind a dominant window arms a down probe, and climb() shrinks
+    // the window by the entry stride through the transfer path.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    cache.setWindowMaximum((cache.maximum() * 7) / 8);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.windowHits = hits;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    long stride = Math.round(STEP_PERCENT * cache.maximum());
+    long protectedMaximum = cache.mainProtectedMaximum();
+    long windowMaximum = cache.windowMaximum();
+    cache.climb();
+
+    // as above: the applied shrink plus the carried remainder equals the down stride
+    long moved = windowMaximum - cache.windowMaximum();
+    assertThat(walkOf(cache).down).isTrue();
+    assertThat(moved).isAtLeast(0);
+    assertThat(moved - cache.climber().adjustment()).isEqualTo(stride);
+    assertThat(cache.mainProtectedMaximum()).isEqualTo(protectedMaximum + moved);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
+  void adapt_decreaseWindow_transferCapsAtThreshold(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A single cycle transfers at most QUEUE_TRANSFER_THRESHOLD nodes; the unfulfilled quota is
+    // given back to the maxima and carried in the climber's adjustment for the next cycle.
+    cache.setMaximumSize(8 * DENSITY_THRESHOLD);
+    cache.setWindowMaximum(cache.maximum() / 2);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    for (int i = 0; i < (QUEUE_TRANSFER_THRESHOLD + 100); i++) {
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(i))).isNull();
+    }
+    cache.cleanUp();
+
+    long windowMaximum = cache.windowMaximum();
+    cache.climber().carryOver(-(QUEUE_TRANSFER_THRESHOLD + 500));
+    cache.decreaseWindow();
+
+    assertThat(cache.windowMaximum()).isEqualTo(windowMaximum - QUEUE_TRANSFER_THRESHOLD);
+    assertThat(cache.climber().adjustment()).isEqualTo(-500);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
+  void adapt_increaseWindow_transferCapsAtThreshold(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // The mirror: growing the window demotes at most QUEUE_TRANSFER_THRESHOLD candidates from the
+    // main space per cycle, carrying the remainder.
+    cache.setMaximumSize(8 * DENSITY_THRESHOLD);
+    cache.setWindowMaximum(100);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    for (int i = 0; i < (QUEUE_TRANSFER_THRESHOLD + 200); i++) {
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(i))).isNull();
+    }
+    cache.cleanUp();
+
+    long windowMaximum = cache.windowMaximum();
+    cache.climber().carryOver((QUEUE_TRANSFER_THRESHOLD + 500));
+    cache.increaseWindow();
+
+    assertThat(cache.windowMaximum()).isEqualTo(windowMaximum + QUEUE_TRANSFER_THRESHOLD);
+    assertThat(cache.climber().adjustment()).isEqualTo(500);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_shrinkClampsAtWindowFloor(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A window near its floor with a shrink signal: the full proportional step would drive the
+    // window below its signal-capable floor (where a starved window can no longer measure its own
+    // density), so the step is clamped to land no lower than the floor. The window earns enough
+    // hits to stay above the starvation bar, so this is a density decision rather than a probe.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    long floor = Math.round(WINDOW_FLOOR_FRACTION * cache.maximum());
+    cache.setWindowMaximum(floor + 100);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.windowHits = (hits >>> 8);
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    long windowMaximum = cache.windowMaximum();
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().walk).isNull();
+    assertThat(cache.climber().adjustment()).isLessThan(0);
+    assertThat(windowMaximum + cache.climber().adjustment()).isAtLeast(floor);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_probesOutOfStarvedFloor(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A floor-sized window earning ~nothing next to an earning main region is the density
+    // signal's blind corner: rather than hold a possibly-pinned position, the climber probes
+    // upward with the goal-driven walk.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    long floor = Math.round(WINDOW_FLOOR_FRACTION * cache.maximum());
+    cache.setWindowMaximum(floor);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.windowHits = 0;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    determineAdjustment(cache);
+
+    assertThat(walkOf(cache).down).isFalse();
+    assertThat(cache.climber().adjustment()).isGreaterThan(0);
+    assertThat(walkOf(cache).samples).isEqualTo(1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_noProbeWhenMainStarvedAtSmallWindow(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A large main region earning nothing next to a small window earning everything (a scan
+    // filling the main region) is fully visible to the density signal, so it must grow the window
+    // rather than probe-shrink the one region that is working.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    cache.setWindowMaximum(cache.maximum() / 10);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.windowHits = hits;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().walk).isNull();
+    assertThat(cache.climber().adjustment()).isGreaterThan(0);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_refractoryTicksAndHolds(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A refractory sample at a blind corner ticks the countdown and holds: the climber just
+    // classified the sample as one the density signal cannot be trusted on, so steering on it
+    // was the dead-phase rider's delivery vehicle.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    cache.setWindowMaximum(cache.maximum() / 4);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    cache.climber().refractoryLeft = 2;
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.windowHits = 0;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().walk).isNull();
+    assertThat(cache.climber().adjustment()).isEqualTo(0);
+    assertThat(cache.climber().refractoryLeft).isEqualTo(1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_probeStraysFailFirstRoundCheaply(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // On a first-round probe (no prior failures), watched hits above the bar that stay below
+    // the probation baseline frozen at arm time end the walk as a cheap failed experiment:
+    // strays and transferred hits reach the bar on workloads whose small window is genuinely
+    // correct, and there the boundary was earning when the probe armed.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    long floor = Math.round(WINDOW_FLOOR_FRACTION * cache.maximum());
+    cache.setWindowMaximum(cache.maximum() / 4);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    injectWalk(cache, /* down= */ false, /* baseWindow= */ floor,
+        /* baseHitRate= */ 0.50, /* baseProbationDensity= */ 1_000_000.0).samples = 1;
+    cache.climber().step.size = STEP_PERCENT * cache.maximum();
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.windowHits = (hits >>> 6);
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    long windowMaximum = cache.windowMaximum();
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().walk).isNull();
+    assertThat(cache.climber().starvation.rung)
+        .isEqualTo(2 * PROBE_BACKOFF_INITIAL);
+    assertThat(cache.climber().adjustment()).isEqualTo(floor - windowMaximum);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_probeCommitmentBlocksEarlyStrayExit(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // After repeated failures the ladder's deepest rung commits the walk past the stray zone:
+    // the same stray-heavy sample that fails a first-round probe may not end a committed one.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    long floor = Math.round(WINDOW_FLOOR_FRACTION * cache.maximum());
+    cache.setWindowMaximum(cache.maximum() / 4);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    injectWalk(cache, /* down= */ false, /* baseWindow= */ floor,
+        /* baseHitRate= */ 0.50, /* baseProbationDensity= */ 1_000_000.0).samples = 1;
+    cache.climber().starvation.rung = PROBE_BACKOFF_MAX;
+    cache.climber().step.size = STEP_PERCENT * cache.maximum();
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.windowHits = (hits >>> 6);
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().walk).isNotNull();
+    assertThat(cache.climber().adjustment()).isGreaterThan(0);
+    assertThat(walkOf(cache).samples).isEqualTo(2);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_probeBudgetExpiryFails(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A walk that spends its budget without confirmation is a completed, failed experiment: the
+    // movement is undone and the refractory ladder doubles.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    long floor = Math.round(WINDOW_FLOOR_FRACTION * cache.maximum());
+    cache.setWindowMaximum(cache.maximum() / 4);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    injectWalk(cache, /* down= */ false, /* baseWindow= */ floor, /* baseHitRate= */ 0.50,
+        /* baseProbationDensity= */ 0.0).samples = PROBE_WALK_BUDGET;
+
+    // the watched region stays below the 4x-bar adjudication exit, so only the spent budget
+    // can end the walk
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.windowHits = (hits >>> 10);
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    long windowMaximum = cache.windowMaximum();
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().walk).isNull();
+    assertThat(cache.climber().starvation.rung)
+        .isEqualTo(2 * PROBE_BACKOFF_INITIAL);
+    assertThat(cache.climber().adjustment()).isEqualTo(floor - windowMaximum);
+    assertThat(cache.climber().refractoryLeft).isEqualTo(cache.climber().starvation.rung);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_probeReversalThroughBaseFails(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A bold-driver reversal that would cross back through the probe's own starting window found
+    // nothing: the probe finishes as a failed experiment instead of walking out the other side.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    long floor = Math.round(WINDOW_FLOOR_FRACTION * cache.maximum());
+    cache.setWindowMaximum(floor + 200);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    injectWalk(cache, /* down= */ false, /* baseWindow= */ (floor + 100),
+        /* baseHitRate= */ 0.50, /* baseProbationDensity= */ 0.0).samples = 2;
+    cache.climber().step.size = STEP_PERCENT * cache.maximum();
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    // A starvation probe's reversal is priced against the workload's own scatter, so the bar
+    // floors at the restart threshold only on a quiet workload; at the DEVIATION_SEED the bar is
+    // three deviations (15pp) and this 6pp drop would not reverse anything.
+    cache.climber().rates.deviation = 0.001;
+    cache.climber().sample.previousHitRate = 0.56; // a crash-scale drop reverses the walk
+    cache.climber().sample.windowHits = 0;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    long windowMaximum = cache.windowMaximum();
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().walk).isNull();
+    assertThat(cache.climber().starvation.rung)
+        .isEqualTo(2 * PROBE_BACKOFF_INITIAL);
+    assertThat(cache.climber().adjustment()).isEqualTo((floor + 100) - windowMaximum);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_probeAdjudicationSuccessResetsLadder(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // When the watched region out-earns the frozen probation baseline a reuse band was found:
+    // the position is kept and the refractory ladder resets so future probes are cheap.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    long floor = Math.round(WINDOW_FLOOR_FRACTION * cache.maximum());
+    cache.setWindowMaximum(cache.maximum() / 4);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    injectWalk(cache, /* down= */ false, /* baseWindow= */ floor, /* baseHitRate= */ 0.50,
+        /* baseProbationDensity= */ 0.0).samples = 10;
+    cache.climber().starvation.rung = PROBE_BACKOFF_MAX;
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.windowHits = hits;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().starvation.rung).isEqualTo(1);
+    assertThat(cache.climber().refractoryLeft).isEqualTo(0);
+    assertThat(cache.climber().adjustment()).isGreaterThan(0);
+    assertThat(cache.climber().walk).isNull();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_probeCrashAborts(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A probe that crashed the hit rate below its own starting point is undone immediately; the
+    // collapse may be exogenous, so the refractory re-arms without doubling.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    cache.setWindowMaximum(cache.maximum() / 4);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    injectWalk(cache, /* down= */ true, /* baseWindow= */ (cache.maximum() / 2),
+        /* baseHitRate= */ 0.90, /* baseProbationDensity= */ 0.0);
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.misses = 3 * hits;
+    cache.climber().sample.windowHits = 0;
+    cache.climber().sample.hits = hits;
+
+    long windowMaximum = cache.windowMaximum();
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().starvation.rung).isEqualTo(PROBE_BACKOFF_INITIAL);
+    assertThat(cache.climber().refractoryLeft).isEqualTo(PROBE_BACKOFF_INITIAL);
+    assertThat(cache.climber().adjustment()).isEqualTo((cache.maximum() / 2) - windowMaximum);
+    assertThat(cache.climber().walk).isNull();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_liftsBelowFloorWindow(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // The initial window (1% of the maximum) starts below the signal-capable floor (2%); a shrink
+    // signal must not wedge it there. The clamp lifts a below-floor window up to the floor.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.frequencySketch().ensureCapacity(cache.maximum());
+    long floor = Math.round(WINDOW_FLOOR_FRACTION * cache.maximum());
+    cache.setWindowMaximum(floor / 2);
+    cache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+
+    long hits = (long) Integer.MAX_VALUE + 1;
+    cache.climber().sample.windowHits = (hits >>> 8);
+    cache.climber().sample.previousHitRate = 0.50;
+    cache.climber().sample.misses = hits;
+    cache.climber().sample.hits = hits;
+
+    long windowMaximum = cache.windowMaximum();
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().walk).isNull();
+    assertThat(cache.climber().adjustment()).isGreaterThan(0);
+    assertThat(windowMaximum + cache.climber().adjustment()).isAtMost(floor);
+    assertThat(windowMaximum + cache.climber().adjustment()).isAtLeast(floor - 1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_resizeResetsProbeState(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Changing the maximum re-seeds the climber; stale probe state must not carry across.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    injectWalk(cache, /* down= */ false, /* baseWindow= */ 1024, /* baseHitRate= */ 0.5,
+        /* baseProbationDensity= */ 0.0);
+    cache.climber().refractoryLeft = 7;
+    cache.climber().carryOver(-280_000);
+    cache.climber().sample.previousHitRate = 0.80;
+    cache.climber().starvation.rung = PROBE_BACKOFF_MAX;
+
+    cache.setMaximumSize(4 * DENSITY_THRESHOLD);
+
+    assertThat(cache.climber().walk).isNull();
+    assertThat(cache.climber().adjustment()).isEqualTo(0);
+    assertThat(cache.climber().refractoryLeft).isEqualTo(0);
+    assertThat(cache.climber().sample.previousHitRate).isEqualTo(0);
+    assertThat(cache.climber().starvation.rung).isEqualTo(PROBE_BACKOFF_INITIAL);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  void adapt_largeCache_hugeMaximumStaysQuiescent(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // 4x a near-Long.MAX_VALUE maximum would overflow into a negative period; the saturated
+    // multiply keeps the gate positive so an idle cache never fabricates samples.
+    cache.setMaximumSize(Long.MAX_VALUE);
+    cache.frequencySketch().ensureCapacity(1024);
+
+    determineAdjustment(cache);
+
+    assertThat(cache.climber().walk).isNull();
+    assertThat(cache.climber().adjustment()).isEqualTo(0);
+    assertThat(Double.isNaN(cache.climber().step.size)).isFalse();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
+  void adapt_largeCache_preInitResetsWindowHits(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Window hits drained before the sketch initializes must not leak into the first real sample,
+    // where they would exceed hitsInSample and poison the density arithmetic.
+    cache.setMaximumSize(2 * DENSITY_THRESHOLD);
+    cache.climber().sample.windowHits = 5_000_000;
+    cache.climber().sample.misses = 100;
+    cache.climber().sample.hits = 100;
+
+    cache.climb();
+
+    assertThat(cache.climber().sample.windowHits).isEqualTo(0);
+    assertThat(cache.climber().sample.hits).isEqualTo(0);
   }
 
   @ParameterizedTest
@@ -2634,27 +3392,28 @@ final class BoundedLocalCacheTest {
       maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
   void adapt_smallCache_postponesAdjustmentAsStepDecays(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    // Maximum.FULL is well below SMALL_CACHE_THRESHOLD so the adaptive-sample logic applies.
-    assertThat(cache.maximum()).isAtMost(SMALL_CACHE_THRESHOLD);
+    // Maximum.FULL is well below SLOW_ADAPT_THRESHOLD so the adaptive-sample logic
+    // applies
+    assertThat(cache.maximum()).isAtMost(SLOW_ADAPT_THRESHOLD);
     prepareForAdaption(cache, context, /* recencyBias= */ false);
 
     // Decay the step size to half its initial magnitude, which doubles the effective sample
     // period. Filling the sample buffer to only the base sample size should not trigger an
     // adjustment because the climber is waiting for more requests.
-    double initialStep = HILL_CLIMBER_STEP_PERCENT * cache.maximum();
-    cache.setStepSize(Math.copySign(initialStep / 2, cache.stepSize()));
+    double initialStep = STEP_PERCENT * cache.maximum();
+    cache.climber().step.size = Math.copySign(initialStep / 2, cache.climber().step.size);
 
     int baseSampleSize = cache.frequencySketch().sampleSize;
     long windowMaximum = cache.windowMaximum();
     long protectedMaximum = cache.mainProtectedMaximum();
 
-    cache.setPreviousSampleHitRate(0.80);
-    cache.setMissesInSample(baseSampleSize / 2);
-    cache.setHitsInSample(baseSampleSize - cache.missesInSample());
+    cache.climber().sample.previousHitRate = 0.80;
+    cache.climber().sample.misses = (baseSampleSize / 2);
+    cache.climber().sample.hits = (baseSampleSize - cache.climber().sample.misses);
     cache.climb();
 
     // Adjustment should have been postponed: counters preserved, sizes unchanged.
-    assertThat(cache.hitsInSample()).isGreaterThan(0);
+    assertThat(cache.climber().sample.hits).isGreaterThan(0);
     assertThat(cache.windowMaximum()).isEqualTo(windowMaximum);
     assertThat(cache.mainProtectedMaximum()).isEqualTo(protectedMaximum);
   }
@@ -2664,25 +3423,25 @@ final class BoundedLocalCacheTest {
       maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
   void adapt_smallCache_triggersAtGrownSamplePeriod(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.maximum()).isAtMost(SMALL_CACHE_THRESHOLD);
+    assertThat(cache.maximum()).isAtMost(SLOW_ADAPT_THRESHOLD);
     prepareForAdaption(cache, context, /* recencyBias= */ false);
 
     // With step decayed to half magnitude, the effective sample size is ratio=2 * base. A
     // sample size matching that grown threshold should trigger the climber.
-    double initialStep = HILL_CLIMBER_STEP_PERCENT * cache.maximum();
-    cache.setStepSize(Math.copySign(initialStep / 2, cache.stepSize()));
+    double initialStep = STEP_PERCENT * cache.maximum();
+    cache.climber().step.size = Math.copySign(initialStep / 2, cache.climber().step.size);
 
     int baseSampleSize = cache.frequencySketch().sampleSize;
     int grownSampleSize = 2 * baseSampleSize;
 
-    cache.setPreviousSampleHitRate(0.80);
-    cache.setMissesInSample(grownSampleSize / 2);
-    cache.setHitsInSample(grownSampleSize - cache.missesInSample());
+    cache.climber().sample.previousHitRate = 0.80;
+    cache.climber().sample.misses = (grownSampleSize / 2);
+    cache.climber().sample.hits = (grownSampleSize - cache.climber().sample.misses);
     cache.climb();
 
     // Adjustment ran: counters reset.
-    assertThat(cache.hitsInSample()).isEqualTo(0);
-    assertThat(cache.missesInSample()).isEqualTo(0);
+    assertThat(cache.climber().sample.hits).isEqualTo(0);
+    assertThat(cache.climber().sample.misses).isEqualTo(0);
   }
 
   @ParameterizedTest
@@ -2690,26 +3449,26 @@ final class BoundedLocalCacheTest {
       maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
   void adapt_smallCache_samplePeriodGrowthCappedAtRatioCap(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.maximum()).isAtMost(SMALL_CACHE_THRESHOLD);
+    assertThat(cache.maximum()).isAtMost(SLOW_ADAPT_THRESHOLD);
     prepareForAdaption(cache, context, /* recencyBias= */ false);
 
     // Force step to a value far below the cap: ratio would be > cap, so should be clamped.
-    double initialStep = HILL_CLIMBER_STEP_PERCENT * cache.maximum();
-    double tinyStep = initialStep / (SMALL_CACHE_SAMPLE_RATIO_CAP * 10);
-    cache.setStepSize(Math.copySign(Math.max(tinyStep, 0.001), cache.stepSize()));
+    double initialStep = STEP_PERCENT * cache.maximum();
+    double tinyStep = initialStep / (SLOW_ADAPT_RATIO_CAP * 10);
+    cache.climber().step.size = Math.copySign(Math.max(tinyStep, 0.001), cache.climber().step.size);
 
     int baseSampleSize = cache.frequencySketch().sampleSize;
     @SuppressWarnings("Varifier")
-    int cappedSampleSize = (int) (baseSampleSize * SMALL_CACHE_SAMPLE_RATIO_CAP);
+    int cappedSampleSize = (int) (baseSampleSize * SLOW_ADAPT_RATIO_CAP);
 
     // At the capped threshold, the climber should run.
-    cache.setPreviousSampleHitRate(0.80);
-    cache.setMissesInSample(cappedSampleSize / 2);
-    cache.setHitsInSample(cappedSampleSize - cache.missesInSample());
+    cache.climber().sample.previousHitRate = 0.80;
+    cache.climber().sample.misses = (cappedSampleSize / 2);
+    cache.climber().sample.hits = (cappedSampleSize - cache.climber().sample.misses);
     cache.climb();
 
-    assertThat(cache.hitsInSample()).isEqualTo(0);
-    assertThat(cache.missesInSample()).isEqualTo(0);
+    assertThat(cache.climber().sample.hits).isEqualTo(0);
+    assertThat(cache.climber().sample.misses).isEqualTo(0);
   }
 
   @ParameterizedTest
@@ -2724,17 +3483,17 @@ final class BoundedLocalCacheTest {
     // in practice (the step never decays to exactly 0.0); it is forced here to lock in the guard.
     cache.setMaximumSize(0);
     cache.frequencySketch().ensureCapacity(1);
-    cache.setStepSize(0.0);
-    cache.setHitsInSample(0);
-    cache.setMissesInSample(0);
-    cache.setPreviousSampleHitRate(0.80);
+    cache.climber().step.size = 0.0;
+    cache.climber().sample.hits = 0;
+    cache.climber().sample.misses = 0;
+    cache.climber().sample.previousHitRate = 0.80;
 
     // An uninitialized sketch would short-circuit determineAdjustment before reaching the guard.
     assertThat(cache.frequencySketch().isNotInitialized()).isFalse();
     cache.climb();
 
-    assertThat(cache.previousSampleHitRate()).isFinite();
-    assertThat(cache.adjustment()).isEqualTo(0);
+    assertThat(cache.climber().sample.previousHitRate).isFinite();
+    assertThat(cache.climber().adjustment()).isEqualTo(0);
   }
 
   @ParameterizedTest
@@ -2743,26 +3502,125 @@ final class BoundedLocalCacheTest {
   void adapt_resizeSeedsDirectionFromFreshBaseline(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     prepareForAdaption(cache, context, /* recencyBias= */ false);
-    cache.setPreviousSampleHitRate(0.80);
-    cache.setAdjustment(-cache.maximum());
 
-    cache.setMaximumSize(cache.maximum() / 2);
-    assertThat(cache.adjustment()).isEqualTo(0);
-    assertThat(cache.previousSampleHitRate()).isEqualTo(0);
+    // A resize re-seeds the slow-adapt regime to grow the window first, overriding the shrinking
+    // step above. A hit rate held over from the old geometry makes the first sample of the new one
+    // look like a decline, sending that step in the opposite direction.
+    cache.climber().sample.previousHitRate = 0.80;
+    cache.setMaximumSize(context.maximumWeightOrSize() / 2);
+    assertThat(cache.maximum()).isAtMost(SLOW_ADAPT_THRESHOLD);
+    assertThat(cache.climber().sample.previousHitRate).isEqualTo(0);
 
     int sampleSize = cache.frequencySketch().sampleSize;
-    cache.setMissesInSample(sampleSize / 2);
-    cache.setHitsInSample(sampleSize - cache.missesInSample());
-    cache.determineAdjustment();
+    long windowMaximum = cache.windowMaximum();
+    cache.climber().sample.misses = (sampleSize / 2);
+    cache.climber().sample.hits = (sampleSize - cache.climber().sample.misses);
+    cache.climb();
 
-    // Judged against no baseline the sample is an improvement, so the climb follows the direction
-    // that stepSize seeds instead of reversing against the prior geometry's high-water mark
-    assertThat(cache.adjustment()).isGreaterThan(0);
+    assertThat(cache.windowMaximum()).isGreaterThan(windowMaximum);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
+  void adapt_increaseWindow_negativeTransientOvershootTolerated(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Pins the adjudicated telescoping-race tolerance (design-decisions, "Two weight fields"):
+    // a transiently negative policyWeight inflates the transfer quota, so the caps over-shift
+    // beyond the command and the remainder is carried over. The caps are policy targets that
+    // the controller coerces back. A skip, quota clamp, or counter clamp must fail here first.
+    cache.evictionLock.lock();
+    try {
+      var node = cache.accessOrderProbationDeque().getFirst();
+      node.setPolicyWeight(-3);
+      long windowSize = cache.windowWeightedSize();
+      long windowMaximum = cache.windowMaximum();
+      long protectedMaximum = cache.mainProtectedMaximum();
+
+      cache.climber().carryOver(1);
+      cache.increaseWindow();
+
+      // quota inflates 1 -> 4; the next candidate (weight 10) exceeds it, so the walk stops and
+      // the inflated remainder is given back and carried over
+      assertThat(node.inWindow()).isTrue();
+      assertThat(cache.climber().adjustment()).isEqualTo(4);
+      assertThat(cache.windowMaximum()).isEqualTo(windowMaximum - 3);
+      assertThat(cache.mainProtectedMaximum()).isEqualTo(protectedMaximum + 3);
+      assertThat(cache.windowWeightedSize()).isEqualTo(windowSize - 3);
+
+      // settle the transient as the late UpdateTask would (the coercion the design relies on)
+      node.setPolicyWeight(node.getPolicyWeight() + 13);
+      cache.setWindowWeightedSize(cache.windowWeightedSize() + 13);
+      assertThat(cache.evictFromWindow()).isNotNull();
+      cache.climber().carryOver(0);
+    } finally {
+      cache.evictionLock.unlock();
+    }
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
+  void adapt_decreaseWindow_negativeTransientOvershootTolerated(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // The decrease-side mirror of the tolerated over-shift: the commanded shrink nets a grow
+    // and carries the inflated remainder, coerced back by subsequent samples.
+    cache.evictionLock.lock();
+    try {
+      // a 10-weight entry cannot fit the 1% window, so plant the transient's deque state
+      var node = cache.accessOrderProbationDeque().getFirst();
+      assertThat(cache.accessOrderProbationDeque().remove(node)).isTrue();
+      assertThat(cache.accessOrderWindowDeque().offerLast(node)).isTrue();
+      node.makeWindow();
+      node.setPolicyWeight(-3);
+      long windowSize = cache.windowWeightedSize();
+      long windowMaximum = cache.windowMaximum();
+      long protectedMaximum = cache.mainProtectedMaximum();
+
+      cache.climber().carryOver(-1);
+      cache.decreaseWindow();
+
+      assertThat(node.inMainProbation()).isTrue();
+      assertThat(cache.climber().adjustment()).isEqualTo(-4);
+      assertThat(cache.windowMaximum()).isEqualTo(windowMaximum + 3);
+      assertThat(cache.mainProtectedMaximum()).isEqualTo(protectedMaximum - 3);
+      assertThat(cache.windowWeightedSize()).isEqualTo(windowSize + 3);
+
+      // settle the transient as the late UpdateTask would (the coercion the design relies on)
+      node.setPolicyWeight(node.getPolicyWeight() + 13);
+      cache.setWindowWeightedSize(cache.windowWeightedSize() - 3);
+      cache.climber().carryOver(0);
+    } finally {
+      cache.evictionLock.unlock();
+    }
+  }
+
+  /** Runs the climber's sample against an initialized sketch, without applying the transfer. */
+  private static void determineAdjustment(BoundedLocalCache<?, ?> cache) {
+    cache.climber().determineAdjustment(cache.maximum(), cache.windowMaximum(),
+        cache.mainProtectedMaximum(), cache.frequencySketch().sampleSize);
+  }
+
+  /** The walk in flight, asserting that there is one; never hold it across an adaptation. */
+  private static WindowClimber.Walk walkOf(BoundedLocalCache<?, ?> cache) {
+    var walk = cache.climber().walk;
+    assertThat(walk).isNotNull();
+    return walk;
+  }
+
+  /** Puts a starvation walk in flight, as an arm would have left it. */
+  @CanIgnoreReturnValue
+  private static WindowClimber.Walk injectWalk(BoundedLocalCache<?, ?> cache, boolean down,
+      long baseWindow, double baseHitRate, double baseProbationDensity) {
+    var walk = new WindowClimber.Walk(cache.climber().starvation, /* isAudit= */ false, down,
+        baseWindow, baseHitRate, /* baseAnchorRate= */ 0.0, baseProbationDensity);
+    cache.climber().walk = walk;
+    return walk;
   }
 
   private static void prepareForAdaption(BoundedLocalCache<Int, Int> cache,
       CacheContext context, boolean recencyBias) {
-    cache.setStepSize((recencyBias ? 1 : -1) * Math.abs(cache.stepSize()));
+    cache.climber().step.size = (recencyBias ? 1 : -1) * Math.abs(cache.climber().step.size);
     cache.setWindowMaximum((long) (0.5 * context.maximumWeightOrSize()));
     cache.setMainProtectedMaximum((long)
         (PERCENT_MAIN_PROTECTED * (context.maximumWeightOrSize() - cache.windowMaximum())));
@@ -2781,9 +3639,9 @@ final class BoundedLocalCacheTest {
   }
 
   private static void adapt(BoundedLocalCache<Int, Int> cache, int sampleSize) {
-    cache.setPreviousSampleHitRate(0.80);
-    cache.setMissesInSample(sampleSize / 2);
-    cache.setHitsInSample(sampleSize - cache.missesInSample());
+    cache.climber().sample.previousHitRate = 0.80;
+    cache.climber().sample.misses = (sampleSize / 2);
+    cache.climber().sample.hits = (sampleSize - cache.climber().sample.misses);
     cache.climb();
 
     // Fill main protected space
@@ -2940,8 +3798,9 @@ final class BoundedLocalCacheTest {
     future.complete(context.absentValue());
     cache.synchronous().cleanUp();
 
-    assertThat(localCache.missesInSample()).isEqualTo(1);
-    assertThat(localCache.hitsInSample()).isEqualTo(0);
+    assertThat(localCache.climber().sample.misses).isEqualTo(1);
+    assertThat(localCache.climber().sample.hits).isEqualTo(0);
+    assertThat(localCache.climber().sample.windowHits).isEqualTo(0);
     assertThat(localCache.frequencySketch().frequency(context.absentKey())).isEqualTo(1);
   }
 
@@ -2956,27 +3815,111 @@ final class BoundedLocalCacheTest {
     cache.getAll(context.absentKeys()).join();
     cache.synchronous().cleanUp();
 
-    assertThat(localCache.missesInSample()).isEqualTo(context.absentKeys().size());
-    assertThat(localCache.hitsInSample()).isEqualTo(0);
+    assertThat(localCache.climber().sample.misses).isEqualTo(context.absentKeys().size());
+    assertThat(localCache.climber().sample.hits).isEqualTo(0);
+    assertThat(localCache.climber().sample.windowHits).isEqualTo(0);
     for (var key : context.absentKeys()) {
       assertThat(localCache.frequencySketch().frequency(key)).isEqualTo(1);
     }
   }
 
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.SYNC,
+      population = Population.SINGLETON, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.ZERO, keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  void zeroWeight_doesNotRecordClimberHit(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.frequencySketch().ensureCapacity(context.maximumSize());
+    int frequency = cache.frequencySketch().frequency(context.firstKey());
+    long windowHits = cache.climber().sample.windowHits;
+    long hits = cache.climber().sample.hits;
+
+    var value = cache.getIfPresent(context.firstKey(), /* recordStats= */ true);
+    cache.cleanUp();
+
+    assertThat(value).isNotNull();
+    // A zero-weight entry occupies no capacity, so its hit must not steer the climber; the
+    // admission sketch still observes the key
+    assertThat(cache.climber().sample.hits).isEqualTo(hits);
+    assertThat(cache.climber().sample.windowHits).isEqualTo(windowHits);
+    assertThat(cache.frequencySketch().frequency(context.firstKey())).isEqualTo(frequency + 1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.ASYNC,
+      population = Population.EMPTY, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.DISABLED, keys = ReferenceType.STRONG)
+  void asyncInFlightRead_doesNotRecordClimberHit(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var localCache = asBoundedLocalCache(cache);
+    localCache.frequencySketch().ensureCapacity(context.maximumSize());
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    cache.synchronous().cleanUp();
+    long hits = localCache.climber().sample.hits;
+    var node = requireNonNull(localCache.data.get(
+        localCache.nodeFactory.newLookupKey(context.absentKey())));
+    assertThat(node.getPolicyWeight()).isEqualTo(0);
+
+    // An in-flight future's policy weight is zero: its coalesced reads are free window credit
+    // until the load completes, so they must not steer the climber
+    var read = cache.getIfPresent(context.absentKey());
+    cache.synchronous().cleanUp();
+    assertThat(read).isSameInstanceAs(future);
+    assertThat(localCache.climber().sample.hits).isEqualTo(hits);
+
+    // once completed the entry has weight, so a read steers again
+    future.complete(context.absentValue());
+    cache.synchronous().cleanUp();
+    assertThat(node.getPolicyWeight()).isEqualTo(1);
+    var completed = cache.getIfPresent(context.absentKey());
+    cache.synchronous().cleanUp();
+    assertThat(completed).isSameInstanceAs(future);
+    assertThat(localCache.climber().sample.hits).isEqualTo(hits + 1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.SYNC,
+      population = Population.SINGLETON, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.DISABLED, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG, refreshAfterWrite = Expire.ONE_MINUTE,
+      loader = Loader.IDENTITY)
+  void refreshCompletion_doesNotRecordAccess(LoadingCache<Int, Int> cache, CacheContext context) {
+    var localCache = asBoundedLocalCache(cache);
+    localCache.frequencySketch().ensureCapacity(context.maximumSize());
+    int frequency = localCache.frequencySketch().frequency(context.firstKey());
+    long misses = localCache.climber().sample.misses;
+    long hits = localCache.climber().sample.hits;
+
+    // The read is refresh-eligible; with a direct executor and an identity loader the reload
+    // and its completion run inline before the read returns
+    context.ticker().advance(Duration.ofMinutes(2));
+    var value = cache.get(context.firstKey());
+    cache.cleanUp();
+
+    assertThat(value).isEqualTo(context.firstKey());
+    assertThat(cache).containsEntry(context.firstKey(), context.firstKey());
+
+    // Only the triggering read records an access; the completion's update is quiet
+    assertThat(localCache.climber().sample.hits).isEqualTo(hits + 1);
+    assertThat(localCache.climber().sample.misses).isEqualTo(misses);
+    assertThat(localCache.frequencySketch().frequency(context.firstKey())).isEqualTo(frequency + 1);
+  }
+
+  @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
-      maximumSize = Maximum.FULL, keys = ReferenceType.STRONG)
+      maximumSize = Maximum.FULL, keys = ReferenceType.STRONG,
+      weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
   void replace_notQuietly_recordsAccess(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.frequencySketch().ensureCapacity(context.maximumSize());
     int frequency = cache.frequencySketch().frequency(context.firstKey());
-    long hits = cache.hitsInSample();
+    long hits = cache.climber().sample.hits;
 
     var oldValue = requireNonNull(context.original().get(context.firstKey()));
     cache.replace(context.firstKey(), oldValue, context.absentValue(),
         /* shouldDiscardRefresh= */ true, /* quietly= */ false);
     cache.cleanUp();
 
-    assertThat(cache.hitsInSample()).isEqualTo(hits + 1);
+    assertThat(cache.climber().sample.hits).isEqualTo(hits + 1);
     assertThat(cache.frequencySketch().frequency(context.firstKey())).isEqualTo(frequency + 1);
   }
 
@@ -2987,14 +3930,57 @@ final class BoundedLocalCacheTest {
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.frequencySketch().ensureCapacity(context.maximumSize());
     int frequency = cache.frequencySketch().frequency(context.firstKey());
-    long hits = cache.hitsInSample();
+    long hits = cache.climber().sample.hits;
 
     var oldValue = requireNonNull(context.original().get(context.firstKey()));
     cache.replace(context.firstKey(), oldValue, context.absentValue(),
         /* shouldDiscardRefresh= */ true, /* quietly= */ true);
     cache.cleanUp();
 
-    assertThat(cache.hitsInSample()).isEqualTo(hits);
+    assertThat(cache.climber().sample.hits).isEqualTo(hits);
+    assertThat(cache.frequencySketch().frequency(context.firstKey())).isEqualTo(frequency);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, keys = ReferenceType.STRONG, weigher = CacheWeigher.DISABLED,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      refreshAfterWrite = Expire.DISABLED, expiry = CacheExpiry.DISABLED)
+  void remap_notQuietly_recordsAccess(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.frequencySketch().ensureCapacity(context.maximumSize());
+    int frequency = cache.frequencySketch().frequency(context.firstKey());
+    long hits = cache.climber().sample.hits;
+
+    var hints = new LocalCache.RemapHints();
+    var value = cache.compute(context.firstKey(), (key, oldValue) -> oldValue, cache.expiry(),
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
+    cache.cleanUp();
+
+    assertThat(value).isEqualTo(context.original().get(context.firstKey()));
+    assertThat(cache.climber().sample.hits).isEqualTo(hits + 1);
+    assertThat(cache.frequencySketch().frequency(context.firstKey())).isEqualTo(frequency + 1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      maximumSize = Maximum.FULL, keys = ReferenceType.STRONG, weigher = CacheWeigher.DISABLED,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      refreshAfterWrite = Expire.DISABLED, expiry = CacheExpiry.DISABLED)
+  void remap_quietly_doesNotRecordAccess(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.frequencySketch().ensureCapacity(context.maximumSize());
+    int frequency = cache.frequencySketch().frequency(context.firstKey());
+    long hits = cache.climber().sample.hits;
+
+    // An unchanged weight within the write time tolerance settles the write on the read path,
+    // where a quiet caller must not have the usage recorded either
+    var hints = new LocalCache.RemapHints();
+    hints.quietly = true;
+    var value = cache.compute(context.firstKey(), (key, oldValue) -> oldValue, cache.expiry(),
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
+    cache.cleanUp();
+
+    assertThat(value).isEqualTo(context.original().get(context.firstKey()));
+    assertThat(cache.climber().sample.hits).isEqualTo(hits);
     assertThat(cache.frequencySketch().frequency(context.firstKey())).isEqualTo(frequency);
   }
 
@@ -3849,6 +4835,32 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  void remap_throws_leavesTheSuccessorsRefresh(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A stale completion's remapping runs past the hint before a user component throws. The
+    // registration it would discard by key belongs to the successor that outbid it, so the
+    // exception exit owes the same narrowing as the reject and absent exits
+    var expiry = requireNonNull(context.expiry());
+    when(expiry.expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenThrow(new IllegalStateException());
+
+    var key = context.firstKey();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));
+    var keyRef = node.getKeyReference();
+    var successor = new CompletableFuture<Int>();
+    cache.refreshes().put(keyRef, successor);
+
+    var hints = new LocalCache.RemapHints();
+    hints.preserveRefresh = true;
+    assertThrows(IllegalStateException.class, () -> cache.compute(key, (k, v) -> context.absentValue(),
+        expiry, /* recordLoad= */ false, /* recordLoadFailure= */ false, hints));
+    assertThat(cache.refreshes()).containsEntry(keyRef, successor);
+    cache.refreshes().remove(keyRef);
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG)
   void computeIfAbsent_removesRefresh_absent(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -4384,6 +5396,31 @@ final class BoundedLocalCacheTest {
 
     cache.tryExpireAfterRead(node, key, v1, expiry, context.ticker().read());
     assertThat(node.getVariableTime()).isEqualTo(expected);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  void tryExpireAfterRead_alreadyDue_reportsNoDurationLeft(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A reader that saw the entry live reaches the extension after a concurrent write shortened it
+    // past the boundary. What is left of the duration is none, and an Expiry that returns what it
+    // was given must leave the entry due rather than lift it a nanosecond back into life
+    var expiry = requireNonNull(context.expiry());
+    when(expiry.expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenAnswer(invocation -> invocation.getArgument(3));
+
+    var key = context.absentKey();
+    var value = context.absentValue();
+    assertThat(cache.put(key, value)).isNull();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));
+    long now = context.ticker().read();
+    node.setVariableTime(now - 1);
+
+    cache.tryExpireAfterRead(node, key, value, expiry, now);
+    verify(expiry).expireAfterRead(key, value, now, 0L);
+    assertThat(node.getVariableTime()).isEqualTo(now);
+    assertThat(cache.hasExpired(node, now, value)).isTrue();
   }
 
   private static void checkExpiryWriteTolerance(BoundedLocalCache<Int, Int> cache,
@@ -5899,16 +6936,7 @@ final class BoundedLocalCacheTest {
     assertThrows(type, () -> cache.setWeightedSize(1L));
     assertThrows(type, () -> cache.setWindowWeightedSize(0));
     assertThrows(type, () -> cache.setMainProtectedWeightedSize(1L));
-    assertThrows(type, cache::hitsInSample);
-    assertThrows(type, cache::missesInSample);
-    assertThrows(type, cache::stepSize);
-    assertThrows(type, cache::previousSampleHitRate);
-    assertThrows(type, cache::adjustment);
-    assertThrows(type, () -> cache.setHitsInSample(1));
-    assertThrows(type, () -> cache.setMissesInSample(1));
-    assertThrows(type, () -> cache.setStepSize(1.0));
-    assertThrows(type, () -> cache.setPreviousSampleHitRate(1.0));
-    assertThrows(type, () -> cache.setAdjustment(1L));
+    assertThrows(type, cache::climber);
   }
 
   @Test

@@ -184,7 +184,8 @@ public final class Registry {
   }
 
   private void registerSketch() {
-    registerMany(WindowTinyLfuPolicy.class, WindowTinyLfuPolicy::policies);
+    registerMany(WindowTinyLfuPolicy.class,
+        config -> WindowTinyLfuPolicy.policies(config, characteristics));
     registerMany(S4WindowTinyLfuPolicy.class, S4WindowTinyLfuPolicy::policies);
     registerMany(LruWindowTinyLfuPolicy.class, LruWindowTinyLfuPolicy::policies);
     registerMany(RandomWindowTinyLfuPolicy.class, RandomWindowTinyLfuPolicy::policies);

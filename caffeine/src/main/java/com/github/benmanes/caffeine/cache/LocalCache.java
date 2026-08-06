@@ -250,8 +250,10 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
   }
 
   /**
-   * Mutable hints that the remapping function may set when returning the same value instance to
-   * signal a no-op (to skip writes to the entry's metadata or leave an in-flight refresh intact).
+   * Mutable hints for a remapping. The function may set them when returning the same value
+   * instance to signal a no-op (skip writes to the entry's metadata or leave an in-flight refresh
+   * intact), and a caller may preset {@code quietly} so a completion's update is not recorded as
+   * a usage.
    */
   final class RemapHints {
     /**
@@ -262,6 +264,13 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
 
     /** Additionally, leave any in-flight refresh intact so that no-op paths do not interfere. */
     boolean preserveRefresh;
+
+    /**
+     * The caller presets this to finalize the write quietly: an update skips the frequency
+     * sketch increment and the eviction policy's hit sampling (a completion is bookkeeping,
+     * not a usage).
+     */
+    boolean quietly;
 
     /** Signals that the remapping did not modify the entry. */
     void preserveEntry() {

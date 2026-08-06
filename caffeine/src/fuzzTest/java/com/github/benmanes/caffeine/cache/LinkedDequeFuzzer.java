@@ -44,8 +44,6 @@ import com.google.errorprone.annotations.Var;
  * corruption. Operation sequences are what expose it, as the unit tests and the mutation coverage
  * both exercise the methods individually rather than in combination.
  */
-// The reference model manipulates both ends of a List, whose SequencedCollection replacements
-// are not available at this module's language level
 @SuppressWarnings({"DequeRemoveFirstOccurrence", "ListAddFirst", "ListRemoveFirst",
     "ListRemoveLast", "SequencedCollectionGetFirst", "SequencedCollectionGetLast"})
 final class LinkedDequeFuzzer {

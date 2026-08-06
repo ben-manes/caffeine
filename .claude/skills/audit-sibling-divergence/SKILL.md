@@ -107,7 +107,10 @@ If a new feature has a sync and async variant not listed above, add it as group 
 before launching. When auditing the simulator, add reader-vs-sibling-reader (shared
 binary/text formats, e.g. the libCacheSim family) and climber-vs-climber (shared
 gradient/timestep convention) port pairs as a group — lower priority, since simulator
-divergence yields misleading benchmark numbers rather than user-facing bugs.
+divergence yields misleading benchmark numbers rather than user-facing bugs. Sim-internal
+pairs only: the production `WindowClimber` deliberately has NO faithful simulator reference
+(`product.Caffeine`, the real cache, is the arbiter) — do not flag sim-reference-vs-production
+divergence as a finding.
 
 ## Step 2: Spawn parallel differential auditors
 

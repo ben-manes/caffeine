@@ -16,7 +16,13 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.IDLE;
+import static com.github.benmanes.caffeine.cache.ClimberInvariants.assertInvariants;
 import static com.github.benmanes.caffeine.cache.LinkedDequeSubject.deque;
+import static com.github.benmanes.caffeine.cache.WindowClimber.DensityClimber.DENSITY_THRESHOLD;
+import static com.github.benmanes.caffeine.cache.WindowClimber.DensityClimber.SAMPLE_MULTIPLIER;
+import static com.github.benmanes.caffeine.cache.WindowClimber.ReactiveClimber.SLOW_ADAPT_RATIO_CAP;
+import static com.github.benmanes.caffeine.cache.WindowClimber.ReactiveClimber.SLOW_ADAPT_THRESHOLD;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Step.STEP_PERCENT;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.MapSubject.map;
 import static com.google.common.truth.Truth.assertThat;
@@ -150,8 +156,8 @@ public final class LocalCacheSubject extends Subject {
 
       if (!bounded.writeBuffer.isEmpty()) {
         continue; // additional writes to drain
-      } else if (bounded.evicts() && (bounded.adjustment() != adjustment)) {
-        adjustment = bounded.adjustment();
+      } else if (bounded.evicts() && (bounded.climber().adjustment() != adjustment)) {
+        adjustment = bounded.climber().adjustment();
         continue; // finish climbing
       } else if (bounded.drainStatusOpaque() != IDLE) {
         continue; // finish a re-armed cycle, e.g. a capped expiration backlog
@@ -245,25 +251,33 @@ public final class LocalCacheSubject extends Subject {
 
   @SuppressWarnings("MathClampDouble")
   private <K, V> void checkHillClimber(BoundedLocalCache<K, V> bounded) {
-    check("hitsInSample").that(bounded.hitsInSample()).isAtLeast(0);
-    check("missesInSample").that(bounded.missesInSample()).isAtLeast(0);
-    if (!bounded.frequencySketch().isNotInitialized()) {
-      long requestCount = bounded.hitsInSample() + bounded.missesInSample();
-      @Var long effectiveSampleSize = bounded.frequencySketch().sampleSize;
-      long maximum = bounded.maximum();
-      if ((maximum > 0) && (maximum <= BoundedLocalCache.SMALL_CACHE_THRESHOLD)) {
-        // Mirror the adaptive sample-period gate in BoundedLocalCache#determineAdjustment.
-        double initialStep = BoundedLocalCache.HILL_CLIMBER_STEP_PERCENT * maximum;
-        double magnitude = Math.max(
-            initialStep / BoundedLocalCache.SMALL_CACHE_SAMPLE_RATIO_CAP,
-            Math.abs(bounded.stepSize()));
-        double ratio = Math.max(1.0, Math.min(
-            BoundedLocalCache.SMALL_CACHE_SAMPLE_RATIO_CAP, initialStep / magnitude));
-        effectiveSampleSize = (long) (effectiveSampleSize * ratio);
-      }
-      check("hitsInSample + missesInSample")
-          .that(requestCount).isLessThan(effectiveSampleSize);
+    assertInvariants(bounded.climber(), bounded.maximum());
+    if (bounded.frequencySketch().isNotInitialized()) {
+      return;
     }
+    long requestCount = bounded.climber().sample.hits + bounded.climber().sample.misses;
+    @Var long effectiveSampleSize = bounded.frequencySketch().sampleSize;
+    long maximum = bounded.maximum();
+    // Mirror the adaptive sample-period gate in WindowClimber#determineAdjustment
+    if (maximum > DENSITY_THRESHOLD) {
+      // Large caches run the density climber on a short period, capped by the sketch's own
+      // entry-denominated sample (mirrors determineAdjustment's saturated multiply)
+      @Var long period = SAMPLE_MULTIPLIER * maximum;
+      if ((period / SAMPLE_MULTIPLIER) != maximum) {
+        period = Long.MAX_VALUE;
+      }
+      effectiveSampleSize = Math.min(period, bounded.frequencySketch().sampleSize);
+    } else if ((maximum > 0) && (maximum <= SLOW_ADAPT_THRESHOLD)) {
+      double initialStep = STEP_PERCENT * maximum;
+      double magnitude = Math.max(
+          initialStep / SLOW_ADAPT_RATIO_CAP,
+          Math.abs(bounded.climber().step.size));
+      double ratio = Math.max(1.0, Math.min(
+          SLOW_ADAPT_RATIO_CAP, initialStep / magnitude));
+      effectiveSampleSize = (long) (effectiveSampleSize * ratio);
+    }
+    // Medium caches keep the sketch's standard period (effectiveSampleSize unchanged)
+    check("sample.requestCount").that(requestCount).isLessThan(effectiveSampleSize);
   }
 
   private <K, V> void checkTimerWheel(BoundedLocalCache<K, V> bounded) {
