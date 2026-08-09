@@ -231,8 +231,16 @@ final class WindowClimber {
       rates.seed(reading.hitRate);
     } else {
       rates.update(reading.hitRate);
-      anchor.track(reading, rates, /* probing= */ walk != null);
+      anchor.track(reading, rates, /* probing= */ isProbing());
     }
+  }
+
+  /**
+   * Whether a probe cycle is in progress. It spans the walk and the retreat that undoes it, since
+   * a capped return drains across later samples with the walk already ended.
+   */
+  private boolean isProbing() {
+    return (walk != null) || hasPendingUndo();
   }
 
   /* --------------- Exceptional Scenarios --------------- */
@@ -326,7 +334,7 @@ final class WindowClimber {
     var ladder = isAudit ? audit : starvation;
     double rate = anchor.isPlanted() ? anchor.rate : rates.smoothed;
     walk = new Walk(ladder, isAudit, down, reading.windowMax,
-        reading.hitRate, rate, reading.probationDensity);
+        reading.requestCount, reading.hitRate, rate, reading.probationDensity);
     return walk;
   }
 
@@ -552,6 +560,7 @@ final class WindowClimber {
     final boolean windowStarved;
     final boolean mainStarved;
 
+    final long requestCount;
     final long windowHits;
     final long windowMax;
     final long mainHits;
@@ -569,6 +578,7 @@ final class WindowClimber {
       this.floor = WINDOW_FLOOR_FRACTION * maximum;
       this.windowStarved = (windowHits < bar);
       this.mainStarved = (mainHits < bar);
+      this.requestCount = requestCount;
       this.band = stableBand(maximum);
       this.windowHits = windowHits;
       this.windowMax = windowMax;
@@ -921,12 +931,13 @@ final class WindowClimber {
      */
     static final double AUDIT_BAR_FRACTION = 0.15d;
 
-    final Ladder ladder;
     final boolean down;
+    final Ladder ladder;
     final boolean isAudit;
     final long baseWindow;
     final double baseHitRate;
     final double baseAnchorRate;
+    final long baseRequestCount;
     final double baseProbationDensity;
 
     int samples;
@@ -934,9 +945,10 @@ final class WindowClimber {
     int belowBarStreak;
     boolean beatBase;
 
-    Walk(Ladder ladder, boolean isAudit, boolean down, long baseWindow,
+    Walk(Ladder ladder, boolean isAudit, boolean down, long baseWindow, long baseRequestCount,
         double baseHitRate, double baseAnchorRate, double baseProbationDensity) {
       this.baseProbationDensity = baseProbationDensity;
+      this.baseRequestCount = baseRequestCount;
       this.baseAnchorRate = baseAnchorRate;
       this.baseHitRate = baseHitRate;
       this.baseWindow = baseWindow;
@@ -989,11 +1001,13 @@ final class WindowClimber {
 
     /** Returns the signal a completed probe is adjudicated by. */
     double verdictSignal(Reading r) {
-      // main's frozen margin up, its average down
-      return down
-          ? r.error()
-          : Math.log((r.windowDensity + Reading.DENSITY_EPSILON)
-              / (baseProbationDensity + Reading.DENSITY_EPSILON));
+      if (down) {
+        return r.error();
+      }
+      double baseline = baseProbationDensity
+          * ((double) r.requestCount / Math.max(1L, baseRequestCount));
+      return Math.log((r.windowDensity + Reading.DENSITY_EPSILON)
+          / (baseline + Reading.DENSITY_EPSILON));
     }
 
     /** Whether a below-bar sample ends the walk now; only a crashed audit's retry is tolerant. */

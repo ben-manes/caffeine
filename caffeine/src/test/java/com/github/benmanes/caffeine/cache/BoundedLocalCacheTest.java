@@ -48,6 +48,7 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.SIZE;
 import static com.github.benmanes.caffeine.cache.WindowClimber.DensityClimber.DENSITY_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_INITIAL;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_MAX;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_COMMITMENT_MID;
 import static com.github.benmanes.caffeine.cache.WindowClimber.ReactiveClimber.SLOW_ADAPT_RATIO_CAP;
 import static com.github.benmanes.caffeine.cache.WindowClimber.ReactiveClimber.SLOW_ADAPT_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Reading.WINDOW_FLOOR_FRACTION;
@@ -1790,8 +1791,7 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN})
-  void frequencySketch_sampleIsEntryDenominated(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void frequencySketch_sampleIsEntryDenominated(BoundedLocalCache<Int, Int> cache) {
     // The add task lazily initializes the sketch with the entry count. A weighted cache passes
     // its mapping count, not the weight-denominated maximum, so the mean entry weight cannot
     // inflate the aging period (and this is the only path that retracks a weighted shrink)
@@ -2813,8 +2813,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_increaseWindowOnWindowDensity(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_increaseWindowOnWindowDensity(BoundedLocalCache<Int, Int> cache) {
     // Above the small-cache threshold the climber directs the window by the within-sample hit
     // density of the two regions. Forcing all sampled hits into the admission window makes its
     // density dominate the (hitless) main region, so the signed error is positive and the window
@@ -2841,8 +2840,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_decreaseWindowOnMainDensity(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_decreaseWindowOnMainDensity(BoundedLocalCache<Int, Int> cache) {
     // The mirror case: all sampled hits land in the main region, so its density dominates and the
     // signed error is negative, shrinking the window. The window sits far above its floor, so the
     // proportional step is applied unclamped.
@@ -2869,8 +2867,7 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
-  void adapt_largeCache_weighted_climbsByDensity(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_weighted_climbsByDensity(BoundedLocalCache<Int, Int> cache) {
     // The tier gate reads the configured maximum in its native weight units, so a weighted cache
     // climbs by density even though its entry count sits far below the threshold, and the step
     // it commands is denominated in those same units
@@ -2895,11 +2892,10 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_climbAppliesProbeEntryStride(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_climbAppliesProbeEntryStride(BoundedLocalCache<Int, Int> cache) {
     // A starved window at a blind corner arms an up probe, and climb() must carry the entry
     // stride through the region transfer: the window and protected maxima shift by the stride
-    // with their sum conserved.
+    // with their sum conserved
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
     cache.frequencySketch().ensureCapacity(cache.maximum());
     cache.setWindowMaximum(cache.maximum() / 10);
@@ -2929,10 +2925,9 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_climbAppliesDownProbeStride(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_climbAppliesDownProbeStride(BoundedLocalCache<Int, Int> cache) {
     // The mirror: a starved main behind a dominant window arms a down probe, and climb() shrinks
-    // the window by the entry stride through the transfer path.
+    // the window by the entry stride through the transfer path
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
     cache.frequencySketch().ensureCapacity(cache.maximum());
     cache.setWindowMaximum((cache.maximum() * 7) / 8);
@@ -2961,10 +2956,9 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
-  void adapt_decreaseWindow_transferCapsAtThreshold(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_decreaseWindow_transferCapsAtThreshold(BoundedLocalCache<Int, Int> cache) {
     // A single cycle transfers at most QUEUE_TRANSFER_THRESHOLD nodes; the unfulfilled quota is
-    // given back to the maxima and carried in the climber's adjustment for the next cycle.
+    // given back to the maxima and carried in the climber's adjustment for the next cycle
     cache.setMaximumSize(8 * DENSITY_THRESHOLD);
     cache.setWindowMaximum(cache.maximum() / 2);
     cache.setMainProtectedMaximum(
@@ -2985,10 +2979,9 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
-  void adapt_increaseWindow_transferCapsAtThreshold(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_increaseWindow_transferCapsAtThreshold(BoundedLocalCache<Int, Int> cache) {
     // The mirror: growing the window demotes at most QUEUE_TRANSFER_THRESHOLD candidates from the
-    // main space per cycle, carrying the remainder.
+    // main space per cycle, carrying the remainder
     cache.setMaximumSize(8 * DENSITY_THRESHOLD);
     cache.setWindowMaximum(100);
     cache.setMainProtectedMaximum(
@@ -3008,8 +3001,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_shrinkClampsAtWindowFloor(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_shrinkClampsAtWindowFloor(BoundedLocalCache<Int, Int> cache) {
     // A window near its floor with a shrink signal: the full proportional step would drive the
     // window below its signal-capable floor (where a starved window can no longer measure its own
     // density), so the step is clamped to land no lower than the floor. The window earns enough
@@ -3037,8 +3029,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_probesOutOfStarvedFloor(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_probesOutOfStarvedFloor(BoundedLocalCache<Int, Int> cache) {
     // A floor-sized window earning ~nothing next to an earning main region is the density
     // signal's blind corner: rather than hold a possibly-pinned position, the climber probes
     // upward with the goal-driven walk.
@@ -3064,8 +3055,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_noProbeWhenMainStarvedAtSmallWindow(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_noProbeWhenMainStarvedAtSmallWindow(BoundedLocalCache<Int, Int> cache) {
     // A large main region earning nothing next to a small window earning everything (a scan
     // filling the main region) is fully visible to the density signal, so it must grow the window
     // rather than probe-shrink the one region that is working.
@@ -3089,8 +3079,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_refractoryTicksAndHolds(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_refractoryTicksAndHolds(BoundedLocalCache<Int, Int> cache) {
     // A refractory sample at a blind corner ticks the countdown and holds: the climber just
     // classified the sample as one the density signal cannot be trusted on, so steering on it
     // was the dead-phase rider's delivery vehicle.
@@ -3116,8 +3105,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_probeStraysFailFirstRoundCheaply(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_probeStraysFailFirstRoundCheaply(BoundedLocalCache<Int, Int> cache) {
     // On a first-round probe (no prior failures), watched hits above the bar that stay below
     // the probation baseline frozen at arm time end the walk as a cheap failed experiment:
     // strays and transferred hits reach the bar on workloads whose small window is genuinely
@@ -3128,11 +3116,12 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(cache.maximum() / 4);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    long hits = (long) Integer.MAX_VALUE + 1;
     injectWalk(cache, /* down= */ false, /* baseWindow= */ floor,
-        /* baseHitRate= */ 0.50, /* baseProbationDensity= */ 1_000_000.0).samples = 1;
+        /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
+        /* baseProbationDensity= */ 1_000_000.0).samples = 1;
     cache.climber().step.size = STEP_PERCENT * cache.maximum();
 
-    long hits = (long) Integer.MAX_VALUE + 1;
     cache.climber().sample.windowHits = (hits >>> 6);
     cache.climber().sample.previousHitRate = 0.50;
     cache.climber().sample.misses = hits;
@@ -3149,22 +3138,24 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_probeCommitmentBlocksEarlyStrayExit(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_probeCommitmentBlocksEarlyStrayExit(BoundedLocalCache<Int, Int> cache) {
     // After repeated failures the ladder's deepest rung commits the walk past the stray zone:
-    // the same stray-heavy sample that fails a first-round probe may not end a committed one.
+    // the same stray-heavy sample that fails a first-round probe may not end a committed one. The
+    // walk is entered at the MIDDLE rung's depth so that the deepest rung's own constant is what
+    // blocks the exit; at a shallower depth every commitment above one blocks it alike.
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
     cache.frequencySketch().ensureCapacity(cache.maximum());
     long floor = Math.round(WINDOW_FLOOR_FRACTION * cache.maximum());
     cache.setWindowMaximum(cache.maximum() / 4);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    long hits = (long) Integer.MAX_VALUE + 1;
     injectWalk(cache, /* down= */ false, /* baseWindow= */ floor,
-        /* baseHitRate= */ 0.50, /* baseProbationDensity= */ 1_000_000.0).samples = 1;
+        /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
+        /* baseProbationDensity= */ 1_000_000.0).samples = PROBE_COMMITMENT_MID;
     cache.climber().starvation.rung = PROBE_BACKOFF_MAX;
     cache.climber().step.size = STEP_PERCENT * cache.maximum();
 
-    long hits = (long) Integer.MAX_VALUE + 1;
     cache.climber().sample.windowHits = (hits >>> 6);
     cache.climber().sample.previousHitRate = 0.50;
     cache.climber().sample.misses = hits;
@@ -3174,13 +3165,12 @@ final class BoundedLocalCacheTest {
 
     assertThat(cache.climber().walk).isNotNull();
     assertThat(cache.climber().adjustment()).isGreaterThan(0);
-    assertThat(walkOf(cache).samples).isEqualTo(2);
+    assertThat(walkOf(cache).samples).isEqualTo(PROBE_COMMITMENT_MID + 1);
   }
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_probeBudgetExpiryFails(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_probeBudgetExpiryFails(BoundedLocalCache<Int, Int> cache) {
     // A walk that spends its budget without confirmation is a completed, failed experiment: the
     // movement is undone and the refractory ladder doubles.
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
@@ -3189,12 +3179,13 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(cache.maximum() / 4);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
-    injectWalk(cache, /* down= */ false, /* baseWindow= */ floor, /* baseHitRate= */ 0.50,
+    long hits = (long) Integer.MAX_VALUE + 1;
+    injectWalk(cache, /* down= */ false, /* baseWindow= */ floor,
+        /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
         /* baseProbationDensity= */ 0.0).samples = PROBE_WALK_BUDGET;
 
     // the watched region stays below the 4x-bar adjudication exit, so only the spent budget
     // can end the walk
-    long hits = (long) Integer.MAX_VALUE + 1;
     cache.climber().sample.windowHits = (hits >>> 10);
     cache.climber().sample.previousHitRate = 0.50;
     cache.climber().sample.misses = hits;
@@ -3212,8 +3203,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_probeReversalThroughBaseFails(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_probeReversalThroughBaseFails(BoundedLocalCache<Int, Int> cache) {
     // A bold-driver reversal that would cross back through the probe's own starting window found
     // nothing: the probe finishes as a failed experiment instead of walking out the other side.
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
@@ -3222,11 +3212,12 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(floor + 200);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    long hits = (long) Integer.MAX_VALUE + 1;
     injectWalk(cache, /* down= */ false, /* baseWindow= */ (floor + 100),
-        /* baseHitRate= */ 0.50, /* baseProbationDensity= */ 0.0).samples = 2;
+        /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
+        /* baseProbationDensity= */ 0.0).samples = 2;
     cache.climber().step.size = STEP_PERCENT * cache.maximum();
 
-    long hits = (long) Integer.MAX_VALUE + 1;
     // A starvation probe's reversal is priced against the workload's own scatter, so the bar
     // floors at the restart threshold only on a quiet workload; at the DEVIATION_SEED the bar is
     // three deviations (15pp) and this 6pp drop would not reverse anything.
@@ -3247,8 +3238,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_probeAdjudicationSuccessResetsLadder(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_probeAdjudicationSuccessResetsLadder(BoundedLocalCache<Int, Int> cache) {
     // When the watched region out-earns the frozen probation baseline a reuse band was found:
     // the position is kept and the refractory ladder resets so future probes are cheap.
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
@@ -3257,11 +3247,12 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(cache.maximum() / 4);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
-    injectWalk(cache, /* down= */ false, /* baseWindow= */ floor, /* baseHitRate= */ 0.50,
+    long hits = (long) Integer.MAX_VALUE + 1;
+    injectWalk(cache, /* down= */ false, /* baseWindow= */ floor,
+        /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
         /* baseProbationDensity= */ 0.0).samples = 10;
     cache.climber().starvation.rung = PROBE_BACKOFF_MAX;
 
-    long hits = (long) Integer.MAX_VALUE + 1;
     cache.climber().sample.previousHitRate = 0.50;
     cache.climber().sample.windowHits = hits;
     cache.climber().sample.misses = hits;
@@ -3277,8 +3268,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_probeCrashAborts(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_probeCrashAborts(BoundedLocalCache<Int, Int> cache) {
     // A probe that crashed the hit rate below its own starting point is undone immediately; the
     // collapse may be exogenous, so the refractory re-arms without doubling.
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
@@ -3286,10 +3276,11 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(cache.maximum() / 4);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
-    injectWalk(cache, /* down= */ true, /* baseWindow= */ (cache.maximum() / 2),
-        /* baseHitRate= */ 0.90, /* baseProbationDensity= */ 0.0);
-
     long hits = (long) Integer.MAX_VALUE + 1;
+    injectWalk(cache, /* down= */ true, /* baseWindow= */ (cache.maximum() / 2),
+        /* baseRequestCount= */ 4 * hits, /* baseHitRate= */ 0.90,
+        /* baseProbationDensity= */ 0.0);
+
     cache.climber().sample.previousHitRate = 0.50;
     cache.climber().sample.misses = 3 * hits;
     cache.climber().sample.windowHits = 0;
@@ -3306,8 +3297,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_liftsBelowFloorWindow(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_liftsBelowFloorWindow(BoundedLocalCache<Int, Int> cache) {
     // The initial window (1% of the maximum) starts below the signal-capable floor (2%); a shrink
     // signal must not wedge it there. The clamp lifts a below-floor window up to the floor.
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
@@ -3334,11 +3324,11 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_resizeResetsProbeState(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_resizeResetsProbeState(BoundedLocalCache<Int, Int> cache) {
     // Changing the maximum re-seeds the climber; stale probe state must not carry across.
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
-    injectWalk(cache, /* down= */ false, /* baseWindow= */ 1024, /* baseHitRate= */ 0.5,
+    injectWalk(cache, /* down= */ false, /* baseWindow= */ 1024,
+        /* baseRequestCount= */ 1000, /* baseHitRate= */ 0.5,
         /* baseProbationDensity= */ 0.0);
     cache.climber().refractoryLeft = 7;
     cache.climber().carryOver(-280_000);
@@ -3356,8 +3346,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
-  void adapt_largeCache_hugeMaximumStaysQuiescent(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_hugeMaximumStaysQuiescent(BoundedLocalCache<Int, Int> cache) {
     // 4x a near-Long.MAX_VALUE maximum would overflow into a negative period; the saturated
     // multiply keeps the gate positive so an idle cache never fabricates samples.
     cache.setMaximumSize(Long.MAX_VALUE);
@@ -3372,8 +3361,7 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY, maximumSize = Maximum.FULL)
-  void adapt_largeCache_preInitResetsWindowHits(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_largeCache_preInitResetsWindowHits(BoundedLocalCache<Int, Int> cache) {
     // Window hits drained before the sketch initializes must not leak into the first real sample,
     // where they would exceed hitsInSample and poison the density arithmetic.
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
@@ -3523,8 +3511,7 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
-  void adapt_increaseWindow_negativeTransientOvershootTolerated(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_increaseWindow_negativeTransientOvershootTolerated(BoundedLocalCache<Int, Int> cache) {
     // Pins the adjudicated telescoping-race tolerance (design-decisions, "Two weight fields"):
     // a transiently negative policyWeight inflates the transfer quota, so the caps over-shift
     // beyond the command and the remainder is carried over. The caps are policy targets that
@@ -3561,8 +3548,7 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
-  void adapt_decreaseWindow_negativeTransientOvershootTolerated(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void adapt_decreaseWindow_negativeTransientOvershootTolerated(BoundedLocalCache<Int, Int> cache) {
     // The decrease-side mirror of the tolerated over-shift: the commanded shrink nets a grow
     // and carries the inflated remainder, coerced back by subsequent samples.
     cache.evictionLock.lock();
@@ -3611,9 +3597,10 @@ final class BoundedLocalCacheTest {
   /** Puts a starvation walk in flight, as an arm would have left it. */
   @CanIgnoreReturnValue
   private static WindowClimber.Walk injectWalk(BoundedLocalCache<?, ?> cache, boolean down,
-      long baseWindow, double baseHitRate, double baseProbationDensity) {
+      long baseWindow, long baseRequestCount, double baseHitRate, double baseProbationDensity) {
     var walk = new WindowClimber.Walk(cache.climber().starvation, /* isAudit= */ false, down,
-        baseWindow, baseHitRate, /* baseAnchorRate= */ 0.0, baseProbationDensity);
+        baseWindow, baseRequestCount, baseHitRate, /* baseAnchorRate= */ 0.0,
+        baseProbationDensity);
     cache.climber().walk = walk;
     return walk;
   }

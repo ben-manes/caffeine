@@ -76,6 +76,9 @@ final class ClimberInvariants {
           .that(walk.baseProbationDensity).isAtLeast(0.0);
       assertWithMessage("the frozen probation baseline is a density")
           .that(Double.isFinite(walk.baseProbationDensity)).isTrue();
+      // it re-expresses that baseline at the live sample's length, so it divides
+      assertWithMessage("the frozen sample length is positive")
+          .that(walk.baseRequestCount).isGreaterThan(0L);
     }
 
     assertWithMessage("the audit rung stays within its schedule")

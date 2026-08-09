@@ -40,6 +40,8 @@ import org.junit.jupiter.api.Test;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * The white-box tests for the window climber's tiers and probe machine. The cache applies the
  * returned {@code adjustment} by transferring entries between the regions, so these drive
@@ -50,8 +52,8 @@ import com.google.errorprone.annotations.Var;
  */
 final class WindowClimberTest {
   private static final long MAXIMUM = 8192;
-  private static final double FLOOR = WINDOW_FLOOR_FRACTION * MAXIMUM;
   private static final double STRIDE = STEP_PERCENT * MAXIMUM;
+  private static final double FLOOR = WINDOW_FLOOR_FRACTION * MAXIMUM;
 
   /* --------------- Seeding --------------- */
 
@@ -662,6 +664,72 @@ final class WindowClimberTest {
     assertThat(walking).isNotEqualTo(0);
     assertThat(climber.walk).isNotNull();
     assertThat(climber.anchor.window).isEqualTo(-1);
+  }
+
+  @Test
+  void audit_freshPark_shieldLastsItsWholeSchedule() {
+    // The shield's LENGTH, not merely its existence. A confirm parks for one initial audit wait,
+    // and the park must survive crash-scale weather for exactly that many samples: a shorter
+    // shield releases a validated position into the first squall, and one that never ages holds
+    // a position the workload has left. The sibling test spends the shield by hand, which pins
+    // only that it covers more than one sample.
+    var climber = armAudit(/* windowMax= */ 2000);
+    @Var long walked = 2000 + climber.adjustment();
+    for (int i = 0; (climber.walk != null) && (i < PROBE_WALK_BUDGET); i++) {
+      walked += steadySample(climber, walked, /* hitRate= */ 0.74);
+    }
+    assertThat(climber.anchor.held).isTrue();
+    assertThat(climber.anchor.freshLeft).isEqualTo(AUDIT_WAIT_INITIAL);
+
+    // alternating crash-scale swings would stand the anchor down on every sample but for the
+    // shield, so the release lands on the sample that spends its last count
+    @Var int releasedAt = -1;
+    for (int i = 1; i <= (2 * AUDIT_WAIT_INITIAL); i++) {
+      steadySample(climber, walked, /* hitRate= */ ((i % 2) == 0) ? 0.80 : 0.74);
+      if (!climber.anchor.held) {
+        releasedAt = i;
+        break;
+      }
+    }
+    assertThat(releasedAt).isEqualTo(AUDIT_WAIT_INITIAL);
+    assertThat(climber.anchor.freshLeft).isEqualTo(0);
+  }
+
+  @Test
+  void auditClock_restart_makesTheNextAuditWaitOutTheStillnessAgain() {
+    // Arming an audit restarts the stillness run. Asserting the wait variable does not pin that:
+    // a long-still position carries its whole run into the walk, so an audit that ends quickly
+    // would be due again immediately and the position is re-tested continuously rather than on
+    // a schedule. Driven at the standard wait, where the run is long enough for the residue to
+    // show; the cold-start wait is too short to tell the two apart.
+    var climber = makeClimber();
+    climber.auditClock.waitSamples = AUDIT_WAIT_INITIAL;
+    @Var int armedAt = -1;
+    for (int i = 1; i <= (4 * AUDIT_WAIT_INITIAL); i++) {
+      steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.70);
+      if (climber.walk != null) {
+        armedAt = i;
+        break;
+      }
+    }
+    assertThat(armedAt).isAtLeast(AUDIT_WAIT_INITIAL);
+    // the arm restarts the run and this sample's own tick is the first of the new one
+    assertThat(climber.auditClock.stillSamples).isEqualTo(1);
+
+    // a crash-scale drop ends the walk on its first sample, so almost none of the run is spent
+    steadySample(climber, /* windowMax= */ 2000 + climber.adjustment(), /* hitRate= */ 0.40);
+    assertThat(climber.walk).isNull();
+
+    // the next audit waits out a fresh run rather than inheriting the one the arm consumed
+    @Var int rearmedAt = -1;
+    for (int i = 1; i <= (4 * AUDIT_WAIT_INITIAL); i++) {
+      steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.40);
+      if (climber.walk != null) {
+        rearmedAt = i;
+        break;
+      }
+    }
+    assertThat(rearmedAt).isAtLeast(PROBE_BACKOFF_INITIAL);
   }
 
   @Test
@@ -1583,6 +1651,61 @@ final class WindowClimberTest {
   }
 
   @Test
+  void anchor_midUndoDrain_doesNotPlantAtTheRetreatingWindow() {
+    // A capped retreat drains across later samples with the walk already ended and no return in
+    // flight, so the window passes through the positions the probe was charged for rejecting. An
+    // unplanted anchor waits for the retreat to land rather than claiming one of them; the drain
+    // is read before the sample's stride, so the sample that empties the ledger is still transit.
+    var climber = failingDownProbe();
+    sample(climber, /* windowMax= */ 2000,
+        /* windowHits= */ 200, /* mainHits= */ 500, /* misses= */ 300);
+    assertThat(climber.walk).isNull();
+    assertThat(climber.undoRemaining).isGreaterThan(0.0);
+
+    steadySample(climber, /* windowMax= */ 4457, /* hitRate= */ 0.70);
+    assertThat(climber.undoRemaining).isGreaterThan(0.0);
+    assertThat(climber.anchor.isPlanted()).isFalse();
+
+    steadySample(climber, /* windowMax= */ 6914, /* hitRate= */ 0.70);
+    assertThat(climber.undoRemaining).isEqualTo(0.0);
+    assertThat(climber.anchor.isPlanted()).isFalse();
+
+    // the retreat has landed, so the position is the cache's own and may be claimed
+    steadySample(climber, /* windowMax= */ 6998, /* hitRate= */ 0.70);
+    assertThat(climber.anchor.window).isEqualTo(6998);
+    assertThat(climber.anchor.rate).isWithin(1.0e-9).of(0.70);
+  }
+
+  @Test
+  void anchor_midUndoDrain_doesNotRatchetOffTheProbeBase() {
+    // The ratchet reads the same transit. A parked anchor at the probe's base, holding a claim the
+    // smoothed rate now clears by a full margin, would otherwise move to wherever the retreat
+    // happened to be and drop its park, leaving the guard rail defending a rejected position.
+    var climber = failingDownProbe();
+    climber.anchor.plant(/* windowMax= */ 7000, /* claimed= */ 0.40);
+    climber.anchor.park(AUDIT_WAIT_INITIAL);
+    sample(climber, /* windowMax= */ 2000,
+        /* windowHits= */ 200, /* mainHits= */ 500, /* misses= */ 300);
+
+    steadySample(climber, /* windowMax= */ 4457, /* hitRate= */ 0.70);
+    assertThat(climber.anchor.window).isEqualTo(7000);
+    assertThat(climber.anchor.rate).isEqualTo(0.40);
+    assertThat(climber.anchor.held).isTrue();
+
+    // the re-sync is the half that does not wait: once the retreat is back inside the anchor's
+    // band the stale claim decays into the live measurement, drain still in flight or not
+    steadySample(climber, /* windowMax= */ 6914, /* hitRate= */ 0.70);
+    assertThat(climber.undoRemaining).isEqualTo(0.0);
+    assertThat(climber.anchor.window).isEqualTo(7000);
+    assertThat(climber.anchor.rate).isWithin(1.0e-9).of(0.70);
+
+    long parked = steadySample(climber, /* windowMax= */ 6998, /* hitRate= */ 0.70);
+    assertThat(parked).isEqualTo(0);
+    assertThat(climber.anchor.window).isEqualTo(7000);
+    assertThat(climber.anchor.held).isTrue();
+  }
+
+  @Test
   void guardRail_marginTracksNoise_silentWhileWideThenVetoes() {
     // The shortfall margin is cleared of the workload's own hit-rate noise: while the deviation
     // estimate is wide the rail stays silent on a gap it cannot distinguish from weather, and
@@ -2146,6 +2269,33 @@ final class WindowClimberTest {
   }
 
   @Test
+  void probeEnding_upProbeVerdict_isFreeOfTheSampleLength() {
+    // The up-probe divides a live window density by a probation density frozen at the arm, and a
+    // density is a hit count over a capacity: two of them form a ratio only when both count the
+    // same span. The same per-request rates over a sample twice as long must reach the same
+    // verdict. Nothing pins this on an unweighted cache, whose period is a constant four maxima;
+    // a weighted one samples on the sketch's entry-denominated period, which moves with the
+    // resident count, so a growing count would otherwise confirm every up-probe it lengthens.
+    var brief = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.97,
+        /* baseProbationDensity= */ 0.02);
+    long briefVerdict = sample(brief, /* windowMax= */ 2000,
+        /* windowHits= */ 30, /* mainHits= */ 940, /* misses= */ 30);
+
+    var extended = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.97,
+        /* baseProbationDensity= */ 0.02);
+    long extendedVerdict = sample(extended, /* windowMax= */ 2000,
+        /* windowHits= */ 60, /* mainHits= */ 1880, /* misses= */ 60);
+
+    // the window earns less per request than the boundary did, so both fail and undo to the base
+    assertThat(brief.walk).isNull();
+    assertThat(extended.walk).isNull();
+    assertThat(briefVerdict).isEqualTo(1024 - 2000);
+    assertThat(extendedVerdict).isEqualTo(1024 - 2000);
+    assertThat(brief.starvation.rung).isEqualTo(2 * PROBE_BACKOFF_INITIAL);
+    assertThat(extended.starvation.rung).isEqualTo(2 * PROBE_BACKOFF_INITIAL);
+  }
+
+  @Test
   void armProbe_freezesProbationBaselinePerArm() {
     // The baseline snapshots at each arm, never mid-walk: the walk's own demotions enrich live
     // probation (a demoted protected-hot core earns furiously there), so adjudicating against
@@ -2364,6 +2514,50 @@ final class WindowClimberTest {
     assertThat(climber.starvation.rung).isEqualTo(PROBE_BACKOFF_MAX);
   }
 
+  @Test
+  @SuppressFBWarnings("UM_UNNECESSARY_MATH")
+  void walk_floorBlockedAudit_chargesTheClockForEvidenceItNeverGathered() {
+    // The sibling above pins the starvation half of a floor-blocked walk. This is the audit half,
+    // and it is the costlier one: strides that clamp at the rail still spend a sample apiece and
+    // the walk still ends at its budget, and since there is no BLOCKED ending the expiry is
+    // priced as a completed failure. At the deepest rung that doubles the wait between audits on
+    // evidence the walk never gathered. Pinned as the current contract, so a BLOCKED ending would
+    // have to move these numbers deliberately.
+    var climber = makeClimber();
+    climber.audit.rung = PROBE_BACKOFF_MAX;
+    climber.auditClock.waitSamples = AUDIT_WAIT_MAX / 2;
+    climber.auditClock.stillSamples = AUDIT_WAIT_MAX;
+    climber.rates.smoothed = 0.50;
+    climber.rates.deviation = 0.001;
+    climber.sample.previousHitRate = 0.50;
+
+    // Both regions earn, so no blind corner pre-empts the clock; the window sits past the upper
+    // corner, where the direction rule chooses down and the walk runs into the floor.
+    @Var long windowMax = 7000;
+    windowMax += sample(climber, windowMax,
+        /* windowHits= */ 250, /* mainHits= */ 250, /* misses= */ 500);
+    assertThat(walkOf(climber).isAudit).isTrue();
+    assertThat(walkOf(climber).down).isTrue();
+
+    @Var long lowest = windowMax;
+    @Var int blocked = 0;
+    while (climber.walk != null) {
+      long adjustment = sample(climber, windowMax,
+          /* windowHits= */ 250, /* mainHits= */ 250, /* misses= */ 500);
+      if ((climber.walk != null) && (adjustment == 0)) {
+        blocked++;
+      }
+      windowMax += adjustment;
+      lowest = Math.min(lowest, windowMax);
+    }
+
+    // it reached the rail, stood there for most of its budget, and was charged a failure for it
+    assertThat(blocked).isAtLeast(PROBE_WALK_BUDGET / 2);
+    assertThat(lowest).isAtMost((long) Math.ceil(FLOOR) + 1);
+    assertThat(climber.audit.rung).isEqualTo(PROBE_BACKOFF_MAX);
+    assertThat(climber.auditClock.waitSamples).isEqualTo(AUDIT_WAIT_MAX);
+  }
+
   /* --------------- Helpers --------------- */
 
   private static WindowClimber makeClimber() {
@@ -2392,7 +2586,8 @@ final class WindowClimberTest {
   private static WindowClimber.Walk injectWalk(WindowClimber climber, boolean isAudit,
       boolean down, long baseWindow, double baseHitRate, double baseAnchorRate) {
     var walk = new WindowClimber.Walk(isAudit ? climber.audit : climber.starvation, isAudit, down,
-        baseWindow, baseHitRate, baseAnchorRate, /* baseProbationDensity= */ 0.0);
+        baseWindow, /* baseRequestCount= */ 1000, baseHitRate, baseAnchorRate,
+        /* baseProbationDensity= */ 0.0);
     climber.walk = walk;
     return walk;
   }
@@ -2407,7 +2602,7 @@ final class WindowClimberTest {
   private static WindowClimber.Walk rebaseAnchorRate(WindowClimber climber, double anchorRate) {
     var armed = walkOf(climber);
     var walk = new WindowClimber.Walk(armed.ladder, armed.isAudit, armed.down, armed.baseWindow,
-        armed.baseHitRate, anchorRate, armed.baseProbationDensity);
+        armed.baseRequestCount, armed.baseHitRate, anchorRate, armed.baseProbationDensity);
     walk.samples = armed.samples;
     walk.belowBarStreak = armed.belowBarStreak;
     walk.aboveStreak = armed.aboveStreak;
@@ -2436,11 +2631,27 @@ final class WindowClimberTest {
         /* baseWindow= */ 7000, baseProbationDensity);
   }
 
+  /**
+   * Arms a down probe whose first sample fails on the density verdict, leaving a retreat longer
+   * than one capped stride so that the undo drains across the samples that follow.
+   */
+  private static WindowClimber failingDownProbe() {
+    var climber = makeClimber();
+    injectWalk(climber, /* isAudit= */ false, /* down= */ true, /* baseWindow= */ 7000,
+        /* baseHitRate= */ 0.70, /* baseAnchorRate= */ 0.0).samples = 1;
+    climber.sample.previousHitRate = 0.70;
+    climber.rates.deviation = 0.001;
+    climber.rates.smoothed = 0.70;
+    climber.step.size = -STRIDE;
+    return climber;
+  }
+
   private static WindowClimber probing(boolean down, double stepSize,
       double baseHitRate, long baseWindow, double baseProbationDensity) {
     var climber = makeClimber();
     var walk = new WindowClimber.Walk(climber.starvation, /* isAudit= */ false, down, baseWindow,
-        baseHitRate, /* baseAnchorRate= */ 0.0, baseProbationDensity);
+        /* baseRequestCount= */ 1000, baseHitRate, /* baseAnchorRate= */ 0.0,
+        baseProbationDensity);
     walk.samples = 1;
     climber.walk = walk;
     climber.step.size = stepSize;

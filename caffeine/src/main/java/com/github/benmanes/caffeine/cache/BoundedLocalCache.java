@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
+import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static com.github.benmanes.caffeine.cache.Caffeine.toNanosSaturated;
 import static com.github.benmanes.caffeine.cache.Caffeine.toUnchecked;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
@@ -552,6 +553,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     throw new UnsupportedOperationException();
   }
 
+  @GuardedBy("evictionLock")
   protected WindowClimber climber() {
     throw new UnsupportedOperationException();
   }
@@ -639,11 +641,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @SuppressWarnings({"ConstantValue", "Varifier"})
   void setMaximumSize(long maximum) {
     requireArgument(maximum >= 0, "maximum must not be negative");
-    if (maximum == maximum()) {
+    long max = Math.min(maximum, MAXIMUM_CAPACITY);
+    if (max == maximum()) {
       return;
     }
 
-    long max = Math.min(maximum, MAXIMUM_CAPACITY);
     long window = max - (long) (PERCENT_MAIN * max);
     long mainProtected = (long) (PERCENT_MAIN_PROTECTED * (max - window));
 
@@ -3357,7 +3359,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       // Obtain the iterator as late as possible for modification count checking
       try (var stream = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
            iterable.iterator(), DISTINCT | ORDERED | NONNULL | IMMUTABLE), /* parallel= */ false)) {
-        return mappingFunction.apply(stream
+        boolean[] open = { true };
+        return mappingFunction.apply(stream.onClose(() -> open[0] = false)
+            .peek(ignored -> requireState(open[0], "stream has already been closed"))
             .map(node -> nodeToCacheEntry(node, transformer, node.getPolicyWeight()))
             .filter(Objects::nonNull));
       }

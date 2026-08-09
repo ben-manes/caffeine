@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.snia.keyvalue;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Set;
 import java.util.stream.Stream;
@@ -47,9 +48,12 @@ public final class ObjectStoreTraceReader extends TextTraceReader {
     return lines()
         .map(line -> line.split(" "))
         .filter(array -> array[1].equals("REST.GET.OBJECT"))
+        .filter(array -> array.length > 3)
         .map(array -> {
           long key = Long.parseUnsignedLong(array[2], 16);
-          int weight = Math.max(Ints.saturatedCast(Long.parseLong(array[3])), 1);
+          long size = Long.parseLong(array[3]);
+          checkArgument(size >= 0, "negative object size: %s", size);
+          int weight = Math.max(Ints.saturatedCast(size), 1);
           return AccessEvent.forKeyAndWeight(key, weight);
         });
   }

@@ -23,6 +23,7 @@ CDDL
 CDPATH
 CHECKPOINTNUM
 classloader
+claude
 clockpro
 clockproplus
 coalescer

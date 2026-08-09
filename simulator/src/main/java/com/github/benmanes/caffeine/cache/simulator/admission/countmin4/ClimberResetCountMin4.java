@@ -49,12 +49,16 @@ public final class ClimberResetCountMin4 extends CountMin4 {
 
   @Override
   public void ensureCapacity(long maximumSize) {
+    long[] previous = table;
     super.ensureCapacity(maximumSize);
     period = (maximumSize == 0) ? 10 : (10 * table.length);
     if (period <= 0) {
       period = Integer.MAX_VALUE;
     }
-    eventsToCount = period;
+    if (table != previous) {
+      eventsToCount = period;
+      additions = 0;
+    }
   }
 
   @Override

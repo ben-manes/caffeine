@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.snia.keyvalue;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -46,6 +47,27 @@ final class ObjectStoreTraceReaderTest {
     assertThat(events).hasLength(2);
     assertThat(events[0].weight()).isEqualTo(1168);
     assertThat(events[1].weight()).isEqualTo(1);
+  }
+
+  @Test
+  void sizelessGetIsSkipped(@TempDir Path dir) throws IOException {
+    // SNIA documents the size and range columns as optional. A GET of unrecorded length cannot be
+    // weighed, so it is dropped; before this the reader indexed past the row and died mid-trace.
+    var events = read(dir, """
+        1232488 REST.GET.OBJECT 95d363d3fbdc0b03 1168 0 1167
+        1232489 REST.GET.OBJECT 8688e0d2d279c9bb
+        """);
+    assertThat(events).hasLength(1);
+    assertThat(events[0].weight()).isEqualTo(1168);
+  }
+
+  @Test
+  void negativeSizeIsRejected(@TempDir Path dir) {
+    // the unit floor exists because AccessEvent requires a positive weight, not to make a corrupt
+    // row look like a one-byte object
+    assertThrows(IllegalArgumentException.class, () -> read(dir, """
+        1232488 REST.GET.OBJECT 95d363d3fbdc0b03 -1168 0 1167
+        """));
   }
 
   private static AccessEvent[] read(Path dir, String content) throws IOException {

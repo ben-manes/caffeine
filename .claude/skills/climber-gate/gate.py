@@ -79,6 +79,9 @@ CELLS = [
     ("h4c1_reverse", "h4c1_p4_control_long.lirs", 8192, 2),
     ("moat_h7800", "moat_h7800_long.lirs", 8192, 2),
     ("moat_h3000", "moat_h3000_b4000.lirs", 8192, 2),
+    # the shallow doses are where the guard rail is the sole recovery mechanism
+    ("moat_h4000", "moat_h4000_b4000.lirs", 8192, 4),
+    ("moat_h5000", "moat_h5000_b4000.lirs", 8192, 4),
     # The slowswap pair is bimodal on which of two audit defects binds, so an unseeded mean here
     # is uninterpretable. These rows only sanity-check the ramp control; adjudicate the step arm
     # with `seedrun`-style seeded runs (SKILL.md's row), never from this CSV.

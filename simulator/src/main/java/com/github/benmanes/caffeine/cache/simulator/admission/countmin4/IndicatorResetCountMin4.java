@@ -49,6 +49,11 @@ public final class IndicatorResetCountMin4 implements Frequency {
   }
 
   @Override
+  public void ensureCapacity(long maximumSize) {
+    sketch.ensureCapacity(maximumSize);
+  }
+
+  @Override
   public void reportMiss() {
     if (sketch.getEventsToCount() <= 0) {
       sketch.resetEventsToCount();

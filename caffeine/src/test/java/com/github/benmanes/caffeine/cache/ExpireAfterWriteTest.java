@@ -499,6 +499,18 @@ final class ExpireAfterWriteTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.FULL, expireAfterWrite = Expire.ONE_MINUTE)
+  void oldestFunc_closed_primedIterator(@ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
+    var iterator = expireAfterWrite.oldest(stream -> {
+      var entries = stream.iterator();
+      entries.next();
+      return entries;
+    });
+    var exception = assertThrows(IllegalStateException.class, iterator::next);
+    assertThat(exception).hasMessageThat().isEqualTo("stream has already been closed");
+  }
+
+  @ParameterizedTest
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE)
   void oldestFunc_partial(Cache<Int, Int> cache,
       CacheContext context, @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
@@ -640,6 +652,18 @@ final class ExpireAfterWriteTest {
     var stream = expireAfterWrite.youngest(identity());
     var exception = assertThrows(IllegalStateException.class, () -> stream.forEach(e -> {}));
     assertThat(exception).hasMessageThat().isEqualTo("source already consumed or closed");
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, expireAfterWrite = Expire.ONE_MINUTE)
+  void youngestFunc_closed_primedIterator(@ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
+    var iterator = expireAfterWrite.youngest(stream -> {
+      var entries = stream.iterator();
+      entries.next();
+      return entries;
+    });
+    var exception = assertThrows(IllegalStateException.class, iterator::next);
+    assertThat(exception).hasMessageThat().isEqualTo("stream has already been closed");
   }
 
   @ParameterizedTest

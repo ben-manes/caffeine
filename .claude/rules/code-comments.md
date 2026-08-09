@@ -38,6 +38,13 @@ before re-punctuating it.
 Excessive docs usually mean the code is too complex or poorly named, not that the docs need
 trimming. Verbosity is not communication; noise hides the content that matters.
 
+**The same voice governs the prose in `.claude/docs/`**, `adaptive-window.html` included. Editing
+into an existing document means matching the voice already there, not writing over it. The tells
+that get flagged: a dash before an explanatory clause, a colon setting up a punchline, a mechanism
+personified ("the retreat is the one that hides"), an aphorism where a fact belongs ("equal spans,
+or no ratio"), and a metaphor carried past its use ("leaves the window's whole journey home
+uncovered"). State what the thing does and stop.
+
 ## Where the evidence goes
 
 Measured deltas, trace or cell names, study nicknames, and "do not re-run X" notes belong in

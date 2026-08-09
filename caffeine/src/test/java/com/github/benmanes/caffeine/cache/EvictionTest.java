@@ -1305,6 +1305,22 @@ final class EvictionTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE,
+      population = Population.FULL, maximumSize = Maximum.FULL)
+  void coldestFunc_closed_primedIterator(Eviction<Int, Int> eviction) {
+    // The sibling above is refused by the stream's own consumed check, which works only because
+    // an untouched iterator has not yet resolved the pipeline's source. One advanced inside the
+    // computation has, so it would walk the policy's structures after the lock was released.
+    var iterator = eviction.coldest(stream -> {
+      var entries = stream.iterator();
+      entries.next();
+      return entries;
+    });
+    var exception = assertThrows(IllegalStateException.class, iterator::next);
+    assertThat(exception).hasMessageThat().isEqualTo("stream has already been closed");
+  }
+
+  @ParameterizedTest
   @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL)
   void coldestFunc_partial(Cache<Int, Int> cache,
       CacheContext context, Eviction<Int, Int> eviction) {
@@ -1505,6 +1521,19 @@ final class EvictionTest {
     var stream = eviction.hottest(identity());
     var exception = assertThrows(IllegalStateException.class, () -> stream.forEach(e -> {}));
     assertThat(exception).hasMessageThat().isEqualTo("source already consumed or closed");
+  }
+
+  @ParameterizedTest
+  @CacheSpec(initialCapacity = InitialCapacity.EXCESSIVE,
+      population = Population.FULL, maximumSize = Maximum.FULL)
+  void hottestFunc_closed_primedIterator(Eviction<Int, Int> eviction) {
+    var iterator = eviction.hottest(stream -> {
+      var entries = stream.iterator();
+      entries.next();
+      return entries;
+    });
+    var exception = assertThrows(IllegalStateException.class, iterator::next);
+    assertThat(exception).hasMessageThat().isEqualTo("stream has already been closed");
   }
 
   @ParameterizedTest

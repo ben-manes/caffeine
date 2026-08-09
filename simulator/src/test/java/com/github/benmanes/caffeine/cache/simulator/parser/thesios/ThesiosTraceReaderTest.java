@@ -33,6 +33,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 /**
  * The published files are shard concatenations, so the header row recurs mid-stream; only READ
  * rows are cache accesses, and a zero-byte read still occupies an entry.
+ * <p>
+ * {@link #HEADER} is the real header of a published shard, not a restatement of what the reader
+ * expects, so the column order below is an oracle rather than a copy of the implementation.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -85,6 +88,15 @@ final class ThesiosTraceReaderTest {
     // a malformed row must fail the run rather than silently skew the result
     assertThrows(NumberFormatException.class, () -> read(dir, """
         aa,not-a-number,app,1,COLD,ERASURE_CODED,READ,OTHER,0,0,1024,0,0,1.0,0.0,0.0,0.0
+        """));
+  }
+
+  @Test
+  void negativeSizeIsRejected(@TempDir Path dir) {
+    // the unit floor exists because AccessEvent requires a positive weight, not to make a corrupt
+    // row look like a one-byte read
+    assertThrows(IllegalArgumentException.class, () -> read(dir, """
+        aa,0,app,1,COLD,ERASURE_CODED,READ,OTHER,0,0,-1024,0,0,1.0,0.0,0.0,0.0
         """));
   }
 

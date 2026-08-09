@@ -349,7 +349,7 @@ final class CaffeinatedGuavaTest {
   }
 
   @Test
-  void cacheLoader_bulkLoad_null() throws Exception {
+  void cacheLoader_bulkLoad_null() {
     // The caffeinate direction must reject a null key as well as a null value, as the Guava loader
     // may return either and neither can be stored
     for (boolean nullKey : new boolean[] { true, false }) {

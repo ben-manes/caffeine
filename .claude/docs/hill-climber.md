@@ -1831,6 +1831,56 @@ measures *consecutive* crashes, and the one-shot form was ratified as designed 2
 *audit* rungs (5 of 12 real cells at rung 64) — §4.3's unreachability sentence is about the
 starvation ladder and now says so.
 
+**The planting gate now spans a probe's undo drain (2026-08-09; adversarial-audit finding 1).**
+`Anchor.track`'s `settled` was fed `walk != null`, but a capped retreat drains across later
+samples with the walk already ended, and `beginReturn` sits *after* `hasPendingUndo()` in the
+router, so `returning` is false throughout. Both planting branches therefore fired at whatever
+transient position the retreat was passing through. `isProbing()` closes it; `resync` is
+untouched, since it never reads the gate.
+
+Measured before believing the severity, because the report assigned HIGH on mechanism alone and
+declined a number. Across 57 battery cells at seed 7: **7,571 density samples, 74 multi-sample
+drains, 3 phantom plants** (`metronome`, `slowswap_ramp`, `slowswap_step`). Seeded 1–8 and paired
+on exactly those three cells, base and fix are **bit-identical**, trajectory statistics included —
+the phantom claim is re-synced or re-planted before anything downstream acts on it. Full battery
+unseeded: mean +0.154, max loss −0.34, and the three apparent ≥1pp gains (widepin, phases_d050,
+crashnoise_a12) are **basin draws that vanish under seeding**. So this is a contract fix, not a
+prize; don't re-open it looking for one.
+
+Two claims from that report are refuted here and should not be re-derived. **The guard rail is not
+uncovered**: it fires 4 times across 57 cells at one seed, consistent with the attribution entry
+above. The report's "zero vetoes across the entire `/climber-gate` battery" measured
+`WindowClimberGateTest`'s three-cell JUnit subset and labelled it the battery. The rail's real gap
+is the one already named above — the shallow moat doses where it is the sole recovery mechanism
+are journaled, not rowed.
+
+**The up-probe verdict is freed of the sample's length (2026-08-09; adversarial-audit finding 2).**
+`Walk.verdictSignal`'s down branch takes `Reading.error()`, both densities from one sample, so the
+sample's length divides out. Its up branch divided a live window density by the probation density
+frozen at the arm — a different sample — and a density is a hit count over a capacity, so nothing
+cancelled. The walk now freezes `baseRequestCount` beside the baseline and re-expresses it at the
+live sample's length. Deliberately scaling the frozen baseline rather than converting both sides to
+per-request rates: `DENSITY_EPSILON`, `steeringError`'s region floors and `error()` are all
+calibrated in hits-per-entry, and normalising globally would move the epsilon's weight on the
+steering path, which is far wider than the finding.
+
+**It cannot bite on an unweighted cache, and the battery says so.** The period there is
+`min(4 x maximum, 10 x maximum)` = a constant `4 x maximum`. Instrumented over 57 cells at seed 7:
+**81 up-probe adjudications on 30 cells, zero verdict flips**, every live-to-arming length ratio
+inside 0.9998-1.0004. The residual is drain overshoot, and it is inert because `verdictSignal`
+feeds a *sign* test, so a 0.0004-nat perturbation only matters to a verdict already that close to
+zero. Consistent with the seeded battery: the five unseeded movers (moat_h7800 -1.86,
+phases_d050@32k +4.75, widepin, crashnoise_a12, phases_d050) are **bit-identical at all 8 seeds**,
+so they were admission-lottery draws, and `moat_h7800`'s seeded 45.28 re-derives the recorded value.
+
+The bias needs a **weighted** cache, where `samplePeriod` takes the sketch's entry-denominated
+sample and therefore moves with the resident count. Two constructed weighted cells failed to
+witness it and the reasons are worth keeping: one pinned `sketchSampleSize` at `MIN_SKETCH_SIZE`
+(resident count ~200, so the period never moved) and one armed no starvation probe at all. A
+witnessing cell needs a resident count that both **exceeds 256** and **moves**, on terrain that
+produces blind corners. Unbuilt; the mechanism rests on
+`WindowClimberTest.probeEnding_upProbeVerdict_isFreeOfTheSampleLength`, which fails without the fix.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor

@@ -2685,6 +2685,18 @@ final class ExpireAfterVarTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.ACCESS)
+  void oldestFunc_closed_primedIterator(VarExpiration<Int, Int> expireAfterVar) {
+    var iterator = expireAfterVar.oldest(stream -> {
+      var entries = stream.iterator();
+      entries.next();
+      return entries;
+    });
+    var exception = assertThrows(IllegalStateException.class, iterator::next);
+    assertThat(exception).hasMessageThat().isEqualTo("stream has already been closed");
+  }
+
+  @ParameterizedTest
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   void oldestFunc_partial(Cache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
@@ -2820,6 +2832,18 @@ final class ExpireAfterVarTest {
     var stream = expireAfterVar.youngest(identity());
     var exception = assertThrows(IllegalStateException.class, () -> stream.forEach(e -> {}));
     assertThat(exception).hasMessageThat().isEqualTo("source already consumed or closed");
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, expiry = CacheExpiry.ACCESS)
+  void youngestFunc_closed_primedIterator(VarExpiration<Int, Int> expireAfterVar) {
+    var iterator = expireAfterVar.youngest(stream -> {
+      var entries = stream.iterator();
+      entries.next();
+      return entries;
+    });
+    var exception = assertThrows(IllegalStateException.class, iterator::next);
+    assertThat(exception).hasMessageThat().isEqualTo("stream has already been closed");
   }
 
   @ParameterizedTest

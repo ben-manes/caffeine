@@ -305,8 +305,8 @@ EDITS = [
     # Was a unified diff (marginal-anatomy.patch) until it was moved here for the same reason
     # the rest of the instrumentation was.
     ("marginal-fields", P,
-     "  private @Nullable Admitter admitter;\n",
-     MARGINAL_FIELDS + "  private @Nullable Admitter admitter;\n"),
+     "  private final Admitter admitter;\n",
+     MARGINAL_FIELDS + "  private final Admitter admitter;\n"),
 
     ("marginal-onmiss", P,
      "    sizeWindow += weight;\n    sizeData += weight;\n    evict();\n",

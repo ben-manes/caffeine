@@ -31,7 +31,16 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   grow-only table, which breaks the precondition `reset()`'s truncation correction relied on
   (`count/4 < size` held only while the table matched the sample). Unclamped, `size` underflows
   deeply negative and aging stalls until it counts back, restoring the old size's cadence that the
-  retrack exists to remove. The clamp is inert whenever the table matches the maximum. Read the doc.
+  retrack exists to remove. The clamp is inert whenever the table matches the maximum. Read the
+  doc. **The retained table's lock-hold cost is accepted, not a defect** (adjudicated 2026-08-09):
+  the table is grow-only while `sampleSize` re-points down, so after a large shrink `reset()`
+  walks the old table at the new, much shorter cadence — 1.94 ms under `evictionLock` on a
+  retained 8 MiB table after a 1M→1K shrink, ~194 ns/increment amortized against ~0.19 ns when
+  the two match. The amortized cost scales with the peak-to-current ratio, so a 10x swing is free
+  and only a ~1000x one is visible. Reachable on unweighted caches through
+  `policy().eviction().setMaximum()`, not only weighted ones. Don't add a hysteretic table shrink:
+  it would fight the per-addition retrack a weighted cache already performs, and the aging
+  correctness the retrack buys is worth more than the tail cost.
 - **`scheduleAfterWrite`'s IDLE arm retries its failed swap** instead of scheduling on what it
   read, mirroring the processing arm. Dropping the failed swap can leave a write with no driver
   when a drain is in flight that already passed its task. Don't collapse it back. Read the doc.
@@ -142,9 +151,20 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   nothing must NOT trigger a probe, and the below-floor clamp **lifts** a sub-floor window to 2%
   (don't restore the wedge). The recency give-back is intentional and derived, not drift:
   frequency-optimal traces return ~0.5–2.5pp versus the reactive climber (4.3pp worst observed)
-  while still beating LRU comfortably.
+  while still beating LRU comfortably. **The densities divide by the region's setpoint, not its
+  occupancy, and that is a known during-burst bias** (raised independently by two reviewers,
+  2026-08-09): the window transfer is bounded per maintenance cycle, so during a burst the window
+  physically holds more than `windowMax` while `Reading.windowDensity` still divides by it, which
+  inflates the window's density and biases the step upward. Both escalations were refuted —
+  `evictFromMain` pulls window candidates through `admit()` like anything else, so there is no
+  admission bypass and no stable wrong fixed point, and `LocalCacheSubject` still asserts the bound
+  at quiescence. Don't re-raise it as a defect, and don't switch the denominator to occupancy
+  without measuring: the setpoint is what the controller commands and the transfer converges to.
 - **The goal-metric layer's references are deliberately inconsistent with each other; do not
-  harmonize them.** Frozen at arm: the probe verdict's probation-marginal baseline, and the audit
+  harmonize them.** Frozen at arm: the probe verdict's probation-marginal baseline **with the
+  sample length it was measured over** (2026-08-09 — a density is a hit count over a capacity, so
+  the frozen baseline is re-expressed at the live sample's length before the ratio is taken; the
+  down verdict needs none of this, reading both densities from one sample), and the audit
   confirm's rate reference. Read LIVE: the starvation probe's walk-interior deviation pricing —
   the walk's own transient must lift its own bar. The rail is priced at `3×deviation` while the
   audit confirm is a raw-sample run-length streak plus a one-shot beat-base gate; they want
@@ -193,10 +213,14 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   control (a claim that chases the rate upward can never fall the margin below it, which is the
   test that moves the anchor to a better position) and one-sided aging disarms the guard rail.
   The on-anchor `resync` is deliberately ungated by walk/return state (only planting waits for a
-  settled sample): a crash-abort's drain runs with the walk ended and no return in flight, so a
-  settled gate cannot reach it; the contaminated blend rides the EMA either way and heals over
-  later on-anchor samples, where a frozen-high claim never heals off-anchor (adjudicated
-  2026-08-07).
+  settled sample): it sits in the `isAt` branch and never reads the gate, so it re-syncs while a
+  crash-abort's retreat is still draining; the contaminated blend rides the EMA either way and
+  heals over later on-anchor samples, where a frozen-high claim never heals off-anchor
+  (adjudicated 2026-08-07). **Planting's gate does span that drain** (2026-08-09): `isProbing()`
+  is the walk *and* the capped retreat undoing it, because `hasPendingUndo()` outranks
+  `anchor.returning` in the router, so `returning` is false for the whole drain and both planting
+  branches would otherwise claim a position the probe was charged a ladder escalation for
+  rejecting. Don't narrow it back to `walk != null`.
 - **The SLRU main space still earns its keep against a plain LRU main** (measured 2026-08-08, 276
   cells). It was introduced in 2015 and the sketch has been fixed several times since, so it was
   re-asked by disabling promotion entirely (threshold above the sketch's 4-bit ceiling leaves

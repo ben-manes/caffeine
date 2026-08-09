@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.thesios;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Set;
 import java.util.stream.Stream;
@@ -56,6 +57,7 @@ public final class ThesiosTraceReader extends TextTraceReader {
               .putLong(Long.parseLong(array[1]))
               .hash().asLong();
           long size = Long.parseLong(array[10]);
+          checkArgument(size >= 0, "negative request size: %s", size);
           int weight = Math.max(Ints.saturatedCast(size), 1);
           return AccessEvent.forKeyAndWeight(key, weight);
         });

@@ -60,7 +60,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  */
 @PolicySpec(name = "sketch.WindowTinyLfu", characteristics = WEIGHTED)
 public final class WindowTinyLfuPolicy implements Policy {
-  private final WindowTinyLfuSettings settings;
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final boolean weighted;
@@ -73,7 +72,8 @@ public final class WindowTinyLfuPolicy implements Policy {
   private final long maximumSize;
   private final long maxProtected;
 
-  private @Nullable Admitter admitter;
+  private final Admitter admitter;
+
   private long sizeProtected;
   private long sizeWindow;
   private long sizeData;
@@ -84,11 +84,12 @@ public final class WindowTinyLfuPolicy implements Policy {
     this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
     this.weighted = characteristics.contains(WEIGHTED);
     this.maximumSize = settings.maximumSize();
-    this.settings = settings;
 
     long maxMain = (long) (maximumSize * percentMain);
     this.maxProtected = (long) (maxMain * settings.percentMainProtected());
-    this.admitter = weighted ? null : Admission.TINYLFU.from(settings.config(), policyStats);
+    this.admitter = Admission.TINYLFU.from(weighted
+        ? ConfigFactory.parseMap(ImmutableMap.of("maximum-size", 0)).withFallback(settings.config())
+        : settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maxWindow = maximumSize - maxMain;
     this.headProtected = new Node();
@@ -185,9 +186,7 @@ public final class WindowTinyLfuPolicy implements Policy {
 
   /** Records the access with the admission filter. */
   private void recordAccess(long key) {
-    if (admitter != null) {
-      admitter.record(key);
-    }
+    admitter.record(key);
   }
 
   /** Adjusts the weighted sizes when an access changes the entry's weight. */
@@ -220,13 +219,7 @@ public final class WindowTinyLfuPolicy implements Policy {
    */
   private void evict() {
     if (weighted && (sizeData >= (maximumSize >>> 1))) {
-      // A weighted trace's entry count is unknown up front, so the admitter is built once enough
-      // entries arrived to size its sketch and is retracked as the count wobbles
-      if (admitter == null) {
-        var config = ConfigFactory.parseMap(ImmutableMap.of("maximum-size", data.size()))
-            .withFallback(settings.config());
-        admitter = Admission.TINYLFU.from(config, policyStats);
-      }
+      // the entry count keeps moving on a weighted trace, so the sketch is retracked to it
       admitter.ensureCapacity(data.size());
     }
     evictFromMain(evictFromWindow());
@@ -314,7 +307,7 @@ public final class WindowTinyLfuPolicy implements Policy {
       }
 
       // evict the entry with the lowest frequency
-      if (requireNonNull(admitter).admit(candidate.key, victim.key)) {
+      if (admitter.admit(candidate.key, victim.key)) {
         Node evict = victim;
         victim = successor(victim);
         evictEntry(evict);

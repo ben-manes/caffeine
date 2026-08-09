@@ -56,6 +56,33 @@ final class ClimberResetCountMin4Test {
     assertThat(climber.additions).isEqualTo(periodic.additions);
   }
 
+  @Test
+  void ensureCapacity_retrackWithoutReallocation_keepsTheEpochRunning() {
+    // A weighted cache retracks on every addition. Rearming the countdown on a retrack that only
+    // re-points the period outruns the per-increment decrement, so reportMiss never adjudicates,
+    // the step freezes at its seed, and the climber silently degenerates into the periodic reset.
+    var sketch = new ClimberResetCountMin4(config());
+    int period = sketch.period;
+
+    sketch.eventsToCount = 1;
+    sketch.additions = 7;
+    sketch.ensureCapacity(MAXIMUM_SIZE);
+    assertThat(sketch.period).isEqualTo(period);
+    assertThat(sketch.eventsToCount).isEqualTo(1);
+    assertThat(sketch.additions).isEqualTo(7);
+
+    // so the countdown reaches the adjudication that moves the step
+    sketch.eventsToCount = 0;
+    sketch.reportMiss();
+    assertThat(sketch.getStep()).isEqualTo(2);
+
+    // a reallocation forgets the counts, so its epoch does start over with them
+    sketch.ensureCapacity(4L * MAXIMUM_SIZE);
+    assertThat(sketch.period).isGreaterThan(period);
+    assertThat(sketch.eventsToCount).isEqualTo(sketch.period);
+    assertThat(sketch.additions).isEqualTo(0);
+  }
+
   private static Config config() {
     var properties = Map.<String, Object>of("maximum-size", MAXIMUM_SIZE);
     return ConfigFactory.parseMap(properties)
