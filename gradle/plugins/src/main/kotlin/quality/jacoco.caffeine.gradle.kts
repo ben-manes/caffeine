@@ -1,10 +1,17 @@
-@file:Suppress("PackageDirectoryMismatch")
+@file:Suppress("PackageDirectoryMismatch", "UnstableApiUsage")
 import org.gradle.util.GradleVersion.version as versionOf
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import org.gradle.testing.jacoco.tasks.JacocoReport
 
 plugins {
   jacoco
+}
+
+configurations.consumable("coverageDataElements") {
+  selectsCoverageData()
+  outgoing.artifact(layout.buildDirectory.dir("jacoco")) {
+    builtBy(tasks.withType<Test>())
+  }
 }
 
 jacoco {

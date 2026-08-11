@@ -3,6 +3,7 @@ import org.gradle.util.GradleVersion.version
 
 plugins {
   id("dev.sigstore.sign-base")
+  id("com.gradleup.nmcp")
   `maven-publish`
   `java-library`
   signing

@@ -10,12 +10,6 @@ import org.gradle.kotlin.dsl.the
 val Project.libs
   get() = the<LibrariesForLibs>()
 
-fun Project.version(major: Int, minor: Int, patch: Int, releaseBuild: Boolean) {
-  if (version == Project.DEFAULT_VERSION) {
-    version = "$major.$minor.$patch" + if (releaseBuild) "" else "-SNAPSHOT"
-  }
-}
-
 fun Project.defaultJvmArgs(): ListProperty<String> {
   val jvmArgs = providers.gradleProperty("jvmArgs").map { it.split(",") }.orElse(emptyList())
   val arguments = providers.zip(jvmArgs, isGraalVM()) { args, isGraalVM ->

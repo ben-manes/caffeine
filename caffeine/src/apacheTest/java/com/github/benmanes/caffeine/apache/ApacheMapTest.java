@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.collections4.map.AbstractMapTest;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.params.ParameterizedClass;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -67,7 +66,4 @@ final class ApacheMapTest<K, V> extends AbstractMapTest<ConcurrentMap<K, V>, K, 
     var cache = (Cache<K, V>) context.cache();
     return cache.asMap();
   }
-  @Nested final class MapKeySetTest extends TestMapKeySet {}
-  @Nested final class MapValuesTest extends TestMapValues {}
-  @Nested final class MapEntrySetTest extends TestMapEntrySet {}
 }

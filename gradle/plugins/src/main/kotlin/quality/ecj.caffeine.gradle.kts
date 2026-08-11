@@ -15,7 +15,7 @@ sourceSets.configureEach {
   val compileTask = tasks.named<JavaCompile>(compileJavaTaskName)
   tasks.register<EclipseJavaCompile>(getTaskName("ecj", /* target= */ null)) {
     description = "Run ECJ analysis for ${this@configureEach.name} classes"
-    properties = rootProject.layout.projectDirectory.file(
+    properties = isolated.rootProject.projectDirectory.file(
       "gradle/config/eclipse/org.eclipse.jdt.core.prefs")
     compileClasspath = compileTask.map { it.classpath }
     inputs.files(compileTask.map { it.outputs.files }).withPathSensitivity(RELATIVE)

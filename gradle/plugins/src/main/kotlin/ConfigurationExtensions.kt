@@ -7,13 +7,19 @@ import org.gradle.api.attributes.Bundling.BUNDLING_ATTRIBUTE
 import org.gradle.api.attributes.Bundling.EXTERNAL
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
+import org.gradle.api.attributes.Category.DOCUMENTATION
 import org.gradle.api.attributes.Category.LIBRARY
+import org.gradle.api.attributes.Category.VERIFICATION
+import org.gradle.api.attributes.DocsType
+import org.gradle.api.attributes.DocsType.DOCS_TYPE_ATTRIBUTE
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.LibraryElements.JAR
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.attributes.Usage
 import org.gradle.api.attributes.Usage.JAVA_RUNTIME
 import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
+import org.gradle.api.attributes.VerificationType
+import org.gradle.api.attributes.VerificationType.VERIFICATION_TYPE_ATTRIBUTE
 
 fun Configuration.configureAsRuntimeIncoming() {
   isCanBeConsumed = false
@@ -27,9 +33,28 @@ fun Configuration.configureAsRuntimeOutgoing() {
   attributes(RuntimeJarAttributes)
 }
 
+/** Selects the runtime jar of a library. */
+fun Configuration.selectsRuntimeJar() = attributes(RuntimeJarAttributes)
+
+/** Selects the directory holding the jacoco execution data of every test suite in a project. */
+fun Configuration.selectsCoverageData() = attributes(CoverageDataAttributes)
+
+/** Selects the directory that a project renders its javadoc into. */
+fun Configuration.selectsJavadocDirectory() = attributes(JavadocDirectoryAttributes)
+
 private val RuntimeJarAttributes: Action<AttributeContainer> = Action {
   attribute(USAGE_ATTRIBUTE, named(Usage::class.java, JAVA_RUNTIME))
   attribute(CATEGORY_ATTRIBUTE, named(Category::class.java, LIBRARY))
   attribute(BUNDLING_ATTRIBUTE, named(Bundling::class.java, EXTERNAL))
   attribute(LIBRARY_ELEMENTS_ATTRIBUTE, named(LibraryElements::class.java, JAR))
+}
+
+private val CoverageDataAttributes: Action<AttributeContainer> = Action {
+  attribute(CATEGORY_ATTRIBUTE, named(Category::class.java, VERIFICATION))
+  attribute(VERIFICATION_TYPE_ATTRIBUTE, named(VerificationType::class.java, "jacoco-execution-data"))
+}
+
+private val JavadocDirectoryAttributes: Action<AttributeContainer> = Action {
+  attribute(CATEGORY_ATTRIBUTE, named(Category::class.java, DOCUMENTATION))
+  attribute(DOCS_TYPE_ATTRIBUTE, named(DocsType::class.java, "javadoc-directory"))
 }

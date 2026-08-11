@@ -1,34 +1,49 @@
-@file:Suppress("PackageDirectoryMismatch")
-import org.gradle.api.plugins.JavaPluginExtension
+@file:Suppress("PackageDirectoryMismatch", "UnstableApiUsage")
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
 
 plugins {
   jacoco
+  `jacoco-report-aggregation`
   id("com.github.nbaztec.coveralls-jacoco")
 }
+
+val coveredProjects = listOf(":caffeine", ":guava", ":jcache")
+val coverageData = configurations.resolvable("coverageData") {
+  extendsFrom(configurations.getByName("jacocoAggregation"))
+  selectsCoverageData()
+  isTransitive = false
+}
+
+configurations.named("aggregateCodeCoverageReportResults").configure { selectsRuntimeJar() }
 
 dependencies {
   jacocoAgent(libs.jacoco.agent)
   jacocoAnt(libs.jacoco.ant)
+  coveredProjects.forEach { jacocoAggregation(project(it)) }
+}
+
+reporting.reports.register<JacocoCoverageReport>("jacocoFullReport") {
+  testSuiteName = "test"
+}
+
+val jacocoFullReport = tasks.named<JacocoReport>("jacocoFullReport")
+jacocoFullReport.configure {
+  group = "Coverage reports"
+  description = "Generates an aggregate report"
+
+  mustRunAfter(coverageData)
+  executionData.setFrom(fileTree(rootDir)
+    .include(coveredProjects.map { "**/*${it.removePrefix(":")}*/**/jacoco/*.exec" }))
+  reports {
+    html.required = true // human-readable
+    xml.required = true  // required by coveralls
+  }
 }
 
 coverallsJacoco {
   reportPath = layout.buildDirectory.file(
     "reports/jacoco/jacocoFullReport/jacocoFullReport.xml").get().asFile.path
-}
-
-val jacocoFullReport = tasks.register<JacocoReport>("jacocoFullReport") {
-  group = "Coverage reports"
-  description = "Generates an aggregate report"
-
-  subprojects {
-    inputs.files(tasks.withType<JavaCompile>().map { it.outputs.files })
-      .withPathSensitivity(RELATIVE)
-  }
-  reports {
-    html.required = true // human-readable
-    xml.required = true  // required by coveralls
-  }
+  reportSourceSets = files(jacocoFullReport.map { it.sourceDirectories })
 }
 
 tasks.named("coverallsJacoco").configure {
@@ -37,18 +52,4 @@ tasks.named("coverallsJacoco").configure {
   onlyIf { isEnabled.get() }
   incompatibleWithConfigurationCache()
   inputs.files(jacocoFullReport.map { it.outputs.files }).withPathSensitivity(RELATIVE)
-}
-
-listOf(project(":caffeine"), project(":guava"), project(":jcache")).forEach { coveredProject ->
-  coveredProject.plugins.withId("java-library") {
-    val extension = coveredProject.the<JavaPluginExtension>()
-    coverallsJacoco.reportSourceSets += files(
-      extension.sourceSets.named("main").map { it.allSource.srcDirs })
-    jacocoFullReport.configure {
-      sourceSets(extension.sourceSets["main"])
-      mustRunAfter(coveredProject.tasks.withType<Test>())
-      executionData(fileTree(rootDir.absolutePath)
-        .include("**/*${coveredProject.name}*/**/jacoco/*.exec"))
-    }
-  }
 }

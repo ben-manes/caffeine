@@ -449,7 +449,6 @@ jobs:
             fulcio.sigstore.dev:443
             central.sonatype.com:443
             oauth2.sigstore.dev:443
-            ossrh-staging-api.central.sonatype.com:443
             rekor.sigstore.dev:443
             tuf-repo-cdn.sigstore.dev:443
       - name: Checkout
@@ -459,14 +458,14 @@ jobs:
       - name: Publish Snapshot
         uses: ./.github/actions/run-gradle
         env:
-          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
           ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_centralPortalUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_centralPortalPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
         with:
           attempt-delay: 2
           attempt-limit: 3
           java: ${{ env.MINIMUM_JDK }}
-          arguments: publishToSonatype --no-configuration-cache
+          arguments: publishAggregationToCentralSnapshots
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}

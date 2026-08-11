@@ -11,7 +11,7 @@ pmd {
   ruleSets = emptyList()
   toolVersion = libs.versions.pmd.get()
   ruleSetConfig = resources.text.fromFile(
-    rootProject.layout.projectDirectory.file("gradle/config/pmd/rulesSets.xml"))
+    isolated.rootProject.projectDirectory.file("gradle/config/pmd/rulesSets.xml"))
 }
 
 tasks.register("pmd") {
@@ -32,6 +32,6 @@ tasks.withType<Pmd>().configureEach {
 
   if (name.contains("Test")) {
     ruleSetConfig = resources.text.fromFile(
-      rootProject.layout.projectDirectory.file("gradle/config/pmd/rulesSets-test.xml"))
+      isolated.rootProject.projectDirectory.file("gradle/config/pmd/rulesSets-test.xml"))
   }
 }

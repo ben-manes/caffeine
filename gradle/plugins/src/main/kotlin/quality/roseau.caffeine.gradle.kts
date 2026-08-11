@@ -18,7 +18,7 @@ tasks.register<Roseau>("roseau") {
   description = "Checks for breaking API changes"
   currentJar = tasks.jar.flatMap { it.archiveFile }
   previous = "${project.group}:${project.name}:${libs.caffeine.get().version}"
-  config = rootProject.layout.projectDirectory.file("gradle/config/roseau/config.yaml")
+  config = isolated.rootProject.projectDirectory.file("gradle/config/roseau/config.yaml")
   compileClasspath.from(configurations.compileClasspath.map { it.incoming.artifactView {
     attributes { attribute(LIBRARY_ELEMENTS_ATTRIBUTE,
       objects.named(LibraryElements::class.java, LibraryElements.JAR))

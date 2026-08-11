@@ -91,6 +91,10 @@
     margin-top: 1.8em;
   }
 
+  h4 {
+    margin-top: 1.5em;
+  }
+
   .byline {
     color: var(--muted);
     margin-bottom: 10px;
@@ -139,6 +143,11 @@
   th {
     color: var(--muted);
     font-weight: 600;
+  }
+
+  .gloss {
+    color: var(--muted);
+    font-weight: 400;
   }
 
   code,
@@ -435,7 +444,9 @@
   <b>Part II (§5–§9)</b> builds the shipped controller one mechanism at a time,
   each introduced by the failure it prevents.<br>
   <b>Part III (§10–§12)</b> is the evidence and a field guide. Sections are self-contained chapters;
-  use the rail to jump, and expand the folded asides only when you want the fine print.</div>
+  use the rail to jump. The folded asides are the maintainer's record, pricing each
+  decision and naming the traces and dead alternatives behind it; nothing in the main
+  line depends on opening them.</div>
 
 
 <h2 id="s1"><a class="hl" href="#s1">1 · The problem: one knob between two philosophies</a></h2>
@@ -447,8 +458,8 @@
 <h3 id="s1-1"><a class="hl" href="#s1-1">1.1 Recency and frequency</a></h3>
 <p><b>Recency</b> policies (the LRU family) bet that whatever was touched most recently
   will be touched again soon. That is the right bet for drifting working sets: a user
-  session, a batch job walking a table, a queue's write-then-read rhythm.
-  <b>Frequency</b> policies (the LFU family) bet on whatever was touched most often,
+  session, a batch job walking a table, a queue's write-then-read rhythm.</p>
+<p><b>Frequency</b> policies (the LFU family) bet on whatever was touched most often,
   which is the right bet for skewed popularity: hot products, hot keys, the Zipfian head
   that dominates most production traffic.</p>
 <p>Each bet has a canonical failure, and real workloads trigger both. One table scan
@@ -497,6 +508,11 @@
   </svg>
   <figcaption>Fig. 1 — The tradeoff: each pure policy fails at the far end from its philosophy, and real traffic mixes both ends at once. W-TinyLFU turns the mix into one movable boundary.</figcaption>
 </figure>
+<p>Neither philosophy is shipped pure; each carries a bias and pays to correct it. TinyLFU
+  is frequency-biased, so W-TinyLFU puts a small LRU window in front of it to buy recency
+  back. Merlin (OSDI '26) runs the correction the other way, buying frequency back for its
+  2Q lineage with an epoch popularity sketch and a ghost queue. Caffeine's
+  correction is a single number, and choosing it is this document's subject.</p>
 <p>So the question isn't "recency or frequency?" but "how much of each, right now?"
   W-TinyLFU makes that a physical quantity: a budget of C slots, split between a space
   that serves new arrivals and a space that guards the established core.</p>
@@ -524,8 +540,8 @@
 <figure>
 <svg viewBox="0 0 740 142" role="img" font-family="system-ui,sans-serif" font-size="12">
     <title>W-TinyLFU anatomy</title>
-    <rect x="20" y="40" width="120" height="60" rx="8" fill="none" stroke="#eb6834" stroke-width="2" />
-    <text x="80" y="66" text-anchor="middle" fill="#eb6834" font-weight="600">window</text>
+    <rect x="20" y="40" width="120" height="60" rx="8" fill="none" stroke="#1baf7a" stroke-width="2" />
+    <text x="80" y="66" text-anchor="middle" fill="#1baf7a" font-weight="600">window</text>
     <text x="80" y="82" text-anchor="middle" fill="#5b6572" font-size="10.5">LRU · recency</text>
     <rect x="300" y="30" width="410" height="80" rx="8" fill="none" stroke="#2a78d6" stroke-width="2" />
     <text x="510" y="22" text-anchor="middle" fill="#2a78d6" font-weight="600">main (SLRU) · frequency</text>
@@ -536,11 +552,10 @@
     <line x1="0" y1="70" x2="18" y2="70" stroke="#1a1f24" stroke-width="1.6" marker-end="url(#a)" />
     <text x="4" y="56" fill="#5b6572" font-size="10.5">new keys</text>
     <line x1="142" y1="70" x2="298" y2="70" stroke="#1a1f24" stroke-width="1.6" />
-    <rect x="176" y="52" width="92" height="34" rx="7" fill="#f6f8fa" stroke="#1baf7a" stroke-width="1.8" />
-    <text x="222" y="66" text-anchor="middle" fill="#1baf7a" font-weight="600" font-size="11">TinyLFU</text>
+    <rect x="176" y="52" width="92" height="34" rx="7" fill="#f6f8fa" stroke="#eb6834" stroke-width="1.8" />
+    <text x="222" y="73" text-anchor="middle" fill="#eb6834" font-weight="600" font-size="11">TinyLFU</text>
     <text x="222" y="100" text-anchor="middle" fill="#5b6572" font-size="10">freq(candidate) &gt; freq(victim)?</text>
-    <text x="370" y="126" fill="#5b6572" font-size="11">the climber moves ONE dial:</text>
-    <text x="370" y="140" fill="#5b6572" font-size="11">the window's share of capacity (initially 1%)</text>
+    <text x="110" y="130" fill="#5b6572" font-weight="400" font-size="13">the climber adjusts the window / main share of capacity (initially 1%)</text>
     <defs>
       <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
         <path d="M0,0 L6,3 L0,6 z" fill="#1a1f24" />
@@ -650,7 +665,7 @@
     <text x="703.5" y="266" text-anchor="middle" fill="#5b6572">99%</text>
     <text x="46" y="290" fill="#5b6572">static window, % of capacity → &#160;&#160; <tspan fill="#eb6834" font-weight="600">loop @512</tspan> &#160; <tspan fill="#1baf7a" font-weight="600">corda @1k</tspan> &#160; <tspan fill="#2a78d6" font-weight="600">OLTP @8k</tspan> &#160; <tspan fill="#eda100" font-weight="600">financial1 @32k</tspan></text>
     </svg>
-  <figcaption>Fig. 3 — Hit rate under every fixed split, one simulation per point: every curve is a different answer, and the answers also move with cache size and with time (§1.3).</figcaption>
+  <figcaption>Fig. 3 — Hit rate under every fixed split, one simulation per point: every curve is a different answer, and the answers also move with cache size and with time.</figcaption>
 </figure>
 <p>Three consequences frame everything that follows. Adaptation is worth real points
   (mid single digits on honest workloads, which for a cache in front of a database is
@@ -659,24 +674,29 @@
   head at one size competes with it at another. And no configuration-time answer
   exists, since nobody re-tunes per deployment, per size, and per traffic era. The
   cache must find the split itself.</p>
+<p>That first consequence is the payoff for adapting at all. The reactive climber of §3
+  already collects most of it, so what this document adds is measured against that
+  climber rather than against a static window.</p>
 
 <h3 id="s1-4"><a class="hl" href="#s1-4">1.4 Why this knob, and not another</a></h3>
-<p>Region sizing is not the only place adaptivity could live, and the alternatives have
-  been tried. The Middleware '18 paper on adaptive software cache management (which
-  this design descends from) introduced the classic hill climber for this problem and
-  aimed it at two dials: the window size, and the admission filter's aging rate, where
-  a faster-aging sketch biases admission toward recency. Adapting the window was at
-  least as good on every trace, so the sketch dial was dropped. Cacheus (FAST '21)
-  carried the climber forward, adapting the hand-tuned learning rate of LeCaR's expert
-  weights with a gradient-based hill climber whose restart rule credits the Middleware
-  paper. Hill-Cache (ICDE '24) hill-climbs the decay constant in an LRFU-style scoring
-  formula; Merlin (OSDI '26) moves adaptation into hotness and popularity thresholds.
-  The pattern is structural: a scoring constant or global threshold is an indirect
-  dial whose effect on the hit rate is mediated by the whole key population, so its
-  response curve is workload-warped before the controller ever touches it. Hill-Cache
-  renormalizes its constant by cache size because the optimal decay shifts with
-  capacity; Merlin keeps a ghost queue because its thresholds misjudge hot and popular
-  objects.</p>
+<p>Region sizing is not the only place adaptivity could live, and it is not a new place
+  to put it. ARC (FAST '03) is the precedent: a recency list, a frequency list, and a
+  boundary that moves toward whichever side its ghost lists say is starved. That is the
+  same knob this document adapts, driven by a different signal (§4.4). The Middleware
+  '18 paper on adaptive software cache management, which this design descends from,
+  introduced the hill climber for W-TinyLFU and aimed it at two dials: the window size,
+  and the frequency sketch's aging rate, where faster aging biases admission toward
+  recency. Adapting the window was at least as good on every trace, so the sketch dial
+  was dropped.</p>
+<p>Later work mostly moved adaptation off allocation and onto a scoring constant or a
+  global threshold. Cacheus (FAST '21) hill-climbs the learning rate behind LeCaR's
+  expert weights, Hill-Cache (ICDE '24) the decay constant of an LRFU-style score, and
+  Merlin (OSDI '26) adapts hotness and popularity thresholds. The pattern is
+  structural. A constant or a threshold is an indirect dial, since its effect on the
+  hit rate is mediated by the whole key population. Its response curve is
+  workload-warped before the controller ever touches it, and it tends to need a
+  correction of its own. Merlin carries a ghost queue because its thresholds misjudge
+  hot and popular objects.</p>
 <p>Caffeine largely gets the threshold question for free. TinyLFU admission compares
   <i>two entries</i> (the candidate against the incumbent victim) rather than testing
   either against a global score, so the admission bar self-adjusts to whatever the
@@ -929,7 +949,7 @@
     by construction. The move that worked was not "avoid regulation" but <b>put the
     integrator on a signal that has a true zero</b>, which is also why §4.2's failure
     does not generalize to §5.</p>
-  <p>The rest of the machine has standing names too, and they are load-bearing when
+  <p>The rest of the design has standing names too, and they are load-bearing when
     judging a proposed change: the anchor and guard rail of §8 are <i>hysteresis
     switching</i> with §8.1's margin as the hysteresis constant (Morse, Mayne &amp;
     Goodwin 1992), the doubling ladders of §6 are <i>average dwell time</i> (Hespanha
@@ -1178,7 +1198,7 @@
   §4 family that swaps the goal metric for a proxy gives the property up somewhere, and
   §7 exists to buy it back.</p>
 
-<h3 id="s3-3"><a class="hl" href="#s3-3">3.3 The organs you only see when they are removed</a></h3>
+<h3 id="s3-3"><a class="hl" href="#s3-3">3.3 What the law provided silently</a></h3>
 <p>Two of the law's load-bearing properties were discovered by the successor work, when
   removing them turned out to be expensive.</p>
 <p><b>The reversal is the window floor.</b> Nothing in the reactive law bounds the window
@@ -1529,6 +1549,13 @@
 <details class="fold">
   <summary>The vocabulary of Part II</summary>
   <ul>
+    <li><b>Density climber</b> — the controller this part builds, named for its
+      steering signal; in full the <b>goal-audited density climber</b>, since density
+      steers, probes rescue the blind corners, and the goal-metric layer audits what
+      density cannot judge for itself.</li>
+    <li><b>Reactive climber</b> — §3's law, named the same way, which ships below 4096
+      entries. The two together are the <b>window climber</b>, the one class that ships
+      (§9.1).</li>
     <li><b>Window / probation / protected</b> — the recency region that admits every
       arrival, and main's two segments behind the TinyLFU filter (§1.2).</li>
     <li><b>Floor</b> — the smallest window the climber will hold, ~1% of capacity.</li>
@@ -1552,6 +1579,9 @@
       sustained noise-cleared shortfall (§8).</li>
     <li><b>Park / shield</b> — holding a confirmed audit landing through crash-scale
       weather, and the fresh park's brief grace (§7.2, §8.2).</li>
+    <li><b>Family names</b> (whisper, mixture, widepin, phases, …) — the constructed
+      workloads of the trap gallery, each catalogued with its shape and its defense in
+      §10.4. Real cells are named by their corpus instead (§10.2).</li>
   </ul>
 </details>
 
@@ -2377,6 +2407,70 @@ window = max(window + step, 0.02·C)</pre>
   rung and crash streak, and only a completed <i>failure</i> at the deepest rung
   doubles the wait between audits, up to 512 samples, so a settled workload is
   re-tested ever more rarely.</div>
+<p>Both triggers drive the same walker, so the two are easiest to read side by side. The
+  strides, the exits and the budget are shared; the arming, the pricing, the judge and
+  the retry schedule are not:</p>
+<div class="tablewrap">
+  <table>
+    <tr>
+      <th>&nbsp;</th>
+      <th>starvation probe (§6)</th>
+      <th>audit (§7)</th>
+    </tr>
+    <tr>
+      <td><b>arms when</b></td>
+      <td>the starved region is the small one</td>
+      <td>the window has held one 2%-of-C band for 32 samples, or 4 after a
+        (re)size</td>
+    </tr>
+    <tr>
+      <td><b>direction</b></td>
+      <td>away from the wall the starved region is pinned against</td>
+      <td>toward the farther wall, alternating between audits</td>
+    </tr>
+    <tr>
+      <td><b>crash bar</b><br><span class="gloss">level, vs the rate frozen at the arm</span></td>
+      <td>the live scatter, clamped to 5–15pp</td>
+      <td>5pp, capped at 15% of the frozen rate</td>
+    </tr>
+    <tr>
+      <td><b>reversal bar</b><br><span class="gloss">first difference, vs the previous sample</span></td>
+      <td>the same bar</td>
+      <td>5pp, capped at 15% of the larger of the frozen rate and the scatter</td>
+    </tr>
+    <tr>
+      <td><b>crash tolerance</b></td>
+      <td>aborts on the first below-bar sample</td>
+      <td>the same, except a retry after a crash, which tolerates two and aborts on
+        the third</td>
+    </tr>
+    <tr>
+      <td><b>judged by</b></td>
+      <td>density, once the watched region earns 4× the starvation bar: against
+        probation's density frozen at the arm growing, against main's average
+        shrinking</td>
+      <td>the goal metric, after a committed depth of five samples: four consecutive
+        raw samples over the frozen reference plus the 1% margin, and at least one
+        sample that beat the walk's own start</td>
+    </tr>
+    <tr>
+      <td><b>on a confirm</b></td>
+      <td>keep it, plant the anchor, reset the ladder; steering resumes</td>
+      <td>keep it, plant the anchor, and park, since density disagrees with the
+        position by construction</td>
+    </tr>
+    <tr>
+      <td><b>on a failure</b></td>
+      <td>undo in full; the refractory doubles 16 → 32 → 64 and the next walk
+        commits deeper (2 samples, then 10) at scaled strides (×2, ×4)</td>
+      <td>undo in full; the wait doubles toward 512 only on a completed failure at
+        the deepest rung, and a crash never moves it</td>
+    </tr>
+  </table>
+</div>
+<p>Both are bounded at sixteen samples, and the two ladders are strictly separate: an
+  audit's endings never deepen the probe machine's rung or streak, and a starvation
+  confirm leaves the audit schedule untouched.</p>
 <details class="fold">
   <summary>The schedule's fine print: direction, calibration, ordering, cadence</summary>
   <p><b>Direction.</b> The walk alternates at interior positions but refuses a
@@ -2386,7 +2480,7 @@ window = max(window + step, 0.02·C)</pre>
     the refractory ladder and the audit clock.</p>
   <p><b>Why the calibration arms at four.</b> A sighted false equilibrium pins from
     its first sample, and waiting the standard clock spends most of a short trace
-    motionless while the reactive tier would have been exploring from sample one; the mixture trap's entire deficit against the predecessor was this prefix. Every
+    motionless while the reactive tier would have been exploring from sample one; the mixture trap's entire deficit against it was this prefix. Every
     later wait uses the standard clock, and the schedule is the audit layer's own: a
     starvation probe's confirm leaves it untouched. (It once reset it to the
     standard wait, spending the calibration before the first audit ever ran, and
@@ -2399,8 +2493,8 @@ window = max(window + step, 0.02·C)</pre>
     on short traces whose escape came from a starvation probe (mixture d025 ~−0.9,
     still above LRU with a steady state 3 points over); the prize on sighted traps
     is the whole prefix (mixture stock +18.7, to above the reactive arm).</p>
-  <p><b>Ordering.</b> An audit may also arm from a blind-corner sample the machine
-    would otherwise spend holding: the blind-corner gate outranks the goal-metric
+  <p><b>Ordering.</b> An audit may also arm from a blind-corner sample the probe
+    machine would otherwise spend holding: the blind-corner gate outranks the goal-metric
     branches, which is right for the guard rail, since it adjudicates a shortfall
     <i>on</i> the starved sample, and wrong for an audit, which adjudicates over the
     samples that follow. Left ordered beneath it, a corner that never cleared served
@@ -2469,7 +2563,7 @@ window = max(window + step, 0.02·C)</pre>
   (55.5 → 66.8 against 64.6; the streak verdict buys the escape and the cold-start
   calibration removes the pinned prefix) and holds under hit-rate weather that the
   deviation-priced verdict could not survive (±8pp modulation at period 12: 65.2,
-  still above LRU; period 6: 64.5 ≈ LRU, above the reactive engine's 59.4; the
+  still above LRU; period 6: 64.5 ≈ LRU, above the reactive climber's 59.4; the
   deeper dose whose scatter crosses the audit's crash bar once killed the layer
   mid-walk, and the crash-streak tolerance of §6.4 heals it to within half a point
   of LRU). The mixture-with-modulation dose that re-pinned the audit clears LRU on
@@ -2478,7 +2572,7 @@ window = max(window + step, 0.02·C)</pre>
   pins escape as far as each trace's length lets the ladder escalate. On the real
   corpus the layer measures as neutral insurance (−0.03pp mean); the streak verdict
   and the fresh-park shield additionally recover part of the corpus's own worst
-  residual (cp_w097@16384 +2.2 of a −6.3 gap to the reactive engine: the audit
+  residual (cp_w097@16384 +2.2 of a −6.3 gap to the reactive climber: the audit
   walks to the 7.5% optimum and confirms there; the remainder is park retention
   between audit cycles, §11).</p>
 <p>The layer as a whole is priced against its own absence. Across the 52-row
@@ -2555,9 +2649,9 @@ window = max(window + step, 0.02·C)</pre>
     <text x="574" y="226" text-anchor="middle" fill="#5b6572">mixture d025 @65536 · long</text>
     <text x="46" y="240" fill="#5b6572"><tspan fill="#eb6834" font-weight="600">no audits</tspan> ·
       <tspan fill="#2a78d6" font-weight="600">with audits</tspan> · dashed = LRU where anchored ·
-      the 65536 cell narrows a −27pp gap to the reactive engine to −8pp; the trace ends mid-escalation</text>
+      the 65536 cell narrows a −27pp gap to the reactive climber to −8pp; the trace ends mid-escalation</text>
     </svg>
-  <figcaption>Fig. 16 — The audit converts the whisper pin from 9 points below LRU to parity; the at-scale constructions escape as far as each trace’s length lets the ladder escalate. The bars record the layer at its introduction; the shipped build has since lifted whisper clear of LRU (66.8 against 64.6).</figcaption>
+  <figcaption>Fig. 16 — The audit converts the whisper pin from 9 points below LRU to 2 above it, and the at-scale constructions escape as far as each trace’s length lets the ladder escalate. The bars record the layer at its introduction, before the shipped build lifted whisper clear of LRU (66.8 against 64.6).</figcaption>
 </figure>
 
 <h3 id="s7-3"><a class="hl" href="#s7-3">7.3 The clock counts stillness of position</a></h3>
@@ -3224,25 +3318,31 @@ window = max(window + step, 0.02·C)</pre>
     library under the trace simulator, never a reimplementation.</li>
   <li><b>Anchors, not raw scores.</b> Each cell reads against fresh LRU, Bélády where
     tractable, and a static-window sweep: the ceiling for <i>this</i> design, and the
-    honest target for an adaptive one.</li>
+    honest target for an adaptive one. LRU is a floor rather than a rival. A
+    general-purpose cache that drops under it on some workload has failed there whatever
+    its average says, so rows are written as <i>stayed above</i>, not <i>won by</i>.</li>
   <li><b>A noise model, and N to match.</b> Admission jitter gives ±0.1–0.8pp
     run-to-run; claims under 2.5pp need N=5. Alternation-heavy families are bimodal
     (identical runs land ±8pp apart), so they adjudicate on seeded N=8 means with
     arms rotated inside each seed, a policy bought with three separate single-run
     embarrassments.</li>
   <li><b>Bars are instruments, and instruments rot.</b> An audit of all 52 gate rows
-    found 37 bars defective, in four flavours that had each previously been found
-    only by accident: a bar inside the row's own seeded spread (a coin flip), a bar
-    set below LRU (it cannot fail for the reason the row exists), a recorded level
-    that no longer reproduces (levels rot; margins do not), and a bar on a trace
-    too short to converge (it prices warmup and reads as quality). A bar is
-    therefore stated as a margin over a re-derivable anchor: above LRU on every
-    seed, a gap to the static ceiling, or no drift below the row's own seeded
-    mean, never as a bare level; and every row is checked for how many decisions
-    its trace actually contains, since a ~50-sample trace holds at most one audit
-    cycle, its whole-trace mean measures convergence speed, and quality is read
-    from the final third. Trajectories are read in six blocks, because a thirds
-    average renders oscillation as smooth drift.</li>
+    found 37 bars defective. A bar is therefore stated as a margin over a
+    re-derivable anchor: above LRU on every seed, a gap to the static ceiling, or no
+    drift below the row's own seeded mean, never as a bare level.
+    <details class="fold">
+      <summary>The four defects, and how a trajectory is read</summary>
+      <p>Each flavour had previously been found only by accident: a bar inside the
+        row's own seeded spread (a coin flip), a bar set below LRU (it cannot fail
+        for the reason the row exists), a recorded level that no longer reproduces
+        (levels rot; margins do not), and a bar on a trace too short to converge (it
+        prices warmup and reads as quality).</p>
+      <p>Every row is also checked for how many decisions its trace actually
+        contains, since a ~50-sample trace holds at most one audit cycle, its
+        whole-trace mean measures convergence speed, and quality is read from the
+        final third. Trajectories are read in six blocks, because a thirds average
+        renders oscillation as smooth drift.</p>
+    </details></li>
   <li><b>Traps are falsifiers, not scoreboards.</b> Constructed workloads may veto a
     design; only real traces score it.</li>
   <li><b>Sealed holdouts.</b> Trace sets never touched during design were frozen and
@@ -3255,6 +3355,14 @@ window = max(window + step, 0.02·C)</pre>
     available holdout could exercise its shape, the level is derived from two
     shipped constants rather than swept, and the departure is journaled as a
     departure, not a precedent.</li>
+  <li><b>What an outside reader can re-run.</b> The constructed families regenerate
+    from deterministic generators bundled with the simulator, so every trap number
+    here re-derives from the repository alone, and several real traces ship with it
+    too (corda, scarab, cloudphysics, lirs). The rest are public downloads (ARC, MSR,
+    UMass, SNIA, thesios) run against a local corpus, inventoried in A.4, whose
+    per-rep raw data lives with the experiment ledger rather than in the tree. Corpus
+    numbers are therefore reported rather than re-runnable from a checkout, and the
+    trap gallery is where the machine's behavior can be checked directly.</li>
   <li><b>Hostile review.</b> The finished design was handed to an independent review
     instructed to break the new machinery. It found the two §7.3 clock defects (both
     repaired and re-verified), two smaller lifecycle holes (since repaired), and a
@@ -3263,11 +3371,29 @@ window = max(window + step, 0.02·C)</pre>
 </ul>
 
 <h3 id="s10-2"><a class="hl" href="#s10-2">10.2 The corpus</a></h3>
-<p>The broad result, from a 205-cell sweep (45 real traces across size ladders,
-  N≥2): <b>41 significant wins (+117.7pp in total) against the reactive climber, 9
-  losses (−13.8pp), 155 ties</b>. The wins are the recency-demand family the density
-  signal was built for; the losses are §5.6's documented bias, each still far above
-  LRU. The shipped build was then re-verified on a fresh 28-cell run against current
+<p>Start with the failure an adaptive policy exists to avoid, which is doing worse than
+  not adapting at all. On five real cells of the release battery the reactive climber
+  lands <b>below LRU</b>, while the density climber holds at or above it on three and
+  within a third of a point on the other two:</p>
+<div class="tablewrap">
+  <table>
+    <tr><th>cell</th><th>LRU</th><th>reactive</th><th>density</th></tr>
+    <tr><td>corda @8k</td><td>33.33</td><td>30.96 (−2.4)</td><td>33.00</td></tr>
+    <tr><td>scarab recs @256k</td><td>87.05</td><td>83.61 (−3.4)</td><td>86.84</td></tr>
+    <tr><td>systor17 LUN0 @1M</td><td>5.45</td><td>4.53 (−0.9)</td><td>5.92</td></tr>
+    <tr><td>tencentPhoto @4M</td><td>73.70</td><td>71.87 (−1.8)</td><td>74.34</td></tr>
+    <tr><td>google thesios c2 @4G</td><td>23.96</td><td>22.62 (−1.3)</td><td>24.07</td></tr>
+  </table>
+</div>
+<p>The aggregate is quieter, and that is the honest shape of the result. From a
+  205-cell sweep (45 real traces across size ladders, N≥2): <b>41 significant wins
+  (+117.7pp in total) against the reactive climber, 9 losses (−13.8pp), 155 ties</b>.
+  The wins are the recency-demand family the density signal was built for; the losses
+  are §5.6's documented bias, each still far above LRU. Ties are the majority because
+  the incumbent already sits at or near the static ceiling on most real traces, leaving
+  nothing to win; the corpus checks that the record holds, and the trap gallery (§10.4)
+  covers where it does not.</p>
+<p>The shipped build was then re-verified on a fresh 28-cell run against current
   master (N=3, extended to N=8 wherever either arm's spread exceeded
   0.5pp; the reactive arm is bimodal on several cells, up to ±2.6, so its single
   draws are not quotable); the significant movers, colored by direction:</p>
@@ -3304,26 +3430,13 @@ window = max(window + step, 0.02·C)</pre>
   behind §2.1 found no interior optimum on any of its 22 real cells (flat from the
   floor or gently rising), and on flat terrain every sane climber ties, so most
   cells <i>should</i> tie. The separation appears where the window matters, and
-  there it is qualitative rather than incremental. First: on five real cells of the
-  release battery the reactive climber lands <b>below LRU</b> (adaptation doing
-  worse than no adaptation, the one failure an adaptive policy exists to avoid),
-  while the density climber holds at or above it on three and within a third of a
-  point on the other two:</p>
-<div class="tablewrap">
-  <table>
-    <tr><th>cell</th><th>LRU</th><th>reactive</th><th>density</th></tr>
-    <tr><td>corda @8k</td><td>33.33</td><td>30.96 (−2.4)</td><td>33.00</td></tr>
-    <tr><td>scarab recs @256k</td><td>87.05</td><td>83.61 (−3.4)</td><td>86.84</td></tr>
-    <tr><td>systor17 LUN0 @1M</td><td>5.45</td><td>4.53 (−0.9)</td><td>5.92</td></tr>
-    <tr><td>tencentPhoto @4M</td><td>73.70</td><td>71.87 (−1.8)</td><td>74.34</td></tr>
-    <tr><td>google thesios c2 @4G</td><td>23.96</td><td>22.62 (−1.3)</td><td>24.07</td></tr>
-  </table>
-</div>
-<p>Second, the weighted view: where object identity and byte cost diverge, the
+  there it is qualitative rather than incremental. The below-LRU rows above are one
+  form of it, and two more follow.</p>
+<p>The weighted view: where object identity and byte cost diverge, the
   density signal prices slots rather than requests, and the gap stops being small.
   metaCDN_rprn @4G trades a −0.73 object rate for <b>+10.69 in byte hit rate</b>
   (49.59 against 38.90), because the retained large objects are exactly what the
-  byte metric pays for. Third, repeatability: on several cells the reactive
+  byte metric pays for. And repeatability: on several cells the reactive
   climber's outcome is a draw among basins rather than a number, so two identical
   runs of the same workload return materially different hit rates; the density
   climber returns the same number to within tenths (N=20 per arm: umass F1 @32k
@@ -3726,7 +3839,7 @@ window = max(window + step, 0.02·C)</pre>
   its measurements are in each fold. The closing paragraph is what makes this a
   finite list rather than an open-ended one.</p>
 <ul>
-  <li><span class="lim lim-trade">priced trade</span><b>The lag limit.</b> Phases
+  <li><span class="lim lim-trade">priced trade</span> <b>The lag limit.</b> Phases
     shorter than ~2 sample periods (≈8·C requests) are untrackable by construction;
     a fix needs a lag-free signal nobody has proposed.
     <details class="fold">
@@ -3745,7 +3858,7 @@ window = max(window + step, 0.02·C)</pre>
         to a lag-free signal is accepting fixed-window behavior under detected
         thrash.</p>
     </details></li>
-  <li><span class="lim lim-trade">priced trade</span><b>The density bias.</b>
+  <li><span class="lim lim-trade">priced trade</span> <b>The density bias.</b>
     Share-matching's chronic give-back on frequency-favoring workloads, typically
     0.5–2.5pp against pure frequency, 4.3 worst observed, always far above LRU; the
     marginal-steering refinement was built and measured to a dead frontier. On a
@@ -3778,7 +3891,7 @@ window = max(window + step, 0.02·C)</pre>
         open refinement, and any successor is screened on rest-point tracking
         before it earns a battery.</p>
     </details></li>
-  <li><span class="lim lim-open">open</span><b>The noisy-texture residual.</b>
+  <li><span class="lim lim-open">open</span> <b>The noisy-texture residual.</b>
     §10.2's red row: traces whose own rate deviation inflates the margins until
     goal-metric adjudication struggles to engage; a rescue needs a lower-variance
     goal reference, not a retune.
@@ -3789,7 +3902,7 @@ window = max(window + step, 0.02·C)</pre>
         the reactive arm's 50.1, with the remainder being park retention between
         audit cycles. Three retunes were measured dead against this cell.</p>
     </details></li>
-  <li><span class="lim lim-trade">priced trade</span><b>The audit walk's interior
+  <li><span class="lim lim-trade">priced trade</span> <b>The audit walk's interior
     bars, settled in both directions.</b> Two failure modes once shared one fixed
     5pp bar; the split (§6.4) answered both, and widening the crash abort stays
     dead.
@@ -3816,7 +3929,7 @@ window = max(window + step, 0.02·C)</pre>
         on the dose sentinels are the crash abort's remaining robustness price, and
         they are what staying out of the widening family costs.</p>
     </details></li>
-  <li><span class="lim lim-trade">priced trade</span><b>Bounded audit duty.</b>
+  <li><span class="lim lim-trade">priced trade</span> <b>Bounded audit duty.</b>
     Where a win must be continually re-won, the residual is a duty cycle of
     excursions rather than a held position; the one proposed remedy failed to
     reproduce and was withdrawn.
@@ -3834,12 +3947,12 @@ window = max(window + step, 0.02·C)</pre>
         pairs and was withdrawn. The gate's shieldtrap and saw rows pin the
         price.</p>
     </details></li>
-  <li><span class="lim lim-trade">priced trade</span><b>Run-to-run variance.</b>
+  <li><span class="lim lim-trade">priced trade</span> <b>Run-to-run variance.</b>
     Basin lotteries are real on alternation families (±8pp between identical runs);
     the design narrows the bad basin's probability, not the spread. Anyone
     A/B-testing versions there will eventually file a "regression" that is a coin
     flip; the first row of §11.2 exists for that conversation.</li>
-  <li><span class="lim lim-constructed">constructed-only</span><b>The aligned
+  <li><span class="lim lim-constructed">constructed-only</span> <b>The aligned
     position jam.</b> A workload that moves the window past the stillness band on
     <i>every</i> sample starves even the decayed clock (§7.3), a knife-edge that
     requires burst edges within ~¼ sample of the frozen grid, which nothing real
@@ -3853,14 +3966,14 @@ window = max(window + step, 0.02·C)</pre>
         requires alignment an attacker cannot aim and a periodic workload lands
         only by luck, the same exposure class as the grid's trace-start offset. The
         cost is not a forgone increment: at N=8 seeded the controller scores 56.08
-        ±0.05 against the hit-rate law's 65.37 ±0.20, a deterministic nine-point
-        regression against the climber this one replaced, and below that cell's LRU
-        of 64.9 where the reactive law is above it, on a shape the hit-rate law has
-        no failure mode for. The dose-matched flat control runs the other way, and
+        ±0.05 against the reactive climber's 65.37 ±0.20, a deterministic nine-point
+        regression against the law this tier replaced, and below that cell's LRU
+        of 64.9 where that law is above it, on a shape it has no failure mode
+        for. The dose-matched flat control runs the other way, and
         is the reason the finding is about the jam rather than the terrain: there
         the controller is 66.92 ±0.01 against the reactive arm's 64.61
         ±<b>10.71</b>, so on the same traffic without the jam it is both better and
-        deterministic where the hit-rate law is a lottery. The reachability scan
+        deterministic where the reactive climber is a lottery. The reachability scan
         comes back 0 of 14 real cells: real traffic holds stillness runs of 9–128
         samples with 1–15 audits armed per run against the jam's single-sample runs
         and zero; the nearest approach (corda) calibrates once on flat terrain,
@@ -3872,7 +3985,7 @@ window = max(window + step, 0.02·C)</pre>
         rests on, the clock that produced the last three severe findings, for a
         shape nothing real reaches.</p>
     </details></li>
-  <li><span class="lim lim-constructed">constructed-only</span><b>The
+  <li><span class="lim lim-constructed">constructed-only</span> <b>The
     density-inverted latch.</b> The deepest genuine pin (bandtrap2, 4.4 under LRU
     converged): a reuse band whose adjudication is density-inverted, where
     steering's own motion starves the audit clock.
@@ -3886,7 +3999,7 @@ window = max(window + step, 0.02·C)</pre>
         audits ever arm). Constructed-only: across the same fourteen real cells,
         stillness runs 9–128 samples with the audit layer live on every one.</p>
     </details></li>
-  <li><span class="lim lim-trade">priced trade</span><b>The zero-main prior.</b>
+  <li><span class="lim lim-trade">priced trade</span> <b>The zero-main prior.</b>
     §5.4's surviving asymmetry: after a total main blackout the window balloons and
     must walk home when the regime flips, the price of the prior that rescues a
     scan-filled main.
@@ -3976,28 +4089,34 @@ window = max(window + step, 0.02·C)</pre>
 </div>
 
 <h2 id="s12"><a class="hl" href="#s12">12 · Closing</a></h2>
-<p>The design in one paragraph, to check understanding against: <i>split the cache
-  into a recency window and a frequency-guarded main space, and size the window by
-  comparing what each region's slots earn within one sample, a signal in which the
-  workload's weather cancels, steered by proportional control that settles at
-  balance. That signal fails three ways, and each failure gets one machine. Where a
-  region is too starved to measure, run a real, budgeted, fully-undoable experiment,
-  judged against the honestly-priced alternative with evidence frozen against
-  self-contamination, retried on an escalating ladder that commits harder as it grows
-  patient. Where the signal is sighted but wrong, re-test held equilibria on a
-  schedule, judged by the goal metric, because a proxy cannot audit itself. And since
-  the whole controller optimizes a proxy, remember the best position the goal metric
-  has witnessed and refuse to stand anywhere measurably worse. Feed it only hits
-  that resident capacity earned. Below the sizes where per-region statistics work,
-  run the simple reactive climber instead. Everything else is a constant with a
-  story.</i></p>
-<p>That paragraph describes the goal-audited density climber; with the reactive tier
+<p>The design in brief, to check understanding against. Split the cache into a recency
+  window and a frequency-guarded main space, and size the window by comparing what each
+  region's slots earn within one sample, a signal in which the workload's weather
+  cancels, steered by proportional control that settles at balance.</p>
+<p>That signal fails three ways, and each failure gets one machine:</p>
+<ul>
+  <li><b>Blind.</b> Where a region is too starved to measure, run a real, budgeted,
+    fully-undoable experiment, judged against the honestly-priced alternative with
+    evidence frozen against self-contamination, retried on an escalating ladder that
+    commits harder as it grows patient.</li>
+  <li><b>Sighted but wrong.</b> Re-test held equilibria on a schedule, judged by the
+    goal metric, because a proxy cannot audit itself.</li>
+  <li><b>A proxy throughout.</b> Remember the best position the goal metric has
+    witnessed, and refuse to stand anywhere measurably worse.</li>
+</ul>
+<p>Feed it only hits that resident capacity earned. Below the sizes where per-region
+  statistics work, run the simple reactive climber instead. Everything else is a
+  constant with a story.</p>
+<p>That is the goal-audited density climber; with the reactive tier
   beneath it, it ships as the window climber. Going deeper:
   <code>WindowClimber.java</code> is the implementation, one plain
   class whose comments cross-reference these chapters; the trap gallery regenerates
   from deterministic generators bundled with the simulator; the appendix holds the
   measurement charts. The W-TinyLFU and adaptive-TinyLFU papers supply the substrate
   this design stands on.</p>
+<p>What the work buys is not a larger number on the public corpora, where the incumbent
+  was already near the ceiling. It is that the number holds on the workloads those
+  corpora do not contain.</p>
 
 
 <h2 id="appendix"><a class="hl" href="#appendix">Appendix · Measurements</a></h2>
@@ -4341,7 +4460,7 @@ window = max(window + step, 0.02·C)</pre>
 <p class="sans" style="color:var(--muted);font-size:0.9em">Only workloads where the two climbers measurably separate are
   charted; for every other trace the four lines overlap within noise across the whole ladder, and they are listed
   instead of plotted.</p>
-<h3 id="database-search-block-storage"><a class="hl" href="#database-search-block-storage">Database, search &amp; block storage (ARC suite)</a></h3>
+<h4 id="database-search-block-storage"><a class="hl" href="#database-search-block-storage">Database, search &amp; block storage (ARC suite)</a></h4>
 <div class="appgrid">
   <div class="appchart"><svg viewBox="0 0 352 208" role="img" font-family="system-ui,sans-serif" font-size="10"><title>P1 — hit rate across sizes</title>
       <line x1="40" y1="172.0" x2="342" y2="172.0" stroke="#e3e7eb" />
@@ -5523,7 +5642,7 @@ window = max(window + step, 0.02·C)</pre>
 </div>
 <p class="sans" style="color:var(--muted);font-size:0.85em">Within noise everywhere on their ladders: P3, P7, P13, S3,
   DS1, spc1likeread, MergeS.</p>
-<h3 id="file-mail-servers-msr"><a class="hl" href="#file-mail-servers-msr">File &amp; mail servers (MSR Cambridge, FIU) ◆</a></h3>
+<h4 id="file-mail-servers-msr"><a class="hl" href="#file-mail-servers-msr">File &amp; mail servers (MSR Cambridge, FIU) ◆</a></h4>
 <div class="appgrid">
   <div class="appchart"><svg viewBox="0 0 352 208" role="img" font-family="system-ui,sans-serif" font-size="10"><title>fiu_homes — hit rate across sizes</title>
       <line x1="40" y1="172.0" x2="342" y2="172.0" stroke="#e3e7eb" />
@@ -6285,7 +6404,7 @@ window = max(window + step, 0.02·C)</pre>
 </div>
 <p class="sans" style="color:var(--muted);font-size:0.85em">Within noise everywhere on their ladders: fiu_casa, ◆
   msr_hm0, ◆ msr_proj2, ◆ msr_mds1.</p>
-<h3 id="financial-search-storage-umass"><a class="hl" href="#financial-search-storage-umass">Financial &amp; search storage (UMass) ◆</a></h3>
+<h4 id="financial-search-storage-umass"><a class="hl" href="#financial-search-storage-umass">Financial &amp; search storage (UMass) ◆</a></h4>
 <div class="appgrid">
   <div class="appchart"><svg viewBox="0 0 352 208" role="img" font-family="system-ui,sans-serif" font-size="10"><title>◆ financial2 — hit rate across sizes</title>
       <line x1="40" y1="172.0" x2="342" y2="172.0" stroke="#e3e7eb" />
@@ -6377,7 +6496,7 @@ window = max(window + step, 0.02·C)</pre>
     <text x="40" y="202" fill="#5b6572" font-size="9">sizes: 16k 64k 256k 1024k 4096k</text>
     </svg></div>
 </div>
-<h3 id="social-kv-cdn"><a class="hl" href="#social-kv-cdn">Social / KV / CDN</a></h3>
+<h4 id="social-kv-cdn"><a class="hl" href="#social-kv-cdn">Social / KV / CDN</a></h4>
 <div class="appgrid">
   <div class="appchart"><svg viewBox="0 0 352 208" role="img" font-family="system-ui,sans-serif" font-size="10"><title>w50 — hit rate across sizes</title>
       <line x1="40" y1="172.0" x2="342" y2="172.0" stroke="#e3e7eb" />
@@ -6657,7 +6776,7 @@ window = max(window + step, 0.02·C)</pre>
     </svg></div>
 </div>
 <p class="sans" style="color:var(--muted);font-size:0.85em">Within noise everywhere on their ladders: w99.</p>
-<h3 id="blockchain-vault"><a class="hl" href="#blockchain-vault">Blockchain vault</a></h3>
+<h4 id="blockchain-vault"><a class="hl" href="#blockchain-vault">Blockchain vault</a></h4>
 <div class="appgrid">
   <div class="appchart"><svg viewBox="0 0 352 208" role="img" font-family="system-ui,sans-serif" font-size="10"><title>corda_large — hit rate across sizes</title>
       <line x1="40" y1="172.0" x2="342" y2="172.0" stroke="#e3e7eb" />
@@ -7159,13 +7278,7 @@ window = max(window + step, 0.02·C)</pre>
         var last = 0;
         var m;
         while ((m = re.exec(value)) !== null) {
-          // §3 is the incumbent chapter (id sinc); §4–§8 trail their ids by one
-          // (the survey is s3, …, memory is s7); §9 up align (s8 was retired long ago)
-          var num = parseInt(m[1], 10);
-          var sub = m[2] ? ('-' + m[2]) : '';
-          var id = (num === 3)
-              ? ('sinc' + sub)
-              : ('s' + (((num >= 4) && (num <= 8)) ? (num - 1) : num) + sub);
+          var id = 's' + m[1] + (m[2] ? ('-' + m[2]) : '');
           if (!document.getElementById(id) || (chapterOf(id) === index)) {
             continue;
           }

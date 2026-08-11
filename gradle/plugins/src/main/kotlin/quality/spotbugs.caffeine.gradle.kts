@@ -27,7 +27,7 @@ spotbugs {
   reportLevel = LOW
   useJavaToolchains = true
   toolVersion = libs.versions.spotbugs.asProvider()
-  excludeFilter = rootProject.layout.projectDirectory.file("gradle/config/spotbugs/exclude.xml")
+  excludeFilter = isolated.rootProject.projectDirectory.file("gradle/config/spotbugs/exclude.xml")
 }
 
 tasks.register("spotbugs") {

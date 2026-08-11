@@ -35,10 +35,10 @@ dependencies {
   implementation(plugin(libs.plugins.sonarqube))
   implementation(plugin(libs.plugins.jmh.report))
   implementation(plugin(libs.plugins.errorprone))
-  implementation(plugin(libs.plugins.nexus.publish))
   implementation(plugin(libs.plugins.forbidden.apis))
-  implementation(plugin(libs.plugins.jmh.asProvider()))
   implementation(plugin(libs.plugins.dependency.check))
+  implementation(plugin(libs.plugins.jmh.asProvider()))
+  implementation(plugin(libs.plugins.nmcp.asProvider()))
   implementation(plugin(libs.plugins.dependency.analysis))
   implementation(plugin(libs.plugins.jvm.dependency.conflict.resolution))
 

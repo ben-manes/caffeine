@@ -1,13 +1,24 @@
 plugins {
-  id("root.caffeine")
+  id("base.caffeine")
+  id("coverage.caffeine")
+  id("intellij.caffeine")
+  id("versions.caffeine")
+  id("sonarqube.caffeine")
+  id("dependency-check.caffeine")
+  alias(libs.plugins.nmcp.aggregation)
+  alias(libs.plugins.dependency.analysis)
 }
 
-allprojects {
-  description = "A high performance caching library"
-  group = "com.github.ben-manes.caffeine"
-  version(
-    major = 3, // incompatible API changes
-    minor = 2, // backwards-compatible additions
-    patch = 5, // backwards-compatible bug fixes
-    releaseBuild = providers.gradleProperty("release").isPresent)
+dependencies {
+  subprojects { nmcpAggregation(project(path)) }
+}
+
+nmcpAggregation {
+  allowDuplicateProjectNames = true
+  publishAllChecksums = true
+
+  centralPortal {
+    username = providers.gradleProperty("centralPortalUsername")
+    password = providers.gradleProperty("centralPortalPassword")
+  }
 }

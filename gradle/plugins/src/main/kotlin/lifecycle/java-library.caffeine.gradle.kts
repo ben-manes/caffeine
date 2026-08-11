@@ -17,6 +17,22 @@ plugins {
   id("dependency-analysis.caffeine")
 }
 
+val caffeineJavadoc = if (path == ":caffeine") {
+  configurations.consumable("javadocDirectoryElements") {
+    selectsJavadocDirectory()
+    outgoing.artifact(tasks.named<Javadoc>("javadoc").map { it.destinationDir!! })
+  }
+  null
+} else {
+  val caffeineJavadocScope = configurations.dependencyScope("caffeineJavadoc")
+  dependencies { add(caffeineJavadocScope.name, project(":caffeine")) }
+  configurations.resolvable("caffeineJavadocDirectory") {
+    extendsFrom(caffeineJavadocScope.get())
+    selectsJavadocDirectory()
+    isTransitive = false
+  }
+}
+
 dependencies {
   annotationProcessor(platform(libs.asm.bom))
   annotationProcessor(platform(libs.kotlin.bom))
@@ -112,7 +128,7 @@ tasks.withType<Javadoc>().configureEach {
     use()
     noTimestamp()
     addStringOption("-link-modularity-mismatch", "info")
-    // -snippet-path is set in doFirst to avoid absolute path in cache key
+    // -snippet-path and -linkoffline are set in doFirst to avoid absolute paths in cache key
     addStringOption("-release", java.toolchain.languageVersion.get().toString())
     links(
       "https://jspecify.dev/docs/api/",
@@ -120,23 +136,27 @@ tasks.withType<Javadoc>().configureEach {
       "https://lightbend.github.io/config/latest/api/",
       "https://guava.dev/releases/${libs.versions.guava.get()}/api/docs/",
       "https://docs.oracle.com/en/java/javase/${java.toolchain.languageVersion.get()}/docs/api/")
-    val caffeine = project(":caffeine")
-    if (project != caffeine) {
-      linksOffline("https://static.javadoc.io/$group/caffeine/$version/",
-        relativePath(caffeine.layout.buildDirectory.dir("docs/javadoc")))
-      inputs.files(caffeine.tasks.withType<Javadoc>().map { it.outputs.files })
-        .withPathSensitivity(RELATIVE)
-    }
-  }
-  doFirst {
-    javadocOptions {
-      addStringOption("-snippet-path", snippetPath.asFile.absolutePath)
-    }
   }
   javadocTool = javaToolchains.javadocToolFor {
     vendor = java.toolchain.vendor
     languageVersion = javaRuntimeVersion
     implementation = java.toolchain.implementation
     nativeImageCapable = java.toolchain.nativeImageCapable
+  }
+
+  val caffeineJavadocUrl = "https://static.javadoc.io/${project.group}/caffeine/${project.version}/"
+  val caffeineJavadocDir = caffeineJavadoc?.let { files(it) }
+  if (caffeineJavadocDir != null) {
+    inputs.files(caffeineJavadocDir)
+      .withPathSensitivity(RELATIVE)
+      .withPropertyName("caffeineJavadoc")
+  }
+  doFirst {
+    javadocOptions {
+      addStringOption("-snippet-path", snippetPath.asFile.absolutePath)
+      if (caffeineJavadocDir != null) {
+        linksOffline(caffeineJavadocUrl, caffeineJavadocDir.singleFile.absolutePath)
+      }
+    }
   }
 }

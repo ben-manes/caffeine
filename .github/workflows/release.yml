@@ -30,14 +30,12 @@ jobs:
       - name: Releasing
         uses: ./.github/actions/run-gradle
         env:
-          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
           ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_centralPortalUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_centralPortalPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: >
-            publishToSonatype closeAndReleaseSonatypeStagingRepository -Prelease
-            --no-configuration-cache
+          arguments: publishAggregationToCentralPortal -Pversion.release=true

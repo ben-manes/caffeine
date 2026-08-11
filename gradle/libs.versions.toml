@@ -9,7 +9,7 @@ bouncycastle-jdk18on = "1.85"
 cache2k = "2.6.1.Final"
 caffeine = "3.2.4"
 coherence = "26.04"
-commons-collections4 = "4.5.0"
+commons-collections4 = "4.6.0"
 commons-compress = "1.28.0"
 commons-lang3 = "3.20.0"
 commons-math3 = "3.6.1"
@@ -72,7 +72,7 @@ kotlin = "2.4.10"
 lincheck = "3.7"
 log4j = "2.26.1"
 mockito = "5.23.0"
-nexus-publish = "2.0.0"
+nmcp = "1.6.1"
 nullaway = "0.13.8"
 nullaway-plugin = "3.1.0"
 okhttp = "5.4.0"
@@ -247,7 +247,8 @@ idea = { id = "org.jetbrains.gradle.plugin.idea-ext", version.ref = "idea" }
 jmh = { id = "me.champeau.jmh", version.ref = "jmh-plugin" }
 jmh-report = { id = "io.morethan.jmhreport", version.ref = "jmh-report" }
 jvm-dependency-conflict-resolution = { id = "org.gradlex.jvm-dependency-conflict-resolution", version.ref = "jvm-dependency-conflict-resolution" }
-nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
+nmcp = { id = "com.gradleup.nmcp", version.ref = "nmcp" }
+nmcp-aggregation = { id = "com.gradleup.nmcp.aggregation", version.ref = "nmcp" }
 nullaway = { id = "net.ltgt.nullaway", version.ref = "nullaway-plugin" }
 pitest = { id = "info.solidsoft.pitest", version.ref = "pitest-plugin" }
 sigstore = { id = "dev.sigstore.sign", version.ref = "sigstore" }
