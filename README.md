@@ -83,6 +83,7 @@ Powering infrastructure near you:
 * An in-depth description of Caffeine's architecture.
   * [Design of a Modern Cache: part #1][modern-cache-1], [part #2][modern-cache-2]
     ([slides][modern-cache-slides]) at [HighScalability][]
+  * [The Adaptive Window, From the Ground Up][adaptive-window] on optimizing shifting workloads
 * Caffeine is presented as part of research papers evaluating its novel eviction policy.
   * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu]
     by Gil Einziger, Roy Friedman, Ben Manes
@@ -162,3 +163,4 @@ Snapshots of the development version are available in
 [aedile]: https://github.com/sksamuel/aedile
 [bootique]: https://bootique.io/
 [caffeine-coroutines]: https://github.com/be-hase/caffeine-coroutines
+[adaptive-window]: https://htmlpreview.github.io/?https://github.com/ben-manes/caffeine/blob/master/.claude/docs/adaptive-window.html

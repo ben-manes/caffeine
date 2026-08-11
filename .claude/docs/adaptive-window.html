@@ -1,9 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How Caffeine adapts the W-TinyLFU admission window at runtime.">
 <title>The Adaptive Window, From the Ground Up</title>
 <style>
   a.hl { color: inherit; text-decoration: none }
   a.hl:hover, a.hl:focus { text-decoration: underline; text-underline-offset: 3px;
          text-decoration-color: var(--muted, #5b6572) }
-  h2, h3 { scroll-margin-top: 1em }
+  h2, h3, h4 { scroll-margin-top: 1em }
 
   /* declared so the browser's own dark rendering and dark-mode extensions leave the
      page alone; without it they re-darken text this stylesheet has already lightened */
@@ -14,9 +20,9 @@
     --grid: #e3e7eb;
     --surface: #ffffff;
     --card: #f6f8fa;
-    --blue: #2a78d6;
-    --orange: #eb6834;
-    --aqua: #1baf7a;
+    --blue: #1769b0;
+    --orange: #c24b20;
+    --aqua: #087a53;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -51,9 +57,9 @@
     --grid: #e3e7eb;
     --surface: #ffffff;
     --card: #f6f8fa;
-    --blue: #2a78d6;
-    --orange: #eb6834;
-    --aqua: #1baf7a;
+    --blue: #1769b0;
+    --orange: #c24b20;
+    --aqua: #087a53;
   }
 
   body {
@@ -111,6 +117,34 @@
     height: auto;
   }
 
+  @media (max-width: 760px) {
+    body {
+      padding: 72px 16px 70px;
+      font-size: 18px;
+    }
+
+    h1 {
+      font-size: 1.65em;
+    }
+
+    figure {
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      scrollbar-gutter: stable;
+    }
+
+    figure svg {
+      width: 640px;
+      min-width: 640px;
+    }
+
+    figure figcaption {
+      position: sticky;
+      left: 0;
+      width: calc(100vw - 32px);
+    }
+  }
+
   figcaption {
     color: var(--muted);
     font-size: 0.86em;
@@ -143,6 +177,25 @@
   th {
     color: var(--muted);
     font-weight: 600;
+  }
+
+  caption {
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-align: left;
+    font-weight: 600;
+  }
+
+  caption.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
   }
 
   .gloss {
@@ -226,6 +279,33 @@
 
   figure svg rect[fill="#f6f8fa"] {
     fill: var(--card);
+  }
+
+  /* Keep small accent labels readable in the light theme. Data strokes retain the
+     brighter plotting palette; text uses the darker interface colors. */
+  figure svg text[fill="#2a78d6"],
+  .appchart svg text[fill="#2a78d6"] {
+    fill: var(--blue);
+  }
+
+  figure svg text[fill="#eb6834"],
+  .appchart svg text[fill="#eb6834"] {
+    fill: var(--orange);
+  }
+
+  figure svg text[fill="#1baf7a"],
+  .appchart svg text[fill="#1baf7a"] {
+    fill: var(--aqua);
+  }
+
+  figure svg :is(line, polyline, path, rect, circle)[stroke="#1baf7a"],
+  .appchart svg :is(line, polyline, path, rect, circle)[stroke="#1baf7a"] {
+    stroke: var(--aqua);
+  }
+
+  figure svg :is(path, rect, circle)[fill="#1baf7a"],
+  .appchart svg :is(path, rect, circle)[fill="#1baf7a"] {
+    fill: var(--aqua);
   }
 
   /* reference lines and secondary markers track the muted text tone, which the
@@ -392,6 +472,7 @@
     cursor: pointer;
     font-family: system-ui, -apple-system, sans-serif;
     font-size: 0.9em;
+    padding: 5px 0;
     color: var(--muted);
   }
 
@@ -408,34 +489,264 @@
     background: rgba(227, 73, 72, 0.10);
   }
 
+  .machine-map {
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  .machine-map table {
+    font-size: 0.9em;
+    margin: 10px 0 0;
+    table-layout: fixed;
+  }
+
+  .machine-map th:nth-child(1) { width: 34% }
+  .machine-map th:nth-child(2) { width: 27% }
+  .machine-map th:nth-child(3) { width: 39% }
+
+  .measurement-key .term {
+    display: block;
+    margin: 2px 0;
+  }
+
+  .appgrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .appchart {
+    flex: 1 1 340px;
+    max-width: 400px;
+  }
+
+  .appchart svg {
+    width: 100%;
+    height: auto;
+  }
+
+  #themeToggle,
+  #tocToggle {
+    position: fixed;
+    top: 14px;
+    z-index: 20;
+    min-width: 44px;
+    height: 44px;
+    border: 1px solid var(--grid);
+    border-radius: 22px;
+    background: var(--card);
+    color: var(--ink);
+    cursor: pointer;
+    font: 600 14px/1 system-ui, -apple-system, sans-serif;
+  }
+
+  #themeToggle {
+    right: 16px;
+    width: 44px;
+    padding: 0;
+    font-size: 17px;
+  }
+
+  #tocToggle {
+    left: 16px;
+    display: none;
+    padding: 0 14px;
+  }
+
+  #themeToggle:hover,
+  #tocToggle:hover {
+    border-color: var(--muted);
+  }
+
+  :is(a, button, summary):focus-visible {
+    outline: 3px solid var(--blue);
+    outline-offset: 3px;
+  }
+
+  #toc {
+    display: none;
+    position: fixed;
+    top: 64px;
+    width: 270px;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 0.88rem;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+
+  #toc > b {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--ink);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  #viewToggle {
+    margin-bottom: 9px;
+    font-size: 0.82rem;
+  }
+
+  #viewToggle a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  #viewToggle a + a::before {
+    content: " · ";
+    color: var(--muted);
+  }
+
+  #viewToggle a.active {
+    color: var(--blue);
+    font-weight: 600;
+  }
+
+  #toc ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-left: 2px solid var(--grid);
+  }
+
+  #toc a {
+    display: block;
+    padding: 5px 8px 5px 10px;
+    color: inherit;
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    margin-left: -2px;
+  }
+
+  #toc li.h3 a {
+    padding-left: 24px;
+    font-size: 0.84rem;
+  }
+
+  #toc li.h4 a {
+    padding-left: 38px;
+    font-size: 0.8rem;
+  }
+
+  #toc a:hover {
+    color: var(--ink);
+  }
+
+  #toc a.active {
+    color: var(--blue);
+    border-left-color: var(--blue);
+    font-weight: 600;
+  }
+
+  a.secref {
+    color: var(--blue);
+    text-decoration: none;
+  }
+
+  a.secref:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  @media (min-width: 1360px) {
+    #toc:not([hidden]) {
+      display: block;
+      right: max(16px, calc(50vw - 686px));
+    }
+  }
+
+  @media (max-width: 1359px) {
+    #tocToggle:not([hidden]) {
+      display: block;
+    }
+
+    #toc.open:not([hidden]) {
+      display: block;
+      left: 16px;
+      width: min(360px, calc(100vw - 32px));
+      box-sizing: border-box;
+      padding: 14px 16px;
+      border: 1px solid var(--grid);
+      border-radius: 12px;
+      background: var(--surface);
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18);
+      z-index: 19;
+    }
+  }
+
+  @media (max-width: 960px) {
+    body {
+      padding-top: 72px;
+    }
+  }
+
+  body.chapterview section.chapter {
+    display: none;
+  }
+
+  body.chapterview section.chapter.current {
+    display: block;
+  }
+
+  body.chapterview.pastintro .introonly {
+    display: none;
+  }
+
   #chapternav {
     display: flex;
     justify-content: space-between;
     gap: 16px;
-    margin-top: 40px;
+    margin-top: 44px;
     padding-top: 14px;
     border-top: 1px solid var(--grid);
     font-family: system-ui, -apple-system, sans-serif;
     font-size: 0.85em;
   }
 
+  #chapternav[hidden] {
+    display: none;
+  }
+
   #chapternav a {
     color: var(--blue);
     text-decoration: none;
-    max-width: 45%;
+    max-width: 46%;
   }
 
   #chapternav a:hover {
     text-decoration: underline;
   }
+
+  #chapternav a:empty {
+    visibility: hidden;
+  }
+
+  @media print {
+    #toc,
+    #tocToggle,
+    #themeToggle,
+    #chapternav {
+      display: none;
+    }
+
+    body.chapterview section.chapter {
+      display: block;
+    }
+  }
 </style>
+
+</head>
+<body>
 
 <h1>The Adaptive Window, From the Ground Up</h1>
 <p class="byline introonly">How Caffeine decides, at runtime, how much of the cache should serve
   recency and how much should serve frequency: the problem, why it is hard, the design
-  that held for a decade, the designs that fail, and the one that ships. Written for a reader who knows caching well but was
-  not on this project's journey. Every design choice arrives with the measurement that
-  forced it.</p>
+  that held for a decade, the designs that fail, and the tiered controller that ships
+  today. Written for a reader who knows caching well but was not on this project's
+  journey. Every design choice arrives with the measurement that forced it.</p>
 
 <div class="box introonly">
   <b>Part I (§1–§4)</b> is the problem: what the window
@@ -444,7 +755,7 @@
   <b>Part II (§5–§9)</b> builds the shipped controller one mechanism at a time,
   each introduced by the failure it prevents.<br>
   <b>Part III (§10–§12)</b> is the evidence and a field guide. Sections are self-contained chapters;
-  use the rail to jump. The folded asides are the maintainer's record, pricing each
+  use <b>Contents</b> to jump. The folded asides are the maintainer's record, pricing each
   decision and naming the traces and dead alternatives behind it; nothing in the main
   line depends on opening them.</div>
 
@@ -668,7 +979,7 @@
   <figcaption>Fig. 3 — Hit rate under every fixed split, one simulation per point: every curve is a different answer, and the answers also move with cache size and with time.</figcaption>
 </figure>
 <p>Three consequences frame everything that follows. Adaptation is worth real points
-  (mid single digits on honest workloads, which for a cache in front of a database is
+  (mid single digits on representative workloads, which for a cache in front of a database is
   often a double-digit reduction in backend load). The optimum is a property of
   (workload, capacity), not workload alone: a reuse pattern that fits beside the hot
   head at one size competes with it at another. And no configuration-time answer
@@ -832,10 +1143,12 @@
   a "ghost hit" says <i>you evicted this too soon</i>, and each ghost list acts as a
   gravitational pull on the split, the hope being that opposing pulls settle at the
   right equilibrium. Caffeine rejects this family deliberately, and the deeper reason
-  is worth being precise about. A ghost hit answers "would this <i>key</i> have
+  is worth being precise about.</p>
+<p>A ghost hit answers "would this <i>key</i> have
   survived?", but pricing a resize needs "would this <i>allocation</i> earn more?", and those differ in both directions. The region might have needed to be far larger
   than the ghost implies before that key survived, with everything displaced from the
-  other region silently charged against the move. And the benefit of growing a region
+  other region silently charged against the move.</p>
+<p>The benefit of growing a region
   is not uniform: it can be near zero until the region spans a reuse distance, then
   large (shape B above), so the marginal nudge a ghost hit justifies never crosses the
   gap. Sometimes the right decision is even to shrink a region and accept its losses
@@ -949,20 +1262,26 @@
     by construction. The move that worked was not "avoid regulation" but <b>put the
     integrator on a signal that has a true zero</b>, which is also why §4.2's failure
     does not generalize to §5.</p>
-  <p>The rest of the design has standing names too, and they are load-bearing when
-    judging a proposed change: the anchor and guard rail of §8 are <i>hysteresis
-    switching</i> with §8.1's margin as the hysteresis constant (Morse, Mayne &amp;
-    Goodwin 1992), the doubling ladders of §6 are <i>average dwell time</i> (Hespanha
-    &amp; Morse 1999), the probes and audits of §6–§7 are <i>dual control</i>: steering
-    has no <i>dual effect</i> on what it cannot see, so a probing term must supply it
-    (Feldbaum 1960–61; Bar-Shalom &amp; Tse 1974), and the probe verdict is
-    <i>unfalsified control</i>: keep the candidate until the data collected while it was
-    in charge refutes it, with no plant model (Safonov &amp; Tsao 1997). The shipped
-    machine is therefore an event-triggered, <i>non-dithering</i> extremum seeker, and
-    that too is derivable rather than stylistic: classical extremum seeking adds a
-    continuous dither and correlates the output with it, which pays §2.3's motion cost
-    on every sample (corda: every fixed window 33.3, an always-moving climber 22.8), so
-    intermittent, revertible, adjudicated excitation strictly dominates it here.</p>
+  <p>The rest of the design also has established control-theory names. They matter
+    when judging whether a proposed change preserves the mechanism:</p>
+  <ul>
+    <li>The anchor and guard rail of §8 are <i>hysteresis switching</i>, with §8.1's
+      margin as the hysteresis constant (Morse, Mayne &amp; Goodwin 1992).</li>
+    <li>The doubling ladders of §6 are <i>average dwell time</i> (Hespanha &amp;
+      Morse 1999).</li>
+    <li>The probes and audits of §6–§7 are <i>dual control</i>: steering has no
+      dual effect on what it cannot see, so a probing term supplies it (Feldbaum
+      1960–61; Bar-Shalom &amp; Tse 1974).</li>
+    <li>The probe verdict is <i>unfalsified control</i>: keep the candidate until
+      evidence collected while it was in charge refutes it, without a plant model
+      (Safonov &amp; Tsao 1997).</li>
+  </ul>
+  <p>Together these make the shipped machine an event-triggered,
+    <i>non-dithering</i> extremum seeker, and that too is derivable rather than
+    stylistic. Classical extremum seeking adds a continuous dither and correlates the
+    output with it, paying §2.3's motion cost on every sample (corda: every fixed
+    window 33.3, an always-moving climber 22.8), so intermittent, revertible,
+    adjudicated excitation strictly dominates it here.</p>
 </details>
 
 <h3 id="s2-6"><a class="hl" href="#s2-6">2.6 The failure-mode checklist</a></h3>
@@ -970,11 +1289,12 @@
   Their names recur through the rest of the document.</p>
 <div class="tablewrap">
   <table>
+    <caption class="sr-only">Six failure modes an adaptive-window design must answer</caption>
     <tr>
-      <th>&nbsp;&nbsp;#&nbsp;&nbsp;&nbsp;</th>
-      <th>failure mode</th>
-      <th>the trap in one sentence</th>
-      <th>answered in</th>
+      <th scope="col">&nbsp;&nbsp;#&nbsp;&nbsp;&nbsp;</th>
+      <th scope="col">failure mode</th>
+      <th scope="col">the trap in one sentence</th>
+      <th scope="col">answered in</th>
     </tr>
     <tr>
       <td>F-1</td>
@@ -1086,12 +1406,14 @@
 <p>Each constant is doing a job, and none of them was derived: they were found
   empirically against the stress test in §3.2. The period borrows the admission sketch's
   own aging sample, ten times capacity: long enough that a 1% window's hits are
-  countable, short enough that a workload era contains several decisions. The 6.25% seed
+  countable, short enough that a workload era contains several decisions.</p>
+<p>The 6.25% seed
   is 1/16 of the range, floored at two entries so small caches can move at all; sixteen
   unreversed steps cross the whole range. The decay is the convergence the original
   implementation added when the raw Middleware climber kept oscillating around the best
   split. At 2% per sample the step halves in about 34 samples, annealing on an era's
-  timescale rather than a trace's, since the restart re-arms it. The five-point restart
+  timescale rather than a trace's, since the restart re-arms it.</p>
+<p>The five-point restart
   bar sits above per-sample weather on quiet traces (±1–3pp, §2.4) and far below a
   genuine era flip, which is measured in tens of points. Below 512 entries the same law
   runs gentler (grow-first, stretched period, slower decay) for §9.1's statistical
@@ -1233,14 +1555,16 @@
   battery runs against. On the adversarial gate's 51 paired rows it is ahead of the
   shipped machine on 18, and on 28 the machine's edge is under a point. On the real
   205-cell corpus the machine wins significantly on 41 cells and loses on 9, everything
-  else a tie, for a whole-corpus mean edge of +0.38pp. Both directions are true at once:
+  else a tie, for a whole-corpus mean edge of +0.38pp.</p>
+<p>Both directions are true at once:
   most workloads never needed the machine, and the ones that did, where a signal starves
-  or an optimum sits across a plateau, needed it badly. The reactive law's own real-trace
+  or an optimum sits across a plateau, needed it badly.</p>
+<p>The reactive law's own real-trace
   losses have one shape: where frequency should own nearly everything it hovers above the
   tiny optimal window and pays for the visit, occasionally landing under LRU, and where
   the optimum is far away at scale it crawls (§3.5). On sharp frequency cliffs,
   meanwhile, it matches the static optimum that the density signal's bias gives away. One
-  measurement hazard: on constructed traps its runs are bimodal, so a single-seed
+  measurement hazard remains: on constructed traps its runs are bimodal, so a single-seed
   comparison reads near-parity and is wrong. Use three runs, or a seeded pair.</p>
 
 <h3 id="s3-5"><a class="hl" href="#s3-5">3.5 Where it breaks</a></h3>
@@ -1317,19 +1641,21 @@
 <p>For many caches, yes. This is the document's off-ramp. Below a few thousand entries it
   is not a compromise at all: it is what Caffeine runs today, because at those sizes a
   sample does not contain the information the density signal needs (§9.1). Above them it
-  is still a pragmatic choice. Twenty lines, one remembered rate, one signed step; easy
+  is still a pragmatic choice.</p>
+<p>Twenty lines, one remembered rate, one signed step: easy
   to maintain, easy to reason about, and it recovers from any confusion by construction.
   §3.5's prices are real, but they are collected mostly on adversarial constructions and
   at scales the tiering now assigns to the machine; on ordinary traffic this law is
-  usually within a point of the best Caffeine can do (§3.4). The successor did not come
+  usually within a point of the best Caffeine can do (§3.4).</p>
+<p>The successor did not come
   from users asking for more. It came from asking whether the defaults could be better,
   and from a willingness to spend internal complexity so that they are. If that is not a
-  budget you want to carry, ship this chapter, with two rules: measure any variant at
+  budget you want to carry, ship this chapter. Follow two rules: measure any variant at
   three runs or more (§3.4), and if you extend the law's commitment in any way, add the
   window floor its reversal was silently providing (§3.3). The rest of this document is
   what "better" costs.</p>
 
-<h2 id="s4"><a class="hl" href="#s4">4 · The design space: six families, and where each breaks</a></h2>
+<h2 id="s4"><a class="hl" href="#s4">4 · The design space: seven families, and where each breaks</a></h2>
 <p class="chapterlede">Most plausible answers to §2 were actually built and measured in
   this project's history. This chapter is the map: each family gets its idea, its
   virtue, and the measured way it breaks. The shipped controller is a composition of
@@ -1438,7 +1764,7 @@
 <p>If <var>HR</var>(<var>w</var>) were a parametric curve, a controller could fit it
   from a few probed points and jump to the argmax. Fig. 3 is the refutation: plateaus,
   cliffs, and steps are not quadratics, so a parabola fit invents a maximum wherever
-  the noise leans. The family also pays §2.2 twice: honestly measuring each fit point
+  the noise leans. The family also pays §2.2 twice: measuring each fit point
   costs an excursion plus settling time, and the workload drifts out from under the
   fit while you collect them. Measured: unstable jumps, no configuration that beat the
   simple climbers.</p>
@@ -1546,6 +1872,26 @@
   chapter derives the signal, shows why the weather cancels out of it, sets its three
   constants, and then states plainly what it cannot do. The three things it cannot do
   are the next three chapters.</p>
+<div class="box machine-map">
+  <b>Part II at a glance.</b> Density steering is the default. Each other mechanism
+  activates only when the default signal cannot answer a specific question.
+  <div class="tablewrap">
+    <table>
+      <caption>How the window climber chooses a decision path</caption>
+      <thead>
+        <tr><th scope="col">condition</th><th scope="col">mechanism</th><th scope="col">judge</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>C ≤ 4096</td><td>reactive climber (§3)</td><td>hit-rate direction</td></tr>
+        <tr><td>ordinary large-cache sample</td><td>density steering (§5)</td><td>regional hit density</td></tr>
+        <tr><td>small region is starved</td><td>probe walk (§6)</td><td>density against the frozen displaced edge</td></tr>
+        <tr><td>position has remained still</td><td>audit walk (§7)</td><td>hit rate against a frozen reference</td></tr>
+        <tr><td>sustained shortfall from a proven position</td><td>anchor veto (§8)</td><td>noise-cleared hit-rate margin</td></tr>
+      </tbody>
+    </table>
+  </div>
+  Chapter 9 follows one sample through these paths in priority order.
+</div>
 <details class="fold">
   <summary>The vocabulary of Part II</summary>
   <ul>
@@ -1558,7 +1904,8 @@
       (§9.1).</li>
     <li><b>Window / probation / protected</b> — the recency region that admits every
       arrival, and main's two segments behind the TinyLFU filter (§1.2).</li>
-    <li><b>Floor</b> — the smallest window the climber will hold, ~1% of capacity.</li>
+    <li><b>Floor</b> — the density tier's signal-capable lower bound, 2% of capacity.
+      The window starts near 1% and is lifted on its first density decision.</li>
     <li><b>Sample</b> — one decision's worth of requests, 4·C at this tier (§5.5).</li>
     <li><b>Density</b> — a region's hits per slot within one sample (§5.1).</li>
     <li><b>Weather vs climate</b> — sample-scale scatter vs the level it obscures (§2.4).</li>
@@ -1592,10 +1939,10 @@
 <pre>d<sub>w</sub> = windowHits / windowSize        d<sub>m</sub> = mainHits / (C − windowSize)</pre>
 <p>If <var>d<sub>w</sub></var> &gt; <var>d<sub>m</sub></var>, window slots are
   out-earning main slots and the split should shift toward the window; the reverse
-  shrinks it; equality is rest. This is ordinary economics, equalize marginal returns
-  across investments, implemented with two integer counters. (The word "marginal" is
-  doing quiet work there; §5.6 confesses how much.) The steering error is the log of
-  the ratio,</p>
+  shrinks it; equality is rest. This is an average-yield proxy for the economic goal
+  of equalizing marginal returns, implemented with two integer counters. The
+  distinction matters: §5.6 measures the bias it introduces. The steering error is
+  the log of the ratio,</p>
 <pre>error = ln(d<sub>w</sub> / d<sub>m</sub>)</pre>
 <p>logged for symmetry: "the window earns 3× main" and "main earns 3× the window"
   become +1.10 and −1.10 rather than 3.0 and 0.33. The signed error says which way
@@ -2397,7 +2744,8 @@ window = max(window + step, 0.02·C)</pre>
   absolute earnings grow with C while the bar tracks the sample, so the trap family
   that probes rescue at 8k re-pins quietly at 32k and above.</div>
 
-<h3 id="s7-2"><a class="hl" href="#s7-2">7.2 The audit, and why density cannot judge it</a></h3>
+<h3 id="s7-2"><a class="hl" href="#s7-2">7.2 The audit contract</a></h3>
+<h4 id="s7-2-1"><a class="hl" href="#s7-2-1">7.2.1 When audits arm</a></h4>
 <div class="rule"><b>The audit.</b> When the window has held one position (within a
   2%-of-C band) for 32 consecutive samples, arm the §6 machine from the held
   equilibrium, walking toward the farther wall. The first audit after a (re)size is
@@ -2407,16 +2755,21 @@ window = max(window + step, 0.02·C)</pre>
   rung and crash streak, and only a completed <i>failure</i> at the deepest rung
   doubles the wait between audits, up to 512 samples, so a settled workload is
   re-tested ever more rarely.</div>
+<h4 id="s7-2-2"><a class="hl" href="#s7-2-2">7.2.2 One walker, two contracts</a></h4>
 <p>Both triggers drive the same walker, so the two are easiest to read side by side. The
   strides, the exits and the budget are shared; the arming, the pricing, the judge and
   the retry schedule are not:</p>
 <div class="tablewrap">
   <table>
-    <tr>
-      <th>&nbsp;</th>
-      <th>starvation probe (§6)</th>
-      <th>audit (§7)</th>
-    </tr>
+    <caption>Where starvation probes and audits differ</caption>
+    <thead>
+      <tr>
+        <th scope="col">contract</th>
+        <th scope="col">starvation probe (§6)</th>
+        <th scope="col">audit (§7)</th>
+      </tr>
+    </thead>
+    <tbody>
     <tr>
       <td><b>arms when</b></td>
       <td>the starved region is the small one</td>
@@ -2466,6 +2819,7 @@ window = max(window + step, 0.02·C)</pre>
       <td>undo in full; the wait doubles toward 512 only on a completed failure at
         the deepest rung, and a crash never moves it</td>
     </tr>
+    </tbody>
   </table>
 </div>
 <p>Both are bounded at sixteen samples, and the two ladders are strictly separate: an
@@ -2505,6 +2859,7 @@ window = max(window + step, 0.02·C)</pre>
     or streak-escalated, keeps the cadence at any rung, because deferring the retry
     is exactly what an exogenous pulse train would want.</p>
 </details>
+<h4 id="s7-2-3"><a class="hl" href="#s7-2-3">7.2.3 Why hit rate judges the audit</a></h4>
 <p>One question decides whether audits work: who judges the walk? The first
   implementation reused the probe's density verdict and failed in the most
   instructive way in this project. On a wide-window equilibrium the audit walked the
@@ -2528,7 +2883,7 @@ window = max(window + step, 0.02·C)</pre>
     inert on every real cell of a 32-trace corpus: bars of 4.3–62.4pp (median 20.7)
     against 1–10pp effects, the 1pp floor binding on none, with instrumented walks
     measuring real +5.4pp and +11pp gains and rejecting them. A consecutive run
-    prices the bar by run-length statistics instead: honestly, a sensitivity gain
+    prices the bar by run-length statistics instead: a sensitivity gain
     of roughly 2–3×, not noise-independence: the walk offers about a dozen
     overlapping chances, so a genuinely neutral position under symmetric scatter
     still leaks confirms at a material rate (the priced costs on trending openings
@@ -2559,36 +2914,32 @@ window = max(window + step, 0.02·C)</pre>
     cold-start misconfirm never beats it at all (−0.18pp).</p>
 </details>
 
-<p>Measured effect: the whisper pin converts from 9 points below LRU to 2 above it
-  (55.5 → 66.8 against 64.6; the streak verdict buys the escape and the cold-start
-  calibration removes the pinned prefix) and holds under hit-rate weather that the
-  deviation-priced verdict could not survive (±8pp modulation at period 12: 65.2,
-  still above LRU; period 6: 64.5 ≈ LRU, above the reactive climber's 59.4; the
-  deeper dose whose scatter crosses the audit's crash bar once killed the layer
-  mid-walk, and the crash-streak tolerance of §6.4 heals it to within half a point
-  of LRU). The mixture-with-modulation dose that re-pinned the audit clears LRU on
-  every seed (48.0 → 56.6 against 55.3; the ~2 points left to the undosed arm is
-  the modulation slowing the early escape, not the audit dying), and the at-scale
-  pins escape as far as each trace's length lets the ladder escalate. On the real
-  corpus the layer measures as neutral insurance (−0.03pp mean); the streak verdict
-  and the fresh-park shield additionally recover part of the corpus's own worst
-  residual (cp_w097@16384 +2.2 of a −6.3 gap to the reactive climber: the audit
-  walks to the 7.5% optimum and confirms there; the remainder is park retention
-  between audit cycles, §11).</p>
-<p>The layer as a whole is priced against its own absence. Across the 52-row
-  constructed battery, removing it costs 268 points in total over the 31 rows it
-  helps and returns 13 over the 16 it hurts (about 21:1, the worst single row
-  costing 2.4), and the gain is structural rather than diffuse: the audit-free arm
-  collapses to a shared ~55.5 across the eleven rows of the whisper / jam /
-  pulse-train family and to 31–35 across the at-scale mixture pins, one pin
-  apiece, with the layer being what escapes each. The costs land on terrain
-  already far above LRU; they are the duty-cycle price §11 carries. One reading
-  discipline came with the measurement: on the bimodal alternation rows a battery
-  mean cannot be read at all: seeded at N=8 with arms rotated, the layer is
-  roughly inert there, and the value on those rows belongs to the density tier
-  rather than to this layer.</p>
+<h4 id="s7-2-4"><a class="hl" href="#s7-2-4">7.2.4 What the audit buys</a></h4>
+<p><b>Sighted false equilibrium.</b> The whisper pin converts from 9 points below LRU
+  to 2 above it: 55.5 → 66.8 against 64.6. The streak verdict buys the escape, and
+  cold-start calibration removes the pinned prefix.</p>
+<p><b>Hit-rate weather.</b> The escape survives modulation that defeated the
+  deviation-priced verdict. At ±8pp, it reaches 65.2 with period 12 and 64.5 with
+  period 6—approximately LRU and above the reactive climber's 59.4. A deeper dose
+  crosses the audit's crash bar once; §6.4's crash-streak tolerance repairs that
+  failure to within half a point of LRU. The mixture-with-modulation dose clears LRU
+  on every seed (48.0 → 56.6 against 55.3), and the at-scale pins escape as far as
+  each trace lets the ladder escalate.</p>
+<p><b>Real corpus.</b> The layer is neutral insurance on average (−0.03pp). The streak
+  verdict and fresh-park shield also recover 2.2 points of cp_w097@16384's −6.3-point
+  gap to the reactive climber: the audit walks to the 7.5% optimum and confirms
+  there; §11 explains the remaining park-retention cost.</p>
+<p><b>Layer ablation.</b> Across the 52-row constructed battery, removing the audit
+  costs 268 points over the 31 rows it helps and returns 13 over the 16 it hurts—about
+  21:1, with a worst single-row cost of 2.4. The gain is concentrated: without the
+  audit, all eleven whisper / jam / pulse-train rows collapse to about 55.5, and the
+  at-scale mixture pins collapse to 31–35. The rows it hurts are already far above
+  LRU; those losses are the duty-cycle price carried into §11.</p>
+<p><b>Reading rule.</b> Do not attribute the bimodal-alternation battery mean to this
+  layer. With N=8 and the arms rotated, the audit is roughly inert there; the density
+  tier produces the value on those rows.</p>
 <figure>
-<svg viewBox="0 0 740 240" role="img" font-family="system-ui,sans-serif" font-size="11.5">
+<svg viewBox="0 0 740 266" role="img" font-family="system-ui,sans-serif" font-size="11.5">
     <title>the sighted false equilibrium — before and after the audit</title>
 
     <line x1="46" y1="206.0" x2="726" y2="206.0" stroke="#e3e7eb" />
@@ -2647,9 +2998,10 @@ window = max(window + step, 0.02·C)</pre>
     <text x="546" y="130.1" text-anchor="middle" fill="#1a1f24" font-size="9.5" class="ann">32.0</text>
     <text x="602" y="85.7" text-anchor="middle" fill="#1a1f24" font-size="9.5" class="ann">51.7</text>
     <text x="574" y="226" text-anchor="middle" fill="#5b6572">mixture d025 @65536 · long</text>
-    <text x="46" y="240" fill="#5b6572"><tspan fill="#eb6834" font-weight="600">no audits</tspan> ·
-      <tspan fill="#2a78d6" font-weight="600">with audits</tspan> · dashed = LRU where anchored ·
-      the 65536 cell narrows a −27pp gap to the reactive climber to −8pp; the trace ends mid-escalation</text>
+    <text x="46" y="242" fill="#5b6572"><tspan fill="#eb6834" font-weight="600">no audits</tspan> ·
+      <tspan fill="#2a78d6" font-weight="600">with audits</tspan> · dashed = LRU
+      <tspan x="46" dy="16">the 65536 cell carries no LRU anchor; it narrows a −27pp gap to the
+      reactive climber to −8pp, ending mid-escalation</tspan></text>
     </svg>
   <figcaption>Fig. 16 — The audit converts the whisper pin from 9 points below LRU to 2 above it, and the at-scale constructions escape as far as each trace’s length lets the ladder escalate. The bars record the layer at its introduction, before the shipped build lifted whisper clear of LRU (66.8 against 64.6).</figcaption>
 </figure>
@@ -2676,10 +3028,12 @@ window = max(window + step, 0.02·C)</pre>
   trickle's delivery (same volume, same optimum; LRU and every static window
   unchanged) held the count at zero on 121 of 122 samples and pinned the climber at
   the audit-free value, 8.9 points below LRU, and ±50% jitter on the burst timing
-  still jammed, so this was not an alignment stunt. The repaired clock <b>decays by
+  still jammed, so this was not an alignment stunt.</p>
+<p>The repaired clock <b>decays by
   one on a moving sample instead of resetting</b>: a mostly-still workload still
   accumulates toward its audit, while a window moving on at least half its samples (genuine motion, not a held orbit) never accumulates. That half-motion threshold
-  is analytic, not realizable: measured 50%- and 67%-motion cadences fail to jam
+  is analytic, not realizable.</p>
+<p>Measured 50%- and 67%-motion cadences fail to jam
   (steering does not hold a clean partial alternation, and the decisive control is
   that the audit-free arm <i>outscores</i> the layer there: inert, not suppressed),
   leaving aligned every-sample motion the only starving cadence (§11). The decay
@@ -2709,7 +3063,7 @@ window = max(window + step, 0.02·C)</pre>
 <p class="chapterlede">The controller optimizes a proxy, so something must remember
   what the goal metric has actually witnessed and refuse to stand anywhere measurably
   worse. That memory is one remembered position with one remembered claim, plus the
-  discipline that keeps the claim honest. Most of this chapter is that discipline;
+  discipline that bounds the claim. Most of this chapter is that discipline;
   each rule was bought by a specific failure.</p>
 
 <h3 id="s8-1"><a class="hl" href="#s8-1">8.1 A place worth defending</a></h3>
@@ -2942,7 +3296,7 @@ window = max(window + step, 0.02·C)</pre>
   <li><b>Its confidence measured loudness, not attributability.</b> On flat terrain
     with white or alternating noise, regimes where the rate contains no information
     about the window at all, the |ΔHR|-based confidence read 0.78 and 1.00. An
-    honest attribution estimator (sign-agreement between step and response) read ≈0
+    attribution estimator (sign-agreement between step and response) read ≈0
     nearly everywhere.</li>
   <li><b>Its jitter disabled the audits.</b> Continuous nudging kept the window off
     the stillness band, so §7's clock never accumulated: the calm-suppression attack
@@ -3008,7 +3362,7 @@ window = max(window + step, 0.02·C)</pre>
     of 0.05), and measurement says the density machinery is ~neutral here, with an
     occasional regression when the boundary was lowered. Neutral upside plus any
     downside keeps the simpler algorithm. The boundary is empirical, held by the
-    standing battery; a density form honest about small counts could collapse this
+    standing battery; a density form explicit about small counts could collapse this
     tier someday. The switch itself has a measured price: an alternation family
     constructed to straddle the boundary moves −7.6pp on one entry of capacity
     while LRU and both pure laws are continuous across it: an open sentinel, and
@@ -3213,7 +3567,7 @@ window = max(window + step, 0.02·C)</pre>
 </details>
 <p>The ordering encodes priorities: an in-flight walk finishes its sample before
   anything else acts; restoration outranks new decisions; blindness outranks the veto
-  (a starved sample cannot honestly adjudicate a shortfall); and the plain density
+  (a starved sample cannot reliably adjudicate a shortfall); and the plain density
   step is the default, running the overwhelming majority of samples. Everything above
   it is exception machinery.</p>
 
@@ -3242,11 +3596,12 @@ window = max(window + step, 0.02·C)</pre>
   <summary>Signal hygiene: the four leaks that forced the rule</summary>
   <div class="tablewrap">
   <table>
+    <caption class="sr-only">Access-path leaks and the rules that prevent them</caption>
     <tr>
-      <th>leak</th>
-      <th>mechanism</th>
-      <th>measured damage</th>
-      <th>rule now enforced</th>
+      <th scope="col">leak</th>
+      <th scope="col">mechanism</th>
+      <th scope="col">measured damage</th>
+      <th scope="col">rule now enforced</th>
     </tr>
     <tr>
       <td>async load completions counted as accesses</td>
@@ -3292,18 +3647,47 @@ window = max(window + step, 0.02·C)</pre>
 </details>
 
 <h3 id="s9-4"><a class="hl" href="#s9-4">9.4 What it costs</a></h3>
-<p>One plain object per cache: some thirty scalar and boolean fields, touched only on
-  the maintenance path. No per-entry state, no ghost structures, no allocation after
-  construction. The constants a maintainer should treat with respect: the starvation
-  bar's shift (§6.1: trap earnings sit two orders below it; the whisper construction
-  sits knife-edge above it by design), the 2% floor and the 2% stillness band
-  (different meanings, coincidentally equal values), the 4·C sample period (§5.5's
-  three-way compromise), the ladder schedule with its commitment depths (§6.5's
-  dilemma resolution, an answer to a measured impossibility, not a tunable), and
-  the audit walk's 15% bar fraction (§6.4: one fraction that caps the crash abort
-  against the frozen rate and prices the reversal against the larger of that rate
-  and the noise band; it is derived from two shipped constants, equals 0.45
-  deviations, and the measured cliff at 0.5 is why it is not a knob).</p>
+<p>The controller keeps only fixed-size, per-cache state: no per-entry metadata, ghost
+  structures, or auxiliary history. Access accounting is constant-time and decisions run
+  on the existing maintenance path, so its time and space overhead are negligible relative
+  to ordinary cache policy work and entry storage.</p>
+<p>Five settings carry most of the controller's design load:</p>
+<div class="tablewrap">
+  <table>
+    <caption>Constants that should not be treated as casual tuning knobs</caption>
+    <thead>
+      <tr><th scope="col">setting</th><th scope="col">why it is load-bearing</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>starvation-bar shift</b></td>
+        <td>Trap earnings sit two orders below it; the whisper construction sits
+          knife-edge above it by design (§6.1).</td>
+      </tr>
+      <tr>
+        <td><b>2% floor and 2% stillness band</b></td>
+        <td>They have different meanings despite sharing a value: one preserves
+          signal, while the other decides whether a position has held.</td>
+      </tr>
+      <tr>
+        <td><b>4·C sample period</b></td>
+        <td>It is the three-way compromise developed in §5.5.</td>
+      </tr>
+      <tr>
+        <td><b>ladder schedule and commitment depths</b></td>
+        <td>They resolve §6.5's measured dilemma; they are not ordinary tuning
+          parameters.</td>
+      </tr>
+      <tr>
+        <td><b>15% audit-bar fraction</b></td>
+        <td>One fraction caps the crash abort against the frozen rate and prices the
+          reversal against the larger of that rate and the noise band. It is derived
+          from two shipped constants, equals 0.45 deviations, and sits just below the
+          measured cliff at 0.5 (§6.4).</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
 
 <h2 id="s10"><a class="hl" href="#s10">10 · The evidence</a></h2>
@@ -3313,6 +3697,17 @@ window = max(window + step, 0.02·C)</pre>
   gallery with each family's defense.</p>
 
 <h3 id="s10-1"><a class="hl" href="#s10-1">10.1 How this design is measured</a></h3>
+<div class="box sans measurement-key">
+  <b>Experiment vocabulary.</b>
+  <div class="term"><b>cell</b> — one trace at one cache size</div>
+  <div class="term"><b>arm</b> — one policy or configuration under comparison</div>
+  <div class="term"><b>N</b> — independent repetitions per arm</div>
+  <div class="term"><b>seed</b> — the paired random condition shared across arms</div>
+  <div class="term"><b>pp</b> — absolute percentage points</div>
+  <div class="term"><b>static ceiling</b> — the best static-window result for that cell</div>
+  <div class="term"><b>measurement floor</b> — the required lower anchor, usually LRU, not
+    §5's capacity floor</div>
+</div>
 <ul>
   <li><b>The simulator drives the real cache.</b> Every claim comes from the actual
     library under the trace simulator, never a reimplementation.</li>
@@ -3377,7 +3772,8 @@ window = max(window + step, 0.02·C)</pre>
   within a third of a point on the other two:</p>
 <div class="tablewrap">
   <table>
-    <tr><th>cell</th><th>LRU</th><th>reactive</th><th>density</th></tr>
+    <caption class="sr-only">Real cells where the reactive climber falls below LRU</caption>
+    <tr><th scope="col">cell</th><th scope="col">LRU</th><th scope="col">reactive</th><th scope="col">density</th></tr>
     <tr><td>corda @8k</td><td>33.33</td><td>30.96 (−2.4)</td><td>33.00</td></tr>
     <tr><td>scarab recs @256k</td><td>87.05</td><td>83.61 (−3.4)</td><td>86.84</td></tr>
     <tr><td>systor17 LUN0 @1M</td><td>5.45</td><td>4.53 (−0.9)</td><td>5.92</td></tr>
@@ -3385,7 +3781,7 @@ window = max(window + step, 0.02·C)</pre>
     <tr><td>google thesios c2 @4G</td><td>23.96</td><td>22.62 (−1.3)</td><td>24.07</td></tr>
   </table>
 </div>
-<p>The aggregate is quieter, and that is the honest shape of the result. From a
+<p>The aggregate is quieter, and that is the actual shape of the result. From a
   205-cell sweep (45 real traces across size ladders, N≥2): <b>41 significant wins
   (+117.7pp in total) against the reactive climber, 9 losses (−13.8pp), 155 ties</b>.
   The wins are the recency-demand family the density signal was built for; the losses
@@ -3399,11 +3795,12 @@ window = max(window + step, 0.02·C)</pre>
   draws are not quotable); the significant movers, colored by direction:</p>
 <div class="tablewrap">
   <table>
+    <caption class="sr-only">Significant movers in the fresh 28-cell re-verification</caption>
     <tr>
-      <th>cell</th>
-      <th>density</th>
-      <th>reactive</th>
-      <th>Δ</th>
+      <th scope="col">cell</th>
+      <th scope="col">density</th>
+      <th scope="col">reactive</th>
+      <th scope="col">Δ</th>
     </tr>
     <tr class="win"><td>cloudphysics w061 @64k</td><td>38.33</td><td>34.16</td><td>+4.17</td></tr>
     <tr class="win"><td>corda @8k</td><td>33.00</td><td>30.96</td><td>+2.04</td></tr>
@@ -3424,7 +3821,7 @@ window = max(window + step, 0.02·C)</pre>
       is in the appendix)</td></tr>
   </table>
 </div>
-<p>The mean undersells what the wins are made of, and the honest reading is worth
+<p>The mean undersells what the wins are made of, and the reading is worth
   spelling out, because a ±2pp table invites "the simpler climber is good enough."
   Most public traces give <i>any</i> window policy little to win: the terrain scan
   behind §2.1 found no interior optimum on any of its 22 real cells (flat from the
@@ -3436,7 +3833,8 @@ window = max(window + step, 0.02·C)</pre>
   density signal prices slots rather than requests, and the gap stops being small.
   metaCDN_rprn @4G trades a −0.73 object rate for <b>+10.69 in byte hit rate</b>
   (49.59 against 38.90), because the retained large objects are exactly what the
-  byte metric pays for. And repeatability: on several cells the reactive
+  byte metric pays for.</p>
+<p>Repeatability is the second distinction: on several cells the reactive
   climber's outcome is a draw among basins rather than a number, so two identical
   runs of the same workload return materially different hit rates; the density
   climber returns the same number to within tenths (N=20 per arm: umass F1 @32k
@@ -3448,16 +3846,18 @@ window = max(window + step, 0.02·C)</pre>
 <p>The one row that deserves its paragraph is the last red one. cp_w097 at 16k is the
   worst loss in the corpus, and it is a density-family structural loss rather than a
   regression of the safety layers (an ablation without them scores the same there
-  to within noise). It is also §8's margins doing their job in the
+  to within noise).</p>
+<p>It is also §8's margins doing their job in the
   direction that hurts: the trace's own rate deviation is 3–7pp, which inflates every
   noise-cleared margin until goal-metric adjudication struggles to engage within the
   smoothing lag; the rail correctly declines to veto on evidence it cannot clear,
   density's structural answer stands, and here it is wrong. It is also the row the
-  streak verdict moved most: the audit walks to the trace's 7.5% optimum and
+  streak verdict moved most.</p>
+<p>The audit walks to the trace's 7.5% optimum and
   confirms there where the older deviation-priced verdict could not engage, and the
   release re-verification reads 47.61 ± 0.05 at N=8 against the reactive arm's
   50.10, the remainder being park retention between audit cycles (§11). Three
-  targeted rescues were measured dead against this cell. The honest claim is the
+  targeted rescues were measured dead against this cell. The supported claim is the
   aggregate, with named bounded residuals, and the named worst case is ~2.5 points
   on a cache still far above LRU.</p>
 <p>Behavior, not just endpoints:</p>
@@ -3695,11 +4095,12 @@ window = max(window + step, 0.02·C)</pre>
   of 25–100MB in 10GB, three seeds each):</p>
 <div class="tablewrap">
   <table>
+    <caption class="sr-only">Weighted-cache spot checks</caption>
     <tr>
-      <th>cell (weighted hit rate)</th>
-      <th>density</th>
-      <th>LRU</th>
-      <th>Δ</th>
+      <th scope="col">cell (weighted hit rate)</th>
+      <th scope="col">density</th>
+      <th scope="col">LRU</th>
+      <th scope="col">Δ</th>
     </tr>
     <tr class="win"><td>wmixture d010 · s7 / s11 / s13</td><td>79.45 / 79.80 / 79.47</td><td>75.25 / 75.67 / 75.21</td><td>+4.2 / +4.1 / +4.3</td></tr>
     <tr class="win"><td>wfew (huge entries) · s7 / s11 / s13</td><td>68.96 / 73.01 / 69.25</td><td>62.14 / 66.51 / 62.37</td><td>+6.8 / +6.5 / +6.9</td></tr>
@@ -3716,11 +4117,12 @@ window = max(window + step, 0.02·C)</pre>
   the two diverge.</p>
 <div class="tablewrap">
   <table>
+    <caption class="sr-only">Constructed workload families and their defenses</caption>
     <tr>
-      <th>family</th>
-      <th>the workload, in production terms</th>
-      <th>failure mode</th>
-      <th>defense at the final build</th>
+      <th scope="col">family</th>
+      <th scope="col">the workload, in production terms</th>
+      <th scope="col">failure mode</th>
+      <th scope="col">defense at the final build</th>
     </tr>
     <tr>
       <td>mixture</td>
@@ -3771,7 +4173,7 @@ window = max(window + step, 0.02·C)</pre>
       <td>widepin's whole-trace 49.6 (seeded) is convergence cost: it ends at a
         77.9% window against an 80% optimum, paying the deficit en route; phases
         d050 (57.2 at N=8, from 47.0 before this layer) is a genuine pin, −8
-        against LRU even converged; §11's honest residual</td>
+        against LRU even converged; §11's measured residual</td>
     </tr>
     <tr>
       <td>jam (rate / position)</td>
@@ -3814,13 +4216,15 @@ window = max(window + step, 0.02·C)</pre>
 <p>Read as a whole: every failure mode in §2.6 has a family that demonstrates it and
   a measured defense, and the whole battery reads against LRU and static-ceiling
   anchors, so "is the machine ever worse than doing nothing" is a table rather than
-  an impression. Across 52 rows the mean margin over LRU is +0.88, 21 rows sit
+  an impression.</p>
+<p>Across 52 rows the mean margin over LRU is +0.88, 21 rows sit
   within 2pp of the ceiling, and against the reactive climber the machine is better
   on 35 with a mean of +2.71. Nineteen rows read below LRU on a whole-trace mean,
   but most of that is convergence cost rather than steady-state quality: twelve of
   the fifteen short instances price warmup, and rows recorded 8pp below LRU are
   3–4pp <i>above</i> it once converged. What survives the separation is small and
-  named: three genuine pins (phases d050, bandtrap2, and the aligned jam), each
+  named.</p>
+<p>Three genuine pins survive (phases d050, bandtrap2, and the aligned jam), each
   constructed-only with a clean reachability scan (§11); eighteen of the nineteen
   below-LRU rows are below for the reactive climber too; and exactly one row is a
   density-introduced regression against doing nothing, the aligned jam.</p>
@@ -4021,7 +4425,8 @@ window = max(window + step, 0.02·C)</pre>
   (whose valley §6.4's crash-streak tolerance now crosses), and the
   modulated-mixture dose instrument (mixmod), each carry a named mechanism and a
   reachability scan against the same fourteen real cells, and all six are
-  constructed-only. The scans also say why: the co-occurrences the traps need do
+  constructed-only.</p>
+<p>The scans also say why: the co-occurrences the traps need do
   not arise in real traffic. High scatter rides narrow terrain (every real cell
   whose scatter is three bars deep has under 3pp of terrain to lose, and every
   wide-terrain cell is quiet), cadences do not lock to the sample grid, and
@@ -4036,10 +4441,11 @@ window = max(window + step, 0.02·C)</pre>
 <h3 id="s11-2"><a class="hl" href="#s11-2">11.2 Symptoms, and first hypotheses</a></h3>
 <div class="tablewrap">
   <table>
+    <caption class="sr-only">Field symptoms, first hypotheses, and diagnostic checks</caption>
     <tr>
-      <th>report</th>
-      <th>first hypothesis</th>
-      <th>how to check</th>
+      <th scope="col">report</th>
+      <th scope="col">first hypothesis</th>
+      <th scope="col">how to check</th>
     </tr>
     <tr>
       <td>"hit rate differs between two runs / versions on the same workload"</td>
@@ -4125,11 +4531,12 @@ window = max(window + step, 0.02·C)</pre>
 <p>The re-run behind §10.2, every cell including the ties: the release re-verification of the shipped build against current master (N=3, extended to N=8 wherever either arm spread more than 0.5pp; means at the final N). The reactive arm is bimodal on umass F1 @32k, arc P11, and arc P5 (spreads up to ±2.6), so its single draws are not quotable. An earlier three-arm run also tied a §5–§6 controller without the goal-metric layer on every cell to within noise, which is how the layer is known to be corpus-neutral; the raw per-rep data lives with the experiment ledger.</p>
 <div class="tablewrap">
   <table>
+    <caption class="sr-only">Full 28-cell release re-verification</caption>
     <tr>
-      <th>cell</th>
-      <th>density</th>
-      <th>reactive</th>
-      <th>Δ</th>
+      <th scope="col">cell</th>
+      <th scope="col">density</th>
+      <th scope="col">reactive</th>
+      <th scope="col">Δ</th>
     </tr>
     <tr class="win"><td>cp w061 65536</td><td>38.33</td><td>34.16</td><td>+4.17</td></tr>
     <tr class="win"><td>corda lg 8192</td><td>33.00</td><td>30.96</td><td>+2.04</td></tr>
@@ -4430,31 +4837,14 @@ window = max(window + step, 0.02·C)</pre>
   ships. The release re-verification against current master re-anchors this: 24 of
   the 28 A.1 cells reproduce within ±0.4pp, and the movers are A.1's, not the ladders':
   no charted workload is among them.) Grouped by pattern; each title is
-  color-coded:
-  <br/><span style="color:#1baf7a;font-weight:600">green</span> = wins or ties everywhere on the ladder
-  <br/><span style="color:#eda100;font-weight:600">amber</span> = mixed within tolerance (3pp)
-  <br/><span style="color:#e34948;font-weight:600">red</span> = a beyond-tolerance loss exists (none in this corpus)
+  marked by status as well as color:
+  <br/><span style="color:var(--aqua);font-weight:600">✓ green</span> = wins or ties everywhere on the ladder
+  <br/><span style="color:#8a5a00;font-weight:600">≈ amber</span> = mixed within tolerance (3pp)
+  <br/><span style="color:#b3261e;font-weight:600">! red</span> = a beyond-tolerance loss exists (none in this corpus)
 </p>
-<style>
-  .appgrid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px
-  }
-
-  .appchart {
-    flex: 1 1 340px;
-    max-width: 400px
-  }
-
-  .appchart svg {
-    width: 100%;
-    height: auto
-  }
-</style>
 <div class="sans" style="display:flex;gap:14px;flex-wrap:wrap;font-size:0.85em;color:var(--muted);margin:10px 0">
-  <span><b style="color:#1baf7a">—</b> Optimal</span><span><b style="color:var(--muted)">- -</b> LRU</span><span><b
-      style="color:#eb6834">—</b> reactive</span><span><b style="color:#2a78d6">—</b> density
+  <span><b style="color:var(--aqua)">—</b> Optimal</span><span><b style="color:var(--muted)">- -</b> LRU</span><span><b
+      style="color:var(--orange)">—</b> reactive</span><span><b style="color:var(--blue)">—</b> density
     climber</span><span>◆ = unseen set (never used in any development)</span>
 </div>
 <p class="sans" style="color:var(--muted);font-size:0.9em">Only workloads where the two climbers measurably separate are
@@ -4530,7 +4920,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">P1</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ P1</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -4611,7 +5001,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">P2</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ P2</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -4692,7 +5082,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">P4</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ P4</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -4773,7 +5163,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#eda100" class="ann">P5</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#eda100" class="ann">≈ P5</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -4854,7 +5244,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#eda100" class="ann">P6</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#eda100" class="ann">≈ P6</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -4935,7 +5325,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">P8</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ P8</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5016,7 +5406,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">P9</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ P9</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5097,7 +5487,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">P10</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ P10</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5139,7 +5529,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">P11</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ P11</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5220,7 +5610,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">P12</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ P12</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5262,7 +5652,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">P14</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ P14</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5360,7 +5750,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">S1</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ S1</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5441,7 +5831,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">S2</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ S2</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5542,7 +5932,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">OLTP</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ OLTP</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5584,7 +5974,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">ConCat</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ ConCat</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5626,7 +6016,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">MergeP</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ MergeP</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5712,7 +6102,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">fiu_homes</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ fiu_homes</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5793,7 +6183,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#eda100" class="ann">fiu_ikki</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#eda100" class="ann">≈ fiu_ikki</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5882,7 +6272,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">fiu_madmax</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ fiu_madmax</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -5983,7 +6373,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">fiu_online</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ fiu_online</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -6064,7 +6454,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">fiu_webmail</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ fiu_webmail</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -6138,7 +6528,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">fiu_webresearch</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ fiu_webresearch</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -6210,7 +6600,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">fiu_webusers</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ fiu_webusers</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -6299,7 +6689,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#eda100" class="ann">◆ msr_prn1</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#eda100" class="ann">≈ ◆ msr_prn1</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -6388,7 +6778,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">◆ msr_proj0</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ ◆ msr_proj0</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -6482,7 +6872,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">◆ financial2</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ ◆ financial2</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -6566,7 +6956,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">w50</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ w50</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -6647,7 +7037,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#eda100" class="ann">w56</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#eda100" class="ann">≈ w56</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -6689,7 +7079,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">metaCDN_reag</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ metaCDN_reag</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -6761,7 +7151,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">◆ twitter52_050</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ ◆ twitter52_050</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -6860,7 +7250,7 @@ window = max(window + step, 0.02·C)</pre>
       </circle>
 
     <text
-        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">corda_large</text>
+        x="40" y="13" font-size="11.5" font-weight="600" fill="#1baf7a" class="ann">✓ corda_large</text>
     <text x="36" y="175.0" text-anchor="end"
         fill="#5b6572" font-size="9">0</text>
     <text x="36" y="138.5" text-anchor="end"
@@ -6886,7 +7276,8 @@ window = max(window + step, 0.02·C)</pre>
     0.5pp; floor = max(reactive, LRU) − 3 per cell. <b>Eleven of twelve pass.</b></p>
   <div class="tablewrap">
     <table>
-      <tr><th>cell</th><th>density</th><th>reactive</th><th>Δ</th><th>LRU</th><th>verdict</th></tr>
+      <caption class="sr-only">Frozen merge-holdout results</caption>
+      <tr><th scope="col">cell</th><th scope="col">density</th><th scope="col">reactive</th><th scope="col">Δ</th><th scope="col">LRU</th><th scope="col">verdict</th></tr>
       <tr><td>wiki1190 @16k</td><td>66.47</td><td>66.95</td><td>−0.48</td><td>63.31</td><td>pass</td></tr>
       <tr><td>wiki1190 @256k</td><td>79.80</td><td>79.84</td><td>−0.03</td><td>77.72</td><td>pass</td></tr>
       <tr><td>wiki1190 @1M</td><td>85.46</td><td>85.39</td><td>+0.07</td><td>85.43</td><td>pass</td></tr>
@@ -6913,7 +7304,8 @@ window = max(window + step, 0.02·C)</pre>
   <p>First measurements on families new to the corpus (entry-denominated; N=3):</p>
   <div class="tablewrap">
     <table>
-      <tr><th>cell</th><th>density</th><th>reactive</th><th>Δ</th><th>LRU</th></tr>
+      <caption class="sr-only">First measurements on new corpus families</caption>
+      <tr><th scope="col">cell</th><th scope="col">density</th><th scope="col">reactive</th><th scope="col">Δ</th><th scope="col">LRU</th></tr>
       <tr class="win"><td>systor17 d09-LUN0 @1M</td><td>5.92</td><td>4.53</td><td>+1.40</td><td>5.45; reactive is below LRU</td></tr>
       <tr><td>systor17 d09-LUN0 @256k</td><td>3.52</td><td>3.63</td><td>−0.11</td><td>3.13</td></tr>
       <tr><td>systor17 d09-LUN0 @64k</td><td>2.48</td><td>2.43</td><td>+0.05</td><td>2.53</td></tr>
@@ -6940,7 +7332,8 @@ window = max(window + step, 0.02·C)</pre>
     goal metric, the byte rate is the panel's; N=3):</p>
   <div class="tablewrap">
     <table>
-      <tr><th>cell</th><th>obj density</th><th>obj reactive</th><th>Δ obj</th><th>Δ byte</th></tr>
+      <caption class="sr-only">Byte-weighted corpus results</caption>
+      <tr><th scope="col">cell</th><th scope="col">obj density</th><th scope="col">obj reactive</th><th scope="col">Δ obj</th><th scope="col">Δ byte</th></tr>
       <tr class="win"><td>ibm objectstore 000 @1G</td><td>66.64</td><td>63.61</td><td>+3.03</td><td></td></tr>
       <tr class="win"><td>twitter52.000 @64M</td><td>89.10</td><td>88.07</td><td>+1.03</td><td>+1.02</td></tr>
       <tr class="win"><td>cloudphysics w01 @1G</td><td>15.19</td><td>14.22</td><td>+0.97</td><td>+0.75</td></tr>
@@ -6970,7 +7363,8 @@ window = max(window + step, 0.02·C)</pre>
   <summary>Every family and its disposition</summary>
   <div class="tablewrap">
     <table>
-      <tr><th>family</th><th>disposition</th></tr>
+      <caption class="sr-only">Corpus family inventory and disposition</caption>
+      <tr><th scope="col">family</th><th scope="col">disposition</th></tr>
       <tr><td>arc (23 files)</td><td>A.1 / A.3 and the study corpora; P3, P4, P6, P7, MergeP @64k are frozen in an unspent study holdout</td></tr>
       <tr><td>cloud_physics (16 files)</td><td>A.1 / A.3 corpus; w015 and w044 @16k frozen in an unspent study holdout</td></tr>
       <tr><td>corda (2)</td><td>large: A.1 / A.3; small: the canonical cross-tier stress trace</td></tr>
@@ -6996,177 +7390,17 @@ window = max(window + step, 0.02·C)</pre>
   </div>
 </details>
 
-<button id="themeToggle" type="button" hidden></button>
+<button id="tocToggle" type="button" aria-controls="toc" aria-expanded="false" hidden>Contents</button>
+<button id="themeToggle" type="button" aria-label="Theme: automatic" hidden></button>
 <nav id="toc" aria-label="Contents" hidden>
   <b>Contents</b>
-  <div id="viewToggle"><a href="#" data-view="chapter">chapters</a><a href="#" data-view="all">whole book</a></div>
+  <div id="viewToggle"><span>View: </span><a href="#" data-view="chapter">chapters</a><a href="#" data-view="all">whole book</a></div>
   <ol></ol>
 </nav>
 <div id="chapternav" hidden>
   <a id="prevChapter" href="#"></a>
   <a id="nextChapter" href="#"></a>
 </div>
-<style>
-  #themeToggle {
-    position: fixed;
-    top: 14px;
-    right: 16px;
-    z-index: 10;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    border: 1px solid var(--grid);
-    background: var(--card);
-    color: var(--ink);
-    font-size: 15px;
-    line-height: 1;
-    cursor: pointer;
-    font-family: system-ui, -apple-system, sans-serif;
-  }
-
-  #themeToggle:hover {
-    border-color: var(--muted);
-  }
-
-  #toc {
-    display: none;
-    position: fixed;
-    top: 64px;
-    width: 250px;
-    max-height: calc(100vh - 96px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    font-family: system-ui, -apple-system, sans-serif;
-    font-size: 0.76rem;
-    line-height: 1.35;
-    color: var(--muted);
-  }
-
-  #toc > b {
-    display: block;
-    margin-bottom: 2px;
-    color: var(--ink);
-    font-size: 0.68rem;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-  }
-
-  #viewToggle {
-    margin-bottom: 8px;
-    font-size: 0.7rem;
-  }
-
-  #viewToggle a {
-    color: var(--muted);
-    text-decoration: none;
-  }
-
-  #viewToggle a.active {
-    color: var(--blue);
-    font-weight: 600;
-  }
-
-  #toc ol {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    border-left: 2px solid var(--grid);
-  }
-
-  #toc a {
-    display: block;
-    padding: 3px 8px 3px 10px;
-    color: inherit;
-    text-decoration: none;
-    border-left: 2px solid transparent;
-    margin-left: -2px;
-  }
-
-  #toc li.h3 a {
-    padding-left: 24px;
-    font-size: 0.72rem;
-  }
-
-  #toc a:hover {
-    color: var(--ink);
-  }
-
-  #toc a.active {
-    color: var(--blue);
-    border-left-color: var(--blue);
-    font-weight: 600;
-  }
-
-  a.secref {
-    color: var(--blue);
-    text-decoration: none;
-  }
-
-  a.secref:hover {
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  @media (min-width: 1360px) {
-    #toc:not([hidden]) {
-      display: block;
-      right: max(16px, calc(50vw - 676px));
-    }
-  }
-
-  body.chapterview section.chapter {
-    display: none;
-  }
-
-  body.chapterview section.chapter.current {
-    display: block;
-  }
-
-  body.chapterview.pastintro .introonly {
-    display: none;
-  }
-
-  #chapternav {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    margin-top: 44px;
-    padding-top: 14px;
-    border-top: 1px solid var(--grid);
-    font-family: system-ui, -apple-system, sans-serif;
-    font-size: 0.85em;
-  }
-
-  #chapternav[hidden] {
-    display: none;
-  }
-
-  #chapternav a {
-    color: var(--blue);
-    text-decoration: none;
-    max-width: 46%;
-  }
-
-  #chapternav a:hover {
-    text-decoration: underline;
-  }
-
-  #chapternav a:empty {
-    visibility: hidden;
-  }
-
-  @media print {
-    #toc,
-    #themeToggle,
-    #chapternav {
-      display: none;
-    }
-
-    body.chapterview section.chapter {
-      display: block;
-    }
-  }
-</style>
 <script>
   (function () {
     'use strict';
@@ -7176,6 +7410,8 @@ window = max(window + step, 0.02·C)</pre>
     var MODES = ['auto', 'light', 'dark'];
     var ICONS = {auto: '◐', light: '☀︎', dark: '☾'};
     var toggle = document.getElementById('themeToggle');
+    var tocToggle = document.getElementById('tocToggle');
+    var toc = document.getElementById('toc');
 
     function applyTheme(mode) {
       if ((mode === 'light') || (mode === 'dark')) {
@@ -7186,6 +7422,8 @@ window = max(window + step, 0.02·C)</pre>
       }
       toggle.textContent = ICONS[mode];
       toggle.title = 'Theme: ' + mode + ' (click to cycle)';
+      var next = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
+      toggle.setAttribute('aria-label', 'Theme: ' + mode + '. Activate for ' + next + '.');
       toggle.setAttribute('data-mode', mode);
     }
 
@@ -7225,6 +7463,7 @@ window = max(window + step, 0.02·C)</pre>
           chapters.push({id: node.id, title: node.textContent, el: section});
         }
         if ((section !== null) && (node.id !== 'toc') && (node.id !== 'themeToggle')
+            && (node.id !== 'tocToggle')
             && (node.id !== 'chapternav') && (node.tagName !== 'SCRIPT')
             && (node.tagName !== 'STYLE')) {
           section.appendChild(node);
@@ -7232,9 +7471,9 @@ window = max(window + step, 0.02·C)</pre>
       });
     })();
 
-    var toc = document.getElementById('toc');
     var list = toc.querySelector('ol');
-    var headings = Array.prototype.slice.call(document.querySelectorAll('h2[id], h3[id]'));
+    var headings = Array.prototype.slice.call(document.querySelectorAll('h2[id], h3[id], h4[id]'));
+    var items = [];
     var links = headings.map(function (heading) {
       var item = document.createElement('li');
       item.className = heading.tagName.toLowerCase();
@@ -7243,11 +7482,56 @@ window = max(window + step, 0.02·C)</pre>
       link.textContent = heading.textContent;
       item.appendChild(link);
       list.appendChild(item);
+      items.push(item);
       return link;
     });
     if (headings.length > 0) {
       toc.hidden = false;
+      tocToggle.hidden = false;
     }
+
+    function setTocOpen(open) {
+      toc.classList.toggle('open', open);
+      tocToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        requestAnimationFrame(function () {
+          active = -1;
+          spy();
+        });
+      }
+    }
+
+    tocToggle.addEventListener('click', function () {
+      setTocOpen(!toc.classList.contains('open'));
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if ((event.key === 'Escape') && toc.classList.contains('open')) {
+        setTocOpen(false);
+        tocToggle.focus();
+      }
+    });
+
+    // The appendix status key must not depend on distinguishing green from amber.
+    var chartStatuses = {
+      '#1baf7a': {mark: '✓ ', label: 'wins or ties across the size ladder'},
+      '#eda100': {mark: '≈ ', label: 'mixed within the 3pp tolerance'},
+      '#e34948': {mark: '! ', label: 'contains a beyond-tolerance loss'}
+    };
+    Array.prototype.forEach.call(
+        document.querySelectorAll('.appchart svg text.ann[y="13"]'), function (label) {
+          var status = chartStatuses[(label.getAttribute('fill') || '').toLowerCase()];
+          if (!status) {
+            return;
+          }
+          if (label.textContent.indexOf(status.mark) !== 0) {
+            label.textContent = status.mark + label.textContent;
+          }
+          var title = label.ownerSVGElement.querySelector('title');
+          if (title) {
+            title.textContent += '; status: ' + status.label;
+          }
+        });
 
     // ---- link § callouts in body prose when they cross chapters ----
     chapters.forEach(function (chapter, index) {
@@ -7326,6 +7610,7 @@ window = max(window + step, 0.02·C)</pre>
           + ((current < (chapters.length - 1)) ? chapters[current + 1].id : ''));
       chapters[current].el.appendChild(nav);
       nav.hidden = false;
+      updateTocVisibility();
       if (scrollTo) {
         var target = document.getElementById(scrollTo);
         if (target && (viewMode === 'chapter') && (scrollTo !== chapters[current].id)) {
@@ -7343,12 +7628,28 @@ window = max(window + step, 0.02·C)</pre>
       nav.hidden = (viewMode !== 'chapter');
       var controls = document.querySelectorAll('#viewToggle a');
       Array.prototype.forEach.call(controls, function (a) {
-        a.classList.toggle('active', a.getAttribute('data-view') === viewMode);
+        var selected = a.getAttribute('data-view') === viewMode;
+        a.classList.toggle('active', selected);
+        if (selected) {
+          a.setAttribute('aria-current', 'true');
+        } else {
+          a.removeAttribute('aria-current');
+        }
       });
       if (viewMode === 'chapter') {
         showChapter((current >= 0) ? current : 0, null);
+      } else {
+        updateTocVisibility();
       }
       spy();
+    }
+
+    function updateTocVisibility() {
+      headings.forEach(function (heading, index) {
+        var show = (viewMode === 'all') || (heading.tagName === 'H2')
+            || (chapterOf(heading.id) === current);
+        items[index].hidden = !show;
+      });
     }
 
     document.getElementById('viewToggle').addEventListener('click', function (event) {
@@ -7378,10 +7679,15 @@ window = max(window + step, 0.02·C)</pre>
           target.scrollIntoView();
         }
       }
+      setTocOpen(false);
       return true;
     }
 
     document.addEventListener('click', function (event) {
+      if (toc.classList.contains('open') && !toc.contains(event.target)
+          && (event.target !== tocToggle)) {
+        setTocOpen(false);
+      }
       var anchor = event.target.closest ? event.target.closest('a[href^="#"]') : null;
       if (!anchor || anchor.closest('#viewToggle')) {
         return;
@@ -7395,6 +7701,7 @@ window = max(window + step, 0.02·C)</pre>
       navigate(location.hash.slice(1), false);
     });
     window.addEventListener('beforeprint', function () {
+      setTocOpen(false);
       body.classList.remove('chapterview');
     });
     window.addEventListener('afterprint', function () {
@@ -7423,15 +7730,19 @@ window = max(window + step, 0.02·C)</pre>
       }
       if (active >= 0) {
         links[active].classList.remove('active');
+        links[active].removeAttribute('aria-current');
       }
       if (idx >= 0) {
         links[idx].classList.add('active');
+        links[idx].setAttribute('aria-current', 'location');
         var link = links[idx].getBoundingClientRect();
         var box = toc.getBoundingClientRect();
-        if (link.top < (box.top + 24)) {
-          toc.scrollTop += link.top - box.top - 24;
-        } else if (link.bottom > (box.bottom - 24)) {
-          toc.scrollTop += link.bottom - box.bottom + 24;
+        if (box.height > 0) {
+          if (link.top < (box.top + 24)) {
+            toc.scrollTop += link.top - box.top - 24;
+          } else if (link.bottom > (box.bottom - 24)) {
+            toc.scrollTop += link.bottom - box.bottom + 24;
+          }
         }
       }
       active = idx;
@@ -7447,7 +7758,12 @@ window = max(window + step, 0.02·C)</pre>
         });
       }
     }, {passive: true});
-    window.addEventListener('resize', spy, {passive: true});
+    window.addEventListener('resize', function () {
+      if (window.innerWidth >= 1360) {
+        setTocOpen(false);
+      }
+      spy();
+    }, {passive: true});
 
     applyView(readStore(VIEW_KEY) || 'chapter');
     var initial = location.hash.slice(1);
@@ -7456,3 +7772,5 @@ window = max(window + step, 0.02·C)</pre>
     }
   })();
 </script>
+</body>
+</html>
