@@ -27,7 +27,9 @@ import static javax.cache.event.EventType.EXPIRED;
 import static javax.cache.event.EventType.REMOVED;
 import static javax.cache.event.EventType.UPDATED;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
@@ -36,7 +38,9 @@ import static org.mockito.Mockito.verify;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Queue;
 import java.util.Set;
@@ -47,7 +51,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
@@ -62,6 +68,7 @@ import javax.cache.event.CacheEntryListener;
 import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
+import javax.cache.event.EventType;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.integration.CacheWriter;
@@ -73,8 +80,13 @@ import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
+import com.github.benmanes.caffeine.jcache.CacheProxy;
+import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.copy.Copier;
@@ -133,6 +145,38 @@ final class EventDispatcherTest {
     dispatcher.register(first);
     dispatcher.register(second);
     assertThat(dispatcher.dispatchQueues).hasSize(1);
+  }
+
+  @Test
+  void register_duplicateRegistration_closesTheDroppedListener() {
+    // the dedupe drops the second listener, which close() then cannot reach
+    var created = new ArrayList<CloseableCreatedListener>();
+    Factory<CacheEntryListener<? super Integer, ? super Integer>> factory = () -> {
+      var listener = new CloseableCreatedListener();
+      created.add(listener);
+      return listener;
+    };
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    dispatcher.register(new MutableCacheEntryListenerConfiguration<>(factory,
+        /* filterFactory= */ null, /* isOldValueRequired= */ false, /* isSynchronous= */ false));
+    dispatcher.register(new MutableCacheEntryListenerConfiguration<>(factory,
+        /* filterFactory= */ null, /* isOldValueRequired= */ false, /* isSynchronous= */ false));
+
+    assertThat(dispatcher.dispatchQueues).hasSize(1);
+    assertThat(created).hasSize(2);
+    assertThat(created.get(1).closed).isTrue();
+  }
+
+  /** A listener that records whether it was closed. */
+  private static final class CloseableCreatedListener
+      implements CacheEntryCreatedListener<Integer, Integer>, AutoCloseable {
+    boolean closed;
+
+    @Override public void onCreated(
+        Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {}
+    @Override public void close() {
+      closed = true;
+    }
   }
 
   @Test
@@ -526,8 +570,121 @@ final class EventDispatcherTest {
       // the synchronous listener's exception is wrapped and propagated to the caller
       var e = assertThrows(CacheEntryListenerException.class, () -> cache.put(KEY_1, VALUE_1));
       assertThat(e).hasCauseThat().isSameInstanceAs(failure);
-      // but the mutation committed before the listener ran (spec: does not affect the update)
+      // the listener failure is observed after the compute returns, so the mutation is committed
       assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+    }
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("committedMutationOperations")
+  void synchronousListenerFailure_committedMutationRetainsStatistics(String description,
+      Consumer<Cache<Integer, Integer>> prepare, Consumer<Cache<Integer, Integer>> operation,
+      @Nullable Integer expectedValue, EventType expectedEvent,
+      long hits, long misses, long puts, long removals) {
+    var fixtureBuilder = JCacheFixture.builder().configure(config -> {
+      config.setExecutorFactory(MoreExecutors::directExecutor);
+      config.setStatisticsEnabled(true);
+    });
+    try (var fixture = fixtureBuilder.build();
+         var cache = fixture.jcache()) {
+      prepare.accept(cache);
+      var listener = new ThrowingMutationListener();
+      cache.registerCacheEntryListener(new MutableCacheEntryListenerConfiguration<>(
+          () -> listener, /* filterFactory= */ null,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+      var statistics = JCacheFixture.getStatistics(cache);
+      long initialHits = statistics.getCacheHits();
+      long initialMisses = statistics.getCacheMisses();
+      long initialPuts = statistics.getCachePuts();
+      long initialRemovals = statistics.getCacheRemovals();
+
+      assertThrows(CacheEntryListenerException.class, () -> operation.accept(cache));
+
+      assertThat(statistics.getCacheHits() - initialHits).isEqualTo(hits);
+      assertThat(statistics.getCacheMisses() - initialMisses).isEqualTo(misses);
+      assertThat(statistics.getCachePuts() - initialPuts).isEqualTo(puts);
+      assertThat(statistics.getCacheRemovals() - initialRemovals).isEqualTo(removals);
+      assertThat(listener.eventTypes).containsExactly(expectedEvent);
+      assertThat(cache.get(KEY_1)).isEqualTo(expectedValue);
+    }
+  }
+
+  static Stream<Arguments> committedMutationOperations() {
+    Consumer<Cache<Integer, Integer>> empty = cache -> {};
+    Consumer<Cache<Integer, Integer>> present = cache -> cache.put(KEY_1, VALUE_1);
+    return Stream.of(
+        arguments("put create", empty, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.put(KEY_1, VALUE_1), VALUE_1, CREATED, 0L, 0L, 1L, 0L),
+        arguments("getAndPut create", empty, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.getAndPut(KEY_1, VALUE_1), VALUE_1, CREATED, 0L, 1L, 1L, 0L),
+        arguments("putIfAbsent create", empty, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.putIfAbsent(KEY_1, VALUE_1), VALUE_1, CREATED, 0L, 1L, 1L, 0L),
+        arguments("put update", present, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.put(KEY_1, VALUE_2), VALUE_2, UPDATED, 0L, 0L, 1L, 0L),
+        arguments("getAndPut update", present, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.getAndPut(KEY_1, VALUE_2), VALUE_2, UPDATED, 1L, 0L, 1L, 0L),
+        arguments("replace", present, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.replace(KEY_1, VALUE_2), VALUE_2, UPDATED, 1L, 0L, 1L, 0L),
+        arguments("conditional replace", present, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.replace(KEY_1, VALUE_1, VALUE_2),
+            VALUE_2, UPDATED, 1L, 0L, 1L, 0L),
+        arguments("getAndReplace", present, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.getAndReplace(KEY_1, VALUE_2), VALUE_2, UPDATED, 1L, 0L, 1L, 0L),
+        arguments("remove", present, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.remove(KEY_1), null, REMOVED, 0L, 0L, 0L, 1L),
+        arguments("conditional remove", present, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.remove(KEY_1, VALUE_1), null, REMOVED, 1L, 0L, 0L, 1L),
+        arguments("getAndRemove", present, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.getAndRemove(KEY_1), null, REMOVED, 1L, 0L, 0L, 1L),
+        arguments("iterator remove", present, (Consumer<Cache<Integer, Integer>>) cache -> {
+          var iterator = cache.iterator();
+          iterator.next();
+          iterator.remove();
+        }, null, REMOVED, 1L, 0L, 0L, 1L),
+        arguments("putAll create", empty, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.putAll(Map.of(KEY_1, VALUE_1)),
+            VALUE_1, CREATED, 0L, 0L, 1L, 0L),
+        arguments("putAll update", present, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.putAll(Map.of(KEY_1, VALUE_2)),
+            VALUE_2, UPDATED, 0L, 0L, 1L, 0L),
+        arguments("removeAll", present, (Consumer<Cache<Integer, Integer>>)
+            cache -> cache.removeAll(Set.of(KEY_1)), null, REMOVED, 0L, 0L, 0L, 1L),
+        arguments("invoke create", empty, (Consumer<Cache<Integer, Integer>>) cache ->
+            cache.invoke(KEY_1, (entry, arguments) -> {
+              entry.setValue(VALUE_1);
+              return null;
+            }), VALUE_1, CREATED, 0L, 1L, 1L, 0L),
+        arguments("invoke update", present, (Consumer<Cache<Integer, Integer>>) cache ->
+            cache.invoke(KEY_1, (entry, arguments) -> {
+              entry.setValue(VALUE_2);
+              return null;
+            }), VALUE_2, UPDATED, 1L, 0L, 1L, 0L),
+        arguments("invoke remove", present, (Consumer<Cache<Integer, Integer>>) cache ->
+            cache.invoke(KEY_1, (entry, arguments) -> {
+              entry.remove();
+              return null;
+            }), null, REMOVED, 1L, 0L, 0L, 1L));
+  }
+
+  @Test
+  void synchronousExpiredListenerFailure_retainsGetStatistics() {
+    var fixtureBuilder = syncListenerFixture(new ThrowingMutationListener(), config -> {
+      config.setStatisticsEnabled(true);
+      config.setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(Duration.ONE_MINUTE));
+      config.setExpireAfterWrite(OptionalLong.of(TimeUnit.HOURS.toNanos(1)));
+    });
+    try (var fixture = fixtureBuilder.build();
+         var cache = fixture.jcache()) {
+      assertThrows(CacheEntryListenerException.class, () -> cache.put(KEY_1, VALUE_1));
+      fixture.ticker().advance(java.time.Duration.ofMinutes(2));
+      var statistics = JCacheFixture.getStatistics(cache);
+      long misses = statistics.getCacheMisses();
+      long evictions = statistics.getCacheEvictions();
+
+      assertThrows(CacheEntryListenerException.class, () -> cache.get(KEY_1));
+
+      assertThat(statistics.getCacheMisses()).isEqualTo(misses + 1);
+      assertThat(statistics.getCacheEvictions()).isEqualTo(evictions + 1);
     }
   }
 
@@ -549,7 +706,7 @@ final class EventDispatcherTest {
       // an Error is not wrapped as a CacheEntryListenerException; it propagates as-is
       var e = assertThrows(AssertionError.class, () -> cache.put(KEY_1, VALUE_1));
       assertThat(e).isSameInstanceAs(failure);
-      // the mutation still committed before the listener ran (spec: does not affect the update)
+      // the listener failure is observed after the compute returns, so the mutation is committed
       assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
     }
   }
@@ -629,9 +786,9 @@ final class EventDispatcherTest {
   }
 
   @Test
-  void putAll_copierFailsMidway_doesNotLeakPending() {
-    // A store-by-value copier that throws mid-loop must not skip awaitSynchronous for the entries
-    // already committed -- their synchronous futures would otherwise leak to the thread's next op
+  void putAll_copierFails_abortsBeforeAnyCommit() {
+    // The store-by-value copies are taken before the writer and the store loop, so a copier failure
+    // commits nothing and leaves no synchronous future to leak to the thread's next operation
     CacheEntryCreatedListener<Integer, Integer> createdListener = events -> {};
     var copier = new Copier() {
       @Override public <T> T copy(T object, ClassLoader classLoader) {
@@ -652,11 +809,12 @@ final class EventDispatcherTest {
         });
     try (var fixture = jcacheFixture.build();
          var cache = fixture.jcache()) {
-      // KEY_1 commits and pends its CREATED future; KEY_2's value copy throws mid-loop.
       var entries = new LinkedHashMap<Integer, Integer>();
       entries.put(KEY_1, VALUE_1);
       entries.put(KEY_2, VALUE_2);
       assertThrows(CacheException.class, () -> cache.putAll(entries));
+
+      assertThat(cache.containsKey(KEY_1)).isFalse();
       assertThat(JCacheFixture.getDispatcher(cache).pending.get()).isEmpty();
     }
   }
@@ -725,33 +883,69 @@ final class EventDispatcherTest {
   }
 
   @Test
-  void putAll_copierFailsMidway_retainsListenerFailure() {
+  void getAll_copierThrows_retainsPrimaryFailure() {
+    // An expired entry publishes EXPIRED to a failing synchronous listener while copying the
+    // surviving entries fails. The copier's failure is the caller's, with the listener's retained
+    // as suppressed, where a bare finally would let the listener's replace it.
     var listenerFailure = new IllegalStateException("listener");
-    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+    CacheEntryExpiredListener<Integer, Integer> listener = events -> {
       throw listenerFailure;
     };
+    var armed = new AtomicBoolean();
     var copier = new Copier() {
       @Override public <T> T copy(T object, ClassLoader classLoader) {
-        if (Objects.equals(object, VALUE_2)) {
+        if (armed.get() && Objects.equals(object, VALUE_2)) {
           throw new CacheException("copy failed");
         }
         return object;
       }
     };
-    var jcacheFixture = syncListenerFixture(listener, config -> {
+    var fixtureBuilder = syncListenerFixture(listener, config -> {
       config.setStoreByValue(true);
       config.setCopierFactory(() -> copier);
+      config.setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(Duration.ONE_MINUTE));
+      config.setExpireAfterWrite(OptionalLong.of(TimeUnit.HOURS.toNanos(1)));
+    });
+    try (var fixture = fixtureBuilder.build();
+         var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      fixture.ticker().advance(java.time.Duration.ofMinutes(2));
+      cache.put(KEY_2, VALUE_2);
+      armed.set(true);
+
+      var e = assertThrows(CacheException.class, () -> cache.getAll(Set.of(KEY_1, KEY_2)));
+
+      assertThat(e).hasMessageThat().isEqualTo("copy failed");
+      assertThat(e.getSuppressed()).hasLength(1);
+    }
+  }
+
+  @Test
+  void putAll_storeFailsMidway_retainsListenerFailure() {
+    var listenerFailure = new IllegalStateException("listener");
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      throw listenerFailure;
+    };
+    var jcacheFixture = syncListenerFixture(listener, config -> {
+      config.setMaximumWeight(OptionalLong.of(1_000));
+      config.setWeigherFactory(Optional.of(() -> (key, value) -> {
+        if (Objects.equals(value, VALUE_2)) {
+          throw new IllegalStateException("weigher");
+        }
+        return 1;
+      }));
     });
     try (var fixture = jcacheFixture.build();
          var cache = fixture.jcache()) {
-      // KEY_1 commits and its listener throws; KEY_2's copy then aborts the loop. The copier's
-      // failure is the one the caller needs, with the listener's retained as suppressed
+      // KEY_1 commits and its listener throws; storing KEY_2 then aborts the loop. The store's
+      // failure is the one the caller needs, with the listener's retained as suppressed. The
+      // store-by-value copies are taken before the loop, so a copier failure cannot reach here.
       var entries = new LinkedHashMap<Integer, Integer>();
       entries.put(KEY_1, VALUE_1);
       entries.put(KEY_2, VALUE_2);
 
-      var e = assertThrows(CacheException.class, () -> cache.putAll(entries));
-      assertThat(e).hasMessageThat().isEqualTo("copy failed");
+      var e = assertThrows(IllegalStateException.class, () -> cache.putAll(entries));
+      assertThat(e).hasMessageThat().isEqualTo("weigher");
       assertThat(e.getSuppressed()).hasLength(1);
       assertThat(JCacheFixture.getDispatcher(cache).pending.get()).isEmpty();
     }
@@ -850,6 +1044,35 @@ final class EventDispatcherTest {
     }
   }
 
+  /** A listener that fails every standard mutation notification. */
+  private static final class ThrowingMutationListener
+      implements CacheEntryCreatedListener<Integer, Integer>,
+      CacheEntryUpdatedListener<Integer, Integer>, CacheEntryRemovedListener<Integer, Integer>,
+      CacheEntryExpiredListener<Integer, Integer> {
+    final Queue<EventType> eventTypes = new ConcurrentLinkedQueue<>();
+
+    @Override public void onCreated(
+        Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {
+      eventTypes.add(CREATED);
+      throw new CacheEntryListenerException("created");
+    }
+    @Override public void onUpdated(
+        Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {
+      eventTypes.add(UPDATED);
+      throw new CacheEntryListenerException("updated");
+    }
+    @Override public void onRemoved(
+        Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {
+      eventTypes.add(REMOVED);
+      throw new CacheEntryListenerException("removed");
+    }
+    @Override public void onExpired(
+        Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {
+      eventTypes.add(EXPIRED);
+      throw new CacheEntryListenerException("expired");
+    }
+  }
+
   private static final class CustomCacheEntryListenerConfiguration<K, V>
       implements CacheEntryListenerConfiguration<K, V> {
     private static final long serialVersionUID = 1L;
@@ -921,4 +1144,120 @@ final class EventDispatcherTest {
       Iterables.addAll(queue, events);
     }
   }
+
+  @Test
+  void publish_listenerObservesTheCommittedMutation() {
+    var onCreated = new AtomicReference<@Nullable Expirable<Integer>>();
+    var listener = new CacheEntryCreatedListener<Integer, Integer>() {
+      @Override public void onCreated(
+          Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {
+        // read through the native cache, since the JCache API is refused to a callback
+        @SuppressWarnings("unchecked")
+        var nativeCache = (com.github.benmanes.caffeine.cache.Cache<Integer, Expirable<Integer>>)
+            cacheRef.get().unwrap(com.github.benmanes.caffeine.cache.Cache.class);
+        onCreated.set(nativeCache.getIfPresent(KEY_1));
+      }
+    };
+    try (var fixture = reentrantFixture(listener);
+        var cache = fixture.jcache()) {
+      cacheRef.set(cache);
+
+      // the dispatch is staged until the computation commits, so the entry the event describes is
+      // present when the listener runs rather than the state it replaced
+      cache.put(KEY_1, VALUE_1);
+      assertThat(onCreated.get()).isNotNull();
+      assertThat(requireNonNull(onCreated.get()).get()).isEqualTo(VALUE_1);
+    }
+  }
+
+  @Test
+  void publish_listenerUsesTheCache_isRejected() {
+    var failure = new AtomicReference<Throwable>();
+    var armed = new AtomicBoolean(true);
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      if (armed.compareAndSet(true, false)) {
+        failure.set(assertThrows(IllegalStateException.class,
+            () -> cacheRef.get().put(KEY_2, VALUE_2)));
+      }
+    };
+    try (var fixture = reentrantFixture(listener);
+        var cache = fixture.jcache()) {
+      cacheRef.set(cache);
+
+      // a caller-runs executor dispatches the listener on the publishing thread, so it is refused
+      // like any other callback rather than being allowed to start a nested operation there
+      cache.put(KEY_1, VALUE_1);
+      assertThat(requireNonNull(failure.get()).getMessage()).isEqualTo("Recursive cache operation");
+      assertThat(cache.containsKey(KEY_2)).isFalse();
+    }
+  }
+
+  @Test
+  void invoke_processorUsesTheCache_isRejected() {
+    var failure = new AtomicReference<Throwable>();
+    try (var fixture = reentrantFixture(events -> {});
+        var cache = fixture.jcache()) {
+      cacheRef.set(cache);
+
+      // an entry processor runs inside the computation, unlike a listener, so it is still refused
+      var result = cache.invoke(KEY_1, (entry, args) -> {
+        failure.set(assertThrows(IllegalStateException.class, () -> cache.put(KEY_2, VALUE_2)));
+        entry.setValue(VALUE_1);
+        return null;
+      });
+      assertThat(requireNonNull(failure.get()).getMessage()).isEqualTo("Recursive cache operation");
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+      assertThat(cache.containsKey(KEY_2)).isFalse();
+      assertThat(result).isNull();
+    }
+  }
+
+  @Test
+  void publish_computationThrowsAfterPublishing_doesNotWedgeTheKey() {
+    var weigherFails = new AtomicBoolean();
+    var events = new ArrayList<Integer>();
+    CacheEntryCreatedListener<Integer, Integer> listener =
+        published -> published.forEach(event -> events.add(event.getValue()));
+    var listenerConfig = new MutableCacheEntryListenerConfiguration<>(
+        /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setMaximumWeight(OptionalLong.of(1_000));
+          config.setWeigherFactory(Optional.of(() -> (key, value) -> {
+            if (weigherFails.get()) {
+              throw new IllegalStateException("weigher");
+            }
+            return 1;
+          }));
+          config.addCacheEntryListenerConfiguration(listenerConfig);
+        }).build();
+        var cache = fixture.jcache()) {
+      // the weigher runs in the cache after the remapping function returns, so the event is
+      // published and the store then aborts; the gate is released regardless or the key's dispatch
+      // chain would never drain and every later event for it would queue behind it forever
+      weigherFails.set(true);
+      assertThrows(IllegalStateException.class, () -> cache.put(KEY_1, VALUE_1));
+
+      weigherFails.set(false);
+      assertTimeoutPreemptively(java.time.Duration.ofSeconds(10), () -> cache.put(KEY_1, VALUE_2));
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_2);
+      assertThat(events).containsExactly(VALUE_1, VALUE_2).inOrder();
+    }
+  }
+
+  private final AtomicReference<CacheProxy<Integer, Integer>> cacheRef = new AtomicReference<>();
+
+  private static JCacheFixture reentrantFixture(CacheEntryCreatedListener<Integer, Integer> listener) {
+    var listenerConfig = new MutableCacheEntryListenerConfiguration<>(
+        /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+    return JCacheFixture.builder()
+        .configure(config -> {
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.addCacheEntryListenerConfiguration(listenerConfig);
+        }).build();
+  }
+
 }

@@ -135,6 +135,18 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   that police what density cannot judge. The tier gate compares the configured maximum in its
   NATIVE units (weight units when weighted): deliberate, attack-tested, not a unit bug. Extending
   density below 4096 was measured and rejected.
+- **Walking the window back down costs 52–63× the maximum in requests, and that is arithmetic
+  rather than a defect.** A density sample is `4 × maximum` requests and the law's step is
+  `|error| × 0.03 × maximum`, with the log-ratio error saturating near 1.5–2 nats, so the descent
+  runs at 4–6pp of the maximum per sample and a full walk down from an 80% window needs 13–16 of
+  them. Measured 2026-08-12 on ten frequency-optimal real cells with the window planted away from
+  its shipped 1% (`/climber-gate`'s `startwin.py`): recovery tracks the trace's sample count and
+  nothing else — 41 samples recovers 73% of an 80% plant, 2 samples recovers 2% and leaves the
+  window where it was planted — and replaying a trace 4× cuts the deficit 3–8×. The density tier
+  recovers about twice as much of a deep plant as the reactive law it replaced. Don't read a
+  large-cache deficit from a wrong window as a broken descent before counting the cell's samples,
+  and don't propose shortening the sample period from this alone: the period is what keeps a
+  converged small window from jittering, and the cost side was never measured.
 - **The reactive tier has no window floor, and the bold driver's reversal is what stands in for
   one.** `BoundedLocalCache.decreaseWindow` floors the window at a single entry; the 2% floor and
   its below-floor lift live in `Reading.floor`, which only the density tier reads. A bold driver

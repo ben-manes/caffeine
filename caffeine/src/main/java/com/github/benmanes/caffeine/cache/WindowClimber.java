@@ -445,12 +445,12 @@ final class WindowClimber {
 
   /**
    * Returns the stride back to where the probe started, pricing the ending on the owning layer's
-   * ladder.
+   * ladder. A walk arrives here crashed or failed, and a crash is priced as a failure once its run
+   * escalates.
    */
   private double undoProbe(Walk walk, ProbeEnding ending, Reading reading) {
     boolean crashed = (ending == ProbeEnding.CRASHED);
-    boolean failed = (ending == ProbeEnding.FAILED)
-        || (crashed && walk.ladder.crashEscalates());
+    boolean failed = !crashed || walk.ladder.crashEscalates();
     if (failed) {
       walk.ladder.escalate();
     }
@@ -1147,7 +1147,7 @@ final class WindowClimber {
     /**
      * Restores the clock to its opening state, as a resize does. The direction is left standing: it
      * alternates across audits for coverage, and a resize has no opinion about the next one. The
-     * is negative until one has closed.
+     * last window is negative until one has closed.
      */
     void reset() {
       waitSamples = AUDIT_WAIT_FIRST;

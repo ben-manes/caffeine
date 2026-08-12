@@ -614,6 +614,53 @@ and four honest-window-hits verdict forms (absolute / vs-main-average / vs-own-b
 vs-baseline-with-bar-floor), each trading a distinct family — the verdict-design tradeoff surface
 in the study report §6.1. The one survivor SHIPPED: the rung-scaled walk stride (§4.3).
 
+### Killed by the 2026-08-12 start-knob sweep: the 1% initial window is not worth moving (measured; 37 cells / 29 workloads x 5 starts x 3 seeds, stratified by measured optimum)
+
+`PERCENT_MAIN` has never been re-asked since it was chosen. The hostile-window study above gave it
+an instrument, so it was swept properly: 77 cells classified by their *measured* static optimum
+(43 frequency-favorable at ≤5%, 14 middling, 20 recency-favorable at ≥40% — the axis the hostile
+study could not see, since its cells were screened **for** a small optimum), then 37 of them swept
+at starts of 1/2/5/10/20%, plus a 30% arm on the 23 density cells.
+
+**The bar was fixed before measuring**: corpus mean ≥ +0.50pp, no stratum mean below zero, no
+workload family losing more than 1.0pp, holding at each tier separately. **The best arm returns
++0.049pp**, a tenth of the bar, and no arm satisfies the stratum clause. Applying this study's own
+readability floor (≥15 density samples) the whole table collapses further: every arm's corpus mean
+lands within ±0.21pp of zero, the best being **+0.018** at a 20% start. The mid stratum's apparent
++0.25..+0.87 is entirely `corda@2k` and `corda@4k` at **3.3 and 6.6 samples**, which price the
+start rather than the controller; with the floor applied that stratum is negative at every arm.
+
+**The mechanism is why, and it is the part worth keeping.** The climber absorbs the plant
+asymmetrically: on recency workloads it captures **96%** of what a larger start could statically
+buy (frozen +2.68 against a delivered +0.11 at a 10% start), because it was walking to a 20–50%
+window anyway and the plant only shortens a journey already underway. On frequency workloads it
+passes **90% of the harm through** (frozen −0.80, delivered −0.72), since there the plant is pure
+displacement to be walked back at §7's 4–6%-of-C-per-sample. A larger default therefore buys almost
+nothing where it would help and costs nearly full price where it hurts. On two cells it lands in a
+*worse* attractor than 1% reaches at all: `wiki_1191a@64k` frozen −0.12 → delivered **−0.99** on
+3 of 3 seeds, `arc_P13@64k` frozen −1.59 → **−3.41**.
+
+The storage families are the case against moving it: the ARC set is **16 of 18** frequency-favorable
+with an optimum at a 1–2% window, losing monotonically as the start grows (frozen −0.15 / −0.44 /
+−1.18 at 5 / 10 / 20%, worst −5.41). A 5–10% default is a straight tax on exactly the large,
+frequency-signalled caches the 1% choice was made for.
+
+`cp_w050@123038`'s basin (§7) does **not** argue for a larger default: at N=8 the 2/5/10/20% arms
+read +0.02 / −0.01 / +0.04 / −0.21 and all converge to the same ~20.6% attractor, and only the 30%
+arm moves (+4.72, and one seed of eight already falls into the *bad* high basin from a 20% plant).
+It is a threshold between 20% and 30% that a 5–10% default captures none of, and it remains a
+question about the audit layer rather than about the default.
+
+Not decision-bearing but recorded: strata are near-collinear with families in this corpus (ARC 16
+of 18 frequency, cloud-physics@16k 12 of 14 mid-or-recency), broken only by `scarab_recs`,
+`wiki_1191a`, `msr_prxy_0`/`hm_0` and the lirs reactive cells; `cp_w097/098/100/101@16384` are
+near-duplicates and count as one workload; and `cp_w050@2048` has its whole static curve **below**
+LRU (ceiling 13.65 against LRU 14.52). No holdout was spent, and none is owed, since nothing was
+fitted. Two rest-point give-backs above the documented 0.5–2.5pp band turned up in passing and
+belong to §8's item 1 rather than here: `arc_P1@64k` settles at a 30% window against a 1% optimum
+for **3.25pp** (45.63 against a 48.88 frozen ceiling), and `cp_w097@16k` settles near 48% against a
+10% optimum over 135 samples.
+
 ### Killed by the 2026-08-08 SLRU study: neither main-space knob is worth adapting (measured; 276 cells x 9 arms, plus a noise floor and a within-trace pass)
 
 The main space has two elements the climber never touches: the 80/20 protected/probation split
@@ -1880,6 +1927,75 @@ witness it and the reasons are worth keeping: one pinned `sketchSampleSize` at `
 witnessing cell needs a resident count that both **exceeds 256** and **moves**, on terrain that
 produces blind corners. Unbuilt; the mechanism rests on
 `WindowClimberTest.probeEnding_upProbeVerdict_isFreeOfTheSampleLength`, which fails without the fix.
+
+**Hostile initial windows: the descent had no coverage at scale (2026-08-12).** Every gate row and
+every real-corpus cell starts the cache where the product starts it, at a 1% window. On the
+frequency-favorable traces that is already the static optimum, so those rows pass without the
+climber having to move, and a machine that could not *descend* would read clean on the whole real
+corpus. `-Dcaffeine.climber.startwin=<frac>` (harness) plants the window instead. Eleven cells were
+screened frequency-favorable by anchors alone; ten were run, all with a 1–2% static optimum: ARC S3
+at 25k–800k, DS1 at 1M–8M, MergeS at 256k and cloud-physics w050 at 123038.
+
+**The descent is the density law, unobstructed, at 4.0–6.3pp of the maximum per sample.**
+Recomputing `|error| × 0.03 × maximum` from the debug counters and comparing against the next
+sample's motion, `s3_100k`@80% is seventeen consecutive `steer` samples with prediction and
+observation agreeing to a rounding, carrying the window `.80 .79 .76 .72 … .09 .04`. The log-ratio
+error saturates near 1.5–2 nats even at a badly wrong window, so the step never approaches the 30%
+cap. **A full walk down from 80% therefore costs 13–16 samples ≈ 52–63 × the maximum in requests.**
+
+**Recovery is a function of that sample budget and of nothing else.** Recovered fraction of the
+plant's handicap at 80%: 164 samples washes it out, 41 → 0.73, 35 → 0.99, 20 → 0.63, 10 →
+0.32/0.35, 5 → 0.05, 2 → 0.02, 1 → 0.02. On `ds1_4M` an 80% plant ends at an **80.1%** window,
+because two samples is two commands. Replaying each trace 4× is the control: `s3_400k`@80% goes
+−16.05 → **−3.63** and lands at the floor, `ds1_1M`@80% −5.75 → −2.13. Four times the decisions, a
+third to an eighth of the deficit.
+
+**So the gap was the scaling, not the mechanism.** The mechanism has coverage at 8192 —
+`slowswap`'s phase 1 is exactly a descent from a wide window — but descent cost in requests is
+proportional to the maximum, and every large-maximum cell in `real.py` and `floors.py` starts at
+1% on a trace whose optimum is 1%. Those rows report the start, not the controller. Nor is this a
+cold-start hazard: `setMaximum` recomputes the window to 1%, and it is the climber that puts the
+window high (`s3_25k` reaches 76% from the shipped start). What the plant prices is the walk back
+after a regime change, which is ~60M requests for a 1M-entry cache and 500k for an 8192-entry one.
+
+**Against the reactive law the density tier replaced, the density tier is the better descender.**
+Paired arms rotated inside the seed: reactive holds the higher level at the shipped start on these
+cells (`ds1_1M` −0.72, `s3_100k` −0.95, `s3_400k` −1.29, the recency give-back inside its recorded
+band), and the arms cross between a 20% and a 40% plant. At 80%, `ds1_1M` 8.45 against 6.78 and
+`s3_100k` 9.20 against 8.38, recovering 0.33/0.13 and 0.73/0.52. Mechanically expected: the
+reactive period is `10 × maximum` against density's `4 ×`, and its step is a fixed decaying 6.25%
+rather than one proportional to how wrong the position is.
+
+**One cell is not the sample budget, and it is the reason to keep this instrument:
+`cp_w050`@123038 has a path-dependent rest point.** It holds 54 samples, so it is not starved, and
+its default arm reproduces the recorded `floors.py` 48.51 exactly. Over 8 admission seeds per arm:
+the shipped 1% start settles at a 20.5–21.2% window for **48.51** (48.48–48.55), a **30% plant
+settles at 14.7–14.9% for 53.16** (53.14–53.21), and 40%/50% plants settle at 55–64% for ~42.
+Static ceiling 54.80 @2%. **A 30% start is worth +4.65pp over the shipped one on the same trace**,
+landing 1.64pp off the ceiling where the shipped start lands 6.29pp off.
+
+The trajectories name the mechanism. From 1% the **first** command leaves the optimum: sample 0
+reads error +3.53, since at a 1% window the window is trivially the denser region, and the law
+commands +10.59pp in one step; the run then oscillates 20–32% for the whole trace, and its two
+audits each **crash after a single walk sample** and undo, both on a low-traffic sample (4,120
+window hits against a normal 60,000). From the 30% plant a down-audit instead runs four clean
+6.25pp steps from 33% to 8%, **confirms at a 2% window**, and parks there for 32 samples. So the
+descent machinery is fine here and the ascent out of the shipped start is not, with the audit layer
+that should catch it crashing on the trace's own phase structure. One cell of ten, reproducible in
+both directions, not traced to a defect: the question to settle is whether a single-sample audit
+crash on a low-traffic sample is the general shape, since `AUDIT_BAR_FRACTION` floors the bar at a
+fraction of the rate frozen at the arm and a sample with 15x fewer requests is not the case that
+pricing was built for.
+
+One further observation recorded rather than raised: a **failed probe undoes a correct descent in
+one capped move**. On `s3_25k`@80% a down-probe walks 30pp the right way, ends FAILED, and `undo`
+restores the whole plant; 171pp of 246pp of descent work goes that way. Full undo on failure is
+deliberate and the cell absorbs it (1.79 against the default start's 1.63), and the shorter cells
+never arm a probe at all (`undone` 0.0).
+
+`ds1_1M` shows the milder, non-bistable version of the rest-point error at 1.63pp, resting at
+13–22% against a 2% optimum. That is §8's average-vs-marginal error on a real cell, in the opposite
+direction from `P3` and `fiu_webmail`, which rest below their peaks.
 
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 

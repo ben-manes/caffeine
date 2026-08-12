@@ -37,8 +37,10 @@ intermediate step of `publishAggregationToCentralPortal`, into `build/nmcp/zip/a
 `nmcpPublishAggregationToMavenLocal` installs the same files for a consuming build to resolve.
 Pass `-Pversion.release=true` for the released coordinates rather than a snapshot.
 
-The `Sign` tasks are incompatible with the configuration cache, which discards the entry for that
-invocation rather than failing, so the publishing flows need no `--no-configuration-cache`.
+The publishing flows are configuration cache compatible and need no `--no-configuration-cache`.
+`Sign` was declared incompatible until 2026-08, which is no longer true of Gradle 9.7: the entry
+stores, and signatures produced from a cached configuration verify. Gradle encrypts the entry, so
+the in-memory PGP key it captures is not written to disk in the clear.
 
 Two non-default settings, both deliberate:
 

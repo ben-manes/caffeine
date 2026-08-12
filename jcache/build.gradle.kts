@@ -202,9 +202,9 @@ tasks.named<Javadoc>("javadoc").configure {
 
 tasks.withType<CheckForbiddenApis>().configureEach {
   bundledSignatures.addAll(when (name) {
-    "forbiddenApisTest" -> listOf("jdk-deprecated", "jdk-internal",
+    "forbiddenApisTest" -> listOf("jdk-internal",
       "jdk-non-portable", "jdk-reflection", "jdk-unsafe")
-    else -> listOf("jdk-deprecated", "jdk-internal", "jdk-non-portable",
+    else -> listOf("jdk-internal", "jdk-non-portable",
       "jdk-reflection", "jdk-system-out", "jdk-unsafe")
   })
 }

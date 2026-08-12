@@ -25,6 +25,7 @@ import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.ObjectStreamClass;
+import java.lang.reflect.Proxy;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -123,6 +124,21 @@ public class JavaSerializationCopier extends AbstractCopier<byte[]> {
         return Class.forName(desc.getName(), /* initialize= */ false, getClassLoader());
       } catch (ClassNotFoundException ignored) {
         return super.resolveClass(desc);
+      }
+    }
+
+    @Override
+    @SuppressWarnings({"BanSerializableRead", "deprecation"})
+    protected Class<?> resolveProxyClass(String[] interfaces)
+        throws IOException, ClassNotFoundException {
+      try {
+        var classes = new Class<?>[interfaces.length];
+        for (int i = 0; i < interfaces.length; i++) {
+          classes[i] = Class.forName(interfaces[i], /* initialize= */ false, getClassLoader());
+        }
+        return Proxy.getProxyClass(getClassLoader(), classes);
+      } catch (ClassNotFoundException | IllegalArgumentException ignored) {
+        return super.resolveProxyClass(interfaces);
       }
     }
   }

@@ -54,6 +54,7 @@ import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigParseOptions;
 import com.typesafe.config.ConfigSyntax;
+import com.typesafe.config.ConfigUtil;
 
 import jakarta.inject.Inject;
 
@@ -116,7 +117,7 @@ public final class TypesafeConfigurator {
   public static <K, V> Optional<CaffeineConfiguration<K, V>> from(Config config, String cacheName) {
     try {
       requireNonNull(cacheName);
-      return (!RESERVED_NAMES.contains(cacheName) && config.hasPath("caffeine.jcache." + cacheName))
+      return (!RESERVED_NAMES.contains(cacheName) && config.hasPath(cachePath(cacheName)))
           ? Optional.of(new Configurator<K, V>(config, cacheName).configure())
           : Optional.empty();
     } catch (ConfigException.BadPath e) {
@@ -174,6 +175,11 @@ public final class TypesafeConfigurator {
   /** Returns the strategy for loading the configuration. */
   public static ConfigSource configSource() {
     return requireNonNull(configSource.get());
+  }
+
+  /** Returns the path where the cache name is an opaque identifier rather than a path segment. */
+  private static String cachePath(String cacheName) {
+    return ConfigUtil.joinPath("caffeine", "jcache", cacheName);
   }
 
   /** Returns the configuration by applying the default strategy. */
@@ -234,7 +240,7 @@ public final class TypesafeConfigurator {
     Configurator(Config config, String cacheName) {
       this.root = requireNonNull(config);
       this.configuration = new CaffeineConfiguration<>();
-      this.customized = root.getConfig("caffeine.jcache." + requireNonNull(cacheName));
+      this.customized = root.getConfig(cachePath(requireNonNull(cacheName)));
       this.merged = customized.withFallback(root.getConfig("caffeine.jcache.default"));
     }
 

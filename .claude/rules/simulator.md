@@ -153,6 +153,18 @@ temporary file. Key invariants:
 - Canonical trace set: bundled LIRS (`loop`, `multi1/2/3`, `2_pools`, `cpp`, `cs`, `scan` at sizes 500/1k/2k); ARC's `DS1` at 1M to 8M; `S3` at 100k to 800k; the corda_large + 5×loop + corda_large phase-shift stress.
 - **The corda+loop stress must be run across the climber tiers.** The climber is tiered by size (`.claude/docs/design-decisions.md`): reactive `≤ SLOW_ADAPT_THRESHOLD` (512, small-tuned) and `≤ DENSITY_THRESHOLD` (4096, standard), density `> 4096`. Run the stress at **512, 513, 1024, 4096, 4097, 8192** and confirm `product.Caffeine` stays near its static-window ceiling and above LRU at every size, with **no cliff at either threshold boundary** (the 512→513 cliff was the original symptom of density taking over too early; density is now scoped to >4096 where it doesn't trap). The density climber is fragile at small/medium sizes — a starved region reads zero density and pins at an extreme — which is why it's scoped to large caches; don't lower `DENSITY_THRESHOLD` without re-running this. A synthetic phase-shift does *not* reliably reproduce the trap — use the real bundled `corda:trace_vaultservice_large.gz` + `lirs:loop.trace.gz`.
 - For LIRS-family bit-for-bit matching: set `non-resident-multiplier` very high (e.g. 100) so the memory bound doesn't fire — published references don't bound shadows.
+- **The LIR/HIR split is rounded on the COLD side, with a per-policy floor.** Both references compute
+  `HIR = (int)(HIR_RATE/100 * mem_size)`, clamp it up to a floor, and give LIR the remainder;
+  rounding the hot side instead (`(int)(size * percentHot)`) moves the boundary by one block and
+  costs 1–4 misses out of thousands. The floors differ and are not interchangeable: `lirs.c` uses
+  **2** (`LOWEST_HG_NUM`) and Chen Zhong's `replace_lirs2.cc` uses **4**. Their stack bounds differ
+  too — `MAX_S_LEN` is `mem_size*2500` for LIRS and `mem_size*8` for LIRS2, which is why
+  `lirs2.stack-length-multiplier` defaults to 8. Verified 2026-08-13: with the cold-side rounding,
+  `LirsPolicy` reproduces `lirs.c`'s miss counts on **8/8** canonical cells
+  (`cs`@512/1024, `ps`@256/1024, `multi1`@1024, `gli`@512, `cpp`@1024, `2_pools`@1024) **at the
+  shipped default**, where it previously matched only when the split was hand-adjusted. Re-check
+  with `verify_reference.py` in the lirs-analysis workspace, which rebuilds `lirs.c` from the
+  simulator's own resources (`cc -std=gnu89`; it has implicit declarations modern C rejects).
 - To run a C/C++ reference side-by-side: use `simulator:rewrite --outputFormat=LIRS` to produce one-int-per-line traces, strip `*` checkpoints with `grep -v '^\*$'` if the reference reader rejects them.
 
 ## Reader / Policy Test Scoping

@@ -170,14 +170,66 @@ final class CacheManagerTest {
           .isNotInstanceOf(LoadingCacheProxy.class);
 
       var config2 = new MutableConfiguration<>().setReadThrough(true);
-      assertThat(fixture.cacheManager().createCache(getClass() + "-2", config2))
-          .isNotInstanceOf(LoadingCacheProxy.class);
+      assertThrows(IllegalArgumentException.class,
+          () -> fixture.cacheManager().createCache(getClass() + "-2", config2));
+      assertThat(fixture.cacheManager().getCache(getClass() + "-2")).isNull();
 
       var config3 = new MutableConfiguration<>()
           .setCacheLoaderFactory(Mockito::mock)
           .setReadThrough(true);
       assertThat(fixture.cacheManager().createCache(getClass() + "-3", config3))
           .isInstanceOf(LoadingCacheProxy.class);
+    }
+  }
+
+  @Test
+  void invalidThroughConfiguration_hasNoCreationSideEffects() {
+    var writerCreated = new AtomicBoolean();
+    var missingLoader = new CaffeineConfiguration<>()
+        .setReadThrough(true)
+        .setWriteThrough(true)
+        .setCacheWriterFactory(() -> {
+          writerCreated.set(true);
+          return Mockito.mock();
+        });
+    var loaderCreated = new AtomicBoolean();
+    var missingWriter = new MutableConfiguration<>()
+        .setReadThrough(true)
+        .setWriteThrough(true)
+        .setCacheLoaderFactory(() -> {
+          loaderCreated.set(true);
+          return Mockito.mock();
+        });
+    CompleteConfiguration<Integer, Integer> custom = Mockito.mock();
+    Mockito.when(custom.getKeyType()).thenReturn(Integer.class);
+    Mockito.when(custom.getValueType()).thenReturn(Integer.class);
+    Mockito.when(custom.isStoreByValue()).thenReturn(true);
+    Mockito.when(custom.isReadThrough()).thenReturn(true);
+    Mockito.when(custom.getCacheEntryListenerConfigurations()).thenReturn(List.of());
+    Mockito.when(custom.getExpiryPolicyFactory())
+        .thenReturn(new MutableConfiguration<Integer, Integer>().getExpiryPolicyFactory());
+
+    try (var fixture = JCacheFixture.builder().build();
+         var cacheManager = fixture.cacheManager()) {
+      assertThrows(IllegalArgumentException.class,
+          () -> cacheManager.createCache("missing-loader", missingLoader));
+      assertThrows(IllegalArgumentException.class,
+          () -> cacheManager.createCache("missing-writer", missingWriter));
+      assertThrows(IllegalArgumentException.class,
+          () -> cacheManager.createCache("custom-missing-loader", custom));
+
+      assertThat(writerCreated.get()).isFalse();
+      assertThat(loaderCreated.get()).isFalse();
+      assertThat(cacheManager.getCache("missing-loader")).isNull();
+      assertThat(cacheManager.getCache("missing-writer")).isNull();
+      assertThat(cacheManager.getCacheNames()).doesNotContain("missing-loader");
+      assertThat(cacheManager.getCacheNames()).doesNotContain("missing-writer");
+      assertThat(cacheManager.getCacheNames()).doesNotContain("custom-missing-loader");
+
+      assertThat(cacheManager.createCache("missing-loader", new MutableConfiguration<>()))
+          .isNotNull();
+      assertThat(cacheManager.createCache("missing-writer", new MutableConfiguration<>()))
+          .isNotNull();
     }
   }
 

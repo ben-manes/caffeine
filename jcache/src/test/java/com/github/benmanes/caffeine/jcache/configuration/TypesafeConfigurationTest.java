@@ -240,6 +240,21 @@ final class TypesafeConfigurationTest {
   }
 
   @Test
+  void from_dottedCacheName() {
+    // a cache name is an opaque identifier, so a dotted name is a single quoted key rather than a
+    // nested path; otherwise cacheNames() enumerates a cache that from() cannot resolve
+    var config = ConfigFactory.parseString(
+        "caffeine.jcache { \"com.example.Foo\" { policy.maximum.size = 123 } }")
+        .withFallback(ConfigFactory.load());
+
+    assertThat(TypesafeConfigurator.cacheNames(config)).contains("com.example.Foo");
+
+    var cacheConfig = TypesafeConfigurator.from(config, "com.example.Foo");
+    assertThat(cacheConfig).isPresent();
+    assertThat(cacheConfig.orElseThrow().getMaximumSize()).hasValue(123);
+  }
+
+  @Test
   void isSet_customized_null() {
     Config root = Mockito.mock();
     Config merged = Mockito.mock();

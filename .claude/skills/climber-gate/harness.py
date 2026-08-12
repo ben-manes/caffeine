@@ -160,6 +160,25 @@ SEED = '''  /** EXPERIMENT HARNESS: a seeded admission tiebreak, or null for the
           : new java.util.Random(Long.getLong("caffeine.climber.seed", 0L));
 '''
 
+STARTWIN = '''
+  /**
+   * EXPERIMENT HARNESS: the window's initial share of the maximum, or a negative value for the
+   * shipped 1%. It plants the window at a hostile position so the climber's recovery to a
+   * frequency-optimal window can be measured on a trace whose optimum the default start already
+   * sits at.
+   */
+  static final double START_WINDOW =
+      Double.parseDouble(System.getProperty("caffeine.climber.startwin", "-1"));
+  /**
+   * Whether the plant re-splits main 80/20, as a `setMaximum` resize does. The default holds
+   * probation at its shipped capacity, which is the geometry the climber itself produces
+   * (`increaseWindow` conserves window and protected), so the cell differs from a default start by
+   * window position alone.
+   */
+  static final boolean START_RESPLIT =
+      System.getProperty("caffeine.climber.startsplit", "climber").equals("resize");
+'''
+
 # (name, file, anchor, replacement) — every anchor is CODE, so javadoc edits cannot break it.
 EDITS = [
     ("flags", W,
@@ -291,6 +310,23 @@ EDITS = [
     ("admit-seed", B,
      "  static final double PERCENT_MAIN_PROTECTED = 0.80d;\n",
      "  static final double PERCENT_MAIN_PROTECTED = 0.80d;\n\n" + SEED),
+
+    ("startwin-flags", B,
+     "  static final double PERCENT_MAIN = 0.99d;\n",
+     "  static final double PERCENT_MAIN = 0.99d;\n" + STARTWIN),
+
+    ("startwin-plant", B,
+     "    long window = max - (long) (PERCENT_MAIN * max);\n"
+     "    long mainProtected = (long) (PERCENT_MAIN_PROTECTED * (max - window));\n",
+     "    // EXPERIMENT HARNESS: -Dcaffeine.climber.startwin=<frac> plants the window away from\n"
+     "    // the shipped 1%, holding probation's capacity unless startsplit=resize\n"
+     "    long defaultWindow = max - (long) (PERCENT_MAIN * max);\n"
+     "    long window = (START_WINDOW < 0) ? defaultWindow : (long) (START_WINDOW * max);\n"
+     "    long probation = (max - defaultWindow)\n"
+     "        - (long) (PERCENT_MAIN_PROTECTED * (max - defaultWindow));\n"
+     "    long mainProtected = ((START_WINDOW < 0) || START_RESPLIT)\n"
+     "        ? (long) (PERCENT_MAIN_PROTECTED * (max - window))\n"
+     "        : Math.max(0L, (max - window) - probation);\n"),
 
     ("admit-draw", B,
      "      int random = ThreadLocalRandom.current().nextInt();\n",

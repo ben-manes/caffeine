@@ -59,7 +59,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
   @Override
   public @Nullable V get(K key) {
-    requireNotClosed();
+    requireOperable();
     @Nullable V value;
     try {
       value = getOrLoad(key);
@@ -71,10 +71,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       awaitAndSuppressFailure(error);
       throw error;
     }
-    var listenerFailure = awaitSynchronousFailure();
-    if (listenerFailure != null) {
-      throw listenerFailure;
-    }
+    rethrowListenerFailure(awaitSynchronousFailure());
     return value;
   }
 
@@ -89,21 +86,31 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       millis = nanosToMillis((start == 0L) ? ticker.read() : start);
       if (expirable.hasExpired(millis)) {
         var expired = expirable;
-        cache.asMap().computeIfPresent(key, (k, e) -> {
-          if (e == expired) {
-            dispatcher.publishExpired(this, key, expired.get());
-            statistics.recordEvictions(1L);
-            return null;
-          }
-          return e;
-        });
+        dispatcher.beginComputation();
+        try {
+          cache.asMap().computeIfPresent(key, (k, e) -> {
+            if (e == expired) {
+              dispatcher.publishExpired(this, key, expired.get());
+              statistics.recordEvictions(1L);
+              return null;
+            }
+            return e;
+          });
+        } finally {
+          dispatcher.endComputation();
+        }
         expirable = null;
       }
     }
 
     if (expirable == null) {
       statistics.recordMisses(1L);
-      expirable = cache.get(copyOf(key));
+      dispatcher.beginComputation();
+      try {
+        expirable = cache.get(copyOf(key));
+      } finally {
+        dispatcher.endComputation();
+      }
     } else {
       var duration = getAccessExpireTime();
       setVariableExpiration(key, duration);
@@ -123,7 +130,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
   @Override
   public Map<K, V> getAll(Set<? extends K> keys) {
-    requireNotClosed();
+    requireOperable();
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
     Map<K, V> result;
@@ -135,7 +142,12 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
             .filter(key -> !entries.containsKey(key))
             .map(this::copyOf)
             .collect(toUnmodifiableList());
-        entries.putAll(cache.getAll(keysToLoad));
+        dispatcher.beginComputation();
+        try {
+          entries.putAll(cache.getAll(keysToLoad));
+        } finally {
+          dispatcher.endComputation();
+        }
       }
 
       result = copyMap(entries);
@@ -150,10 +162,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       awaitAndSuppressFailure(error);
       throw error;
     }
-    var listenerFailure = awaitSynchronousFailure();
-    if (listenerFailure != null) {
-      throw listenerFailure;
-    }
+    rethrowListenerFailure(awaitSynchronousFailure());
     return result;
   }
 }

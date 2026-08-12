@@ -95,6 +95,7 @@ final class CacheFactory {
   public static <K, V> CacheProxy<K, V> createCache(CacheManagerImpl cacheManager,
       String cacheName, Configuration<K, V> configuration) {
     CaffeineConfiguration<K, V> config = resolveConfigurationFor(cacheManager, configuration);
+    checkConfiguration(config);
     return new Builder<>(cacheManager, cacheName, config).build();
   }
 
@@ -131,6 +132,16 @@ final class CacheFactory {
     template.setTypes(configuration.getKeyType(), configuration.getValueType());
     template.setStoreByValue(configuration.isStoreByValue());
     return template;
+  }
+
+  /** Validates the resolved configuration before any cache resource is constructed. */
+  private static void checkConfiguration(CompleteConfiguration<?, ?> config) {
+    if (config.isReadThrough() && (config.getCacheLoaderFactory() == null)) {
+      throw new IllegalArgumentException("Read-through requires a CacheLoader factory");
+    }
+    if (config.isWriteThrough() && (config.getCacheWriterFactory() == null)) {
+      throw new IllegalArgumentException("Write-through requires a CacheWriter factory");
+    }
   }
 
   /** A one-shot builder for creating a cache instance. */
@@ -193,7 +204,7 @@ final class CacheFactory {
       }
 
       CacheProxy<K, V> cache;
-      if (isReadThrough()) {
+      if (config.isReadThrough()) {
         configureRefreshAfterWrite();
         cache = newLoadingCacheProxy();
       } else {
@@ -204,11 +215,6 @@ final class CacheFactory {
         evictionListener.setCache(cache);
       }
       return cache;
-    }
-
-    /** Determines if the cache should operate in read through mode. */
-    private boolean isReadThrough() {
-      return config.isReadThrough() && (config.getCacheLoaderFactory() != null);
     }
 
     /** Creates a cache that does not read through on a cache miss. */
@@ -336,7 +342,12 @@ final class CacheFactory {
       } else if (expirable.isEternal()) {
         return Long.MAX_VALUE;
       }
-      return TimeUnit.MILLISECONDS.toNanos(expirable.getExpireTimeMillis()) - ticker.read();
+      // The deadline and the ticker share an arbitrary origin, so the difference is taken in the
+      // millisecond base that both are expressed in. Converting the deadline first would saturate
+      // it near the nanosecond horizon and collapse the remaining duration.
+      long remainingMillis = expirable.getExpireTimeMillis()
+          - TimeUnit.NANOSECONDS.toMillis(ticker.read());
+      return TimeUnit.MILLISECONDS.toNanos(remainingMillis);
     }
   }
 }

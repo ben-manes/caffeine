@@ -1172,9 +1172,11 @@
     measurement layer has to respect that (§7.3).</li>
   <li><b>Convergence is measured in multiples of C.</b> A sample needs ~4·C requests
     (§5.5), a traverse needs many samples, and each step's effect shows only after the
-    regions re-warm. Converging from a bad start takes tens of C's worth of traffic.
-    Adaptation is a between-eras mechanism; phases shorter than a couple of samples
-    are structurally untrackable for <i>any</i> design of this shape (§11).</li>
+    regions re-warm. Converging from a bad start takes tens of C's worth of traffic:
+    measured at 4–6% of C per sample, so a full walk down from an 80% window is 13–16
+    samples, <b>52–63·C</b>. Adaptation is a between-eras mechanism; phases shorter than
+    a couple of samples are structurally untrackable for <i>any</i> design of this
+    shape (§11).</li>
 </ul>
 
 <h3 id="s2-4"><a class="hl" href="#s2-4">2.4 The noise: weather vs climate</a></h3>
@@ -3740,6 +3742,15 @@ window = max(window + step, 0.02·C)</pre>
     </details></li>
   <li><b>Traps are falsifiers, not scoreboards.</b> Constructed workloads may veto a
     design; only real traces score it.</li>
+  <li><b>A cell that starts where the product starts cannot test the descent.</b> Every
+    row began at the shipped 1% window, which on a frequency-favoring trace is already
+    the optimum, so the row passed without the controller moving and a machine that
+    could only climb would have scored clean on the whole corpus. Planting the window
+    away from 1% is what closes it. Ten frequency-optimal real cells, planted at 5–80%:
+    recovery tracks the trace's decision count and nothing else, from full at 41 samples
+    to none at two, and the density law recovers about twice as much of a deep plant as
+    the reactive law it replaced. This is the same shape as the bar defects above, an
+    instrument that cannot fail for the reason it exists.</li>
   <li><b>Sealed holdouts.</b> Trace sets never touched during design were frozen and
     scored exactly once at locking decisions, three generations of them. The final
     generation (twelve cells over four never-touched families) was scored once at

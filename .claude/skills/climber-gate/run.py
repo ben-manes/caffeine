@@ -30,30 +30,43 @@ def gradle(size, trace, args, fmt="lirs"):
             f"-Dcaffeine.simulator.files.paths.0={fmt}:{os.path.abspath(trace)}",
             "-Dcaffeine.simulator.admission.0=Always",
             "-Dcaffeine.simulator.report.format=csv"]
+    # CAF_EXTRA appends harness properties (e.g. -Dcaffeine.climber.startwin=0.4) to every run,
+    # so a study can hold one knob across the anchors and every arm without forking the tools.
+    base += os.environ.get("CAF_EXTRA", "").split()
     return subprocess.run(base + args, capture_output=True, text=True, cwd=WT)
 
 
-def anchors(trace, size, fmt="lirs"):
+def curve(trace, size, fmt="lirs", windows=WINDOWS):
+    """Returns (LRU, {percent-main label: hit rate}) over the static-window anchor sweep."""
     args = ["-Dcaffeine.simulator.policies.0=linked.Lru",
             "-Dcaffeine.simulator.policies.1=sketch.WindowTinyLfu"]
-    for i, w in enumerate(WINDOWS):
+    for i, w in enumerate(windows):
         args.append(f"-Dcaffeine.simulator.window-tiny-lfu.percent-main.{i}={1.0 - w:.2f}")
     r = gradle(size, trace, args, fmt)
-    lru, best = None, (-1.0, None)
+    lru, static = None, {}
     for ln in r.stdout.splitlines():
         if ln.startswith("linked.Lru,"):
             lru = float(ln.split(",")[1])
         m = re.match(r"sketch\.WindowTinyLfu \((\d+)%\),([\d.]+),", ln)
-        if m and float(m.group(2)) > best[0]:
-            best = (float(m.group(2)), int(m.group(1)))
+        if m:
+            static[int(m.group(1))] = float(m.group(2))
     if lru is None:
         sys.stderr.write(r.stdout[-3000:] + r.stderr[-3000:])
+    return lru, static
+
+
+def anchors(trace, size, fmt="lirs"):
+    lru, static = curve(trace, size, fmt)
+    best = (-1.0, None)
+    for win, hr in static.items():
+        if hr > best[0]:
+            best = (hr, win)
     return lru, best
 
 
-def variant(trace, size, var, fmt="lirs", debug=False, dump=None, seed=None):
+def variant(trace, size, var, fmt="lirs", debug=False, dump=None, seed=None, extra=()):
     args = ["-Dcaffeine.simulator.policies.0=product.Caffeine",
-            f"-Dcaffeine.climber.variant={var}"]
+            f"-Dcaffeine.climber.variant={var}", *extra]
     if debug:
         args.append("-Dcaffeine.climber.debug=true")
     if seed is not None:

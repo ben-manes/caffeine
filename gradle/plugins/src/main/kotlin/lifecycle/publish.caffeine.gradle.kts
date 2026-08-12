@@ -62,7 +62,7 @@ publishing {
 }
 
 signing {
-  // https://github.com/gradle/gradle/issues/11387
+  // A build without a signing key stages an unsigned publication rather than failing
   setRequired { false }
 
   val signingKey = project.findProperty("signingKey") as String?
@@ -70,10 +70,6 @@ signing {
   val signingPassword = project.findProperty("signingPassword") as String?
   useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
   sign(publishing.publications["mavenJava"])
-}
-
-tasks.withType<Sign>().configureEach {
-  incompatibleWithConfigurationCache()
 }
 
 if (providers.environmentVariable("ACTIONS_ID_TOKEN_REQUEST_URL").isPresent) {

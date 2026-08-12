@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache.event;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -74,12 +75,58 @@ public final class EventDispatcher<K, V> {
       Registration<K, V>,
       ConcurrentMap<K, CompletableFuture<@Nullable CacheEntryListenerException>>> dispatchQueues;
   final ThreadLocal<List<CompletableFuture<@Nullable CacheEntryListenerException>>> pending;
+  final ThreadLocal<@Nullable CompletableFuture<@Nullable Void>> gate;
+  final ThreadLocal<Boolean> inCallback;
   final Executor executor;
 
   public EventDispatcher(Executor executor) {
+    this.inCallback = ThreadLocal.withInitial(() -> Boolean.FALSE);
     this.pending = ThreadLocal.withInitial(ArrayList::new);
     this.dispatchQueues = new ConcurrentHashMap<>();
     this.executor = requireNonNull(executor);
+    this.gate = new ThreadLocal<>();
+  }
+
+  /**
+   * Marks the start of a computation, during which the cache's callbacks run and the events they
+   * publish are staged rather than dispatched.
+   */
+  public void beginComputation() {
+    inCallback.set(true);
+  }
+
+  /** Releases the events staged by the computation, which has committed, and marks its end. */
+  public void endComputation() {
+    var barrier = gate.get();
+    gate.remove();
+    try {
+      if (barrier != null) {
+        barrier.complete(null);
+      }
+    } finally {
+      inCallback.set(false);
+    }
+  }
+
+  /** Returns whether a callback of this cache is running on the current thread. */
+  public boolean inCallback() {
+    return inCallback.get();
+  }
+
+  /**
+   * Returns what a published event waits on, chaining this thread's gate with the key's previous
+   * event so that the per-key dispatch order is retained.
+   */
+  private @Nullable CompletableFuture<?> gated(@Nullable CompletableFuture<?> queue) {
+    if (!inCallback()) {
+      return queue;
+    }
+    @Var var barrier = gate.get();
+    if (barrier == null) {
+      barrier = new CompletableFuture<>();
+      gate.set(barrier);
+    }
+    return (queue == null) ? barrier : CompletableFuture.allOf(barrier, queue);
   }
 
   /** Returns the cache entry listener registrations. */
@@ -100,13 +147,21 @@ public final class EventDispatcher<K, V> {
     var listener = new EventTypeAwareListener<K, V>(
         configuration.getCacheEntryListenerFactory().create());
 
-    var factory = configuration.getCacheEntryEventFilterFactory();
-    CacheEntryEventFilter<K, V> filter = (factory == null)
-        ? event -> true
-        : new GuardedCacheEntryEventFilter<>(factory.create());
+    CacheEntryEventFilter<K, V> filter;
+    try {
+      var factory = configuration.getCacheEntryEventFilterFactory();
+      filter = (factory == null)
+          ? event -> true
+          : new GuardedCacheEntryEventFilter<>(factory.create());
+    } catch (Throwable t) {
+      closeQuietly(listener, t);
+      throw t;
+    }
 
     var registration = new Registration<>(configuration, filter, listener);
-    dispatchQueues.putIfAbsent(registration, new ConcurrentHashMap<>());
+    if (dispatchQueues.putIfAbsent(registration, new ConcurrentHashMap<>()) != null) {
+      closeQuietly(listener, /* outer= */ null);
+    }
   }
 
   /**
@@ -295,9 +350,11 @@ public final class EventDispatcher<K, V> {
       @SuppressWarnings("PMD.CloseResource")
       var listener = registration.getCacheEntryListener();
       var future = dispatchQueue.compute(key, (k, queue) -> {
-        return (queue == null)
-            ? CompletableFuture.supplyAsync(() -> listener.dispatch(e), executor)
-            : queue.handleAsync((prev, error) -> listener.dispatch(e), executor);
+        var predecessor = gated(queue);
+        var ready = (predecessor == null)
+            ? CompletableFuture.completedFuture(null)
+            : predecessor.handle((result, error) -> null);
+        return ready.thenApplyAsync(ignored -> listener.dispatch(e), executor);
       });
       future.whenComplete((result, error) -> {
         // optimistic check to avoid locking if not a match
@@ -307,6 +364,19 @@ public final class EventDispatcher<K, V> {
       });
       if (registration.isSynchronous() && !quiet) {
         pending.get().add(future);
+      }
+    }
+  }
+
+  /** Closes the resource, retaining a close failure as suppressed by the outermost error. */
+  private static void closeQuietly(AutoCloseable resource, @Nullable Throwable outer) {
+    try {
+      resource.close();
+    } catch (Throwable t) {
+      if (outer == null) {
+        logger.log(Level.WARNING, "Failure when closing an unregistered listener", t);
+      } else if (t != outer) {
+        outer.addSuppressed(t);
       }
     }
   }

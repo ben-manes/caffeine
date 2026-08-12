@@ -27,6 +27,9 @@ import static org.mockito.Mockito.when;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import javax.cache.expiry.CreatedExpiryPolicy;
+import javax.cache.expiry.Duration;
+
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -63,6 +66,26 @@ final class JCacheExpiryTest {
       var value = fixture.jcache().get(KEY_1);
       assertThat(value).isEqualTo(VALUE_2);
       verify(expiry).expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong());
+    }
+  }
+
+  @Test
+  void nativeDeadline_nearNanosecondSaturation() {
+    // The JCache deadline is an absolute millisecond timestamp in the ticker's own arbitrary base.
+    // Converting it to nanoseconds first saturates once it passes the horizon, so the subtraction
+    // of a ticker that has not yet saturated returns whatever is left below Long.MAX_VALUE: here a
+    // one minute deadline would become 100ns. The difference must be taken in milliseconds.
+    long now = Long.MAX_VALUE - 100;
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setTickerFactory(() -> () -> now);
+          config.setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(Duration.ONE_MINUTE));
+        }).build();
+        var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+
+      var expiresAfter = JCacheFixture.getNativeExpiresAfter(cache, KEY_1);
+      assertThat(expiresAfter).isEqualTo(java.time.Duration.ofMinutes(1));
     }
   }
 }

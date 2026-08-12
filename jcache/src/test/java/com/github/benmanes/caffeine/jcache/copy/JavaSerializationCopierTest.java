@@ -28,6 +28,10 @@ import java.io.InputStream;
 import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
+import java.io.Serializable;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.time.Month;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -84,6 +88,50 @@ final class JavaSerializationCopierTest {
     var copier = new JavaSerializationCopier();
     var copy = copier.copy(ImmutableSet.of(), ClassLoader.getPlatformClassLoader());
     assertThat(copy).isInstanceOf(ImmutableSet.class);
+  }
+
+  @Test
+  void deserializable_resolveProxyClass() {
+    // a proxy's interfaces are resolved through resolveProxyClass, not resolveClass, so without
+    // that override the supplied class loader is bypassed for the manager's own types
+    var requested = new ArrayList<String>();
+    var classLoader = new ClassLoader(getClass().getClassLoader()) {
+      @Override public Class<?> loadClass(String name) throws ClassNotFoundException {
+        requested.add(name);
+        return super.loadClass(name);
+      }
+    };
+    var proxy = Proxy.newProxyInstance(getClass().getClassLoader(),
+        new Class<?>[] { SerializableGreeter.class }, new GreeterHandler());
+
+    var copier = new JavaSerializationCopier();
+    var copy = copier.copy(proxy, classLoader);
+
+    assertThat(copy).isInstanceOf(SerializableGreeter.class);
+    assertThat(((SerializableGreeter) copy).greet()).isEqualTo("hello");
+    assertThat(requested).contains(SerializableGreeter.class.getName());
+  }
+
+  /** An interface for a serializable dynamic proxy. */
+  @FunctionalInterface
+  public interface SerializableGreeter extends Serializable {
+    String greet();
+  }
+
+  /** A handler that is itself serializable, as a proxy is written with its handler. */
+  @SuppressFBWarnings("DESERIALIZATION_GADGET")
+  private static final class GreeterHandler implements InvocationHandler, Serializable {
+    private static final long serialVersionUID = 1L;
+
+    @SuppressFBWarnings("URV_INHERITED_METHOD_WITH_RELATED_TYPES")
+    @Override public Object invoke(Object proxy, Method method, Object[] args) {
+      switch (method.getName()) {
+        case "hashCode": return System.identityHashCode(proxy);
+        case "equals": return (proxy == args[0]);
+        case "toString": return "greeter";
+        default: return "hello";
+      }
+    }
   }
 
   @ParameterizedTest @MethodSource("copiers")

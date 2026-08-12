@@ -10,7 +10,7 @@ plugins {
 }
 
 dependencies {
-  subprojects { nmcpAggregation(project(path)) }
+  subprojects.map { it.path }.forEach { nmcpAggregation(project(it)) }
 }
 
 nmcpAggregation {

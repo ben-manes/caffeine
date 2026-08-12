@@ -100,11 +100,21 @@ public final class Lirs2Policy implements KeyOnlyPolicy {
     this.data = new Long2ObjectOpenHashMap<>();
     this.policyStats = new PolicyStats(name());
     this.maximumSize = Math.toIntExact(settings.maximumSize());
-    this.maximumHotSize = (int) (maximumSize * settings.percentHot());
+    this.maximumHotSize = maximumSize - maximumColdSize(maximumSize, settings.percentHot());
     this.maximumStackLength = maximumSize * settings.stackLengthMultiplier();
     this.maximumNonResidentSize = (int) (maximumSize * settings.nonResidentMultiplier());
-    checkState(maximumHotSize >= 1,
+    checkState(maximumHotSize >= 5,
         "maximum size %s is too small for the configured percent-hot", maximumSize);
+  }
+
+  /**
+   * Returns the number of resident HIR blocks, which the reference implementation derives from the
+   * cold side and floors at four blocks. Rounding the hot side instead moves the boundary by one
+   * block, so it is computed the reference's way. The floor is twice LIRS's, where the same
+   * calculation stops at two.
+   */
+  private static int maximumColdSize(int maximumSize, double percentHot) {
+    return Math.max(4, (int) (maximumSize * (1.0d - percentHot)));
   }
 
   @Override

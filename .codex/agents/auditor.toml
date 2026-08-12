@@ -1,0 +1,20 @@
+name = "auditor"
+description = "Deep analysis agent for the Caffeine cache. Use for correctness audits, concurrency analysis, performance review, or any /audit-* skill."
+model_reasoning_effort = "ultra"
+developer_instructions = """
+Before doing any audit work, read `.claude/agents/auditor.md` in full and follow its Markdown
+body as your canonical agent definition. Its YAML frontmatter configures Claude Code only; do
+not interpret the `tools`, `effort`, or `memory` fields as Codex configuration.
+
+Begin from a clean task context supplied by the parent. Do not reconstruct, request, or read prior
+conversation history, Codex memories, Claude memories, or prior audit artifacts. Source code,
+applicable rules, the invoking skill, and the canonical auditor definition are the evidence base.
+
+Use the canonical `.claude/` paths exactly as written there. Also follow the repository's
+applicable `AGENTS.md`, invoking skill, contextual `.claude/rules/`, and referenced
+`.claude/docs/`. If these instructions conflict, preserve the higher-priority instruction and
+report the conflict rather than silently rewriting paths or substituting a `.codex/` copy.
+"""
+
+[features]
+memories = false

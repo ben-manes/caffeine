@@ -14,10 +14,7 @@ jitwatch.out
 .antigravitycli/
 __pycache__/
 .opencode/
-.agents/
-.codex/
 .local/
-AGENTS*.md
 .cifuzz-corpus
 .classpath
 .settings

@@ -251,26 +251,22 @@ session memory for the full rationale.
   `close()`'s `invalidateAll` (**M2**) is not just unspecified but **explicitly permitted**:
   "Closing a Cache does not necessarily destroy the contents ... the contents of a closed
   Cache may still be available." Local in-memory → the lingering entry is GC-reclaimed, no
-  resource leak. **M3**: `EventDispatcher.publish`'s *first-event* `runAsync` throws
-  `RejectedExecutionException` synchronously to the racing caller once the executor is shut
-  down (subsequent events' `thenRunAsync` captures it — a real internal asymmetry; trigger
-  is a rejecting executor = the close-shutdown or a user's `AbortPolicy` bounded pool). The
-  **sync-`pending` ThreadLocal leak (F7/A14)** is a non-issue: `runAsync` sits *inside*
-  `dispatchQueue.compute` and `pending.add` runs only after it returns, so a fully-rejecting
-  (shut-down) executor throws on the *first* registration before any `pend` → `pending` stays
-  empty. A stale future needs the executor to flip accepting→rejecting **mid-loop** (an
-  `AbortPolicy` pool crossing capacity between two registrations/keys), and it self-heals on the
-  next `awaitSynchronous`/`ignoreSynchronous` (both `clear()` in a `finally`). The bulk loop ops
-  (`getAll`/`putAll`/`removeAll`) already wrap their loop in a `try..finally` that awaits/clears
-  `pending` even on a throw (`removeAll` was brought into line with `putAll`); the single-key ops
-  don't need it (the throw precedes any `pend`), so the only residue is a single-key op with ≥2
-  sync listeners hitting a mid-loop flip, self-healing on the next op — not worth per-caller
-  try/finally there. The
+  resource leak. **M3**: `EventDispatcher.publish`'s *first-event* `runAsync` used to throw
+  `RejectedExecutionException` synchronously to the racing caller while subsequent events'
+  `thenRunAsync` captured it — an internal asymmetry **resolved 2026-08-14** on the write-through
+  atomicity leg this adjudication had not weighed (see the entry below). Every publish is now a
+  dependent stage, so a rejection completes the dispatch future exceptionally and reaches a
+  synchronous caller as a `CacheEntryListenerException` after the mutation commits. The
+  **sync-`pending` ThreadLocal leak (F7/A14)** is a non-issue, now for a simpler reason than the
+  one first recorded here: a rejected publish still pends its failed future, and every operation
+  path ends in `awaitSynchronous`/`ignoreSynchronous`, which `clear()` in a `finally`. The bulk
+  loop ops (`getAll`/`putAll`/`removeAll`) wrap their loop in a `try..finally` that awaits/clears
+  `pending` even when the loop throws (`removeAll` was brought into line with `putAll`); the
+  single-key ops reach their await on the normal path. The
   **event loss itself is spec-mandated** — close() "must prevent events being delivered to
   configured `CacheEntryListener`s" — which Caffeine enforces **two ways** (the shut-down
   executor rejects the dispatch task, *and* `EventTypeAwareListener.dispatch` early-returns
-  on `event.getSource().isClosed()`), so the drop is correct on both paths; only the
-  raw-REE-to-caller is the unspecified quirk. **Executor shutdown is spec-SILENT, not required** (correcting a first-draft
+  on `event.getSource().isClosed()`), so the drop is correct on both paths. **Executor shutdown is spec-SILENT, not required** (correcting a first-draft
   overclaim): § *Closing a Cache*'s enumerated `Closeable` list is `CacheLoader`/
   `CacheWriter`/`CacheEntryListener`s/`ExpiryPolicy` — the executor is **not** in it;
   closing it rests on the general "release all resources coordinated on behalf of the
@@ -297,7 +293,7 @@ session memory for the full rationale.
   Note the one **mandatory** clause here — no events delivered to a closed `CacheEntryListener` —
   is enforced by `EventTypeAwareListener.dispatch`'s `event.getSource().isClosed()` early-return
   plus the shut-down executor's rejection, *not* by this barrier, so a queued dispatch that runs
-  after close delivers nothing. Don't add op-vs-close locking or a synchronous REE guard; don't
+  after close delivers nothing. Don't add op-vs-close locking; don't
   funnel refreshes into `inFlight` or await them in close(); don't move the `loadAll` notification
   back outside the tracked future, and don't "simplify" the compose into a `join`; don't re-raise
   M2/F1 (spec explicitly permits retained contents and is silent on in-progress operations).
@@ -337,7 +333,7 @@ session memory for the full rationale.
   the filter failure and returns false so the dispatcher skips that listener. Unlike a
   synchronous *listener* exception (which propagates — see the next entry), a *filter*
   exception is swallowed because the filter runs **inside** the mutating `compute`: propagating
-  would abort the store that already committed. The listener runs *after* the commit (via
+  would abort the store that already committed. The listener runs after the commit (via
   `awaitSynchronous`), so it can safely propagate. Pinned by
   `EventDispatcherTest.publishCreated_filterThrows`.
 - **A synchronous `CacheEntryListener` exception propagates to the caller, wrapped as a
@@ -362,6 +358,32 @@ session memory for the full rationale.
   `EventDispatcherTest.put_syncListenerThrows_propagatesToCaller` (+ `_asyncListenerThrows_swallowed`,
   `_subsequentEventStillDelivered`, `awaitSynchronous_listenerException{,s_suppressed}`) and
   `EventTypeAwareListenerTest`.
+- **A committed operation records its statistics before a synchronous listener failure is
+  rethrown** (fixed 2026-08-12). Direct `get`-expiry, put/getAndPut/putIfAbsent,
+  remove/getAndRemove/conditional-remove, replace/getAndReplace/conditional-replace, and delegated
+  iterator removal used to await first, so a `CacheEntryListenerException` skipped their
+  post-commit hit/miss/put/removal counters and timers entirely. The spec does not order
+  statistics against a listener failure; the basis is that `putAll`/`removeAll`, `invoke`, and the
+  loading siblings already captured the notification failure, accounted for the committed effect,
+  and then rethrew it, so the direct paths were dropping a specified counter their own siblings
+  record. They now use that ordering too, via `awaitSynchronousFailure` +
+  `rethrowListenerFailure`. `getAndRemove`/`getAndReplace` also moved their store-by-value copy of
+  the returned value below the accounting, converging on `getAndPut`, so a copier failure no longer
+  discards the committed operation's counters either. This is deliberately limited to the
+  specified listener exception; a
+  callback `Error` still propagates as-is, and statistics enable/disable races retain the
+  specification's undefined-consistency semantics. Pinned by
+  `EventDispatcherTest.synchronousListenerFailure_committedMutationRetainsStatistics` and
+  `synchronousExpiredListenerFailure_retainsGetStatistics`.
+- **A synchronous listener failure never replaces the operation's own failure** (`getAll` fixed
+  2026-08-14). Every path that can fail after publishing catches the primary error, folds the
+  listener's onto it with `awaitAndSuppressFailure`, and rethrows the primary —
+  `putAll`/`removeAll`/`invoke`/`LoadingCacheProxy.getAll` already did. `CacheProxy.getAll` was the
+  holdout, ending in a bare `finally { awaitSynchronous(); }`, so when `copyMap`'s store-by-value
+  copy failed while a lazily-expired entry's EXPIRED listener had also thrown, Java's finally rule
+  handed the caller the listener's exception and discarded the copier's. It was easy to miss
+  because `LoadingCacheProxy` overrides `getAll` outright, so the loading path was already correct.
+  Pinned by `EventDispatcherTest.getAll_copierThrows_retainsPrimaryFailure`.
 - **`invoke`/`invokeAll` UPDATED must record `CachePuts` only after
   `CacheWriter.write` succeeds** (fixed 2026-06-10). `postProcess` case UPDATED
   recorded the put before the write-through call, so a writer exception left a
@@ -428,6 +450,26 @@ session memory for the full rationale.
   objects sharing one listener factory *and* a custom `equals` that reports them unequal — a plain
   `MutableCacheEntryListenerConfiguration` is field-equal, so the config list itself rejects the second as
   a duplicate). Don't re-key `Registration`/`deregister` by the raw config (it reintroduces the deregister-key mismatch that commit fixed).
+- **`getConfiguration()`'s read-only copy keeps the live `MutableCacheEntryListenerConfiguration`
+  leaves** (declined 2026-08-14). The spec requires *"The returned value must be immutable"*, and
+  `immutableCopy()` makes the configuration itself read-only — setters throw
+  `UnsupportedOperationException`, the listener iterable is unmodifiable — but each listener
+  setting keeps its four setters, so a caller can mutate what the configuration reports.
+  **Immutability is not transitive**: an immutable list of mutable elements is still an immutable
+  list, and reading the sentence as a deep freeze is an overreach. No implementation reads it that
+  way — the RI hands back its live, fully mutable `MutableConfiguration` field, and Ehcache 3's
+  purpose-built `Eh107CompleteConfiguration` wraps the very same listener references in an
+  unmodifiable list — so Caffeine is already stricter than both. Impact is bounded regardless:
+  `Registration` takes its own defensive copy at registration, so dispatch never reads the mutable
+  leaf, and the residue is reporting plus `deregister` matching for a caller who mutated an object
+  it took from a read-only accessor. TCK-blind (`ConfigurationTest` pins only that mutating the
+  caller's configuration after `createCache` does not reach the cache). **A copy-every-entry
+  version was built and reverted**: the copy is a `MutableCacheEntryListenerConfiguration`, whose
+  `equals` is `instanceof`-guarded, so against a user-implemented `CacheEntryListenerConfiguration`
+  it never matched the original but did match `Registration`'s own copy —
+  `deregisterCacheEntryListener` then dropped the registration while leaving the configuration
+  entry, stranding a listener that stayed listed, went unclosed by `close()`, and could not be
+  re-registered. Don't copy the leaves.
 - **`invoke` `remove()` on an absent entry records no removal and fires no
   `REMOVED` event** (only `CacheWriter.delete` is called). The RI unconditionally
   counts a removal and fires REMOVED-with-null-value, contradicting its own
@@ -488,21 +530,51 @@ session memory for the full rationale.
   per-key `compute`s put with `publishToWriter=false` — the same structural same-key window (a
   racing single-key op can leave cache and store inverted) and the same spec exemption apply. Both
   batch ops use the atomicity-exempt writer methods; the single-key `put`/`remove` fixes above do
-  not extend to them, by design.
+  not extend to them, by design. **The exemption covers ordering and cross-key atomicity, not a
+  store-only write** (bounded 2026-08-14): `writeAll` says *"if thrown cache mutations will occur
+  for entries that succeeded"*, and `putAll` is defined as *"equivalent to … calling `put(k, v)` …
+  once for each mapping"*, where a single-key put copies ahead of its own write-through. So the
+  store-by-value copies are now taken for the whole batch **before** `writeAll`, and a copier
+  failure aborts with nothing written and nothing cached. Pinned by
+  `CacheProxyTest.putAll_writeThrough_copierThrows_doesNotWriteToTheStore` and
+  `EventDispatcherTest.putAll_copierFails_abortsBeforeAnyCommit`. A mid-loop abort is still
+  possible from a throwing extension `Weigher`/native `Expiry` (the user-callback family), and when
+  it happens a saved `CacheWriterException` from a partial `writeAll`/`deleteAll` is retained as
+  suppressed rather than replaced — pinned by
+  `CacheProxyTest.putAll_writerPartiallyFails_storeThrows_retainsWriterFailure`.
 - **`JCacheLoaderAdapter.expireTimeMillis` applies the same ±1 sentinel-collision
   adjustment** as `CacheProxy.getWriteExpireTimeMillis`/`setAccessExpireTime` when
   a finite adjusted time lands exactly on `0` or `Long.MAX_VALUE` (treated as
   already-expired / eternal). Resolved by "Clamp the jcache loader's computed creation expiry" and pinned by
   `CacheLoaderTest.load_adjustedTimeSentinelZero`/`...Max`; earlier revisions of
   this list recorded the adjustment as missing — do not re-derive that gap.
-- **Synchronous-listener exceptions are logged and swallowed**, not wrapped in
-  `CacheEntryListenerException` and rethrown to the cache-op caller (the RI
-  rethrows). The TCK's `testBrokenCacheEntryListener` tolerates both behaviors
-  (catch-without-fail), and the queued-dispatch model has no synchronous frame to
-  rethrow from. Intentional (the swallow-and-log mechanism is
-  `EventTypeAwareListener.dispatch`'s catch plus `awaitSynchronous`'s
-  `CompletionException` catch; the `EventDispatcher` class javadoc documents
-  ordering/await semantics, not this policy).
+- **`ExpirableToExpiry` takes the deadline difference in milliseconds, not nanoseconds**
+  (fixed 2026-08-14). It used to compute `MILLISECONDS.toNanos(expireTimeMillis) - ticker.read()`,
+  converting the absolute deadline first. That conversion saturates at `Long.MAX_VALUE / 1_000_000`
+  (~292 years of ticker), so once the deadline crossed the horizon the numerator pinned to
+  `Long.MAX_VALUE` while the ticker kept climbing and the remaining duration collapsed: at
+  `ticker = Long.MAX_VALUE - 100`, a one minute deadline yielded a 100 ns native duration (the
+  mirror case, a ticker near `Long.MIN_VALUE`, expired everything at once). Both operands share the
+  ticker's arbitrary origin — `Expirable.expireTimeMillis` comes from
+  `CacheProxy.currentTimeMillis()` = `NANOSECONDS.toMillis(ticker.read())` — so the difference is
+  now taken in that millisecond base and converted once. This is the same modular subtraction
+  `Expirable.hasExpired` already relies on, so it is wrap-safe rather than merely unsaturated.
+  Only the **native timer wheel** was ever affected; the lazy `hasExpired` gate that keeps an
+  expired value from being returned was correct throughout. The failure envelope needs a ticker
+  within one duration of the horizon, which `Ticker.systemTicker()` on HotSpot/Linux
+  (`CLOCK_MONOTONIC` since boot) does not reach — a custom `setTickerFactory` does, and
+  `JCacheFixture.START_TIME` is already randomized across the full long range for exactly this
+  class of bug. Core's clamps cover the edges: `expiresAt` applies
+  `Math.min(duration, MAXIMUM_EXPIRY)` so a saturated positive cannot overflow `now + duration`,
+  and every call site is `Math.max(0L, …)` so a negative means expire-now — which is the contract
+  the `-1L` zero-expiry sentinel already depended on. **Cost:** the native deadline is now
+  millisecond-granular, so the wheel may fire up to ~1 ms later; that aligns it with the
+  millisecond-granular `hasExpired` and removes the old sub-millisecond window where the wheel
+  could fire while the lazy gate still called the entry live. Do **not** "improve" this by using
+  the `currentTime` parameter core passes in instead of re-reading the ticker: the ledger records
+  that cleanup being reverted (BC-1/BC-2) because the expiry suites use an auto-increment ticker
+  where dropping a `read()` shifts observed timestamps. Pinned by
+  `JCacheExpiryTest.nativeDeadline_nearNanosecondSaturation`.
 - **Entry-processor `getValue()`-load followed by `remove()` calls
   `CacheWriter.delete`** (action `LOADED` → `DELETED`). The RI cancels LOAD+remove
   to a no-op. Spec-silent; Caffeine's behavior is internally consistent with
@@ -670,6 +742,133 @@ session memory for the full rationale.
   clause unreachable in both impls (every close path removes the cache from the registry before
   `enable*` could observe it). TCK-blind; pinned by `CacheManagerTest.enableManagement_absent` /
   `enableStatistics_absent`.
+- **A resolved read-through or write-through configuration must supply its corresponding factory**
+  (fixed 2026-08-12). `MutableConfiguration.setReadThrough`'s javadoc states *"It is an invalid
+  configuration to set this to true without specifying a `CacheLoader` `Factory`"* (same for
+  `setWriteThrough`/`CacheWriter`), and `CacheManager.createCache` declares
+  `IllegalArgumentException` for an invalid configuration. Caffeine previously accepted it,
+  advertised the flag through the MXBean, and silently substituted a non-loading cache or disabled
+  writer. `CacheFactory.createCache` now validates the resolved standard/vendor configuration
+  before the one-shot builder creates a ticker, executor, scheduler, policy, copier, listener,
+  loader, or writer. A missing factory is rejected without publishing the name or invoking the
+  other configured factory; false-flag base configurations remain valid. A present factory whose
+  `create()` returns null is a separate initialization question, not part of this rule.
+  **The ecosystem is split and the TCK is silent, so don't revert this on an RI comparison:** the
+  RI tolerates it (`RICache`'s constructor merely null-checks each factory, and every use site
+  re-checks), Ehcache 3 throws the same `IllegalArgumentException`
+  (`ConfigurationMerger.initCacheLoaderWriter`, *"read-through enabled without a CacheLoader
+  factory provided"*), and no TCK test reaches the case — its one candidate,
+  `CacheMXBeanTest.testCustomConfiguration`, sets both flags to false. A HOCON cache declaring
+  `read-through.enabled = true` with `loader = null` now fails from `getCache` rather than
+  degrading silently. Pinned by `CacheManagerTest.isReadThrough`,
+  `invalidThroughConfiguration_hasNoCreationSideEffects`, and
+  `createCache_minimalConfiguration`.
+- **A failed runtime listener registration rolls back and closes what it built**
+  (fixed 2026-08-14). `registerCacheEntryListener` recorded the configuration and then called
+  `EventDispatcher.register`, so a throwing listener or filter `Factory` left the configuration
+  advertising a listener that was never registered. That is not merely untidy: the spec requires
+  `registerCacheEntryListener` to *"@throws IllegalArgumentException is the same
+  CacheEntryListenerConfiguration is used more than once"*, and `MutableConfiguration` implements
+  it, so the retained entry made the natural retry fail as a duplicate — the user's only escape was
+  a `deregisterCacheEntryListener` they had no reason to call. The configuration is still recorded
+  first, so a genuine duplicate is rejected before the user's factories run, and is now rolled back
+  if they throw. Separately, `register` builds the `EventTypeAwareListener` before the filter, so a
+  throwing filter factory dropped an already-constructed listener that `close()` could never reach
+  (`Cache.close` requires closing *"registered CacheEntryListeners … that implement the
+  java.io.Closeable interface"*, which is what `EventTypeAwareListener` delegates); it is now closed
+  on that path, with any close failure suppressed onto the original. Pinned by
+  `CacheProxyTest.registerCacheEntryListener_factoryThrows_isRetryable` and
+  `registerCacheEntryListener_filterFactoryThrows_closesTheListener`.
+- **A rejected event dispatch no longer splits a write-through from the cache** (fixed
+  2026-08-14). `EventDispatcher.publish` opened a key's dispatch chain with
+  `CompletableFuture.supplyAsync(…, executor)`, a source stage whose bare `execute` call throws
+  `RejectedExecutionException` synchronously; publishing happens inside the `cache.asMap().compute`
+  that the single-key `CacheWriter.write`/`delete` has already run in, so the rejection aborted the
+  cache mutation and left the system of record ahead of the cache. The chained branch never had the
+  defect — a dependent stage captures the rejection into its own future (the `claim()` that calls
+  `execute` sits inside `uniHandle`'s try, on JDK 11 through current) — so the first event for a key
+  behaved differently from its successors, and since a `whenComplete` empties the slot as soon as a
+  dispatch settles, "first event" is the ordinary state of a quiescent key rather than a one-time
+  case. Now both branches are dependent stages. **The basis is the single-key `CacheWriter`
+  atomicity rule** — *"the non-batch writer methods are atomic with respect to the corresponding
+  cache operation"*, the same sentence behind the remove/getAndRemove bin-lock fix, whose converse
+  is that a successful `write` means the mutation occurs. The earlier adjudication (2026-07-06 M3)
+  declined the raw-REE asymmetry as a misconfigured-executor case without weighing write-through,
+  and is superseded on that leg only; a rejecting executor is still the user's misconfiguration,
+  and the failure is still reported, as a `CacheEntryListenerException` once the store and the
+  cache agree. Pinned by `CacheProxyTest.put_writeThrough_eventExecutorRejects_doesNotSplitTheStore`.
+- **A standard listener observes the committed mutation** (fixed 2026-08-15, after an attempt in
+  the prior session was reverted). `EventDispatcher.publish` is called from inside the mutating
+  `cache.asMap().compute`, so a callback reading `event.getSource()` back saw CREATED as absent,
+  UPDATED as the old mapping, and REMOVED as still present. Events published during a computation
+  are now staged on a per-thread gate that `endComputation()` completes once the computation has
+  returned. **Publishing still happens inside the compute**, which is what buys the ordering the
+  spec does require — *"if synchronous are fired, for a given key, in the order that events occur"*
+  — since the chain append happens under the per-key lock; only the execution moves out. The gate
+  is created lazily by a publish and only while a computation is in progress, so a cache with no
+  listeners allocates nothing, and an event published with no computation to release it, such as
+  the loader reached through `unwrap`, dispatches immediately instead of stalling the key. The
+  *filter* keeps running inside the computation by design: it decides whether an event publishes at
+  all, and the settled ruling is that a filter exception must not abort a store the writer may
+  already have committed. Ecosystem, all read from source: the RI dispatches after `entries.put`
+  but inside `lockManager.lock(key)`; Ehcache 3 accumulates into a `StoreEventSink` released after
+  `map.compute`; Hazelcast publishes after `doPutRecord`/`updateRecordValue`; Infinispan's adapter
+  forwards only `!isPre()` events; Coherence drives its listeners from post-mutation `MapEvent`s.
+  Only cache2k fires earlier than Caffeine did, running listeners before
+  `mutationReleaseLockAndStartTimer` writes the value. Pinned by
+  `EventDispatcherTest.publish_listenerObservesTheCommittedMutation`, which observes through the
+  native cache because the JCache API is refused to a callback, plus
+  `publish_computationThrowsAfterPublishing_doesNotWedgeTheKey` (the gate is released from a
+  `finally`, or a `Weigher`/native `Expiry` throwing after the remapping function returns would
+  leave the key's chain undrained) and
+  `CacheProxyTest.unwrap_nativeLoad_dispatchesAndDoesNotStallTheKey`.
+- **An operation attempted from a callback on the publishing thread is refused with
+  `IllegalStateException: Recursive cache operation`** (added 2026-08-15). A
+  `CacheEntryEventFilter`, `EntryProcessor`, `CacheLoader`, `CacheWriter`, `ExpiryPolicy`, or
+  `Copier` runs inside the `cache.asMap().compute` that is mutating the entry, so an operation
+  entered from one acquires a second per-key lock while holding the caller's. A synchronous
+  listener dispatched by a caller-runs executor is refused for a related reason: it runs on the
+  mutating thread while its own dispatch future is outstanding, so an operation there would await
+  the future executing it. The mark covers the computation and the gate release, both on the
+  publishing thread. **What it replaces was bin-dependent**: reproduced under a caller-runs
+  executor, the same listener write threw CHM's `Recursive update` for the same key or a
+  bin-colliding key and *silently succeeded* for a different bin; two threads cross-writing each
+  other's key deadlocked outright, both parked in `ConcurrentHashMap.compute`, one holding each
+  bin. **Reads are refused too, and expiration is why**: `get`/`containsKey`/`getAll` enter
+  `computeIfPresent` to evict a lazily expired entry, verified by a listener's `get` publishing
+  `EXPIRED` from inside the listener frame, so permitting reads would make the failure depend on
+  whether the key happened to have expired; the refusal is therefore raised by `requireOperable()`
+  when the operation begins, not when it reaches a computation of its own. The mark is **per
+  cache** and **per thread**, and is held only for the computation and its release, so the batch
+  `CacheWriter.writeAll`/`deleteAll`, which fire before the per-key loop and hold no lock, may
+  still use the cache, as `CacheWriterTest.removeAll_racingInsert` requires. **The spec permits
+  this rather than requiring it**: *"A listener that mutates a cache on the CacheManager may cause
+  a deadlock. Detection and response to deadlocks is implementation specific."* Two hazards are
+  left undetected, both following from the specification rather than from this adapter, and
+  neither introduced here. A cross-cache cycle (A's listener writes B, B's listener writes A)
+  still deadlocks. So does a synchronous listener **dispatched asynchronously** that operates on
+  the key it was notified about: its operation publishes on that key, chains behind the dispatch
+  currently executing it, and then awaits it. That was verified to hang with the gate both enabled
+  and disabled, so it long predates this change, and it follows from mandated per-key ordering
+  meeting mandated synchronous await. Neither the TCK (493) nor the unit suite (603) contains a
+  re-entrant operation: measured before implementing, with a probe that recorded rather than
+  rejected, and a positive control to prove the probe was live. Pinned by
+  `EventDispatcherTest.publish_listenerUsesTheCache_isRejected` and
+  `invoke_processorUsesTheCache_isRejected`.
+- **`destroyCache` clears before it closes** (clear added 2026-08-14). The spec states the call is
+  *"equivalent to … 1. `Cache#clear()` 2. `Cache#close()` followed by allowing the name of the Cache
+  to be used"*, so the contents are now discarded while the cache is still whole rather than only by
+  `close()`'s trailing `invalidateAll()`, which stays as a concurrency sweep. Closing is itself
+  permitted to discard contents, so clear + close + the sweep all sit inside the contract. The clear
+  fires no events: `Cache.clear()` is specified *"without notifying listeners or CacheWriters"*, and
+  `JCacheEvictionListener` is wired through `caffeine.evictionListener(...)`, which sees automatic
+  evictions (SIZE/EXPIRED/COLLECTED) but not the EXPLICIT removals `invalidateAll()` produces — had
+  it been a `removalListener`, this change would have started firing REMOVED for every entry.
+  **The sequence constrains the clear only.** Dropping the registry entry first is conformant: the
+  trailing clause licenses reuse of the name afterwards rather than mandating when the entry is
+  released. The ecosystem agrees — Ehcache 3, Infinispan, Coherence and Hazelcast all
+  `caches.remove(...)` then close/destroy; only the RI does `caches.get(...)` then `close()`. Pinned
+  by `CacheProxyTest.destroyCache_clearsBeforeClosing`.
 - **Spec-truer-than-RI EntryProcessor corners, pinned against a "fix" toward the RI.** An
   `{ entry.remove(); entry.getValue(); }` returns `null` without triggering a read-through load
   (the RI resurrects the removed entry via LOAD); a read-through `load` returning `null` is

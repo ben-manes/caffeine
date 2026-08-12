@@ -81,14 +81,15 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     var settings = new LirsSettings(config);
     this.maximumSize = Math.toIntExact(settings.maximumSize());
     this.maximumNonResidentSize = (int) (maximumSize * settings.nonResidentMultiplier());
-    this.maximumHotSize = (int) (maximumSize * settings.percentHot());
+    this.maximumHotSize = maximumSize - Math.max(
+        2, (int) (maximumSize * (1.0 - settings.percentHot())));
     this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
     this.evicted = new ArrayList<>();
     this.headNR = new Node();
     this.headS = new Node();
     this.headQ = new Node();
-    checkState(maximumHotSize >= 1,
+    checkState(maximumHotSize >= 3,
         "maximum size %s is too small for the configured percent-hot", maximumSize);
   }
 

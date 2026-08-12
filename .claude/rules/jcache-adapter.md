@@ -35,7 +35,12 @@ paths:
   scope") and can block on the eviction lock or run maintenance inline (a same-bin nested CHM
   mutation). The compute already refreshes the native timer via its own `Expiry` on commit
   (`expireAfterUpdate` fires even on a same-instance return, reading the just-written
-  timestamp). Don't add `setVariableExpiration` to a write path.
+  timestamp). Don't add `setVariableExpiration` to a write path. **The absolute-millisecond to
+  native-nanosecond bridge (`ExpirableToExpiry`) subtracts in milliseconds and converts once** —
+  the deadline and the ticker share an arbitrary origin, so converting the deadline first saturates
+  it near the nanosecond horizon and collapses the remaining duration. Don't reorder it, and don't
+  swap the `ticker.read()` for the `currentTime` parameter core supplies (reverted as BC-1/BC-2:
+  the expiry suites use an auto-increment ticker where dropping a read shifts the observed times).
 - **A query-style op that returns the same `Expirable` still counts as a native write — accepted
   best-effort divergence**: core's `remap` has no way to hear "this was a no-op" from outside its
   package (`RemapHints` is package-private), so the adapter's query paths — a *failed*
@@ -53,6 +58,31 @@ paths:
   behind newer entries, expiring it *later*), while routing `putIfAbsent` through `computeIfAbsent`
   with an expired-prior fallback splits an atomic op and never reaches `invoke`. Don't re-raise it,
   and don't add a public no-op hint for it.
+- **Dispatch is staged until the computation commits**: `beginComputation()`/`endComputation()`
+  delegate to the `EventDispatcher`, which marks the thread and lazily creates a per-thread gate on
+  the first publish. `endComputation()` completes the gate from a `finally`, so a throwing
+  `Weigher`/native `Expiry` cannot leave the key's chain undrained, and holds the mark across the
+  release because a caller-runs executor dispatches the listeners right there. The chain append
+  still happens inside the `compute`, which is what preserves per-key ordering; only the execution
+  moves out. A publish with no computation in progress is not staged, since nothing would release
+  it: that is what keeps the `unwrap`-driven loader from stalling the key, and it means a cache
+  with no listeners allocates no gate. Don't move the publish out of the compute, don't stage a
+  publish made outside a computation, and don't release the gate anywhere but the `finally`.
+- **A callback may not re-enter the cache from the publishing thread**: `requireOperable()` — the
+  precondition every public operation calls, in place of a bare `requireNotClosed()` — refuses
+  while the dispatcher's mark is set. Callbacks that run inside the computation (filter,
+  `EntryProcessor`, `CacheLoader`, `CacheWriter`, `ExpiryPolicy`, `Copier`) would otherwise take a
+  second per-key lock while holding the caller's; a caller-runs listener would await the future
+  executing it. Reads are refused along with writes because lazy expiry makes `get` and
+  `containsKey` enter a computation, so narrowing to mutations would make the failure depend on
+  whether the key had expired, which is why the check belongs at the start of the operation and not
+  in `beginComputation()`. `removeAll()` delegates to the guarded `removeAll(Set)` and `invokeAll`
+  to the guarded `invoke`; neither wraps its own loop in a computation, so their per-key siblings
+  do the refusing. The spec permits detection rather than requiring it, so two inherent JCache
+  hazards are deliberately left alone: a cross-cache listener cycle, and a synchronous listener
+  dispatched asynchronously that operates on the key it was notified about (it chains behind the
+  dispatch running it and awaits it — pre-existing, reproduced with the gate both on and off).
+  Don't extend the mark to dispatch threads to chase those.
 - **EntryProcessor state machine**: `EntryProcessorEntry.Action` tracks the dominant
   operation (NONE → READ/CREATED/UPDATED/LOADED/DELETED). `getValue()` is stateful —
   first call triggers loading. Action transitions have strict rules. `remove()` from
@@ -86,6 +116,13 @@ paths:
   `publishToWriter=false`, so a concurrent same-key single-key op can invert the cache vs the
   store across the batch window. Spec-sanctioned — the `CacheWriter` contract exempts batch
   methods from atomicity ("not required to be atomic in the writer"); see `jsr107-conformance.md`.
+  **That exemption covers ordering and cross-key atomicity, not writing entries to the store that
+  the cache then refuses** (`writeAll`: "cache mutations will occur for entries that succeeded"), so
+  `putAll` copies the whole batch for store-by-value **before** `writeAll` runs, via a `CopiedEntry`
+  holder that the store loop reuses rather than copying twice. Don't move the copies back into the
+  loop. If the loop aborts anyway (a throwing extension `Weigher`/native `Expiry` — the
+  user-callback family), a saved `CacheWriterException` is retained with `addSuppressed` rather
+  than replaced.
 - **Read-through `getAll` clobbers (replace-on-materialize); `loadAll(keepExisting)` uses
   putIfAbsent — intentional divergence**: `LoadingCacheProxy.getAll` delegates the miss-load to
   Caffeine's `getAll`, whose `bulkLoad` stores loaded values with `put` (**replace**), so a value
@@ -103,15 +140,24 @@ paths:
   write will materialize, and JCache doesn't order concurrent events.)
 - **EventDispatcher**: Per-key ordering via CompletableFuture chains. Synchronous
   listeners tracked in ThreadLocal; callers must call `awaitSynchronous()` or
-  `ignoreSynchronous()`. The per-key dispatch-queue slot (`compute` appends
-  `runAsync`/`thenRunAsync`; a `whenComplete` removes the future) is **race-safe** and needs no
-  extra locking: `compute` is atomic (CHM bin lock) so the chain-append can't interleave a
+  `ignoreSynchronous()`. **Every publish is a dependent stage**, including the first event for a
+  key, which chains off a freshly completed future rather than calling `supplyAsync`: a dependent
+  captures an executor rejection into the returned future, while a source stage calls `execute`
+  synchronously and throws the rejection out of the enclosing `compute`, aborting a mutation the
+  `CacheWriter` has already committed. Don't restore `supplyAsync` on the empty-slot branch. The
+  per-key dispatch-queue slot (`compute` appends the dependent; a `whenComplete` removes the
+  future) is **race-safe** and needs no extra locking: `compute` is atomic (CHM bin lock) so the chain-append can't interleave a
   completing future's cleanup, and cleanup is a **conditional** `remove(key, future)` that fires
   only if that exact future is still the slot's head (the preceding `get(key) == future` is only an
   optimistic fast-path). A successor chained before cleanup leaves the slot intact; cleanup before a
   successor lets the next event start a fresh chain after the prior one already completed (ordering
   preserved). Don't add locking or "fix" the get-then-remove — the conditional remove is the
   authority.
+- **Account for a committed direct operation before rethrowing a synchronous listener failure**:
+  call `awaitSynchronousFailure`, record the operation's required statistics using the existing
+  start-state/timer rules, then rethrow the captured `CacheEntryListenerException`. This matches
+  `putAll`/`removeAll`, invoke, and loading siblings. Do not turn this into a broad `Throwable`
+  catch: listener `Error` is deliberately outside the specified wrapping path and propagates as-is.
 - **A `CaffeineConfiguration` extension `Weigher`/native `Expiry` that throws leaves a valid
   notification without a persisted store — by-design, not a phantom event**: the adapter publishes
   CREATED/UPDATED and fires the write-through `CacheWriter` *inside* the `cache.asMap().compute`
@@ -152,6 +198,15 @@ paths:
   don't-shutdown flag or skip the shutdown.
 - **TypesafeConfigurator**: External HOCON config (`application.conf`) can intercept
   cache creation. Config-based caches take precedence over programmatic ones.
+- **Validate through-mode dependencies after resolving configuration and before building**:
+  `readThrough=true` requires a `CacheLoader` factory and `writeThrough=true` requires a
+  `CacheWriter` factory. Validate the resolved standard/vendor configuration before any ticker,
+  executor, scheduler, copier, policy, listener, loader, or writer factory is invoked; invalid
+  configurations must leave the cache name unpublished and throw `IllegalArgumentException`.
+  A present factory returning null is a separate initialization-failure question.
+  `CacheFactory.createCache` is the single validation point: the builder no longer re-checks the
+  loader factory, so `config.isReadThrough()` alone selects the loading proxy. Don't restore the
+  `&& (getCacheLoaderFactory() != null)` gate — it would silently re-admit the invalid config.
 - **OSGi classloader**: `CacheManagerImpl` swaps the thread context classloader to the
   manager's loader on the *creation* paths (`createCache`/`getCache`) — the JCache
   `FactoryBuilder.ClassFactory` resolves config-named factory classes via the ambient TCCL
