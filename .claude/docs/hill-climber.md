@@ -1997,6 +1997,43 @@ never arm a probe at all (`undone` 0.0).
 13–22% against a 2% optimum. That is §8's average-vs-marginal error on a real cell, in the opposite
 direction from `P3` and `fiu_webmail`, which rest below their peaks.
 
+**2026-08-15 (the audit sweep's climber rows, worked with Ben into one commit).** Three fixes and
+two declines from the consolidated Sol backlog's §4. Fixed: `demoteFromMainProtected` re-arms
+maintenance when it exits at its transfer budget, as `evictFromWindow` already did, so a
+`setMaximum` shrink no longer leaves protected oversized on an idle cache (pre-existing since the
+2019 adaptive commit; the 10k→8k witness sat at 6,920/6,336 with the drain status idle); the crash
+streak saturates at `PROBE_CRASH_ESCALATION` through `Ladder.crash()`, since the ledger only
+distinguishes none, one, and a run, and the invariants pin that domain; and the undo ledger is
+integral, charged with each return command as published rather than with the fractional capped
+stride, so a capped return lands on the base. That last one is not cosmetic at ordinary sizes: at
+8,192 the cap is 2,457.6, the pinned 5,000 return closed at 4,998, and at a permanently starved
+corner, where every deep-rung probe fails and undoes, each cycle re-based the probe 1–2 entries
+toward the probed direction, a slow creep toward the corner boundary that battery-length traces
+(under 40 cycles) cannot show. Declined: the walk's crossing predicate reading the continuous
+command (an actuator landing exactly on base fails one sample earlier than an integer predicate
+would, the same ending), and the 2% floor's rounding band at 2^53 weight units and above (see
+`design-decisions.md`, "The climber commands in `double`"). Battery for the ledger change against
+the 2026-08-09 sweep: 61 cells, mean −0.09, median 0.00; the three cells beyond ±1pp
+(`phases_d050` −4.99, `crashnoise_a12` −1.42, `phases_d050@32k` +1.11) are bit-identical to the
+pre-change tree on seeds 1–8, so they are basin draws. Fuzzer 770,372 runs clean.
+
+Two cells the LIRS family study (2026-08-13) turned up were adjudicated the same day and rowed as
+frontier sentinels in `/climber-gate` (`gen_norank.py`; seeded records in its table) rather than
+chased. `rep_r6_w4096`@8192 references every key exactly six times at a reuse distance of 4,096, so
+the sketch cannot rank and main fills with retired keys whose counts shield them; window hits
+appear only once window ÷ miss rate covers the reuse distance (about 8% of the cache at the good
+regime's 1/6 miss rate, about 45% while main is that graveyard), so the starved corner is a
+self-consistent trap that only a large walk escapes. Seeds 1–8 score 65.6 / 69.1 / 41.1 / 15.9 /
+61.7 / 57.6 / 68.0 / 72.9 against an LRU-equal ceiling of 83.29 at a 50% window: not two basins
+but a spread of escape times over 91 samples, every seed reaching the 80% top corner, the slow one
+held 31 samples by an audit that confirmed and parked on a starved position. Steady state at the
+top is ~75%, since the corner arms a down-probe every refractory cycle and each crash-aborts.
+`flood_j100`@8192 (a hot set in rotation plus throwaway pairs at spacing 4) is the average-vs-
+marginal rest-point error of §8 with a clean instrument: density steers to 45%+ by sample 7 on
+pairs that are dense per slot and worth nothing at the margin, an audit walks down, confirms and
+parks, and density walks it back up when the park expires; seeds score 49.4–56.0 against a 65.39
+ceiling at a 1% window. Both belong to §8's "recovery from a depressed window" thread.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor

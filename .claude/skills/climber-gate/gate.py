@@ -98,6 +98,11 @@ CELLS = [
     # pair together. The corda+5xloop+corda ladder row stays outside this table (multi-path).
     ("strad_p8@4096", "strad_p8.lirs", 4096, 2),
     ("strad_p8@4097", "strad_p8.lirs", 4097, 2),
+    # Frontier sentinels from the 2026-08-13 LIRS study (gen_norank.py): a no-frequency-signal
+    # ring whose score is the escape time from a starved corner (wide unseeded spread), and the
+    # dense-but-worthless window pairs that price the density rest-point error.
+    ("norank_rep_r6", "rep_r6_w4096.lirs", 8192, 8),
+    ("norank_flood_j100", "flood_j100.lirs", 8192, 4),
 ]
 
 

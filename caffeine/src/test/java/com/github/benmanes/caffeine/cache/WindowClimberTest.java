@@ -24,6 +24,7 @@ import static com.github.benmanes.caffeine.cache.WindowClimber.DensityClimber.DE
 import static com.github.benmanes.caffeine.cache.WindowClimber.DensityClimber.DENSITY_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_INITIAL;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_MAX;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_CRASH_ESCALATION;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Rates.DEVIATION_SEED;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Reading.DENSITY_EPSILON;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Reading.MAX_STEP_FRACTION;
@@ -761,7 +762,7 @@ final class WindowClimberTest {
     @Var long walked = 2000 + climber.adjustment();
     for (int i = 0; i < (2 * PROBE_WALK_BUDGET); i++) {
       walked += steadySample(climber, walked, /* hitRate= */ 0.70);
-      if ((climber.walk == null) && (climber.undoRemaining == 0.0)) {
+      if ((climber.walk == null) && (climber.undoRemaining == 0)) {
         break;
       }
     }
@@ -1290,7 +1291,7 @@ final class WindowClimberTest {
       }
       long adjustment = steadySample(climber, windowMax, /* hitRate= */ 0.70);
       windowMax = Math.max(164, windowMax + adjustment);
-      if ((climber.walk == null) && (climber.undoRemaining == 0.0) && !climber.anchor.returning) {
+      if ((climber.walk == null) && (climber.undoRemaining == 0) && !climber.anchor.returning) {
         windowMax = 2000;
       }
     }
@@ -1413,7 +1414,7 @@ final class WindowClimberTest {
         steadySample(climber, /* windowMax= */ 1800, /* hitRate= */ 0.60);
       }
       assertThat(climber.walk).isNull();
-      assertThat(climber.audit.crashStreak).isEqualTo(crash + 1);
+      assertThat(climber.audit.crashStreak).isEqualTo(Math.min(crash + 1, PROBE_CRASH_ESCALATION));
       assertThat(climber.audit.rung).isEqualTo(expectedRung[crash]);
       assertThat(climber.auditClock.waitSamples).isAtMost(PROBE_BACKOFF_MAX);
       assertThat(climber.starvation.rung).isEqualTo(PROBE_BACKOFF_INITIAL);
@@ -1608,7 +1609,7 @@ final class WindowClimberTest {
     long undo = steadySample(climber, /* windowMax= */ 676, /* hitRate= */ 0.70);
     assertThat(undo).isEqualTo(((long) FLOOR) - 676);
     assertThat(climber.walk).isNull();
-    assertThat(climber.undoRemaining).isEqualTo(0.0);
+    assertThat(climber.undoRemaining).isEqualTo(0);
     assertThat(climber.audit.crashStreak).isEqualTo(0);
     assertThat(climber.audit.rung).isEqualTo(2 * PROBE_BACKOFF_INITIAL);
     assertThat(climber.anchor.held).isFalse();
@@ -1660,19 +1661,19 @@ final class WindowClimberTest {
     sample(climber, /* windowMax= */ 2000,
         /* windowHits= */ 200, /* mainHits= */ 500, /* misses= */ 300);
     assertThat(climber.walk).isNull();
-    assertThat(climber.undoRemaining).isGreaterThan(0.0);
+    assertThat(climber.undoRemaining).isGreaterThan(0);
 
     steadySample(climber, /* windowMax= */ 4457, /* hitRate= */ 0.70);
-    assertThat(climber.undoRemaining).isGreaterThan(0.0);
+    assertThat(climber.undoRemaining).isGreaterThan(0);
     assertThat(climber.anchor.isPlanted()).isFalse();
 
     steadySample(climber, /* windowMax= */ 6914, /* hitRate= */ 0.70);
-    assertThat(climber.undoRemaining).isEqualTo(0.0);
+    assertThat(climber.undoRemaining).isEqualTo(0);
     assertThat(climber.anchor.isPlanted()).isFalse();
 
     // the retreat has landed, so the position is the cache's own and may be claimed
-    steadySample(climber, /* windowMax= */ 6998, /* hitRate= */ 0.70);
-    assertThat(climber.anchor.window).isEqualTo(6998);
+    steadySample(climber, /* windowMax= */ 7000, /* hitRate= */ 0.70);
+    assertThat(climber.anchor.window).isEqualTo(7000);
     assertThat(climber.anchor.rate).isWithin(1.0e-9).of(0.70);
   }
 
@@ -1695,11 +1696,11 @@ final class WindowClimberTest {
     // the re-sync is the half that does not wait: once the retreat is back inside the anchor's
     // band the stale claim decays into the live measurement, drain still in flight or not
     steadySample(climber, /* windowMax= */ 6914, /* hitRate= */ 0.70);
-    assertThat(climber.undoRemaining).isEqualTo(0.0);
+    assertThat(climber.undoRemaining).isEqualTo(0);
     assertThat(climber.anchor.window).isEqualTo(7000);
     assertThat(climber.anchor.rate).isWithin(1.0e-9).of(0.70);
 
-    long parked = steadySample(climber, /* windowMax= */ 6998, /* hitRate= */ 0.70);
+    long parked = steadySample(climber, /* windowMax= */ 7000, /* hitRate= */ 0.70);
     assertThat(parked).isEqualTo(0);
     assertThat(climber.anchor.window).isEqualTo(7000);
     assertThat(climber.anchor.held).isTrue();
@@ -2183,8 +2184,9 @@ final class WindowClimberTest {
 
     long third = sample(climber, /* windowMax= */ 2000 + adjustment + second,
         /* windowHits= */ 880, /* mainHits= */ 20, /* misses= */ 100);
-    assertThat(third).isEqualTo((long) (5000 - (2 * MAX_STEP_FRACTION * MAXIMUM)));
-    assertThat(climber.undoRemaining).isEqualTo(0.0);
+    assertThat(third).isEqualTo(5000 - (2 * (long) (MAX_STEP_FRACTION * MAXIMUM)));
+    assertThat(adjustment + second + third).isEqualTo(5000);
+    assertThat(climber.undoRemaining).isEqualTo(0);
   }
 
   @Test
@@ -2208,6 +2210,20 @@ final class WindowClimberTest {
         /* windowHits= */ 340, /* mainHits= */ 0, /* misses= */ 660);
     assertThat(second).isEqualTo(7000 - 5000);
     assertThat(climber.starvation.crashStreak).isEqualTo(2);
+    assertThat(climber.starvation.rung).isEqualTo(2 * PROBE_BACKOFF_INITIAL);
+  }
+
+  @Test
+  void probeEnding_crashStreak_saturates() {
+    // the ledger only distinguishes a lone crash from a run, so the streak holds at the escalation
+    // threshold rather than counting on toward a wrap
+    var climber = probingDown(/* stepSize= */ -STRIDE, /* baseHitRate= */ 0.5);
+    climber.starvation.crashStreak = PROBE_CRASH_ESCALATION;
+    long returned = sample(climber, /* windowMax= */ 5000,
+        /* windowHits= */ 340, /* mainHits= */ 0, /* misses= */ 660);
+    assertThat(returned).isEqualTo(7000 - 5000);
+    assertThat(climber.starvation.crashStreak).isEqualTo(PROBE_CRASH_ESCALATION);
+    assertThat(climber.starvation.crashEscalates()).isTrue();
     assertThat(climber.starvation.rung).isEqualTo(2 * PROBE_BACKOFF_INITIAL);
   }
 
@@ -2376,8 +2392,7 @@ final class WindowClimberTest {
 
     assertThat(climber.walk).isNull();
     assertThat(adjustment).isEqualTo((long) (MAX_STEP_FRACTION * MAXIMUM));
-    assertThat(climber.undoRemaining).isWithin(1.0e-9)
-        .of(5000 - (MAX_STEP_FRACTION * MAXIMUM));
+    assertThat(climber.undoRemaining).isEqualTo(5000 - (long) (MAX_STEP_FRACTION * MAXIMUM));
     assertThat(climber.starvation.rung).isEqualTo(2 * PROBE_BACKOFF_INITIAL);
   }
 
@@ -2501,7 +2516,7 @@ final class WindowClimberTest {
         double cap = MAX_STEP_FRACTION * maximum;
         assertThat(adjustment).isAtMost((long) cap);
         windowMax += adjustment;
-        while (climber.undoRemaining != 0.0) {
+        while (climber.undoRemaining != 0) {
           long chunk = bigSample(climber, maximum, windowMax, /* hits= */ 500);
           assertThat(Math.abs(chunk)).isAtMost((long) cap);
           windowMax += chunk;

@@ -83,14 +83,12 @@ final class WindowClimberFuzzer {
       int starvationRung = climber.starvation.rung;
       int auditRung = climber.audit.rung;
       int auditWait = climber.auditClock.waitSamples;
-      int auditCrashes = climber.audit.crashStreak;
 
       long mainProtected = data.consumeLong(0, Math.max(0, maximum - windowMax));
       int sketchSample = data.consumeInt(4, 1_000_000);
       climber.determineAdjustment(maximum, windowMax, mainProtected, sketchSample);
       assertInvariants(climber, maximum);
-      checkDeferralOwnership(climber, probing,
-          starvationRung, auditRung, auditWait, auditCrashes);
+      checkDeferralOwnership(climber, probing, starvationRung, auditRung, auditWait);
 
       // a sample completes when the accumulated counts crossed the period and were consumed,
       // detected from the counters, since a zero-fed call can complete an accumulated sample
@@ -123,8 +121,7 @@ final class WindowClimberFuzzer {
    * verdict rather than crashing out.
    */
   private static void checkDeferralOwnership(WindowClimber climber,
-      WindowClimber.@Nullable Walk probing, int starvationRung, int auditRung,
-      int auditWait, int auditCrashes) {
+      WindowClimber.@Nullable Walk probing, int starvationRung, int auditRung, int auditWait) {
     boolean endedAudit = (probing != null) && (climber.walk != probing) && probing.isAudit;
     boolean endedStarvation = (probing != null) && (climber.walk != probing) && !probing.isAudit;
 
@@ -138,7 +135,7 @@ final class WindowClimberFuzzer {
         .that((climber.auditClock.waitSamples <= auditWait)
             || (climber.auditClock.waitSamples
                 <= Math.max(AUDIT_WAIT_INITIAL, climber.audit.rung))
-            || (climber.audit.crashStreak <= auditCrashes)).isTrue();
+            || (climber.audit.crashStreak == 0)).isTrue();
   }
 
   /** Returns a maximum size, weighted toward the tier boundaries and including the extremes. */

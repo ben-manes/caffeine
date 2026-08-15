@@ -17,6 +17,16 @@ per cycle in the worst case. A dedicated zero-weight queue to hold them out of t
 explored and rejected: it made the eviction paths messier for little value. Don't propose it
 again without a measurement showing the scan actually costs something.
 
+**Region transfers are budgeted per maintenance cycle and re-armed.** `evictFromWindow` and
+`demoteFromMainProtected` move at most `QUEUE_TRANSFER_THRESHOLD` entries per cycle and set
+`PROCESSING_TO_REQUIRED` when a backlog remains, because a `setMaximum` shrink can leave either
+region arbitrarily oversized and one cycle would otherwise drain it whole under `evictionLock`.
+The climber's `increaseWindow` / `decreaseWindow` carry their remainder in `adjustment` instead
+(see the climber entries below). A region briefly over its maximum right after a resize is the
+budget, not a leak; the protected demotion lacked the re-arm from the 2019 adaptive commit until
+the 2026-08 audit sweep, which is why an idle cache could sit with protected oversized until the
+next access. Don't remove either re-arm.
+
 **Transient negative weightedSize is acceptable.** `maximumSize` allows eviction
 before/after threshold. Eventual consistency is fine given documented promises.
 Weight convergence is guaranteed by the telescoping sum property across all write
@@ -273,6 +283,24 @@ to exactly `0.0`), but construction does: with `maximumSize(0)` the constructor'
 `setMaximumSize(0)` early-returns on `maximum == maximum()` (the field default), leaving
 `step.size` at its `0.0` default. The guard is live for that configuration — covered by
 `adapt_smallCache_zeroMagnitudeDoesNotPoisonHitRate` — not just defense-in-depth.
+
+**The climber commands in `double`; the cache applies `(long)` of the command, truncated
+toward zero once at publication.** Positions, region maxima, and the walk's base are `long`, and
+position identity is band-based (`Reading.stableBand`, 2% of the maximum), so a command's lost
+fraction is not itself an error. Two consequences follow and are accepted: `walkStep`'s
+base-crossing predicate reads the continuous command, so a reversal whose truncated landing is
+exactly the base fails the walk one sample earlier than an integer predicate would (the same
+ending, one sample cheaper); and the 2% floor is a `double`, so the integer window rests one entry
+below it (pinned by `walkStep_floorBasedWalk_endsAtBudgetWithAFullUndo`), and at maxima above
+2^53 weight units the floor comparison has a rounding band of a few units, which is unreachable.
+Don't make the floor or the predicate integral. **The one ledger that must close is integral:**
+`undoRemaining` is a `long` charged with each return command as published, not with the
+fractional capped stride. Charged with the fraction it closed short of the base by the cap's
+fraction per capped stride (8,192: 2,457 + 2,457 + 84 for a 5,000 return), and at a permanently
+starved corner, where every deep-rung probe fails and undoes, that re-based each cycle 1–2 entries
+toward the probed direction, a slow creep toward the corner boundary; the sweep audit's row 4.2
+(2026-08-15). Pinned by `probeEnding_adjudication_wrongSignFailsAndDoubles` (the commands sum to
+the distance).
 
 **Async load completions replace quietly.** A completed future's `handleCompletion` (and the
 bulk `fillProxies`) calls `replace(..., quietly= true)`: the UpdateTask finalizes the weight and

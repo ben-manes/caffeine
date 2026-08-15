@@ -1213,16 +1213,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @GuardedBy("evictionLock")
   void demoteFromMainProtected() {
     long mainProtectedMaximum = mainProtectedMaximum();
-    for (int i = 0; i < QUEUE_TRANSFER_THRESHOLD; i++) {
-      if (mainProtectedWeightedSize() <= mainProtectedMaximum) {
-        break;
-      }
-
+    @Var int remaining = QUEUE_TRANSFER_THRESHOLD;
+    while (mainProtectedWeightedSize() > mainProtectedMaximum) {
       Node<K, V> demoted = accessOrderProtectedDeque().peekFirst();
       if (demoted == null) {
         break;
       }
+      if (remaining == 0) {
+        setDrainStatusOpaque(PROCESSING_TO_REQUIRED);
+        break;
+      }
       transfer(demoted, demoted.getPolicyWeight(), PROTECTED, PROBATION);
+      remaining--;
     }
   }
 

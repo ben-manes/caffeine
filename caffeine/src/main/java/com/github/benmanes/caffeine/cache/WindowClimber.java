@@ -69,7 +69,7 @@ final class WindowClimber {
 
   @Nullable Walk walk;
 
-  double undoRemaining;
+  long undoRemaining;
   int refractoryLeft;
   long adjustment;
 
@@ -87,8 +87,8 @@ final class WindowClimber {
 
   /** Resets the state and seeds the step size when the cache's maximum size is changed. */
   public void resized(long maximum) {
-    undoRemaining = 0.0;
     refractoryLeft = 0;
+    undoRemaining = 0;
     adjustment = 0;
     walk = null;
 
@@ -247,13 +247,18 @@ final class WindowClimber {
 
   /** Whether a capped return to a probe's start is still draining across later samples. */
   private boolean hasPendingUndo() {
-    return undoRemaining != 0.0;
+    return undoRemaining != 0;
   }
 
-  /** Returns the next stride of a multi-sample restore toward the probe's base. */
+  /**
+   * Returns the next stride of a multi-sample restore toward the probe's base. The ledger is kept
+   * in entries and charged with the command as published, since the cache truncates each command
+   * and a ledger charged with the fractional stride would close short of the base.
+   */
   private double undoStride(Reading reading) {
+    @SuppressWarnings("LongDoubleConversion")
     double stride = reading.cappedStride(undoRemaining);
-    undoRemaining -= stride;
+    undoRemaining -= (long) stride;
     return step.commit(stride);
   }
 
@@ -389,7 +394,7 @@ final class WindowClimber {
       // crash, not a cycle. A shift moves the rate once while a damaging probe moves it on every
       // arm, so consecutive crashes escalate the walk's own ladder like completed failures.
       endWalk();
-      walk.ladder.crashStreak++;
+      walk.ladder.crash();
       return ProbeEnding.CRASHED;
     }
     return walk.isAudit ? auditEnding(walk, reading) : starvationEnding(walk, reading);
@@ -463,9 +468,10 @@ final class WindowClimber {
 
   /** Returns the stride back to the walk's starting window. */
   private double returnToBase(Walk walk, Reading reading) {
-    double amount = (walk.baseWindow - reading.windowMax);
+    long amount = (walk.baseWindow - reading.windowMax);
+    @SuppressWarnings("LongDoubleConversion")
     double stride = reading.cappedStride(amount);
-    undoRemaining = (amount - stride);
+    undoRemaining = (amount - (long) stride);
     return step.commit(stride);
   }
 
@@ -1064,6 +1070,11 @@ final class WindowClimber {
     /** Deepens the rung, as a completed and failed experiment does. */
     void escalate() {
       rung = Math.min(PROBE_BACKOFF_MAX, 2 * rung);
+    }
+
+    /** Records a crash ending; the run saturates once it prices like a completed failure. */
+    void crash() {
+      crashStreak = Math.min(PROBE_CRASH_ESCALATION, crashStreak + 1);
     }
 
     /** Rewards a confirmed probe: the crash run is forgiven and the next arm is nearly free. */

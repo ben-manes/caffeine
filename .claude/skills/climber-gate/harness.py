@@ -139,7 +139,7 @@ FLAGS = '''
 TRACE = '''    if (DEBUG && dense) {
       long wh = sample.windowHits;
       System.err.printf("climb max=%d win=%d hr=%.4f s=%d mode=%s adj=%d wh=%d mh=%d ph=%d"
-          + " stable=%d auditWait=%d rung=%d left=%d arung=%d acs=%d pcs=%d undo=%.0f"
+          + " stable=%d auditWait=%d rung=%d left=%d arung=%d acs=%d pcs=%d undo=%d"
           + " anchorW=%d anchorR=%.4f ema=%.4f dev=%.4f hold=%d fresh=%d shortfall=%d ret=%d"
           + " auditbar=%.4f wbase=%.4f wbar=%.4f%n",
           maximum, windowMaximum, hitRate, dbgSample++, dbgMode, adjustment, wh,

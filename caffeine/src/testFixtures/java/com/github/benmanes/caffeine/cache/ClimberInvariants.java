@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_MAX;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_INITIAL;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_MAX;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_CRASH_ESCALATION;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Reading.MAX_STEP_FRACTION;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Step.MIN_INITIAL_STEP;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Walk.AUDIT_CRASH_PERSISTENCE;
@@ -89,6 +90,10 @@ final class ClimberInvariants {
         .that(climber.audit.crashStreak).isAtLeast(0);
     assertWithMessage("each ledger's crash streak is non-negative")
         .that(climber.starvation.crashStreak).isAtLeast(0);
+    assertWithMessage("each ledger's crash streak saturates once it escalates")
+        .that(climber.audit.crashStreak).isAtMost(PROBE_CRASH_ESCALATION);
+    assertWithMessage("each ledger's crash streak saturates once it escalates")
+        .that(climber.starvation.crashStreak).isAtMost(PROBE_CRASH_ESCALATION);
     // the schedule's floor is the cold-start calibration seed; every retry after the first
     // audit is floored at the initial refractory by undoProbe
     assertWithMessage("the audit wait stays within its schedule")
@@ -118,7 +123,7 @@ final class ClimberInvariants {
     assertWithMessage("an in-progress return implies the park that follows it")
         .that(!climber.anchor.returning || climber.anchor.held).isTrue();
     assertWithMessage("a walk holds no undo remainder")
-        .that((walk == null) || (climber.undoRemaining == 0.0)).isTrue();
+        .that((walk == null) || (climber.undoRemaining == 0)).isTrue();
     assertWithMessage("a park defends a planted anchor")
         .that(!climber.anchor.held || climber.anchor.isPlanted()).isTrue();
 
@@ -133,8 +138,6 @@ final class ClimberInvariants {
         .that(Math.abs(climber.step.size)).isAtMost((double) bound);
     assertWithMessage("the step size is finite")
         .that(Double.isFinite(climber.step.size)).isTrue();
-    assertWithMessage("the undo remainder is finite")
-        .that(Double.isFinite(climber.undoRemaining)).isTrue();
 
     assertWithMessage("the deviation estimate is non-negative and finite")
         .that(climber.rates.deviation).isAtLeast(0.0);

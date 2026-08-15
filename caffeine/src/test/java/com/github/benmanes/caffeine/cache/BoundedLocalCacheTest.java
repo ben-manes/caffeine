@@ -2494,6 +2494,40 @@ final class BoundedLocalCacheTest {
     assertThat(accessOrderProbationDeque).hasSize(QUEUE_TRANSFER_THRESHOLD);
     assertThat(accessOrderProtectedDeque).hasSize(9 * QUEUE_TRANSFER_THRESHOLD);
     assertThat(cache.mainProtectedWeightedSize).isEqualTo(100_000 - QUEUE_TRANSFER_THRESHOLD);
+    assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_REQUIRED);
+  }
+
+  @Test
+  void demoteFromMain_cappedBacklog() {
+    var cache = Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .maximumSize(10_000)
+        .<Int, Int>build();
+    var localCache = asBoundedLocalCache(cache);
+    for (int i = 0; i < 10_000; i++) {
+      cache.put(Int.valueOf(i), Int.valueOf(i));
+    }
+    for (int i = 0; i < 10_000; i++) {
+      assertThat(cache.getIfPresent(Int.valueOf(i))).isNotNull();
+    }
+    cache.cleanUp();
+    assertThat(localCache.drainStatus).isEqualTo(IDLE);
+    assertThat(localCache.mainProtectedWeightedSize())
+        .isEqualTo(localCache.mainProtectedMaximum());
+    assertThat(localCache.mainProtectedWeightedSize()).isGreaterThan(QUEUE_TRANSFER_THRESHOLD);
+
+    // A resize can leave the protected region oversized by more than one cycle's transfer budget,
+    // so the demotion is re-armed to drain the backlog across cycles
+    cache.policy().eviction().orElseThrow().setMaximum(8_000);
+    assertThat(localCache.mainProtectedWeightedSize())
+        .isGreaterThan(localCache.mainProtectedMaximum());
+    assertThat(localCache.drainStatus).isEqualTo(REQUIRED);
+
+    cache.cleanUp();
+    assertThat(localCache.drainStatus).isEqualTo(IDLE);
+    assertThat(localCache.mainProtectedWeightedSize())
+        .isEqualTo(localCache.mainProtectedMaximum());
+    assertThat(cache).isValid();
   }
 
   @ParameterizedTest
