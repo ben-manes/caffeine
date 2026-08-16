@@ -111,6 +111,37 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   the absent-key path propagates the throwable raw and owes nothing, and `UnboundedLocalCache` never
   converts (`throw t` unchanged), so neither is an asymmetry to "fix".
 
+- **The refresh token is the user's own future, and its identity is what stands in for the
+  generation.** `CompletableFuture` has no equality, so identity is the only way to map a
+  registration onto a side structure (conditionally clearing `refreshes` when a load fails against
+  concurrent updates), and the loader's future is returned and exposed rather than wrapped. A
+  per-generation `copy()` is therefore not available: it changes what `refresh(k)` and
+  `policy().refreshes()` hand back, and cancelling a copy no longer reaches the loader's future.
+  The exposure has known annoyances, the cache-updating `whenComplete` running after the user's
+  future is already done, with no way to wait for the cache to be populated, since an expensive
+  handler ahead of ours in the dependent stack is slow to pop. A loader that returns one
+  still-pending future for two refresh generations of the same key is **out of scope**
+  (adjudicated 2026-08-15): the earlier completion reads the successor's identical token as its
+  own, discards the newest reload, and the one produced value takes the declined-value disposal
+  from both handlers, which bites only a non-idempotent listener. The window is narrow, the JDK
+  completing its dependent stack LIFO so the successor installs first in the ordinary case, and a
+  user who coalesces can hand out a copy. Don't add a per-generation wrapper, and don't tighten
+  the ownership test with a write-time term, which repairs neither the double disposal nor the
+  orphan-token risk on paths that keep a registration across a timestamp change. The mirror case
+  takes the same ruling: a `CompletableFuture` subclass whose `equals` makes distinct instances
+  compare equal defeats the conditional map operations a completion cleans up with
+  (`remove(k, future)`, `replace(k, future, future)`, and the CHM `refreshes.remove`), so a stale
+  completion can remove or overwrite a successor. Those are `equals`-based because `Map` requires
+  it, and they coincide with identity only because `CompletableFuture` has none. Out of scope with
+  the rest of the hostile-future family; the repair would be identity-conditional internal variants
+  threaded through both caches plus a `computeIfPresent` for the refresh token.
+- **A concurrent obtrusion on a cached future reads as not-ready rather than propagating.**
+  `Async.getIfReady` wraps its `join`, because a standard `obtrudeException` landing between the
+  readiness check and the join otherwise threw a `CompletionException` out of any caller, public
+  queries and `evictionLock`-held maintenance alike. Only the readiness question is defended: a
+  completion handler is one-shot, so a future obtruded after it succeeded leaves the entry
+  physically present while queries filter it, which is accepted. Don't widen the catch past
+  `CancellationException`/`CompletionException`, and don't report the lingering entry as a leak.
 - **A contract-violating user component is the user's problem** — a throwing
   `Ticker`/`Weigher`/`Expiry`/loader, broken `equals`/`hashCode`, a hostile future, `Error`/OOME.
   The guarded/unguarded split is deliberate: fire-and-forget extensions are wrapped because a

@@ -80,6 +80,21 @@ final class AsyncTest {
   }
 
   @Test
+  void getIfReady_obtrudedAfterCheck() {
+    // Obtruding from the readiness check schedules the race where another thread obtrudes an
+    // exception onto a successful future after it was observed as ready
+    var future = new CompletableFuture<Integer>() {
+      @Override public boolean isCompletedExceptionally() {
+        boolean completedExceptionally = super.isCompletedExceptionally();
+        obtrudeException(new IllegalStateException());
+        return completedExceptionally;
+      }
+    };
+    future.complete(1);
+    assertThat(Async.getIfReady(future)).isNull();
+  }
+
+  @Test
   void getWhenSuccessful_success() {
     assertThat(Async.getWhenSuccessful(CompletableFuture.completedFuture(1))).isEqualTo(1);
   }
@@ -142,6 +157,16 @@ final class AsyncTest {
 
     assertThat(expiry.expireAfterRead(0, future, 1, 2)).isEqualTo(3 * ONE_MINUTE);
     verify(expiry.delegate).expireAfterRead(0, 100, 1, 2);
+  }
+
+  @Test
+  void asyncExpiry_completion() {
+    var expiry = makeAsyncExpiry(ONE_MINUTE, 2 * ONE_MINUTE, 3 * ONE_MINUTE);
+    var future = CompletableFuture.completedFuture(100);
+
+    assertThat(expiry.expireAfterUpdate(0, future, 1, ASYNC_EXPIRY)).isEqualTo(ONE_MINUTE);
+    verify(expiry.delegate).expireAfterCreate(0, 100, 1);
+    verify(expiry.delegate, never()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
   }
 
   @Test

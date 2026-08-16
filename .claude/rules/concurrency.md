@@ -2,6 +2,9 @@
 paths:
   - "caffeine/src/main/java/**"
   - "caffeine/src/test/java/**"
+  - "caffeine/src/frayTest/java/**"
+  - "caffeine/src/lincheckTest/java/**"
+  - "caffeine/src/jcstress/java/**"
 ---
 
 # Concurrency Conventions

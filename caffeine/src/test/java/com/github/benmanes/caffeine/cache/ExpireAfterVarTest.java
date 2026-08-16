@@ -277,10 +277,6 @@ final class ExpireAfterVarTest {
 
     verify(context.expiry(), times(context.absent().size()))
         .expireAfterCreate(any(), any(), anyLong());
-    if (context.isAsync() && !context.loader().isBulk()) {
-      verify(context.expiry(), times(context.absent().size()))
-          .expireAfterUpdate(any(), any(), anyLong(), anyLong());
-    }
     verifyNoMoreInteractions(context.expiry());
   }
 
@@ -681,6 +677,24 @@ final class ExpireAfterVarTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  void get_readyFuture_isACreation(AsyncCache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
+
+    var future = cache.get(context.absentKey(),
+        (key, executor) -> context.absentValue().toFuture());
+    assertThat(future).succeedsWith(context.absentValue());
+
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry(), never()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    assertThat(expireAfterVar.getExpiresAfter(context.absentKey(), TimeUnit.NANOSECONDS))
+        .hasValue(context.expiryTime().timeNanos());
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   void get_expiryFails_read(Cache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofHours(1));
@@ -798,6 +812,35 @@ final class ExpireAfterVarTest {
         cache.put(context.absentKey(), context.absentValue()));
     context.ticker().advance(Duration.ofHours(-1));
     assertThat(cache).containsExactlyEntriesIn(context.original());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  void put_insert_readyFuture_isACreation(AsyncCache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
+
+    cache.put(context.absentKey(), context.absentValue().toFuture());
+
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry(), never()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    assertThat(expireAfterVar.getExpiresAfter(context.absentKey(), TimeUnit.NANOSECONDS))
+        .hasValue(context.expiryTime().timeNanos());
+  }
+
+  @ParameterizedTest
+  @SuppressWarnings("unchecked")
+  @CacheSpec(population = Population.FULL,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  void put_update_readyFuture_isASingleUpdate(AsyncCache<Int, Int> cache, CacheContext context) {
+    clearInvocations(context.expiry());
+
+    cache.put(context.firstKey(), context.absentValue().toFuture());
+
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verify(context.expiry(), never()).expireAfterCreate(any(), any(), anyLong());
   }
 
   @ParameterizedTest
@@ -1302,9 +1345,6 @@ final class ExpireAfterVarTest {
     cache.refresh(context.absentKey()).join();
 
     verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
-    if (context.isAsync()) {
-      verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
-    }
     verifyNoMoreInteractions(context.expiry());
   }
 

@@ -47,9 +47,15 @@ final class Async {
 
   /** Returns the current value or null if either not done or failed. */
   static <V> @Nullable V getIfReady(@Nullable CompletableFuture<V> future) {
-    return ((future != null) && future.isDone() && !future.isCompletedExceptionally())
-        ? future.join()
-        : null;
+    if ((future == null) || !future.isDone() || future.isCompletedExceptionally()) {
+      return null;
+    }
+    try {
+      return future.join();
+    } catch (CancellationException | CompletionException e) {
+      // not ready if the future's completion state was obtruded
+      return null;
+    }
   }
 
   /** Returns the value when completed successfully or null if failed. */

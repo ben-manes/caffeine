@@ -370,6 +370,36 @@ holding. Consuming the sentinel there also hands the user's callback a 220-year
 among them, then pins the entry for that span instead of expiring it after its
 configured duration.
 
+**The completion finalizes only what the insertion deferred.** `handleCompletion`
+finalizes an entry with a same-instance quiet `replace`, which lands on the update path.
+For a future that was in flight when it was inserted that is the entry's first and only
+evaluation, since the install stored the sentinel and `AsyncExpiry` routes it back to
+`expireAfterCreate`. A future that was **already complete** when inserted was weighed and
+dated by that write, so finalizing it again charged the creation as an update: the user's
+`expireAfterCreate` ran at the install and their `expireAfterUpdate` a moment later, and
+the update's duration is the one the entry kept. Measured with an `Expiry` of 1h on create
+and 1m on update, `put(k, completedFuture(v))` and a loader returning a completed future
+both produced a 1m entry where the synchronous cache and an in-flight future produced 1h.
+So the callers pass whether the insertion deferred its accounting and the completion skips
+the replace when it did not. A ready future replacing a live entry likewise takes one
+update rather than two. Reachability is not exotic: any loader that can answer without I/O
+returns a completed future.
+
+Three things about the shape are load-bearing. **The readiness is read before the store**,
+because a future observed as ready before the install was ready when the install evaluated
+it, whereas one observed afterwards may have completed in between, and skipping there
+leaves the entry holding weight 0 and the sentinel permanently (measured: moving the read
+after the `put` stranded 2,950 of 20,000 entries against a completion race, versus 0 of
+500,000 with the read where it is). **The decision cannot live in `AsyncExpiry`**: its
+`expireAfterUpdate` receives the key, the new value and the current duration, so a
+completion's `replace(k, f, f)` and a genuine `put` of an equal ready future are identical
+from inside it; the sentinel test only works for the deferred case because the entry still
+carries the mark. **And it must not be `AsyncExpiry.expireAfterCreate` deferring every
+creation** — the synchronous view's `asMap()` compute family installs completed futures
+with no completion handler at all, so deferring strands them at the sentinel and the user's
+`expireAfterCreate` is never called (9,013 failures across the narrowed async matrix when
+tried).
+
 **MAXIMUM_EXPIRY = ~150 years** (`Long.MAX_VALUE >> 1`). User-provided expiration
 durations are clamped to prevent nanoTime arithmetic overflow. `now + ASYNC_EXPIRY`
 overflows to negative after ~73 years of JVM uptime, but this is within the
@@ -515,6 +545,20 @@ reasoning is pinned here rather than re-argued:
 - **Ben's precedent:** Quarkus shipped a broken `CompletableFuture`; Caffeine pushed back and Quarkus
   fixed it — a better outcome than defensive code would have produced. Don't add a must-not-throw
   clause to `Ticker`'s javadoc either; that was considered and declined.
+- **The one containment taken in this family is that a concurrent obtrusion reads as not-ready.**
+  `Async.getIfReady` checks `isDone() && !isCompletedExceptionally()` and then joins, so a standard
+  `CompletableFuture.obtrudeException` landing between the two threw a `CompletionException` out of
+  whatever asked: `AsyncCache.getIfPresent`, the synchronous view, and every `isComputingAsync`
+  caller, `hasExpired` and eviction under `evictionLock` included. Measured with a plain future and
+  no subclass, a free-running obtruder produced 3.5M throws in 1.28B query rounds. The join is now
+  wrapped and returns null, which is the classification the method's own doc promises, and the
+  catch is narrow (`CancellationException`/`CompletionException`) so a hostile subclass throwing
+  anything else from `join` still propagates. It defends the readiness question only, not the
+  entry: the completion handler is one-shot, so obtruding onto an already-successful future leaves
+  the entry physically present while queries filter it, which is the documented physical-vs-logical
+  split and is accepted. Nothing better exists once a user completes a future the cache owns. The
+  cache's own use is safe by ordering, `AsyncBulkCompleter.failProxies` removing the mapping before
+  it obtrudes.
 - **A throw inside `maintenance` does not lose work.** The `finally` CASes `PROCESSING_TO_IDLE → IDLE`
   on a clean exit *and* on a throw (only a racing writer's `PROCESSING_TO_REQUIRED` forces `REQUIRED`),
   so the un-drained buffer entries are **deferred, not dropped**: they stay in the write buffer, the
@@ -1058,6 +1102,17 @@ reads "the future it found." Double-collecting (re-reading the mapping after the
 unwrap and returning null on change) would close it but adds a map re-read to every
 sync-view hit for a narrow, non-linearizable-by-design corner. Don't add the
 re-check guard.
+
+The same two-step shape is `AsMapView.computeIfAbsent`'s optimistic prior-future
+branch, the one exit in its retry loop that does not re-read the mapping. A future
+removed and completed while the caller sits between the map read and the `isDone`
+test yields that future's value with no mapper call, where an unpaused caller would
+have waited on the pending future, looped to `getIfPresentQuietly`, found the key
+gone, and computed. Same adjudication: the value came from a future that was the
+mapping when it was read, an in-flight mapping counts as present for
+`computeIfAbsent` under the coalescing rule below, and `ConcurrentHashMap` promises
+nothing about a mapping surviving the return either. Three reports have re-derived
+this, each proposing the re-check guard.
 
 **The compute variants adopt the found future too — `synchronous().get(k, func)` /
 `getAll` load-coalesce, they do not recompute.** The present-branch of

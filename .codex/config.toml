@@ -1,11 +1,5 @@
 developer_instructions = """
-This repository keeps its canonical shared project guidance and reusable content under
-`.claude/`. Use those paths as written; do not rewrite or mirror them under `.codex/`.
-
-Claude Code loads `.claude/rules/*.md` contextually. Codex must emulate that behavior: once the
-task scope or touched paths are known, inspect the rule filenames and their `paths` frontmatter,
-then read every matching rule before analysis or edits. A rule without `paths` applies
-repository-wide when its topic is relevant. If applicability is uncertain, read the rule.
+These Codex-specific compatibility instructions supplement `AGENTS.md`.
 
 Claude Code also uses skill frontmatter that Codex does not interpret natively. After selecting
 a skill under `.claude/skills/`, read its `SKILL.md` in full and translate these fields:
@@ -18,6 +12,10 @@ a skill under `.claude/skills/`, read its `SKILL.md` in full and translate these
   skill. Treat `$skill-name`, Claude-style `/skill-name`, and "run skill-name" as explicit.
 - `$ARGUMENTS`: substitute the text following the skill name; when absent, use the skill's stated
   default.
+
+If a forked workflow requests more simultaneous subagents than the session permits, use the
+maximum available concurrency and dispatch the remaining workstreams in batches. Do not omit or
+merge groups or evaluators; preserve each workstream's isolated context and assigned output path.
 
 The parent must still read the selected skill before delegation, wait for the forked workflow, and
 return its result. These translations affect Codex orchestration only; do not edit the canonical

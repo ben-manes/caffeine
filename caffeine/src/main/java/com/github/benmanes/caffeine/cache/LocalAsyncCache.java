@@ -100,17 +100,19 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return present;
     }
 
+    var deferred = new boolean[1];
     long startTime = cache().statsTicker().read();
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Nullable CompletableFuture<? extends V>[] result = new CompletableFuture[1];
     CompletableFuture<V> future = cache().computeIfAbsent(key, k -> {
       @SuppressWarnings("unchecked")
       var castedResult = (CompletableFuture<V>) mappingFunction.apply(key, cache().executor());
+      deferred[0] = !Async.isReady(castedResult);
       result[0] = castedResult;
       return requireNonNull(castedResult);
     }, recordStats, /* recordLoad= */ false);
     if (result[0] != null) {
-      handleCompletion(key, result[0], startTime);
+      handleCompletion(key, result[0], startTime, deferred[0]);
     }
     return requireNonNull(future);
   }
@@ -203,15 +205,25 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @SuppressWarnings("unchecked")
     var castedFuture = (CompletableFuture<V>) valueFuture;
+    boolean deferred = !Async.isReady(castedFuture);
     CompletableFuture<V> prior = cache().put(key, castedFuture);
     if (prior != castedFuture) {
-      handleCompletion(key, valueFuture, startTime);
+      handleCompletion(key, valueFuture, startTime, deferred);
     }
   }
 
+  /**
+   * Registers the callback that completes the insertion of the value once it is available.
+   *
+   * @param key the key that the future was inserted with
+   * @param valueFuture the inserted future
+   * @param startTime the time when the load started, in nanoseconds
+   * @param deferred whether the insertion deferred the entry's weight and expiration to the
+   *        completion, which it does when the value was not yet available to evaluate them
+   */
   @SuppressWarnings({"FutureReturnValueIgnored", "ResultOfMethodCallIgnored"})
-  default void handleCompletion(K key, CompletableFuture<? extends V> valueFuture,
-      long startTime) {
+  default void handleCompletion(K key,
+      CompletableFuture<? extends V> valueFuture, long startTime, boolean deferred) {
     valueFuture.whenComplete((value, error) -> {
       long loadTime = cache().statsTicker().read() - startTime;
       if (value == null) {
@@ -236,9 +248,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         var castedFuture = (CompletableFuture<V>) valueFuture;
 
         try {
-          // update the weight and expiration timestamps
-          cache().replace(key, castedFuture, castedFuture,
-              /* shouldDiscardRefresh= */ false, /* quietly= */ true);
+          if (deferred) {
+            // update the weight and expiration timestamps
+            cache().replace(key, castedFuture, castedFuture,
+                /* shouldDiscardRefresh= */ false, /* quietly= */ true);
+          }
           cache().statsCounter().recordLoadSuccess(loadTime);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during asynchronous load", t);
@@ -409,18 +423,20 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return asyncCache.cache().get(key);
     }
     @Override public @Nullable CompletableFuture<V> putIfAbsent(K key, CompletableFuture<V> value) {
+      boolean deferred = !Async.isReady(value);
       CompletableFuture<V> prior = asyncCache.cache().putIfAbsent(key, value);
       long startTime = asyncCache.cache().statsTicker().read();
       if (prior == null) {
-        asyncCache.handleCompletion(key, value, startTime);
+        asyncCache.handleCompletion(key, value, startTime, deferred);
       }
       return prior;
     }
     @Override public @Nullable CompletableFuture<V> put(K key, CompletableFuture<V> value) {
+      boolean deferred = !Async.isReady(value);
       CompletableFuture<V> prior = asyncCache.cache().put(key, value);
       long startTime = asyncCache.cache().statsTicker().read();
       if (prior != value) {
-        asyncCache.handleCompletion(key, value, startTime);
+        asyncCache.handleCompletion(key, value, startTime, deferred);
       }
       return prior;
     }
@@ -429,19 +445,21 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       map.forEach(this::put);
     }
     @Override public @Nullable CompletableFuture<V> replace(K key, CompletableFuture<V> value) {
+      boolean deferred = !Async.isReady(value);
       CompletableFuture<V> prior = asyncCache.cache().replace(key, value);
       long startTime = asyncCache.cache().statsTicker().read();
       if ((prior != null) && (prior != value)) {
-        asyncCache.handleCompletion(key, value, startTime);
+        asyncCache.handleCompletion(key, value, startTime, deferred);
       }
       return prior;
     }
     @Override
     public boolean replace(K key, CompletableFuture<V> oldValue, CompletableFuture<V> newValue) {
+      boolean deferred = !Async.isReady(newValue);
       boolean replaced = asyncCache.cache().replace(key, oldValue, newValue);
       long startTime = asyncCache.cache().statsTicker().read();
       if (replaced && (newValue != oldValue)) {
-        asyncCache.handleCompletion(key, newValue, startTime);
+        asyncCache.handleCompletion(key, newValue, startTime, deferred);
       }
       return replaced;
     }
@@ -454,17 +472,19 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override public @Nullable CompletableFuture<V> computeIfAbsent(K key,
         Function<? super K, ? extends @Nullable CompletableFuture<V>> mappingFunction) {
       requireNonNull(mappingFunction);
+      var deferred = new boolean[1];
       @SuppressWarnings({"rawtypes", "unchecked"})
       @Nullable CompletableFuture<V>[] result = new CompletableFuture[1];
       long startTime = asyncCache.cache().statsTicker().read();
       Function<K, @Nullable CompletableFuture<V>> function = k -> {
         result[0] = mappingFunction.apply(k);
+        deferred[0] = !Async.isReady(result[0]);
         return result[0];
       };
       @Nullable CompletableFuture<V> future = asyncCache.cache().computeIfAbsent(
           key, function, /* recordStats= */ true, /* recordLoad= */ false);
       if (result[0] != null) {
-        asyncCache.handleCompletion(key, result[0], startTime);
+        asyncCache.handleCompletion(key, result[0], startTime, deferred[0]);
       }
       return future;
     }
@@ -479,6 +499,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         ? super CompletableFuture<V>, ? extends CompletableFuture<V>> remappingFunction) {
       requireNonNull(remappingFunction);
 
+      var deferred = new boolean[1];
       @SuppressWarnings({"rawtypes", "unchecked"})
       @Nullable CompletableFuture<V>[] result = new CompletableFuture[1];
       @SuppressWarnings({"rawtypes", "unchecked"})
@@ -486,12 +507,13 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       long startTime = asyncCache.cache().statsTicker().read();
       asyncCache.cache().compute(key, (K k, @Nullable CompletableFuture<V> oldValue) -> {
         result[0] = remappingFunction.apply(k, oldValue);
+        deferred[0] = !Async.isReady(result[0]);
         prior[0] = oldValue;
         return result[0];
       }, asyncCache.cache().expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
 
       if ((result[0] != null) && (result[0] != prior[0])) {
-        asyncCache.handleCompletion(key, result[0], startTime);
+        asyncCache.handleCompletion(key, result[0], startTime, deferred[0]);
       }
       return result[0];
     }

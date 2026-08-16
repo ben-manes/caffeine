@@ -1,7 +1,6 @@
 ---
 paths:
-  - "**/src/main/java/**"
-  - "**/src/test/java/**"
+  - "**/src/*/java/**"
 ---
 
 # ErrorProne & NullAway
