@@ -58,6 +58,9 @@ it as a static contract.
   mid-flight state across `resized`, the starvation confirm's release, and the reactive
   tier's period read. `WindowClimberFuzzer` scenarios: random samples, teleporting positions,
   fuzzed region geometry, partial adjustment application, cross-tier resizes
+- Behavioral regret (does the climber close the gap on a workload) is not the unit suite's job:
+  `/climber-gate` holds the known traps and `/audit-regret` searches for new ones, both in the
+  simulator against `product.Caffeine`
 - `WindowClimber` state or schedule changes must ALSO run
   `./gradlew :caffeine:fuzzTest --tests 'WindowClimberFuzzer'` — its oracle (mirrored by
   `LocalCacheSubject.checkHillClimber`) pins the state-machine invariants and CI runs it; a

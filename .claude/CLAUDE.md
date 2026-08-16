@@ -147,6 +147,7 @@ When to read which doc:
 - **Skills** (`/audit-third-party-contracts`): external-library and JDK contract misuse across adapters, simulator, and examples — verifies call-site assumptions (error paths, duplicate/empty inputs, disposal) against upstream docs
 - **Skills** (`/sim-*`): simulator workflow automation — `/sim-compare` for policy comparison charts, `/sim-analyze` for trace characterization
 - **Skills** (`/climber-gate`): regenerate the window climber's adversarial trap traces (deterministic generators, committed) and run the behavioral gate vs LRU/ceiling anchors in the simulator — run after any `WindowClimber` change; companion to `/audit-adaptivity`
+- **Skills** (`/audit-regret`): adversarial workload search for eviction regret. Mutates a compositional trace generator to find workloads where the climber fails to close the gap to its achievable ceiling, shrinks each to a minimal witness, finds its phase transition, classifies the failure (wrong equilibrium / slow convergence / masked signal / insufficient exploration / oscillation / memory / irreversible damage / aliasing / premature commitment / tier discontinuity / structural), and routes it to the controller, policy structure, or recovery layer. Produces new `/climber-gate` rows and `hill-climber.md` §8 directions rather than bug reports
 - **Auditor agent** (`.claude/agents/`): multi-pass — analysis → reflection → evaluator challenge → targeted re-audit
 
 ### Audit Selection Guide
@@ -175,6 +176,7 @@ When to read which doc:
 | Documented behavior vs. implementation drift | `/audit-contract-drift` |
 | Divergences between sibling implementations | `/audit-sibling-divergence` |
 | Adaptive hill-climber / window-resize correctness | `/audit-adaptivity` |
+| Workloads where eviction underperforms its own ceiling | `/audit-regret` |
 | Drain-status / node-lifecycle / async-value state machines | `/audit-state-machine` |
 | JSR-107 (JCache) spec conformance of the adapter | `/audit-jcache-conformance` |
 | Third-party/JDK API contract misuse (adapters, simulator, examples) | `/audit-third-party-contracts` |
@@ -182,5 +184,7 @@ When to read which doc:
 **Audit output**: reports go to `.local/audits/<model>/<skill-name>.md` — one directory per
 producing model (`opus-5`, `gpt-5-codex`, …) plus `shared` for cross-model working documents like
 the consolidated backlog. Gitignored but kept long-term; see `.claude/rules/audit-output.md`.
+
+**Correctness vs regret**: the `/audit-*` skills above look for defects in what the code does. `/audit-regret` looks for workloads where correct code still loses hit rate, and its findings are failure classes with a responsible layer, not bugs. Its companions are `/climber-gate` (re-runs the traps already known) and `/audit-adaptivity` (implementation defects in the same subsystem).
 
 **Review vs Audit**: `/review-change` is for pre-commit code review — reads design docs and filters known-intentional patterns. `/audit-*` skills are for correctness doubts — independent, no design context filtering. Use review for routine changes, audit when you need fresh-eyes analysis. `/audit-temporal-walk` is a third category (heavyweight, rare-run history-mining) — see its `SKILL.md` for invocation.

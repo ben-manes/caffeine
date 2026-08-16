@@ -1,0 +1,10 @@
+{
+  "max": 8192, "seed": 7, "repeat": 1,
+  "members": {
+    "hot":  {"kind": "zipf",  "n": 0.6, "alpha": 0.9},
+    "band": {"kind": "pairs", "d": 0.25, "k": 2}
+  },
+  "segments": [
+    {"samples": 60, "shares": {"hot": 0.7, "band": 0.3}}
+  ]
+}

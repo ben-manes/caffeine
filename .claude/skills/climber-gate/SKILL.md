@@ -649,6 +649,16 @@ Weighted traps (`.lcs.csv`, simulator format `lcs-trace`): use the byte capacity
 prints as `maximum-size`, and read the `Weighted Hit Rate` column of the CSV report (same
 `simulator:run` invocation; no separate task needed).
 
+## Where new rows come from
+
+This skill's job is to hold the traps already known; finding new ones is `/audit-regret`, which
+searches over synthetic workloads for cells where the machine fails to close the gap to its
+static ceiling, shrinks each to a minimal witness, and classifies the failure. A family it
+confirms arrives here as a spec under `.claude/skills/audit-regret/specs/`, a `workload.py` line
+in the generation block above, and a `gate.py` `CELLS` row with its seeded record; a family that
+is accepted residue arrives as a frontier sentinel instead. Its bars follow this file's rule: a
+margin over a re-derivable anchor, never a bare level.
+
 ## Reporting
 
 Emit a per-cell table — family, cell, cache HR, LRU, ceiling, gap, verdict — and call out any

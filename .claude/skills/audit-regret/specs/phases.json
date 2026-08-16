@@ -1,0 +1,11 @@
+{
+  "max": 8192, "seed": 7, "repeat": 6,
+  "members": {
+    "loop": {"kind": "loop",  "n": 0.9},
+    "band": {"kind": "pairs", "d": 0.5, "k": 2}
+  },
+  "segments": [
+    {"samples": 8, "shares": {"loop": 1.0}},
+    {"samples": 8, "shares": {"band": 1.0}}
+  ]
+}

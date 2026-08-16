@@ -1,0 +1,9 @@
+{
+  "max": 8192, "seed": 7, "repeat": 1,
+  "members": {
+    "rep": {"kind": "pairs", "d": 0.5, "k": 6}
+  },
+  "segments": [
+    {"samples": 90, "shares": {"rep": 1.0}}
+  ]
+}

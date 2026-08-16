@@ -1,0 +1,10 @@
+{
+  "max": 8192, "seed": 7, "repeat": 1,
+  "members": {
+    "hot":  {"kind": "rotation", "n": 0.5, "step": 0.05, "period": 4},
+    "band": {"kind": "pairs", "d": 0.3, "k": 2}
+  },
+  "segments": [
+    {"samples": 60, "shares": {"hot": 0.7, "band": {"share": 0.3, "mod": {"kind": "sine", "period": 12, "amp": 0.6}}}}
+  ]
+}

@@ -175,7 +175,12 @@ a formalism that names a mechanism correctly still does not license changing it.
 
 The generators, run commands, and per-family verdicts for this section live in the committed
 `/climber-gate` skill (`.claude/skills/climber-gate/`); the traces are deterministic and
-regenerate on demand, so only the generators are preserved.
+regenerate on demand, so only the generators are preserved. New families are found by
+`/audit-regret`, which searches a compositional workload generator for cells where the machine
+does not close the gap to its static ceiling and classifies each failure (wrong equilibrium,
+slow convergence, masked signal, insufficient exploration, oscillation, memory, irreversible
+damage, aliasing, premature commitment, tier discontinuity, structural) against the layer that
+owns it; a confirmed family lands here and in the gate table, and its open direction lands in §8.
 
 - **corda + 5×loop + corda phase-shift stress** (real traces, bundled): run at
   512/513/1024/2048/4096/4097/8192; no cliffs at either tier boundary; near static ceiling.
