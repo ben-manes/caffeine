@@ -40,6 +40,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.RUNNABLE;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
 import static java.util.Spliterator.CONCURRENT;
@@ -78,6 +79,7 @@ import java.util.Spliterators;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -362,6 +364,7 @@ final class AsyncAsMapTest {
         .hasSize(1);
   }
 
+  @CheckNoStats
   @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   void put_replace_sameValue(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -478,6 +481,30 @@ final class AsyncAsMapTest {
     assertThat(cache).containsExactlyEntriesIn(entries);
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(replaced).exclusively();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY)
+  @SuppressWarnings("SequencedCollectionGetFirst")
+  void writes_readyFuture_doNotRecordALoad(AsyncCache<Int, Int> cache, CacheContext context) {
+    var keys = List.copyOf(context.absentKeys());
+    var map = cache.asMap();
+    map.put(keys.get(0), context.absentValue().toFuture());
+    map.replace(keys.get(0), context.absentValue().toFuture());
+    map.replace(keys.get(0), map.get(keys.get(0)), context.absentValue().toFuture());
+    map.putIfAbsent(keys.get(1), context.absentValue().toFuture());
+    map.putAll(Map.of(keys.get(2), context.absentValue().toFuture()));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, stats = Stats.ENABLED)
+  void writes_inFlightFuture_recordTheLoad(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.asMap().put(context.absentKey(), future);
+    future.complete(context.absentValue());
+
+    assertThat(context).stats().hits(0).misses(0).success(1).failures(0);
   }
 
   /* ---------------- putIfAbsent -------------- */
@@ -1172,6 +1199,35 @@ final class AsyncAsMapTest {
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(context.firstKey(), requireNonNull(context.original().get(context.firstKey())))
         .exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON)
+  void replaceAll_appliedOncePerKey(AsyncCache<Int, Int> cache, CacheContext context)
+      throws InterruptedException {
+    var invocations = new AtomicInteger();
+    var started = new AtomicBoolean();
+
+    // a dedicated thread rather than the shared pool, which may not schedule it promptly
+    var writer = new Thread(() -> {
+      started.set(true);
+      cache.asMap().put(context.firstKey(), context.absentValue().toFuture());
+    });
+    writer.setDaemon(true);
+    writer.start();
+
+    cache.asMap().replaceAll((key, value) -> {
+      invocations.incrementAndGet();
+      await().untilTrue(started);
+
+      // the writer either blocks behind this computation or has finished its write
+      await().until(() -> writer.getState() != RUNNABLE);
+
+      return value;
+    });
+
+    writer.join();
+    assertThat(invocations.get()).isEqualTo(1);
   }
 
   /* ---------------- computeIfAbsent -------------- */
@@ -3140,11 +3196,9 @@ final class AsyncAsMapTest {
     @SuppressWarnings("unchecked")
     var array = (Map.Entry<Int, CompletableFuture<Int>>[])
         cache.asMap().entrySet().toArray(new Map.Entry<?, ?>[0]);
-    @Var int replaced = 0;
     for (var entry : array) {
       var future = expected.get(entry.getKey());
       if (!Objects.equals(entry.getValue(), future)) {
-        replaced++;
         entry.setValue(future);
         assertThat(entry.getValue()).isEqualTo(future);
       }
@@ -3154,7 +3208,7 @@ final class AsyncAsMapTest {
         .contains(Maps.toMap(context.firstMiddleLastKeys(),
             key -> requireNonNull(context.original().get(key))))
         .exclusively();
-    assertThat(context).stats().hits(0).misses(0).success(replaced).failures(0);
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
   }
 
   @CheckNoStats
@@ -3731,6 +3785,7 @@ final class AsyncAsMapTest {
 
   /* ---------------- WriteThroughEntry -------------- */
 
+  @CheckNoStats
   @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   void writeThroughEntry(AsyncCache<Int, Int> cache, CacheContext context) {
@@ -3743,7 +3798,6 @@ final class AsyncAsMapTest {
     assertThat(cache).containsEntry(entry.getKey(), value);
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(entry.getKey(), oldValue).exclusively();
-    assertThat(context).stats().hits(0).misses(0).success(1).failures(0);
   }
 
   @CheckNoStats

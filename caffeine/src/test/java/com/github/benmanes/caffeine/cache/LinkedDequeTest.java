@@ -45,6 +45,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A unit-test for the @{@link AbstractLinkedDeque} implementations.
  *
@@ -680,6 +682,22 @@ final class LinkedDequeTest {
   @ParameterizedTest @MethodSource("full")
   void removeAll_toEmpty(LinkedDeque<LinkedValue> deque) {
     assertThat(deque.removeAll(List.copyOf(deque))).isTrue();
+    assertThat(deque).isExhaustivelyEmpty();
+  }
+
+  @ParameterizedTest @MethodSource("full")
+  @SuppressWarnings("ModifyingCollectionWithItself")
+  @SuppressFBWarnings("DMI_USING_REMOVEALL_TO_CLEAR_COLLECTION")
+  void removeAll_self(LinkedDeque<LinkedValue> deque) {
+    assertThat(deque.removeAll(deque)).isTrue();
+    assertThat(deque).isExhaustivelyEmpty();
+  }
+
+  @ParameterizedTest @MethodSource("empty")
+  @SuppressWarnings("ModifyingCollectionWithItself")
+  @SuppressFBWarnings("DMI_USING_REMOVEALL_TO_CLEAR_COLLECTION")
+  void removeAll_self_whenEmpty(LinkedDeque<LinkedValue> deque) {
+    assertThat(deque.removeAll(deque)).isFalse();
     assertThat(deque).isExhaustivelyEmpty();
   }
 

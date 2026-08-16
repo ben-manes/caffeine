@@ -33,6 +33,21 @@ paths:
   recording there, and
   don't flag the loud-user-replace vs quiet-completion asymmetry as an inconsistency
 - Null result or failed future → entry removed; user removal listener does NOT fire
+- **A load is recorded for a computation, and for a write whose value materialized while the cache
+  held it.** `handleCompletion` takes `computed` from its caller and records when
+  `computed || deferred`: `get`/`getAll` and the `asMap()` compute family always record, since the
+  mapping function ran; `put`, `putIfAbsent` and `replace` on either surface record only when the
+  future was still in flight when it was inserted, because then the entry sat in the loading state
+  and the elapsed time is a real wait. A write of an already-resolved future loaded nothing and
+  records nothing, which is what `CacheStats` means by a non-computing operation. Don't simplify
+  this to "writes never record": the suite pins the in-flight cases
+  (`computeIfAbsent_present_failed`, `handleCompletion_brokenFuture_*`), where a future handed to
+  the cache and then failed must show up as a load failure
+- A **bulk proxy** is owned by `AsyncBulkCompleter`, not by `handleCompletion`, so cancelling one
+  leaves the entry mapped until the load settles and `fillProxies` obtrudes the value onto it. That
+  is accepted: cancelling means downstream chained actions may be abandoned, not that the value is
+  uncacheable, and the computation still materializes a value that a dropped entry could never hand
+  to the removal listener. Don't add cancel-aware completion logic to the bulk path
 - Refresh failures preserve the old value (not removed)
 
 ## Removal Listener Timing
@@ -53,6 +68,17 @@ paths:
   once predecessors complete; don't notify eagerly for an in-flight replacement, which re-opens
   #593. Cache-driven paths cannot grow it (refresh starts only on a ready future), so it takes
   user-supplied futures that never complete.
+
+## Map Views
+- **Both async views override `replaceAll` to compute per key** rather than inheriting
+  `ConcurrentMap`'s default. The default reads the value, applies the function outside any lock,
+  and CASes, re-invoking the function for that key on every lost race, which CHM's own override
+  also does. Caffeine's native caches instead apply the function inside their atomic remap, so the
+  views were the odd ones out: with removal listeners and eviction bookkeeping, a value computed
+  into a lost CAS is silently dropped without notification. The sync view passes
+  `recordLoad = false` so that, like `Cache.asMap().replaceAll`, it records no load statistics.
+  Both iterate `keySet()`, whose iterator filters in-flight entries through `getIfReady`, matching
+  what the default's `forEach` skipped
 
 ## Key Gotchas
 - Null values are never cached — null or failed futures remove the entry

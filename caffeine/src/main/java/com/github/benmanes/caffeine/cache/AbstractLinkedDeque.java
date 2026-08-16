@@ -343,6 +343,12 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   @Override
   @SuppressWarnings("DequeRemoveFirstOccurrence")
   public boolean removeAll(Collection<?> c) {
+    if (isEmpty()) {
+      return false;
+    } else if (c == this) {
+      clear();
+      return true;
+    }
     @Var boolean modified = false;
     for (Object o : c) {
       modified |= remove(o);

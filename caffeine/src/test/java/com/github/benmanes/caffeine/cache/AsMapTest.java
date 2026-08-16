@@ -41,6 +41,7 @@ import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.RUNNABLE;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
 import static java.util.Spliterator.CONCURRENT;
@@ -81,6 +82,7 @@ import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -1168,6 +1170,36 @@ final class AsMapTest {
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(context.firstKey(), requireNonNull(context.original().get(context.firstKey())))
         .exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  void replaceAll_appliedOncePerKey(Map<Int, Int> map, CacheContext context)
+      throws InterruptedException {
+    var invocations = new AtomicInteger();
+    var started = new AtomicBoolean();
+
+    // a dedicated thread rather than the shared pool, which may not schedule it promptly
+    var writer = new Thread(() -> {
+      started.set(true);
+      map.put(context.firstKey(), context.absentValue());
+    });
+    writer.setDaemon(true);
+    writer.start();
+
+    map.replaceAll((key, value) -> {
+      invocations.incrementAndGet();
+      await().untilTrue(started);
+
+      // the writer either blocks behind this computation or has finished its write
+      await().until(() -> writer.getState() != RUNNABLE);
+
+      return value;
+    });
+
+    writer.join();
+    assertThat(invocations.get()).isEqualTo(1);
   }
 
   /* --------------- computeIfAbsent --------------- */

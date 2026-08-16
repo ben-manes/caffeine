@@ -15,9 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.lang.invoke.ConstantBootstraps.fieldVarHandle;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
@@ -254,6 +257,10 @@ final class References {
    */
   static final class WeakValueReference<V> extends WeakReference<@Nullable V>
       implements InternalReference<V> {
+    private static final VarHandle KEY_REFERENCE = fieldVarHandle(MethodHandles.lookup(),
+        "keyReference", VarHandle.class, WeakValueReference.class, Object.class);
+
+    @SuppressWarnings({"FieldCanBeFinal", "PMD.ImmutableField", "unused", "UnusedVariable"})
     private Object keyReference;
 
     public WeakValueReference(Object keyReference,
@@ -264,11 +271,11 @@ final class References {
 
     @Override
     public Object getKeyReference() {
-      return keyReference;
+      return KEY_REFERENCE.getOpaque(this);
     }
 
     public void setKeyReference(Object keyReference) {
-      this.keyReference = keyReference;
+      KEY_REFERENCE.setOpaque(this, keyReference);
     }
 
     @Override
@@ -295,6 +302,10 @@ final class References {
    */
   static final class SoftValueReference<V> extends SoftReference<@Nullable V>
       implements InternalReference<V> {
+    private static final VarHandle KEY_REFERENCE = fieldVarHandle(MethodHandles.lookup(),
+        "keyReference", VarHandle.class, SoftValueReference.class, Object.class);
+
+    @SuppressWarnings({"FieldCanBeFinal", "PMD.ImmutableField", "unused", "UnusedVariable"})
     private Object keyReference;
 
     public SoftValueReference(Object keyReference,
@@ -305,11 +316,11 @@ final class References {
 
     @Override
     public Object getKeyReference() {
-      return keyReference;
+      return KEY_REFERENCE.getOpaque(this);
     }
 
     public void setKeyReference(Object keyReference) {
-      this.keyReference = keyReference;
+      KEY_REFERENCE.setOpaque(this, keyReference);
     }
 
     @Override

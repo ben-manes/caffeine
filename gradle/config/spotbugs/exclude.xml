@@ -245,6 +245,16 @@
     <Bug pattern="HES_EXECUTOR_NEVER_SHUTDOWN"/>
   </Match>
   <Match>
+    <Or>
+      <Class name="com.github.benmanes.caffeine.cache.References$SoftValueReference"/>
+      <Class name="com.github.benmanes.caffeine.cache.References$WeakValueReference"/>
+    </Or>
+    <Field name="keyReference"/>
+    <Bug pattern="
+      FCBL_FIELD_COULD_BE_LOCAL,
+      URF_UNREAD_FIELD"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.SerializationProxy"/>
     <Bug pattern="DESERIALIZATION_GADGET"/>
   </Match>

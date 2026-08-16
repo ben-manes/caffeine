@@ -570,10 +570,22 @@ reasoning is pinned here rather than re-argued:
 
 ## References
 
-**Non-volatile keyReference in WeakValueReference** is a plain field. It is set
-during construction and, under `synchronized(node)`, mutated to a sentinel value
-(`RETIRED_*_KEY` / `DEAD_*_KEY`) when the node is retired or dies. Lock-free
-readers tolerate the resulting staleness window as weakly-consistent observation.
+**The keyReference in a weak/soft value reference is read and written opaquely.** The
+field is set during construction and, under `synchronized(node)`, mutated to a sentinel
+value (`RETIRED_*_KEY` / `DEAD_*_KEY`) when the node is retired or dies. Lock-free
+readers tolerate the resulting staleness window as weakly-consistent observation, but a
+strong-key weak/soft-value node keeps its key *inside* that reference, so `getKey()` and
+`isAlive()` read the field independently: with plain reads, a reader that observed the
+sentinel and then observed the older key would judge a retired node alive while handing
+out an internal sentinel as its key. Opaque access forbids exactly that, since opaque
+operations on one variable are coherent, and it costs nothing at runtime because the
+constraint binds the compiler rather than the hardware (opaque loads compile to ordinary
+loads on x86 and aarch64 alike). The field stays non-volatile and the constructor's store
+stays plain, the object not yet being published; only the accessors are opaque. A jcstress
+probe was written to arbitrate first and found no violation over both weak and soft values
+while exercising the window (it observed the monotonic `key`-then-retired interleaving),
+so it was discarded rather than kept as a pin: the hazard is a legal compiler
+transformation that a green run cannot refute.
 
 In `setValue`, a new `WeakValueReference` is installed via
 `setRelease` followed by `VarHandle.storeStoreFence()`, then the old reference is
@@ -1153,6 +1165,30 @@ is replaced). It is benign regardless — re-inserting a specific future instanc
 after replacing it is unusual, and the second `replace(k, f1, f1)` is idempotent
 (no state corruption; `notifyOnReplace` suppresses on identity). Pinned by
 `AsyncCacheTest.put_reregisteredInstance_completionRecordedTwice`.
+
+**A cancelled bulk proxy stays mapped, and the completer re-asserts its lifecycle.**
+`getAll` installs a proxy per absent key and gives its lifecycle to `AsyncBulkCompleter`
+rather than to `handleCompletion`, so a caller who cancels the mapped proxy leaves the
+entry in place. Measured: the entry stays mapped and counted while queries filter it, a
+`get` in that window adopts the cancelled future instead of starting a fresh load, and
+once the load settles `fillProxies` obtrudes the value onto that same future, leaving the
+entry holding it and the proxy no longer cancelled. The single-key path differs because
+its `handleCompletion` removes an entry whose future completed without a value, so
+cancelling there is self-healing.
+
+Accepted 2026-08-16 as the least bad of unsatisfactory options, and the reasoning is what
+to re-read before proposing a change. Cancellation does not stop the computation, so the
+value still materializes, and a cache that dropped the entry on cancel would have no way
+to hand that value to a removal listener for cleanup, where an entry removed while in
+flight does have a listener attached to notify. Cancelling says downstream chained actions
+may be abandoned, which still happens; removing the mapping directly says the value is not
+cacheable. Obtruding is then the cache treating the value as having materialized elsewhere
+and re-asserting its own lifecycle over it. Removal-on-cancel is not free either: the
+cancellation happens outside the cache, so it takes a dependent action per proxy, and it
+would leave the completer's `replace` unable to install the loaded value. `CompletableFuture`
+offers no API that satisfies every case and there is no clean decision matrix, so don't add
+cancel-aware completion logic to the bulk path, and don't screen the cancelled future out of
+`LocalAsyncCache.get`'s present branch, which the adopt-the-found-future decision covers.
 
 ## TimerWheel
 

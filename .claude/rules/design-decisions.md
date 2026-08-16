@@ -61,7 +61,13 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
 - **`scheduleAfterWrite`'s IDLE arm retries its failed swap** instead of scheduling on what it
   read, mirroring the processing arm. Dropping the failed swap can leave a write with no driver
   when a drain is in flight that already passed its task. Don't collapse it back. Read the doc.
-- **Non-volatile keyReference in WeakValueReference** is safe (published via setRelease + storeStoreFence). Instead verify the fence is present in setValue.
+- **The keyReference in a weak/soft value reference is non-volatile but read and written
+  opaquely** (published via setRelease + storeStoreFence; verify the fence is present in setValue).
+  A strong-key weak/soft-value node stores its key in that reference, so `getKey()` and `isAlive()`
+  read the field independently and plain reads would permit observing the sentinel and then the
+  older key, judging a retired node alive while handing out the sentinel. Opaque reads are coherent,
+  which forbids it, and cost nothing at runtime. Don't demote them to plain, and don't promote the
+  field to volatile.
 - **`refreshIfNeeded` is lock-free and `discardRefresh` is over-aggressive** — both intentional;
   a refresh racing a real mutation must die for linearizability. Don't add `synchronized(node)` or
   narrow the discard. The one sanctioned narrowing is `RemapHints.preserveRefresh` for query-style

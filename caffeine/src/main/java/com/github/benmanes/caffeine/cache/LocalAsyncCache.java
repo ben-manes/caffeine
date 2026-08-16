@@ -112,7 +112,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return requireNonNull(castedResult);
     }, recordStats, /* recordLoad= */ false);
     if (result[0] != null) {
-      handleCompletion(key, result[0], startTime, deferred[0]);
+      handleCompletion(key, result[0], startTime, deferred[0], /* computed= */ true);
     }
     return requireNonNull(future);
   }
@@ -208,7 +208,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     boolean deferred = !Async.isReady(castedFuture);
     CompletableFuture<V> prior = cache().put(key, castedFuture);
     if (prior != castedFuture) {
-      handleCompletion(key, valueFuture, startTime, deferred);
+      handleCompletion(key, valueFuture, startTime, deferred, /* computed= */ false);
     }
   }
 
@@ -220,10 +220,12 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
    * @param startTime the time when the load started, in nanoseconds
    * @param deferred whether the insertion deferred the entry's weight and expiration to the
    *        completion, which it does when the value was not yet available to evaluate them
+   * @param computed whether the caller computed the value, which a write does not
    */
   @SuppressWarnings({"FutureReturnValueIgnored", "ResultOfMethodCallIgnored"})
-  default void handleCompletion(K key,
-      CompletableFuture<? extends V> valueFuture, long startTime, boolean deferred) {
+  default void handleCompletion(K key, CompletableFuture<? extends V> valueFuture,
+      long startTime, boolean deferred, boolean computed) {
+    boolean recordLoad = computed || deferred;
     valueFuture.whenComplete((value, error) -> {
       long loadTime = cache().statsTicker().read() - startTime;
       if (value == null) {
@@ -231,7 +233,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
             && !(error instanceof TimeoutException)) {
           logger.log(Level.WARNING, "Exception thrown during asynchronous load", error);
         }
-        cache().statsCounter().recordLoadFailure(loadTime);
+        if (recordLoad) {
+          cache().statsCounter().recordLoadFailure(loadTime);
+        }
         cache().remove(key, valueFuture);
       } else if (!Async.isReady(valueFuture)) {
         logger.log(Level.ERROR, String.format(US, "An invalid state was detected, occurring when "
@@ -241,7 +245,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
             + "(key: %s, key type: %s, value type: %s, future: %s, cache type: %s).",
             key, key.getClass().getName(), value.getClass().getName(), valueFuture,
             cache().getClass().getSimpleName()), new IllegalStateException());
-        cache().statsCounter().recordLoadFailure(loadTime);
+        if (recordLoad) {
+          cache().statsCounter().recordLoadFailure(loadTime);
+        }
         cache().remove(key, valueFuture);
       } else {
         @SuppressWarnings("unchecked")
@@ -253,10 +259,14 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
             cache().replace(key, castedFuture, castedFuture,
                 /* shouldDiscardRefresh= */ false, /* quietly= */ true);
           }
-          cache().statsCounter().recordLoadSuccess(loadTime);
+          if (recordLoad) {
+            cache().statsCounter().recordLoadSuccess(loadTime);
+          }
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during asynchronous load", t);
-          cache().statsCounter().recordLoadFailure(loadTime);
+          if (recordLoad) {
+            cache().statsCounter().recordLoadFailure(loadTime);
+          }
           cache().remove(key, valueFuture);
         }
       }
@@ -427,7 +437,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       CompletableFuture<V> prior = asyncCache.cache().putIfAbsent(key, value);
       long startTime = asyncCache.cache().statsTicker().read();
       if (prior == null) {
-        asyncCache.handleCompletion(key, value, startTime, deferred);
+        asyncCache.handleCompletion(key, value, startTime, deferred, /* computed= */ false);
       }
       return prior;
     }
@@ -436,7 +446,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       CompletableFuture<V> prior = asyncCache.cache().put(key, value);
       long startTime = asyncCache.cache().statsTicker().read();
       if (prior != value) {
-        asyncCache.handleCompletion(key, value, startTime, deferred);
+        asyncCache.handleCompletion(key, value, startTime, deferred, /* computed= */ false);
       }
       return prior;
     }
@@ -449,7 +459,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       CompletableFuture<V> prior = asyncCache.cache().replace(key, value);
       long startTime = asyncCache.cache().statsTicker().read();
       if ((prior != null) && (prior != value)) {
-        asyncCache.handleCompletion(key, value, startTime, deferred);
+        asyncCache.handleCompletion(key, value, startTime, deferred, /* computed= */ false);
       }
       return prior;
     }
@@ -459,9 +469,17 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       boolean replaced = asyncCache.cache().replace(key, oldValue, newValue);
       long startTime = asyncCache.cache().statsTicker().read();
       if (replaced && (newValue != oldValue)) {
-        asyncCache.handleCompletion(key, newValue, startTime, deferred);
+        asyncCache.handleCompletion(key, newValue, startTime, deferred, /* computed= */ false);
       }
       return replaced;
+    }
+    @SuppressWarnings({"CheckReturnValue", "FutureReturnValueIgnored"})
+    @Override public void replaceAll(BiFunction<? super K, ? super CompletableFuture<V>,
+        ? extends CompletableFuture<V>> function) {
+      requireNonNull(function);
+      for (K key : keySet()) {
+        computeIfPresent(key, (k, oldValue) -> requireNonNull(function.apply(k, oldValue)));
+      }
     }
     @Override public @Nullable CompletableFuture<V> remove(Object key) {
       return asyncCache.cache().remove(key);
@@ -484,7 +502,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Nullable CompletableFuture<V> future = asyncCache.cache().computeIfAbsent(
           key, function, /* recordStats= */ true, /* recordLoad= */ false);
       if (result[0] != null) {
-        asyncCache.handleCompletion(key, result[0], startTime, deferred[0]);
+        asyncCache.handleCompletion(key, result[0], startTime, deferred[0], /* computed= */ true);
       }
       return future;
     }
@@ -513,7 +531,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }, asyncCache.cache().expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
 
       if ((result[0] != null) && (result[0] != prior[0])) {
-        asyncCache.handleCompletion(key, result[0], startTime, deferred[0]);
+        asyncCache.handleCompletion(key, result[0], startTime, deferred[0], /* computed= */ true);
       }
       return result[0];
     }
@@ -946,6 +964,16 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return replaced[0];
     }
 
+    @Override
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
+      requireNonNull(function);
+      for (K key : keySet()) {
+        computeIfPresent(key, (k, oldValue) ->
+            requireNonNull(function.apply(k, oldValue)), /* recordLoad= */ false);
+      }
+    }
+
     /**
      * Applies the remapping to the entry once its value has settled, retrying while a load is in
      * flight. A remapping that returns the future it was given is a no-op, leaving the entry's
@@ -1041,9 +1069,15 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public @Nullable V computeIfPresent(K key,
         BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction) {
+      return computeIfPresent(key, remappingFunction, /* recordLoad= */ true);
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private @Nullable V computeIfPresent(K key,
+        BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
+        boolean recordLoad) {
       requireNonNull(remappingFunction);
 
       @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
@@ -1067,7 +1101,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
               }
 
               BiFunction<? super K, ? super V, ? extends @Nullable V> function =
-                  delegate.statsAware(remappingFunction);
+                  delegate.statsAware(remappingFunction, recordLoad, recordLoad);
               newValue[0] = function.apply(key, oldValue);
               return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
             }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);

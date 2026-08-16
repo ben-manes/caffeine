@@ -41,6 +41,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -78,9 +79,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.LocalAsyncCache.AsyncBulkCompleter.NullMapCompletionException;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.ExpectedError;
@@ -1346,13 +1349,30 @@ final class AsyncCacheTest {
     var value = context.absentValue().toFuture();
     cache.put(context.absentKey(), value);
     assertThat(cache).hasSize(context.initialSize() + 1);
-    assertThat(context).stats().hits(0).misses(0).success(1).failures(0);
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
+  @CheckNoStats
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY)
-  void put_sameInstance_completionRecordedOnce(
+  void put_readyFuture_doesNotRecordALoad(AsyncCache<Int, Int> cache, CacheContext context) {
+    cache.put(context.absentKey(), context.absentValue().toFuture());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, stats = Stats.ENABLED)
+  void put_inFlightFuture_recordsTheLoad(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    future.complete(context.absentValue());
+
+    assertThat(context).stats().hits(0).misses(0).success(1).failures(0);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
+  void put_sameInstance_completionRegisteredOnce(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);
@@ -1360,15 +1380,19 @@ final class AsyncCacheTest {
     assertThat(cache).hasSize(context.initialSize() + 1);
     assertThat(cache.getIfPresent(context.absentKey())).isSameInstanceAs(future);
 
+    // A write records no load, so the finalization the handler performs is what counts it, arriving
+    // as the creation that the async sentinel routes it to
     future.complete(context.absentValue());
     assertThat(context).removalNotifications().isEmpty();
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry(), never()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
     assertThat(context).stats().hits(1).misses(0).success(1).failures(0);
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
   @ParameterizedTest
-  @CacheSpec(population = Population.EMPTY)
-  void put_reregisteredInstance_completionRecordedTwice(
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
+  void put_reregisteredInstance_completionRegisteredTwice(
       AsyncCache<Int, Int> cache, CacheContext context) {
     var f1 = new CompletableFuture<Int>();
     var f2 = new CompletableFuture<Int>();
@@ -1380,9 +1404,11 @@ final class AsyncCacheTest {
 
     // Re-inserting a previously registered instance re-registers its completion handler, as the
     // identity dedup only skips consecutive same-instance puts. A single completion then runs
-    // handleCompletion twice (each replays replace + recordLoadSuccess, re-invoking
-    // expireAfterUpdate).
+    // handleCompletion twice, so the finalization is replayed: the first evaluates the creation
+    // that the async sentinel routes it to and the second sees the settled duration as an update.
     f1.complete(context.absentValue());
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
     assertThat(context).stats().hits(1).misses(0).success(2).failures(0);
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
