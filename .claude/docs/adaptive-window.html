@@ -2821,7 +2821,8 @@ window = max(window + step, 0.02·C)</pre>
     <tr>
       <td><b>on a confirm</b></td>
       <td>keep it, plant the anchor, reset the ladder (deepen it if steering reverses
-        the position at once); steering resumes</td>
+        the position at once, and park if that reversed confirm came at the deepest
+        commitment with the goal metric's confirmation); steering resumes</td>
       <td>keep it, plant the anchor, and park, since density disagrees with the
         position by construction</td>
     </tr>
@@ -3141,10 +3142,14 @@ window = max(window + step, 0.02·C)</pre>
   <li><b>Audit confirms also park.</b> After an audit win, steering is suspended at
     the anchor, beginning with the confirming sample itself, which returns without
     a parting density step off the paid-for position. The audit clock owns
-    re-exploration, releasing on a crash-scale shift. Density disagrees with the position by construction, so handing it the
-    wheel dismantles the win. Starvation-probe confirms do <i>not</i> park: density
-    agrees with those, and cheap re-probing afterward is load-bearing (removing it
-    cost 11–15 points across three trap families).</li>
+    re-exploration, releasing on a crash-scale shift, unless the shift is one of its
+    own audits walking out of the park, whose ending returns to it. Density disagrees
+    with the position by construction, so handing it the wheel dismantles the win. A
+    starvation-probe confirm parks only when it is an audit in all but name: the walk
+    took the deepest commitment, the goal metric confirms it, and density would reverse
+    it. Every other starvation confirm hands to density, and cheap re-probing
+    afterward is load-bearing (removing it cost 11–15 points across three trap
+    families).</li>
   <li><b>A fresh park rides out weather.</b> For one initial audit wait after the
     confirm, crash-scale swings do not release the park; the shield is deliberately
     bounded: a stationary optimum is re-confirmed before it lapses, and a drifting
@@ -3559,7 +3564,8 @@ window = max(window + step, 0.02·C)</pre>
         keeps the cadence)
       starvation walk → watched ≥ 4·bar at committed depth: density
         verdict; confirm: keep + plant anchor + ladder reset (×2 instead if
-        steering reverses it at once); else fail
+        steering reverses it at once; PARK when that reversed confirm is
+        audit-grade); else fail
       budget out → undo, ladder ×2
       else → rung-scaled bold-driver stride, reversing only on a
         sample-to-sample drop past reversalBar

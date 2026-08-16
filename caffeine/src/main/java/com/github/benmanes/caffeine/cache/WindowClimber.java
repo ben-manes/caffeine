@@ -217,9 +217,15 @@ final class WindowClimber {
     return (walk == null) && anchor.isShielded();
   }
 
-  /** Whether this sample's rate move announces a workload change. */
+  /**
+   * Whether this sample's rate move announces a workload change. An audit's walk out of a park is
+   * the park's own re-test, and its crash-scale moves are what that test produces, so they do not
+   * stand the park down; the walk's ending returns to the park and the audit clock prices it.
+   */
   private boolean isWorkloadShift(Reading reading) {
-    return (Math.abs(sample.hitRateChange(reading.hitRate)) >= RESTART_THRESHOLD) && !isShielded();
+    boolean auditFromPark = (walk != null) && walk.isAudit && anchor.held;
+    return (Math.abs(sample.hitRateChange(reading.hitRate)) >= RESTART_THRESHOLD)
+        && !isShielded() && !auditFromPark;
   }
 
   /**
@@ -315,17 +321,19 @@ final class WindowClimber {
    * Keeps the position a walk just validated, returning whether the climber parks on this sample.
    * The position becomes the anchor at once so the guard rail can defend what the walk paid for. An
    * audit's confirm parks as well, since density disagreed with this position by construction and
-   * would dismantle it; a starvation confirm hands back to density, whose disagreement, if any, the
-   * ladder has already priced.
+   * would dismantle it, and so does a starvation confirm that density reverses after the deepest
+   * commitment when the goal metric confirms it, which is an audit in all but name; any other
+   * starvation confirm hands back to density, whose disagreement the ladder has already priced.
    */
   private boolean keepConfirmedPosition(Walk walk, Reading reading) {
     anchor.plant(reading.windowMax, rates.smoothed);
-    if (walk.isAudit) {
+    boolean park = walk.isAudit || walk.isAuditGrade(reading);
+    if (park) {
       anchor.park(AuditClock.AUDIT_WAIT_INITIAL);
     } else {
       anchor.release();
     }
-    return walk.isAudit;
+    return park;
   }
 
   /* --------------- Probe Walk --------------- */
@@ -398,6 +406,10 @@ final class WindowClimber {
       walk.ladder.crash();
       return ProbeEnding.CRASHED;
     }
+    walk.aboveStreak = (reading.hitRate > (walk.baseAnchorRate + VETO_MARGIN_MIN))
+        ? (walk.aboveStreak + 1)
+        : 0;
+    walk.beatBase |= (reading.hitRate >= walk.baseHitRate);
     return walk.isAudit ? auditEnding(walk, reading) : starvationEnding(walk, reading);
   }
 
@@ -407,10 +419,6 @@ final class WindowClimber {
    * re-test.
    */
   private ProbeEnding auditEnding(Walk walk, Reading reading) {
-    walk.aboveStreak = (reading.hitRate > (walk.baseAnchorRate + VETO_MARGIN_MIN))
-        ? (walk.aboveStreak + 1)
-        : 0;
-    walk.beatBase |= (reading.hitRate >= walk.baseHitRate);
     if (walk.isConfirmed()) {
       endWalk();
       walk.ladder.reset();
@@ -1044,6 +1052,15 @@ final class WindowClimber {
      */
     boolean isReversedBy(Reading r) {
       return (r.steeringError() * direction()) < 0.0;
+    }
+
+    /**
+     * Whether a starvation walk's confirm is one an audit would have reached: it took the deepest
+     * commitment, the goal metric confirms it, and density would walk it home, so keeping it means
+     * parking it.
+     */
+    boolean isAuditGrade(Reading r) {
+      return (samples >= Ladder.PROBE_COMMITMENT_DEEP) && isReversedBy(r) && isConfirmed();
     }
   }
 

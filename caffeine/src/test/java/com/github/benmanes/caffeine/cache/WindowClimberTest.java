@@ -33,6 +33,7 @@ import static com.github.benmanes.caffeine.cache.WindowClimber.Reading.WINDOW_FL
 import static com.github.benmanes.caffeine.cache.WindowClimber.Step.STEP_DECAY_RATE;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Step.STEP_PERCENT;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Walk.AUDIT_COMMITMENT;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Walk.AUDIT_CONFIRM_STREAK;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Walk.AUDIT_CRASH_PERSISTENCE;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Walk.PROBE_WALK_BUDGET;
 import static com.google.common.truth.Truth.assertThat;
@@ -2392,6 +2393,69 @@ final class WindowClimberTest {
     assertThat(deepest.walk).isNull();
     assertThat(deepest.starvation.rung).isEqualTo(PROBE_BACKOFF_MAX);
     assertThat(deepest.refractoryLeft).isEqualTo(0);
+  }
+
+  @Test
+  void probeEnding_deepReversedConfirm_goalConfirmed_parksAsAnAudit() {
+    // A starvation walk that took the deepest commitment, whose confirm density reverses, and
+    // that satisfies the audit's own confirm test is an audit in all but name: it is kept as a
+    // park, since density would walk it home in the same sample, and the sample takes no parting
+    // step. The base rate is far below what the walk earns, so the goal metric confirms it
+    var climber = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.30,
+        /* baseProbationDensity= */ 0.002);
+    climber.starvation.rung = PROBE_BACKOFF_MAX;
+    var walk = walkOf(climber);
+    walk.samples = PROBE_COMMITMENT_DEEP;
+    walk.aboveStreak = AUDIT_CONFIRM_STREAK - 1;
+    long adjustment = sample(climber, /* windowMax= */ 2000,
+        /* windowHits= */ 30, /* mainHits= */ 940, /* misses= */ 30);
+    assertThat(climber.walk).isNull();
+    assertThat(adjustment).isEqualTo(0);
+    assertThat(climber.anchor.held).isTrue();
+    assertThat(climber.anchor.freshLeft).isEqualTo(AUDIT_WAIT_INITIAL);
+    assertThat(climber.anchor.window).isEqualTo(2000);
+    assertThat(climber.starvation.rung).isEqualTo(PROBE_BACKOFF_MAX);
+
+    // without the goal metric's streak the same confirm hands back to density, as any reversed
+    // confirm does
+    var unconfirmed = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.30,
+        /* baseProbationDensity= */ 0.002);
+    unconfirmed.starvation.rung = PROBE_BACKOFF_MAX;
+    walkOf(unconfirmed).samples = PROBE_COMMITMENT_DEEP;
+    long steered = sample(unconfirmed, /* windowMax= */ 2000,
+        /* windowHits= */ 30, /* mainHits= */ 940, /* misses= */ 30);
+    assertThat(unconfirmed.walk).isNull();
+    assertThat(unconfirmed.anchor.held).isFalse();
+    assertThat(steered).isEqualTo(densityStep(
+        /* windowMax= */ 2000, /* windowHits= */ 30, /* mainHits= */ 940));
+
+    // and so does a walk short of the deepest commitment, streak or not
+    var shallow = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.30,
+        /* baseProbationDensity= */ 0.002);
+    walkOf(shallow).aboveStreak = AUDIT_CONFIRM_STREAK - 1;
+    long shallowStep = sample(shallow, /* windowMax= */ 2000,
+        /* windowHits= */ 30, /* mainHits= */ 940, /* misses= */ 30);
+    assertThat(shallow.walk).isNull();
+    assertThat(shallow.anchor.held).isFalse();
+    assertThat(shallowStep).isEqualTo(densityStep(
+        /* windowMax= */ 2000, /* windowHits= */ 30, /* mainHits= */ 940));
+  }
+
+  @Test
+  void audit_walkFromPark_crashScaleMove_keepsThePark() {
+    // an audit's walk out of a park is the park's own re-test: the crash-scale move it makes when
+    // it walks into a valley is what the crash abort prices, and the undo returns to the park, so
+    // it is not read as a workload shift that stands the park down (a shift while no walk is in
+    // flight still does, as guardRail_crashScaleShift_releasesTheParkAndReturn pins)
+    var climber = armAudit(/* windowMax= */ 2000);
+    climber.anchor.held = true;
+    climber.anchor.freshLeft = 0;
+    long walked = 2000 + climber.adjustment();
+    long undo = steadySample(climber, walked, /* hitRate= */ 0.50);
+    assertThat(climber.walk).isNull();
+    assertThat(undo).isEqualTo(2000 - walked);
+    assertThat(climber.anchor.held).isTrue();
+    assertThat(climber.anchor.window).isEqualTo(2000);
   }
 
   @Test

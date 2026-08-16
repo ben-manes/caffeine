@@ -294,8 +294,11 @@ owns it; a confirmed family lands here and in the gate table, and its open direc
   found position is not kept: after a walk from the floor, density's rest point on the far side is
   at or below the cliff (main holds the protected core, 3.7 hits per entry against the window's
   1.2), the guard rail cannot catch the fall (the fall inflates the deviation its margin is priced
-  from), and the deep walk's confirm at the top is itself reversed, so nothing parks. Retention is
-  §8 item 4's open half.
+  from), and the deep walk's confirm at the top is itself reversed, so nothing parked. Retention
+  landed 2026-08-16 (§7's entry): a reversed confirm at the deepest commitment that the goal metric
+  confirms parks as an audit's does, and the park survives its own audits' crash-scale moves; the
+  wedge seeds read 36.5 / 36.4 / 36.3 (repeat 2: 37.1) against the 42.0 ceiling, the residual being
+  the top corner's periodic down-audit crashing at the cliff.
 
 ## 4. The shipped design (the probe machine, >4096)
 
@@ -440,6 +443,15 @@ Non-starved samples are the pure density step. The additions:
    what it costs), and on `norank_rep_r6` one seed of eight (41.1 → 20.3): a reversed confirm on
    a rewarded ladder deepens it, so the fail that follows waits 16 samples where the reward's
    ladder waited 2, and the ×1 walk that reached that seed's escape re-arms 25 samples later.
+   A reversed confirm at the deepest commitment that the goal metric confirms (the audit's own
+   streak and beat-base test, `Walk.isAuditGrade`) is an audit in all but name and is kept as an
+   audit's confirm is: it parks (2026-08-16). Any other starvation confirm still hands to density,
+   so the cheap re-probing that phase alternation relies on is untouched. The park's own audits
+   are covered by it: a crash-scale move while an audit walks out of a park is what that re-test
+   produces and its ending returns to the park, so it does not stand the park down
+   (`isWorkloadShift`); a shift with no walk in flight still does. Measured on shallowmoat, where
+   a deep walk finds a band density then dismantles (36.4 on the wedge seeds against 30.7), and
+   on `flood_j100` (+1.1 at N=8); bit-identical on the rest of the seeded battery and corpus.
 6. **Refractory ladder**: length starts 16 and doubles per adjudicated failure to 64 (the arming
    doubles first, so effective waits are 32 → 64; after a kept confirm the next failure waits 2;
    a confirm the density arm reverses doubles the rung without a wait).
@@ -2390,6 +2402,48 @@ alone (`deferblind`) is bit-identical to ship.
 38 wired at `4f9a8e3c9`); `census.py` and `corner.py` joined the skill; the sentinel rows carry
 these verdicts. The study spent no holdout, since no arm reached a ship gate.
 
+**2026-08-16 (retention past a cliff: a deep reversed confirm the goal metric confirms parks; a
+parked audit's own walk is covered; the wedge pricing's holdout spent; the audit-undo refractory
+measured).** The second half of `shallowmoat`. With the ladder deepening on a reversed confirm,
+the rung-64 walk crosses the cliff and confirms at the top corner, but that confirm is reversed
+too, nothing parks, density drifts the window back over the edge, and the guard rail never vetoes
+(the fall inflates the deviation its margin is priced from). Two changes, both scoped: (1) a
+starvation confirm that took the deepest commitment, that density reverses, and that satisfies
+the audit's own confirm test (`Walk.isAuditGrade`: a streak of four above the frozen reference
+and beat-base) parks as an audit's confirm does, with the audit's counters now kept for every
+walk in `probeEnding`; (2) a crash-scale move while an audit walks out of a park does not stand
+the park down (`isWorkloadShift`), since the walk is the park's own re-test and its ending
+returns to it. Seeded, arms rotated, against the wedge-priced machine at N=8: `shallowmoat`
+wedge seeds 30.66 / 30.02 / 30.61 → 36.50 / 36.36 / 36.28, repeat 2 35.47 / 31.03 / 35.28 →
+37.11 / 37.05 / 37.06 (basin-B seeds identical), `norank_flood_j100` +1.07 (4 up, 4 identical),
+`bandtrap2` −0.12 (seven seeds down by tenths, one +0.64), `arc_ConCat` −0.02 over four seeds;
+bit-identical on `rep_r6`, `trickle`, `phases_d050` and @32k, `widepin`, `deadphase`,
+`strad_p8`, `balloonflip`, `shieldtrap` s7/s11/s13, `metronome`, `demoflood`, `slowswap`,
+`straywall2`, `mixture` d025/d050, `moat` h4000/h5000, `whisper_mod_a12`, `crashnoise_a12`,
+`mixmod_a010`, `h4c1`, `posjam_d0`, `blindlock_blind`, `regimeramp`, `climbtrend_up`, and the
+corpus (cp_w015…w100, arc_P8, arc_S3). The unseeded battery moves only its spread families
+(`rep_r6`'s N=8 unseeded mean swings 40–68 between runs of the *same* arm; the seeded row is the
+record). The park alone, without (2), reads +0.8..+1.7 on the wedge seeds: the calibration audit
+arms down from the fresh park, crashes at the cliff, and its crash stands the park down. The
+sibling thread's `arrive` (the undo's arrival sample not judged for a shift) on top gains nothing
+here (37.11 either way) and costs `demoflood` −1.88 on every seed, so it stays out. Frozen
+holdout for this change: `holdout_retention.md` in the local climber-shallowmoat workspace (six
+pristine cells, wiki_1190@65536, wiki_1192@16384/262144, systor17 d08-LUN0@262144, d10-LUN0@1M,
+d09-LUN1@262144, LRU-only characterization), spent once; the gate skill's row has the reading.
+
+Two side records. The stillness holdout (frozen 2026-08-04, eight cells) was spent on the wedge
+pricing: k5_v25@64k, k5_v0@16k and the four exchange shards bit-identical or within 0.02,
+k5_v25@16k +0.01 mean (−0.43..+0.53 seed jitter), k5_v0@8k +0.10; nothing walks away from a
+correct floor. And the audit-undo refractory was priced: `undoProbe` sets `refractoryLeft =
+starvation.rung` for an audit's undo too, which was half of `rep_r6` seed 3's delay; an arm that
+leaves the starvation refractory alone after an audit's undo (`auditundo`) reads `widepin` +5.08
+(six seeds up, the low basin lifted from 44–51 to 50–59), `rep_r6` seed 3 +5.4 (the others
+±0.8), `shallowmoat` +1.1, `strad_p8@4097` +0.14 (8 of 8), against `metronome` −0.92 (7 of 8),
+`balloonflip` −0.26 (8 of 8), `cp_w050` −0.55 (4 of 4), `cp_w015` −0.12, `arc_S2` −0.13 and
+`shieldtrap_s13` −1.34 on one seed; bit-identical elsewhere. Faster retries after an audit's
+retreat buy the deep-band escapes and cost the cells where holding still after the retreat
+protects. Recorded, not landed.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor
@@ -2661,25 +2715,19 @@ the shipped arming time on a settling workload. Note this is **no longer on marg
 critical path** — the gain halving covers that coupling — so it is now a standalone thread with a
 smaller prize, and it should be sequenced after (1).
 
-**4. Keeping a found position past a cliff (`shallowmoat`'s retention half, 2026-08-15).** The
-reach half is done: a confirm the density arm reverses deepens the ladder (§4.5, §7's wedge
-entry), and the wedge seeds cross the cliff at s17. What remains is that the found position is
-not kept. After a walk from the floor, density's rest point on the far side is at or below the
-cliff (main is the protected core), so density walks the window back over the edge within ~15
-samples; the guard rail cannot catch a fall whose own deviation prices its margin; and the deep
-walk's confirm at the top is itself reversed, so it never parks. The measured shape of the repair
-(workspace arms, not landed): a deepest-rung wedge that satisfies the audit's own confirm test
-parks as an audit does, and the park must survive its own audits' crash at the cliff and their
-undo's arrival (the depressed-window thread's C1 `auditshield` and C2 `arrive`); with both, the
-row reads 36.4 and repeat 2 reads 37.1 against 42, the residual being the top corner's periodic
-down-audit crashing at the cliff. As an unconditional pair the two are a trade (§5,
-2026-08-15: moat +6.5 in total against `demoflood` −1.88 on every seed, its bar), so the form that
-lands has to be scoped to the wedge park. Two things belong to other items: the far-side rest point is
-item 1's average-vs-marginal error seen from a cliff, and the park's fragility is the sibling
-thread's. The ramp variants add item 1's give-back from above (5–7pp), so a reach-plus-park
-repair does not close them either. Below item 1 in expected value; above item 3. The basin-B
-seeds (the calibration audit's trend misconfirm at 32%, class 9, `regimeramp`'s sentinel) are the
-open trend thread, not this item.
+**4. Keeping a found position past a cliff (`shallowmoat`, 2026-08-15; both halves landed by
+2026-08-16).** Reach: a confirm the density arm reverses deepens the ladder (§4.5), and the wedge
+seeds cross the cliff at s17. Retention: a reversed confirm at the deepest commitment that the
+goal metric confirms parks as an audit's does, and the park survives its own audits' crash-scale
+moves (§4.5, §7's 2026-08-16 entry); the wedge seeds read 36.4 on the row and 37.1 at repeat 2
+against 42. What remains, and where it lives: the residual is the top corner's periodic
+down-audit crashing at the cliff every 16 → 32 → 64 samples (the moat family's known steady
+state); after a walk from the floor density's rest point on the far side is at or below the
+cliff, which is item 1's average-vs-marginal error seen from a cliff; the undo's arrival read as
+a shift (the depressed-window thread's C2) is priced there and costs `demoflood` unconditionally;
+the ramp variants add item 1's give-back from above (5–7pp); and the basin-B seeds (the
+calibration audit's trend misconfirm at 32%, class 9, `regimeramp`'s sentinel) are the open
+trend thread. Below item 1 in expected value; above item 3.
 
 **Do not reopen** (each has a measured negative with a mechanism): a hysteresis band on the
 reactive reversal (§5); `parkbound` on `shieldtrap`, absent a mechanism for its s7 tail; any

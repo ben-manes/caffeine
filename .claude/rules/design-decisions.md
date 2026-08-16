@@ -305,7 +305,14 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   `deadphase` −0.2) and, on a rewarded ladder mid-dither, the fail after a wedge waiting 16 samples
   instead of 2 (`norank_rep_r6` seed 3, 41 → 20; seven seeds identical); the guard that removes the
   first two is measured and recorded in `hill-climber.md` §5 (`wedgeshift`), not landed. Don't
-  re-derive it without the stillness holdout.
+  re-derive it without a holdout. **The one reversed confirm that does park** (2026-08-16) is the
+  deepest-commitment walk whose confirm the goal metric confirms (`Walk.isAuditGrade`: the audit's
+  own streak and beat-base test): it is an audit in all but name and density would dismantle it.
+  Every other starvation confirm hands to density; the cheap re-probing that phase alternation
+  relies on is intact. **A parked audit's own walk is covered by the park** (`isWorkloadShift`):
+  its crash-scale move is the re-test's product and its ending returns to the park; a shift with
+  no walk in flight still stands the park down, and the undo's arrival is still judged (the
+  depressed-window study's `arrive` costs `demoflood` −1.9 unconditionally). Don't widen either.
 - **The SLRU main space still earns its keep against a plain LRU main** (measured 2026-08-08, 276
   cells). It was introduced in 2015 and the sketch has been fixed several times since, so it was
   re-asked by disabling promotion entirely (threshold above the sketch's 4-bit ceiling leaves
