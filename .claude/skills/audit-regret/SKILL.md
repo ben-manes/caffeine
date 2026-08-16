@@ -122,9 +122,9 @@ already in the record so a new witness is compared to it, not re-derived.
 | 1 | **wrong equilibrium** `wrong-equilibrium` | converges and holds a position whose static value is below the ceiling | `pos_l3 ≥ max(1, gap/2)` (wrong at the end), law wants the opposite of `needed` or nothing (`rest_err` sign vs `w* - win_l3`), `steer` dominant | `DensityClimber.steer`'s zero (`ln(d_w/d_m)`; the average-vs-marginal rest point, §2.1) | controller | `cp_w097@16384` resting near 48% against a 10% optimum; `ds1_1M` 13–22% vs 2%; `flood_j100`; `P3`/`fiu_webmail` resting below a non-convex peak |
 | 2 | **slow convergence** `slow-convergence` | the right position is reachable and reached, but late; or the profitable phase ends first | `pos_transient` dominant, `progress` toward `w*`, late `arrival`; `/walk-paced` when the move happens through probes | `Step.size`/`DENSITY_GAIN` (steering-paced), the sample period, or the ladders and `AuditClock` waits (walk-paced); actuator-limited when `adj` far exceeds the realized `Δwin` (`BoundedLocalCache.QUEUE_TRANSFER_THRESHOLD`) | controller gain, or exploration cadence; policy structure when actuator-limited | the 13–16 sample descent from 80% (§7 2026-08-12); `rep_r6` escape times spread over 91 samples; mixture round-3 escapes at ~100 samples; the ~2-sample-period lag limit on phases |
 | 3 | **masked signal** `masked-signal` | the observed statistic reads healthy while the harmed population's misses are invisible to it | as class 1 with `probes = 0` and `steer` dominant (sighted); `wh` above the bar from traffic worth nothing at the margin; a rider that keeps a starved region "sighted" | `Sample.windowHits/probationHits` attribution, `Reading.steeringError`, the starvation bar (`MIN_SIGNAL_SHIFT`) | controller (estimator) or the goal-metric layer that must judge what density cannot | `whisper` (the trickle keeps the window sighted); `deadphase` rider (six window hits authorize the maximum step); `flood_j100` (dense per slot, zero at the margin) |
-| 4 | **insufficient exploration** `insufficient-exploration` | the machine holds a position and never tests far or often enough to find the better one | `park`+`hold` dominant, `audits` rare, `max_wait` 128–512, `max_rung` 64; `/reach` when every walk ends `crash`/`fail` short of the ceiling window (`repeat_arms`, `top_frac`/`floor_frac`) | `AuditClock.stillSamples/waitSamples`, `Ladder.rung`, `refractoryLeft`, `Anchor.held/freshLeft`, `Walk.samples` and its crash bar | recovery layer | `metronome` (positional clock jam); H4-C1 ratchet; the r3 blind-corner lockout; the moat (a valley deeper than the audit's crash bar); `rep_r6`'s top corner re-probing every refractory cycle; `shallowmoat` (a valley 2pp deep and 57% wide: the first-round walk adjudicates three or four strides out and never reaches the prize) |
+| 4 | **insufficient exploration** `insufficient-exploration` | the machine holds a position and never tests far or often enough to find the better one | `park`+`hold` dominant, `audits` rare, `max_wait` 128–512, `max_rung` 64; `/reach` when every walk ends `crash`/`fail` short of the ceiling window (`repeat_arms`, `top_frac`/`floor_frac`) | `AuditClock.stillSamples/waitSamples`, `Ladder.rung`, `refractoryLeft`, `Anchor.held/freshLeft`, `Walk.samples` and its crash bar | recovery layer | `metronome` (positional clock jam); H4-C1 ratchet; the r3 blind-corner lockout; the moat (a valley deeper than the audit's crash bar); `rep_r6`'s top corner re-probing every refractory cycle; `shallowmoat` (a valley 2pp deep and 57% wide: the first-round walk adjudicated three or four strides out and never reached the prize; repaired 2026-08-16, now a gate row) |
 | 5 | **oscillation / chasing** `oscillation` | the loop follows the workload's phase instead of stabilizing; a fixed window at the mean position wins | `settle` never, `flips` ≥ n/4, `residual` > `pos_regret`, `move` high; six blocks alternate | `Step` decay (reactive) / the proportional density step under alternation; `STABLE_BAND_FRACTION`; the stillness clock decaying instead of arming | controller (no damping or prediction) | `widepin`; `phases_d050` (grid-locked, bimodal); `posjam_d0`; `corda_large`'s churn (10.5pp against any fixed window, §1) |
-| 6 | **memory failure** `memory-failure` | evidence that a decision was wrong has been discarded, so it is repeated | `/stale-claim`: `bad_veto` (a veto drags to an anchor whose static value is worse, `anchorR - ema` large); `/repeat-probe`: `repeat_arms` (an arm re-launched from a band and direction that already crashed or failed) | `Anchor.window/rate` and `Rates` (the claim), `Ladder.crashStreak`, `sample.previousHitRate` after `resized`, the frozen `Walk.base*` | recovery layer; policy structure when the memory is the sketch's aging | the stale away-anchor claim (a rate claim earned before a regime shift; fixed by the stand-down, `regimeramp`/`staleclaim` rows); H4-C1/adv4-F2 (a streak cleared by the other layer's ending); the undo ledger's creep at a starved corner (fixed by the integral ledger, §7 2026-08-15); `shallowmoat` (a mid-depth confirm the density arm reverses in the same sample resets the ladder, so the escalation never starts) |
+| 6 | **memory failure** `memory-failure` | evidence that a decision was wrong has been discarded, so it is repeated | `/stale-claim`: `bad_veto` (a veto drags to an anchor whose static value is worse, `anchorR - ema` large); `/repeat-probe`: `repeat_arms` (an arm re-launched from a band and direction that already crashed or failed) | `Anchor.window/rate` and `Rates` (the claim), `Ladder.crashStreak`, `sample.previousHitRate` after `resized`, the frozen `Walk.base*` | recovery layer; policy structure when the memory is the sketch's aging | the stale away-anchor claim (a rate claim earned before a regime shift; fixed by the stand-down, `regimeramp`/`staleclaim` rows); H4-C1/adv4-F2 (a streak cleared by the other layer's ending); the undo ledger's creep at a starved corner (fixed by the integral ledger, §7 2026-08-15); `shallowmoat` (a mid-depth confirm the density arm reversed in the same sample reset the ladder, so the escalation never started; repaired 2026-08-16: a reversed confirm now deepens the ladder, and one at the deepest commitment that the goal metric confirms parks) |
 | 7 | **irreversible damage** `irreversible-damage` | by the time the mistake is detected the valuable residents are gone; restoring the position does not restore the rate | `undo_deficit` ≥ 2 (post-undo `hr` below `static(win)`), or a recovered window whose `hr` lags for samples | `undoRemaining` (full undo), the transfer cap, demotion into probation (the walk's own demotions) | recovery mechanism (undo policy) or policy structure (region transfer displaces) | `corda_large`'s displaced residents; `s3_25k` (171pp of 246pp of descent undone by one failed probe); the deadphase rider growing the window into main |
 | 8 | **aliasing** `aliasing` | two regimes produce the same observables at the decision but need different actions; the machine must fail one | a **pair**: one terrain, one bit flipped, `search.py pair` shows identical fields at the decision sample and divergent optima | the statistic at that decision (starvation bar, crash bar, stillness, first-difference reversal) | controller (a new estimator) or a priced trade (design) | a correct floor is as still as a trap (the `blindprobe`/`norefr` negatives, §7 2026-08-04); a monotone drawdown into the moat is a damaging walk at the crash point; a big move because the rest point is wrong is a big move because the workload changed (`margrest`, §8); window-irrelevant modulation (`whisper_mod`, `posjam`) |
 | 9 | **premature commitment** `premature-commitment` | the machine parks, confirms, or anchors on a transient (warmup, ramp, trend) and the shield holds it there | `early_confirm` (an `AUDITCONFIRM` before sample 24 at a position below the ceiling), long `park` after | the audit verdict (`AUDIT_CONFIRM_STREAK`, `beatBase`), `AUDIT_WAIT_FIRST`, `Anchor.freshLeft` | recovery layer | the cold-start misconfirm at ~33% (`flatctl`, workspace-only; `regimeramp` is its rowed sentinel); `climbtrend`/`saw_p40` (a trend clears any raw streak); `shieldtrap` |
@@ -297,13 +297,17 @@ and the mechanism-directed prompt: for each class, "construct the workload that 
 class's regret against this machine, and say which line of `densityClimb` decides wrongly on it".
 A lane writes specs; it runs nothing.
 
-Dispatch both lanes, and step 7's evaluators, with `model: opus` (Ben's standing direction for
-adversary and verification subagents). A Fable subagent asked to design traces that damage the
-climber tripped a safety classifier on the construction framing and was stopped (2026-07-30);
-Opus does not have that friction, and the orchestrating session model is unaffected. Keep every
-prompt concrete about the domain it is in (simulator request traces, a cache policy's hit rate, a
-window-sizing loop) rather than generic red-team language, which is what reads as
-offensive-security to a classifier without the context.
+Dispatch the two lanes on two different models, one on the session model (Fable) and one on
+Opus, so the lanes differ by model as well as by what they are shown; dispatch step 7's evaluators
+on the session model (Fable), since refuting a finding with runs and reading its trajectories is
+where round 1's errors slipped through on Opus (an evaluator confirmed "the plant at 70% holds"
+without opening the trajectory, where it was one audit park inside a 64-sample horizon, and let a
+post-tick misreading of the audit clock stand). Ben's direction, 2026-08-16, replacing the earlier
+all-Opus one. Keep every prompt concrete about the domain it is in (simulator request traces, a
+cache policy's hit rate, a window-sizing loop) rather than generic red-team language: a Fable
+subagent asked to design traces that damage the climber once tripped a safety classifier on the
+construction framing (2026-07-30); if that recurs on a lane, fall that lane back to `model: opus`
+and say so in the report.
 
 **2. Screen.** `search.py eval <specs> --csv screen.csv --seeds 1` on the harness tree at the
 spec's own maximum (8192 unless the attack is about scale), so every row carries a hint. Apply the
@@ -335,7 +339,7 @@ and name what they share.
 (16384 or 32768; 4096/4097 when the tier is implicated), `eval`, and record the surface. The
 neighborhood is what a fix will be judged on.
 
-**7. Challenge.** Spawn one evaluator per finding (`model: opus`) with the finding's writeup, its
+**7. Challenge.** Spawn one evaluator per finding (the session model, Fable) with the finding's writeup, its
 CSV rows, the anchor sidecars, and the dumps, no source, told to refute it: is it warmup, a basin,
 an alignment artifact, a peak beyond 80% or between two swept windows, a recorded family re-dosed,
 or an anchor error? Every objection is answered by a run or the finding is downgraded.
@@ -352,6 +356,26 @@ skill's `specs/`, generated by `workload.py` in the gate's generation block, a `
 row with its seeded record) or a frontier sentinel when it is accepted residue; its mechanism goes
 to `hill-climber.md` §3 (a family) or §7 (a dated entry) with the class named; open directions go
 to §8. Write the report; leave the ledger current.
+
+## Directions carried from earlier rounds
+
+What a round did not get to is written here rather than in its report, since a fresh round does
+not read prior reports. Strike a line when it is done or dead.
+
+- Real-trace instances of `shallowmoat`'s shape (a large flat population, a far recency band, a
+  scan that thins probation): a `climber-gate/marginal.py` static anatomy over the corpus, or a
+  `real.py` pass, would say whether a 2pp valley half the cache wide with a prize behind it exists
+  outside the generator (round 1, 2026-08-15).
+- The anchor-fidelity discrepancy on flat-zipf-plus-scan synthetics: the product's parked position
+  earned ~4pp more than `sketch.WindowTinyLfu` at the same window on a reference curve flat within
+  0.5pp (`b_scarburn`), so small gaps on that terrain must not be read to the half-point until a
+  same-window comparison settles whether it is admission jitter, sketch parameters, or the
+  reference's own aging (round 1).
+- The masked-signal class beyond `whisper`: neither lane could construct a main-side mirror (main
+  is starved iff it is worthless, so the top-corner gate is close to self-justifying); a modulated
+  scan share (`b_scanwash`) read clean (round 1).
+- `s_scarburst` and `s_flashpark` are dose notes on recorded classes with open controls (a second
+  trace seed, a neighborhood); the `pair` instrument for class 8 was not exercised (round 1).
 
 ## Rules of evidence
 

@@ -359,6 +359,27 @@ final class WindowClimberTest {
   }
 
   @Test
+  void undoProbe_auditRetreat_leavesTheStarvationRefractoryAlone() {
+    // the refractory is the starvation machine's backoff, armed by its own endings; an audit that
+    // preempted a hold and crashed hands the corner back with the hold where it was, not re-armed
+    // to the whole rung, which deferred the corner's next probe for an audit that was not the
+    // probe's doing (a starvation walk's undo still arms it, as the walkStep_ tests pin)
+    var climber = makeClimber();
+    climber.refractoryLeft = 3;
+    climber.auditClock.stillSamples = AUDIT_WAIT_FIRST;
+    sample(climber, /* windowMax= */ 1024,
+        /* windowHits= */ 0, /* mainHits= */ 500, /* misses= */ 500);
+    assertThat(walkOf(climber).isAudit).isTrue();
+
+    long undo = sample(climber, /* windowMax= */ 512,
+        /* windowHits= */ 0, /* mainHits= */ 300, /* misses= */ 700);
+    assertThat(climber.walk).isNull();
+    assertThat(undo).isEqualTo(1024 - 512);
+    assertThat(climber.refractoryLeft).isEqualTo(3);
+    assertThat(climber.auditClock.waitSamples).isEqualTo(PROBE_BACKOFF_INITIAL);
+  }
+
+  @Test
   void armProbe_refractory_dueClockBelowTheFloor_stillClearsIt() {
     // pre-empting the hold must not cost the below-floor lift the hold would have made: the
     // window sits under the floor, so the audit is refused a downward direction and its entry

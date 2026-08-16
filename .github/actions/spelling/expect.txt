@@ -184,7 +184,6 @@ sln
 Smax
 snia
 snyk
-sonatype
 spi
 spotbugs
 subtable
@@ -226,6 +225,7 @@ Watchlist
 wikibench
 wikipedia
 workingset
+workstream
 writebehind
 xorshift
 youtube

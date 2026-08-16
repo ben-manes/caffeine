@@ -410,7 +410,7 @@ final class WindowClimber {
         ? (walk.aboveStreak + 1)
         : 0;
     walk.beatBase |= (reading.hitRate >= walk.baseHitRate);
-    return walk.isAudit ? auditEnding(walk, reading) : starvationEnding(walk, reading);
+    return walk.isAudit ? auditEnding(walk) : starvationEnding(walk, reading);
   }
 
   /**
@@ -418,7 +418,7 @@ final class WindowClimber {
    * this equilibrium and would veto every walk away from it which is the bias the audit exists to
    * re-test.
    */
-  private ProbeEnding auditEnding(Walk walk, Reading reading) {
+  private ProbeEnding auditEnding(Walk walk) {
     if (walk.isConfirmed()) {
       endWalk();
       walk.ladder.reset();
@@ -467,7 +467,8 @@ final class WindowClimber {
   /**
    * Returns the stride back to where the probe started, pricing the ending on the owning layer's
    * ladder. A walk arrives here crashed or failed, and a crash is priced as a failure once its run
-   * escalates.
+   * escalates. The refractory is the starvation machine's own backoff, armed by its own endings;
+   * an audit's retreat leaves whatever hold is running to run out.
    */
   private double undoProbe(Walk walk, ProbeEnding ending, Reading reading) {
     boolean crashed = (ending == ProbeEnding.CRASHED);
@@ -477,8 +478,9 @@ final class WindowClimber {
     }
     if (walk.isAudit) {
       auditClock.reschedule(failed, crashed, audit.rung);
+    } else {
+      refractoryLeft = starvation.rung;
     }
-    refractoryLeft = starvation.rung;
     return returnToBase(walk, reading);
   }
 

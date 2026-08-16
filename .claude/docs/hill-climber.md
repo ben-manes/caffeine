@@ -314,8 +314,10 @@ Non-starved samples are the pure density step. The additions:
    The gate outranks the goal-metric branches, which is right for the guard rail (it adjudicates a
    shortfall *on* the starved sample) and was wrong for the audit (it adjudicates over the samples
    that follow): a blind corner that never clears served its whole refractory motionless while the
-   clock said the position was due, since `refractoryLeft` is armed by every `undoProbe` and
-   decremented only inside the hold. A **due** clock now pre-empts that hold, a sample the machine
+   clock said the position was due, since `refractoryLeft` is armed by a starvation walk's
+   `undoProbe` and decremented only inside the hold (an audit's undo left it alone from
+   2026-08-16; before that every undo re-armed it, which deferred the corner's next probe by the
+   whole rung after an audit that was not the probe's doing). A **due** clock now pre-empts that hold, a sample the machine
    was otherwise spending on nothing — the 2026-08-04 blind-corner entry in §7.
 3. **The walk**: bold-driver seeded at the 6.25% restart magnitude in the probe direction,
    **scaled by the refractory rung — ×2 at rung 32, ×4 at rung 64, capped at the 30% max step**
@@ -2440,9 +2442,12 @@ leaves the starvation refractory alone after an audit's undo (`auditundo`) reads
 (six seeds up, the low basin lifted from 44–51 to 50–59), `rep_r6` seed 3 +5.4 (the others
 ±0.8), `shallowmoat` +1.1, `strad_p8@4097` +0.14 (8 of 8), against `metronome` −0.92 (7 of 8),
 `balloonflip` −0.26 (8 of 8), `cp_w050` −0.55 (4 of 4), `cp_w015` −0.12, `arc_S2` −0.13 and
-`shieldtrap_s13` −1.34 on one seed; bit-identical elsewhere. Faster retries after an audit's
-retreat buy the deep-band escapes and cost the cells where holding still after the retreat
-protects. Recorded, not landed.
+`shieldtrap_s13` −1.34 on one seed; bit-identical elsewhere, on the corpus within those tenths,
+and bit-identical on the retention holdout. Faster retries after an audit's retreat buy the
+deep-band escapes and cost the cells where holding still after the retreat protects. **Landed the
+same day** under the "a small loss is acceptable where it fixes big losses" rule (Ben): `undoProbe`
+arms the refractory only for a starvation walk's undo; the gate rows for `widepin`, `rep_r6`,
+`metronome`, `balloonflip`, `strad_p8@4097` and `shallowmoat` carry the re-base.
 
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 

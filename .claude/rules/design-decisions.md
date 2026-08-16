@@ -313,6 +313,12 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   its crash-scale move is the re-test's product and its ending returns to the park; a shift with
   no walk in flight still stands the park down, and the undo's arrival is still judged (the
   depressed-window study's `arrive` costs `demoflood` −1.9 unconditionally). Don't widen either.
+  **The starvation refractory is armed only by a starvation walk's undo** (2026-08-16): an audit's
+  retreat leaves a running hold to run out rather than re-arming it to the whole rung, which
+  deferred the corner's next probe for an audit that was not the probe's doing. Priced: `widepin`
+  +5.1 (the low basin lifted), `rep_r6` seed 3 +5.4, `shallowmoat` +1.1 against `metronome` −0.9,
+  `balloonflip` −0.3, `cp_w050` −0.55; accepted as a small loss for big ones. Don't restore the
+  re-arm without that ledger, and don't extend it the other way (a starvation undo must arm it).
 - **The SLRU main space still earns its keep against a plain LRU main** (measured 2026-08-08, 276
   cells). It was introduced in 2015 and the sketch has been fixed several times since, so it was
   re-asked by disabling promotion entirely (threshold above the sketch's 4-bit ceiling leaves
