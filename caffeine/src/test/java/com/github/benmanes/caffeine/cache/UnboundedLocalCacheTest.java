@@ -19,6 +19,9 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.slf4j.event.Level.TRACE;
 
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -33,6 +36,7 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
+import com.google.common.testing.GcFinalization;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -190,5 +194,26 @@ final class UnboundedLocalCacheTest {
     assertThat(thrown).isSameInstanceAs(expected);
     assertThat(cache.refreshes()).doesNotContainKey(key);
     assertThat(cache.getIfPresent(key, /* recordStats= */ false)).isEqualTo(2);
+  }
+
+  @Test
+  void notifyRemoval_allowGc() {
+    // A queued notification must not retain the cache, or a backlogged executor keeps every live
+    // entry reachable after the caller has dropped the cache
+    var tasks = new ArrayList<Runnable>();
+    var reference = notifyingCache(tasks);
+
+    assertThat(tasks).hasSize(1);
+    GcFinalization.awaitClear(reference);
+  }
+
+  private static WeakReference<UnboundedLocalCache<Integer, Integer>> notifyingCache(
+      List<Runnable> tasks) {
+    RemovalListener<Integer, Integer> listener = (key, value, cause) -> {};
+    var cache = new UnboundedLocalCache<Integer, Integer>(
+        Caffeine.newBuilder().executor(tasks::add).removalListener(listener),
+        /* isAsync= */ false);
+    cache.notifyRemoval(1, 2, RemovalCause.EXPLICIT);
+    return new WeakReference<>(cache);
   }
 }

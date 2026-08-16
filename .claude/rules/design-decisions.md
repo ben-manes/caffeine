@@ -18,6 +18,23 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
 - **Transient negative weightedSize** is acceptable eventual consistency. Instead verify convergence after maintenance completes.
 - **accessTime uses opaque write (not CAS)** to avoid contention storms. Instead verify that stale reads cause only benign early expiration.
 - **Read-path expiry extension can briefly resurrect a just-expired entry** (`tryExpireAfterRead`'s `casVariableTime`, or `setAccessTime`) — accepted, not a bug. A reader that saw the entry live and then extends it can land the write just after the entry crossed its boundary, leaving it visible slightly later than expiry. Inherent to lock-free read-extension over lazy expiration (the CAS only checks the field is unchanged, so it can't reject an expired entry; a fresh-clock guard before the write still races a context switch — only a read-path lock, rejected, closes it). Wide window needs a slow `expireAfterRead` (callback misuse). "Never later" is best-effort here; over-stay is bounded by one duration and self-heals on maintenance. Don't add a *fresh-clock* re-check guard (distinct from the load-bearing `node.getValue() == value` value-identity check that blocks rebinding a read duration onto a replaced value — keep that one).
+- **`maximum` and `weightedSize` have a plain reader and an acquire reader, and no public-facing
+  path may use the plain one.** `AddMaximum.addPlainAndAcquireField` emits `maximum()` as a
+  `VarHandle.get`, which guarantees bitwise atomicity only up to 32 bits, so a plain read of the
+  64-bit field can tear against `setMaximum`'s release write on a 32-bit JVM. The plain reader is
+  for callers already holding `evictionLock`; everything reachable from the public API takes
+  `maximumAcquire()`/`weightedSizeAcquire()`. There is no way to assert an access mode in a test,
+  so this is a review-time invariant: check the call site's lock state, not the accessor's name.
+  The three duration fields need no such care, since `addAcquireReleaseField` emits only an
+  acquire reader.
+- **The async expiry sentinel is also the mark that a load has not been accounted for, so both
+  read-extension paths guard on it.** `AsyncExpiry.expireAfterUpdate` routes to the user's
+  `expireAfterCreate` while `currentDuration > MAXIMUM_EXPIRY`, which is how a completion's quiet
+  replace tells a first load from an update; `AsyncExpiry.expireAfterRead` keys off `getIfReady`
+  and cannot see it. So `tryExpireAfterRead` and `expireAfterRead` each return early on `isAsync &&
+  currentDuration > MAXIMUM_EXPIRY`, and the duplication is not redundant. The uncovered case is
+  not the in-flight one: it is the value arriving while the completion waits on the node lock a
+  `putIfAbsent` holds. Read the doc.
 - **notifyEviction before user code** preserves linearizability. Instead verify catch-commit-rethrow handles exceptions after irrevocable notification.
 - **Catch-commit-rethrow** in doComputeIfAbsent/remap makes phantom evictions real on exception. Instead verify the committed state is consistent. This is the most commonly misunderstood pattern — read the doc before flagging exception handling in compute paths.
 - **Two weight fields** (weight + policyWeight) is intentional for the telescoping sum; verify
@@ -55,7 +72,16 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   (a throwing weigher/`Expiry`/`Ticker` lands there after the remapping set it); the exits that
   precede the remapping cannot, since the hint is what the remapping computes, and none of them is
   reachable from a completion. The jcache adapter deliberately does not get this narrowing. Read
-  the doc.
+  the doc. The bounded cache's `containsKey` prescreen in `discardRefresh` **stays**: a
+  `ConcurrentHashMap.remove` takes the bin lock whether or not there is anything to remove, so the
+  prescreen is what keeps a write off that lock. It was added to the bounded cache only, and the
+  unbounded cache still removes unconditionally. It cannot see an in-progress `computeIfAbsent`
+  reservation, so a write landing inside that window leaves an orphan token; that race is benign
+  and adjudicated. The commit is protected by the ABA guards, the registration's own re-validation
+  inside the reservation rejects any write that lands earlier, and the residue is bounded by one
+  load: automatic refresh is suppressed for the key, and a `refresh(k)` issued after the write
+  coalesces onto the superseded token and is discarded. Don't remove the prescreen to close it, and
+  don't add a registration-side re-check for it.
 - **Async sync-view mutations are physical while queries are logical** — in-flight entries are
   absent to queries but the key-based removals operate on the raw delegate; `size()`/`isEmpty()`
   are physical too. Blocking everywhere invites deadlock. The exception is **value-conditional CAS

@@ -1,0 +1,13 @@
+{
+  "max": 8192, "seed": 7, "repeat": 1,
+  "members": {
+    "core":  {"kind": "uniform", "n": 1.2},
+    "sink":  {"kind": "scan"},
+    "keep":  {"kind": "pairs", "d": 0.01, "k": 2},
+    "flash": {"kind": "pairs", "d": 0.20, "k": 2}
+  },
+  "segments": [
+    {"samples": 14, "shares": {"core": 0.35, "sink": 0.196, "keep": 0.004, "flash": 0.45}},
+    {"samples": 50, "shares": {"core": 0.80, "sink": 0.196, "keep": 0.004}}
+  ]
+}

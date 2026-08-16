@@ -274,6 +274,20 @@ owns it; a confirmed family lands here and in the gate table, and its open direc
   the bar and the marginal verdict escapes where the average form stays pinned). Owned by the
   equilibrium audit: 66.8 against LRU 64.6 on every seed, identical under both verdict forms
   above the bar.
+- **shallowmoat** (`/audit-regret` round 1, 2026-08-15; spec `audit-regret/specs/shallowmoat.json`):
+  a zipf over 1.5·max that fills main and gives the window only stray hits, a two-reference band
+  6,200 requests apart caught only past a ~58% window, and a one-shot scan that keeps probation
+  thin. The static curve is a valley 2pp deep and 57% of the cache wide with a 19pp prize behind
+  it, so no walk crashes and no first-round walk reaches it. Seeded 1–8: 27.4–28.5 against a
+  42.0 ceiling and LRU 39.4, and the same product planted at 70% holds 42.0. Two basins, one
+  outcome: the starvation up-probe adjudicates at 4×bar hits three or four strides out, confirms
+  against the thin frozen probation, `Ladder.reward` resets the rung, and the density arm reverses
+  the window in the same sample, so the ladder alternates 1↔2 and no commitment depth is ever
+  reached (absorbing at 127 decisions); or the calibration audit confirms on the trace's warmup
+  trend at 32%, one stride short of the cliff, and parks. Reach (class 4) through a successful
+  verdict erasing the ledger (class 6). Splitting the band over a spread of reuse distances keeps
+  the gap (26.8 / 29.0 at N=8) and adds the average law's rest-point give-back from above. The
+  reactive arm beats the machine on 6 of 8 seeds (+2.0 mean). §7's 2026-08-15 audit-regret entry.
 
 ## 4. The shipped design (the probe machine, >4096)
 
@@ -2039,6 +2053,54 @@ pairs that are dense per slot and worth nothing at the margin, an audit walks do
 parks, and density walks it back up when the park expires; seeds score 49.4–56.0 against a 65.39
 ceiling at a 1% window. Both belong to §8's "recovery from a depressed window" thread.
 
+**2026-08-15 (`/audit-regret` round 1, the skill's first run; report in the fable-5 audit tree).**
+Two proposal lanes (one blind to §3/§5, one sighted), sixteen specs, one new family and two dose
+notes. **`shallowmoat`** (§3, gate row): a hit-rate valley too shallow to trip any crash bar (2pp)
+and too wide for any first-round walk (57% of the cache), with a 19pp band behind it. From the 1%
+start every arm fails it (hybrid 27.81 ± 0.57, reactive 29.82 ± 4.05, noaudit 27.45 ± 0.87 at
+N=8, against a 42.03 ceiling and LRU 39.40) and the same product planted at 70% holds 42.04, so
+the deficit is reach, not the law's rest point. The mechanism was predicted independently by
+both lanes before any run and is the sentence in §4 that a starvation confirm hands to a density
+arm "which agrees with it": on this terrain the up-probe's verdict (window density against the
+probation density frozen at the arm) and the steering law (window density against main's
+average) disagree at every mid-depth position, so a first-round walk confirms at 4×bar hits three
+or four strides out, `Ladder.reward` resets the rung to 1, and the density arm walks the window
+home in the same sample; the ladder alternates 1↔2 forever, the commitment depth stays 0, and
+the blind-corner branch outranks the due audit clock in the router, so the audit layer never
+arms (the `noaudit` dumps are byte-identical on those seeds). At 127 decisions two of six seeds
+are still in that cycle. The other basin is the recorded cold-start misconfirm: the calibration
+audit confirms on the trace's own warmup trend at 32%, one stride short of the cliff, parks 32
+samples, and escapes only at 78–89 samples through a later audit whose doubled stride crosses,
+which is the ladder-reset mechanism seen from the other side. Neighborhood 17 of 18 cells at
+12–17pp across band distance, scan share and 16384; a spread of reuse distances (three or five
+bands, a ramp instead of a step) keeps the gap at N=8 (26.80 / 28.96) and adds §8 item 1's
+rest-point give-back from above (planted at 70%: 34.92 / 37.67), so the delta witness is the
+clean instrument for reach and the ramp is its composition with class 1. The scan share is a
+level shift with a seed-lottery band (0.125–0.15: per seed either ~30 trapped or ~43 crossed,
+depending on whether the audit's confirm streak completes before or after the crossing stride)
+and a firm trap from 0.20. Nearest recorded families and the difference: the moat (a valley
+deeper than the bar; every walk crashes; here none does), straywall2/mixture_d050/rep_r6 (the
+mid-depth adjudications fail and the ladder escalates; here they confirm and reset it), the r3
+blind-corner lockout (the trigger), regimeramp/flatctl (the misconfirm basin, composed with a
+cliff). Two dose notes, not families: **`s_flashpark`**, a 14-sample recency opening then a
+steady core, where the calibration audit confirms at 41% two strides past the capture point, the
+regime ends one sample later announced by a rise (+10.6pp at the parked window; the fresh-park
+shield holds), and the audit layer nets −3.81 against `noaudit` (−3.47..−4.00 across seeds; it
+earns +1.89 on the walk and loses 5.89 on the park and the tail), the largest measured cost of
+that layer, against `balloonflip`'s −2.39 in §8 item 2 (the shieldtrap shape at a rising dose,
+break-even dwell ~4–5 samples against the shipped 32); and **`s_scarburst`**, a loop plus scan base
+with a k=6 short-reuse burst three samples in every ten, where the reactive law beats the machine
+by 6.96 (57.36 against 50.40 at N=8; `noaudit` 43.56 pinned at a sighted floor by the keepalive
+rider) because the audit's down-walk horizon (5–6 samples) is shorter than the phase period (10)
+and the density arm chases the phases without damping after the exit; the margin is grid-
+sensitive (4.72 with the trace start shifted a quarter sample, 2.82 at a half), so it is a
+candidate reactive-anchor sentinel with that caveat, not a family. No tier discontinuity on
+either straddle pair. One instrument observation for the anchors: five blind cells beat the
+static reference ceiling by 2–3.9pp, one of them (`b_scarburn`, a large flat zipf plus scan) on
+a reference curve flat within 0.5pp, where the product's parked position earned ~4pp more than
+the reference at the same window; the two implementations differ on that terrain and small gaps
+on flat-zipf synthetics should not be read to the half-point until it is understood.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor
@@ -2304,6 +2366,19 @@ and being bit-identical). The only shape left is a measure loose about oscillati
 the shipped arming time on a settling workload. Note this is **no longer on marginal steering's
 critical path** — the gain halving covers that coupling — so it is now a standalone thread with a
 smaller prize, and it should be sequenced after (1).
+
+**4. First-round walk endings on a wide shallow valley (`shallowmoat`, 2026-08-15).** The
+starvation probe's first-round exit (adjudicate at 4×bar hits, commitment 0) and the audit's raw
+streak confirm both end a walk three or four strides out, and on a valley wider than that with
+no crash-bar depth neither ever reaches the prize; a confirm the density arm reverses in the same
+sample resets the ladder, so §4.5's escalation, which carries the recorded deep-band escapes,
+never begins. The repair lives in the walk endings (a confirm that density immediately overrides
+is not a confirm; or the escalation survives it), and it must hold the moat rows (a valley that
+must crash), straywall2 and mixture_d050 (fails that must escalate), demoflood (the frozen
+baseline), and the real corpus, since the cheap first-round exit exists for the thin-signal
+floors (§4.5, §5's v7/v9). Measured against the ramp variants too: from above the density law
+gives back 5–7pp there (item 1's rest point), so a fix for reach alone does not close the ramp
+cells. Below item 1 in expected value; above item 3.
 
 **Do not reopen** (each has a measured negative with a mechanism): a hysteresis band on the
 reactive reversal (§5); `parkbound` on `shieldtrap`, absent a mechanism for its s7 tail; any

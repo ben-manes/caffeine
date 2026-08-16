@@ -1,0 +1,13 @@
+{
+  "max": 8192,
+  "seed": 13,
+  "repeat": 1,
+  "members": {
+    "core": {"kind": "zipf", "n": 1.5, "alpha": 0.7},
+    "cliff": {"kind": "pairs", "dreq": 6200, "k": 2},
+    "cold": {"kind": "scan"}
+  },
+  "segments": [
+    {"samples": 64, "shares": {"core": 0.5, "cliff": 0.24, "cold": 0.26}}
+  ]
+}

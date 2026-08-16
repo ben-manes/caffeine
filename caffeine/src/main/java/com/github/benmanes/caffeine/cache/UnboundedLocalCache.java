@@ -184,6 +184,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
+    var removalListener = removalListener();
     if (removalListener == null) {
       return;
     }

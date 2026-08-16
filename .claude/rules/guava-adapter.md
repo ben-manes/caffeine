@@ -12,10 +12,24 @@ paths:
 - The detection is *fooled* by delegating wrappers like `CacheLoader.asyncReloading`
   (its wrapper overrides `loadAll` even when the underlying loader doesn't), so the
   bulk-loader adapters (`InternalBulkLoader`/`ExternalBulkLoader`) catch
-  `UnsupportedLoadingOperationException` and fall back to per-key `load`, matching
-  native Guava's `getAll`. Catching it is unambiguous — its constructor is
-  package-private, so only the base-class default `loadAll` can throw it (user code
-  can't).
+  `UnsupportedLoadingOperationException` and fall back to per-key `load`. Catching it
+  is unambiguous — its constructor is package-private, so only the base-class default
+  `loadAll` can throw it (user code can't).
+- **That fallback loads per key but does not commit per key, and the difference from native
+  Guava is accepted.** The adapters accumulate the loads into a map that core installs only
+  once every key has succeeded, so a failure part way through discards the values already
+  loaded. `LocalCache.getAll` instead loops `get(key, defaultLoader)`, committing each value
+  before attempting the next. Witnessed with an `asyncReloading` loader that fails on the
+  second of two keys: Guava retains the first and records a load success, the facade retains
+  nothing. Declined 2026-08-15 (Ben): `getAll` specifies no prefix retention, reaching it takes
+  both an undetectable non-bulk loader and a mid-batch failure, and what is lost is a
+  warm-cache difference the caller's retry reloads; anyone depending on it would use Caffeine's
+  own API. The facade could be repaired by catching the marker in
+  `CaffeinatedGuavaLoadingCache.getAll` and looping `cache.get(key)`, at the cost of
+  double-counting the fallback's hits and misses (the aborted bulk attempt counts them first,
+  and there is no counter API to compensate as Guava's `misses--` does). `caffeinate()`'s
+  external loader cannot be repaired at all, since a `CacheLoader` has no handle to install
+  with.
 - `nullBulkLoad` ThreadLocal in `CaffeinatedGuavaLoadingCache` signals that
   `loadAll` returned null keys/values. Required because Guava's `getAll()` must
   throw `InvalidCacheLoadException` for nulls, but filtering happens inside the

@@ -103,6 +103,11 @@ CELLS = [
     # dense-but-worthless window pairs that price the density rest-point error.
     ("norank_rep_r6", "rep_r6_w4096.lirs", 8192, 8),
     ("norank_flood_j100", "flood_j100.lirs", 8192, 4),
+    # /audit-regret round 1 (2026-08-15): the shallow wide moat; unimodal in outcome (spread 1.1)
+    ("shallowmoat", "shallowmoat_8192.lirs", 8192, 2),
+    # /audit-regret round 1: the reactive law beats the machine here (a burst three samples in ten
+    # that the audit's down-walk cannot ride out); a reactive-anchor sentinel, not a family
+    ("scarburst", "scarburst_8192.lirs", 8192, 2),
 ]
 
 

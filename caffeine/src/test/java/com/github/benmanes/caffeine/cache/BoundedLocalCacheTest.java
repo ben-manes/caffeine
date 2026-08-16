@@ -4152,6 +4152,55 @@ final class BoundedLocalCacheTest {
     assertThat(accessTime).isAtMost(now + TimeUnit.MINUTES.toNanos(1));
   }
 
+  @Test
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
+  void putIfAbsent_variableTime_notCorruptedByAsyncSentinel() {
+    var ticker = new FakeTicker();
+    AsyncCache<Int, Int> asyncCache = Caffeine.newBuilder()
+        .expireAfter(Expiry.creating((Int key, Int value) -> Duration.ofMinutes(1)))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .buildAsync();
+    var cache = asBoundedLocalCache(asyncCache);
+
+    var key = Int.valueOf(1);
+    asyncCache.put(key, CompletableFuture.completedFuture(Int.valueOf(100)));
+    var lookupKey = cache.nodeFactory.newLookupKey(key);
+    var node = requireNonNull(cache.data.get(lookupKey));
+
+    // Expire the entry so that put()'s fast path falls through to the synchronized block
+    ticker.advance(Duration.ofMinutes(2));
+    long now = ticker.read();
+
+    // Force the slow path as above, and stand in for the concurrent write that installs a fresh
+    // in-flight future whose value arrives before the completion can claim the node lock. The
+    // writer finds the entry alive (mayUpdate=false) and extends the read duration, which must
+    // preserve the sentinel that tells the completion this is a first load rather than an update.
+    var writer = new AtomicReference<@Nullable Thread>();
+    var started = new AtomicBoolean();
+    var incomplete = new CompletableFuture<Int>();
+
+    CompletableFuture<?> writerDone;
+    synchronized (node) {
+      writerDone = CompletableFuture.runAsync(() -> {
+        writer.set(Thread.currentThread());
+        await().untilTrue(started);
+        asyncCache.asMap().putIfAbsent(key, incomplete);
+      }, executor);
+
+      started.set(true);
+      await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && (thread.getState() == BLOCKED);
+      });
+
+      node.setVariableTime(now + ASYNC_EXPIRY);
+    }
+
+    writerDone.join();
+    assertThat(node.getVariableTime()).isEqualTo(now + ASYNC_EXPIRY);
+  }
+
   @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.SINGLETON, expireAfterWrite = Expire.ONE_MINUTE,
@@ -5573,6 +5622,65 @@ final class BoundedLocalCacheTest {
         .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
     assertThat(cache.get(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
     assertThat(node.getVariableTime()).isNotEqualTo(initialVariableTime);
+  }
+
+  @Test
+  void expireAfterRead_asyncSentinel() {
+    // An async entry carries the sentinel as its duration until the completion applies the create
+    // duration, so the read extension must leave it in place while computing and while the value is
+    // ready but not yet applied. An Expiry that returns what it was given would otherwise cap the
+    // sentinel to MAXIMUM_EXPIRY and erase the mark that says the load has not been accounted for
+    var ticker = new FakeTicker();
+    var cache = Caffeine.newBuilder()
+        .expireAfter(Expiry.creating((Int key, Int value) -> Duration.ofMinutes(1)))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .buildAsync();
+    var localCache = asBoundedLocalCache(cache);
+    var key = Int.valueOf(1);
+    var future = new CompletableFuture<Int>();
+    cache.put(key, future);
+
+    var node = requireNonNull(localCache.data.get(localCache.nodeFactory.newLookupKey(key)));
+    long sentinel = node.getVariableTime();
+    assertThat(sentinel).isEqualTo(ticker.read() + ASYNC_EXPIRY);
+    assertThat(localCache.expireAfterRead(node, key, requireNonNull(node.getValue()),
+        localCache.expiry(), ticker.read())).isEqualTo(sentinel);
+
+    future.complete(Int.valueOf(2));
+    node.setVariableTime(sentinel);
+    assertThat(localCache.expireAfterRead(node, key, requireNonNull(node.getValue()),
+        localCache.expiry(), ticker.read())).isEqualTo(sentinel);
+  }
+
+  @Test
+  void expireAfterRead_asyncSentinel_completionIsACreate() {
+    // Consuming the sentinel leaves the completion unable to tell a first load from an update, so
+    // an Expiry that sets a duration only on creation pins the entry for the sentinel's span
+    var ticker = new FakeTicker();
+    var cache = Caffeine.newBuilder()
+        .expireAfter(Expiry.creating((Int key, Int value) -> Duration.ofMinutes(1)))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .buildAsync();
+    var localCache = asBoundedLocalCache(cache);
+    var key = Int.valueOf(1);
+    var future = new CompletableFuture<Int>();
+    cache.put(key, future);
+
+    var node = requireNonNull(localCache.data.get(localCache.nodeFactory.newLookupKey(key)));
+    long sentinel = node.getVariableTime();
+    future.complete(Int.valueOf(2));
+    node.setVariableTime(sentinel);
+
+    var value = requireNonNull(node.getValue());
+    node.setVariableTime(localCache.expireAfterRead(node, key, value,
+        localCache.expiry(), ticker.read()));
+    assertThat(localCache.replace(key, value, value,
+        /* shouldDiscardRefresh= */ false, /* quietly= */ true)).isTrue();
+
+    var expireAfterVar = cache.synchronous().policy().expireVariably().orElseThrow();
+    assertThat(expireAfterVar.getExpiresAfter(key)).hasValue(Duration.ofMinutes(1));
   }
 
   @ParameterizedTest

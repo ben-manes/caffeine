@@ -1477,7 +1477,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    */
   long expireAfterRead(Node<K, V> node, K key, V value, Expiry<K, V> expiry, long now) {
     if (expiresVariable()) {
-      long currentDuration = Math.max(0L, node.getVariableTime() - now);
+      long variableTime = node.getVariableTime();
+      long currentDuration = Math.max(0L, variableTime - now);
+      if (isAsync && (currentDuration > MAXIMUM_EXPIRY)) {
+        // expireAfterCreate has not yet set the duration after completion
+        return variableTime;
+      }
       long duration = Math.max(0L, expiry.expireAfterRead(key, value, now, currentDuration));
       return expiresAt(now, duration);
     }
@@ -4229,9 +4234,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (cache.evicts()) {
       if (cache.isWeighted) {
         proxy.weigher = cache.weigher;
-        proxy.maximumWeight = cache.maximum();
+        proxy.maximumWeight = cache.maximumAcquire();
       } else {
-        proxy.maximumSize = cache.maximum();
+        proxy.maximumSize = cache.maximumAcquire();
       }
     }
     proxy.cacheLoader = cache.cacheLoader;

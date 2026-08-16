@@ -355,6 +355,21 @@ The tolerance applies to multiple per-entry timestamps:
 duration to prevent expiration during async computation. The `isComputingAsync()`
 check tests both the `isAsync` flag AND whether the future is complete.
 
+**The sentinel also records that a load has not been accounted for, so every
+read-extension path preserves it.** `AsyncExpiry.expireAfterUpdate` routes to the
+user's `expireAfterCreate` when `currentDuration > MAXIMUM_EXPIRY`, which is how
+`handleCompletion`'s quiet replace tells a first load from an update. `AsyncExpiry`
+cannot make that distinction on a read: it keys off `getIfReady`, so once the value
+arrives it delegates and returns a real duration. The guard therefore belongs in the
+cache, and both `tryExpireAfterRead` and `expireAfterRead` carry it (`isAsync &&
+currentDuration > MAXIMUM_EXPIRY` returns without consulting the `Expiry`). The
+window it covers is not the in-flight state, which `AsyncExpiry` handles: it is the
+value arriving while the completion waits on the node lock a `putIfAbsent` is
+holding. Consuming the sentinel there also hands the user's callback a 220-year
+`currentDuration`, and an `Expiry` that returns what it was given, `Expiry.creating`
+among them, then pins the entry for that span instead of expiring it after its
+configured duration.
+
 **MAXIMUM_EXPIRY = ~150 years** (`Long.MAX_VALUE >> 1`). User-provided expiration
 durations are clamped to prevent nanoTime arithmetic overflow. `now + ASYNC_EXPIRY`
 overflows to negative after ~73 years of JVM uptime, but this is within the
@@ -827,6 +842,24 @@ the same generation. Any refresh in flight was launched against a pre-mutation
 snapshot, so killing it is correct for linearizability even if it happens to be
 a "newer" generation from a later reader.
 
+**The bounded cache's `containsKey` prescreen stays, and the race it leaves open is
+benign** (adjudicated 2026-08-15). `ConcurrentHashMap.remove` takes the bin lock
+whether or not the key is there, so the prescreen is what keeps an ordinary write
+off that lock. It was added to the bounded cache only; the unbounded cache still
+removes unconditionally. What the prescreen cannot see is an in-progress
+`computeIfAbsent` reservation, which reads as absent, so a write landing inside
+that window leaves a token launched from the generation it superseded. Nothing is
+committed wrongly: the completion's ABA guards reject the value, and the
+registration re-validates `node.getWriteTime()` inside the reservation, which
+rejects any write that lands earlier. The residue is bounded by one load, and it
+is a delay rather than a loss — automatic refresh is suppressed for that key while
+the orphan is in flight (`refreshIfNeeded` gates on the same `containsKey`), and a
+`refresh(k)` issued after the write coalesces onto the superseded token and is
+discarded. Don't drop the prescreen to close it, and don't add a
+registration-side re-check: closing it there would fix only `refreshIfNeeded` and
+leave the manual `LocalLoadingCache` and `LocalAsyncLoadingCache` registrations,
+which carry no write-time marker to test, while implying all three were closed.
+
 **A rejected reload is notified even though it was never in the cache.** When the
 completion's `compute` declines to install the reloaded value it sets a cause and calls
 `notifyRemoval(key, value, cause)` — `EXPLICIT` on the absent exit, `REPLACED` on the reject
@@ -1164,11 +1197,22 @@ matching Guava's proxy behavior. Don't propose capturing them — the actionable
 gap is only the `Caffeine` class javadoc, which overstates "retain all the
 configuration properties."
 
-**Proxy field names and sentinel values are wire format.** Two changes broke
-cross-version streams: the `loader` → `cacheLoader` rename (3.0.4) and the
-`0` → `UNSET_INT` sentinel change for the three duration fields (3.2.4, the
-zero-duration fix). When touching proxy fields, remember that streams from
-≤ 3.2.3 carry literal `0` for unset durations, and that a field *absent* from an
-old stream deserializes to the JVM default (`0`/`null`) — field initializers do
-not run during deserialization. Golden streams written by real released jars
-are kept with the serialization audit's local records (`audit-serialization-repro`).
+**Serialization is same-version only, and that is not a gap to close** (ruled
+2026-08-15). The library never promises cross-version compatibility, and neither
+does Guava; a promise of that kind has to be offered by the contract rather than
+expected of it. So a finding of the shape "a stream written by an older release
+deserializes into a broken or silently wrong cache" is closed on principle, not
+on reachability or on whether the failure is loud. No `serialVersionUID` bump, no
+`readObject` defaulting, no wire-format tolerance shim, no release note, no
+javadoc qualifier. This covers `SerializationProxy`, `CaffeineConfiguration`, and
+any serializable type added later.
+
+**Proxy field names and sentinel values are still wire format within a version.**
+Two changes broke cross-version streams: the `loader` → `cacheLoader` rename
+(3.0.4) and the `0` → `UNSET_INT` sentinel change for the three duration fields
+(3.2.4, the zero-duration fix). The reason to know this is not compatibility but
+debugging a bug report: streams from ≤ 3.2.3 carry literal `0` for unset
+durations, and a field *absent* from an old stream deserializes to the JVM
+default (`0`/`null`), because field initializers do not run during
+deserialization. Golden streams written by real released jars are kept with the
+serialization audit's local records (`audit-serialization-repro`).
