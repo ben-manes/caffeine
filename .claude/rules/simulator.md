@@ -165,6 +165,14 @@ temporary file. Key invariants:
   shipped default**, where it previously matched only when the split was hand-adjusted. Re-check
   with `verify_reference.py` in the lirs-analysis workspace, which rebuilds `lirs.c` from the
   simulator's own resources (`cc -std=gnu89`; it has implicit declarations modern C rejects).
+- **The LIRS2 stack bound is load-bearing, not inert.** `lirs2.stack-length-multiplier` looks like
+  a memory knob and is not one: `stackLength` tracks the depth of the admission bar, so `MAX_S_LEN`
+  clamps how permissive admission may become. Three independent measurements in 2026-08:
+  dropping 8 to 1 frees zero blocks while driving slot visits per request from 1.997 to 8,105;
+  multiplier 1 moves a constructed cell by 12.91 points by cutting promotions 92%; and at the
+  published 8 a working set can be locked out of promotion entirely, curing only at 12 or above.
+  Sweeping it as a fairness control and reporting "flat" is only valid over the range actually
+  swept, and 1 is outside what the published bound contemplates.
 - To run a C/C++ reference side-by-side: use `simulator:rewrite --outputFormat=LIRS` to produce one-int-per-line traces, strip `*` checkpoints with `grep -v '^\*$'` if the reference reader rejects them.
 
 ## Reader / Policy Test Scoping

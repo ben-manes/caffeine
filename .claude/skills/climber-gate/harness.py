@@ -265,8 +265,8 @@ EDITS = [
      "    } else if (walk.isAudit && !PRECRASH && (walk.belowBarStreak > 0)) {\n"),
 
     ("starvwrite", W,
-     "        walk.ladder.reward();\n        refractoryLeft = 0;\n        return ProbeEnding.CONFIRMED;\n",
-     "        walk.ladder.reward();\n        refractoryLeft = 0;\n"
+     "        refractoryLeft = 0;\n        return ProbeEnding.CONFIRMED;\n",
+     "        refractoryLeft = 0;\n"
      "        if (STARVWRITE) {\n          auditClock.waitSamples = AuditClock.AUDIT_WAIT_INITIAL;\n        }\n"
      "        return ProbeEnding.CONFIRMED;\n"),
 
