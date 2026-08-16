@@ -288,6 +288,14 @@ owns it; a confirmed family lands here and in the gate table, and its open direc
   verdict erasing the ledger (class 6). Splitting the band over a spread of reuse distances keeps
   the gap (26.8 / 29.0 at N=8) and adds the average law's rest-point give-back from above. The
   reactive arm beats the machine on 6 of 8 seeds (+2.0 mean). §7's 2026-08-15 audit-regret entry.
+  Reach was repaired the same day (§7's wedge entry): a confirm the density arm reverses now
+  deepens the ladder instead of resetting it, and the wedge seeds cross the cliff at s17 (30.7 /
+  30.0 / 30.6 against 28.5 / 28.4 / 28.5). The row still reads far below the ceiling because the
+  found position is not kept: after a walk from the floor, density's rest point on the far side is
+  at or below the cliff (main holds the protected core, 3.7 hits per entry against the window's
+  1.2), the guard rail cannot catch the fall (the fall inflates the deviation its margin is priced
+  from), and the deep walk's confirm at the top is itself reversed, so nothing parks. Retention is
+  §8 item 4's open half.
 
 ## 4. The shipped design (the probe machine, >4096)
 
@@ -416,8 +424,25 @@ Non-starved samples are the pure density step. The additions:
    rungs, so thin-signal floors keep the cheap behavior exactly; steady deep-band traps escape by
    ~round 3 (≈100 samples) — an absorbing pin becomes a bounded, temporary dip (demonstrated:
    mixture_d050 scores 33.5 on a dip-length trace and 53.3 on a 3× trace as round 3 escapes).
+   A confirm the density arm reverses in the same sample also deepens the ladder (2026-08-15):
+   the confirmed position is walked home at once and the corner re-arms, so a reset there restarts
+   the ladder on every cycle of a dither that never reaches the band it is looking for. That was
+   the majority ending of a starvation confirm (668 of 881 across the battery and corpus dumps),
+   and pricing it as the completed experiment it is closes the reach half of `shallowmoat` and lifts
+   `bandtrap2` +4.1, `trickle_s7` +2.8 and `trickle_s11` +0.9 (seeded, 8 of 8 on each),
+   `strad_p8@4097` +1.9, `widepin` +1.7 (7 of 8) and `phases_d050@32k` +4.8 (4 up, 4 unchanged);
+   `phases_d050` +0.3 with two seeds falling to its low basin, the N=8 mean above its bar. The
+   confirm's handoff and its zero refractory are unchanged, so nothing is undone and
+   the escalation is fast: rung 64 in ~10 samples on a steady dither. Its price is on the
+   thin-signal floors with a dither in a low phase, where a deep walk armed in a trough has no
+   crash abort (its base is the trough, §5's v7): `arc_DS1@1051635` −0.7 on a 10-sample trace and
+   `deadphase` −0.2, accepted (§7's 2026-08-15 wedge entry has the guard that removes both and
+   what it costs), and on `norank_rep_r6` one seed of eight (41.1 → 20.3): a reversed confirm on
+   a rewarded ladder deepens it, so the fail that follows waits 16 samples where the reward's
+   ladder waited 2, and the ×1 walk that reached that seed's escape re-arms 25 samples later.
 6. **Refractory ladder**: length starts 16 and doubles per adjudicated failure to 64 (the arming
-   doubles first, so effective waits are 32 → 64; after a success the next failure waits 2).
+   doubles first, so effective waits are 32 → 64; after a kept confirm the next failure waits 2;
+   a confirm the density arm reverses doubles the rung without a wait).
 7. **Below-floor lift**: the density arm's clamp raises a sub-floor window to the 2% floor (the
    initial window is 1% and otherwise wedges under the documented floor). The blind-corner
    refractory hold honors the lift too — a workload whose every sample is blind never reaches
@@ -632,6 +657,35 @@ by construction — victims are always sketch-hotter — and the equilibrium-gat
 and four honest-window-hits verdict forms (absolute / vs-main-average / vs-own-baseline /
 vs-baseline-with-bar-floor), each trading a distinct family — the verdict-design tradeoff surface
 in the study report §6.1. The one survivor SHIPPED: the rung-scaled walk stride (§4.3).
+
+### Killed by the 2026-08-15 wedge round (measured; the local climber-shallowmoat workspace)
+
+The round priced a starvation confirm that the density arm reverses in the same sample (a
+"wedge"). What shipped is the escalation without a wait; the rest is dead:
+
+- **wedgehold** (the wedge keeps the rung, neither reward nor escalation) and **wedgefail** (the
+  wedge is a failed experiment: undo, escalate, refractory = rung): both hold the floor long enough
+  for the calibration audit to arm and misconfirm on the warmup trend, so `shallowmoat`'s wedge
+  seeds read 27.5 / 27.3 against ship's 28.5, and neither reaches the prize inside 64 samples.
+- **wedgewalk** (the wedge does not end the walk): the v9 slam-continue family (§5 above), kept as
+  the diagnostic upper bound (33.5 on the wedge seeds) and not promotable.
+- **wedgeflat** (only a wedge on flat terrain escalates; one across a restart-magnitude change
+  keeps the rung): `trickle_s7` −6.7 (four seeds at −14) because the kept rung makes the next
+  fail's refractory 32 samples instead of the reward's 2.
+- **wedgedead** (a walk armed on a dead sample is first-round): `arc_DS1@1051635` −1.7; its low
+  samples straddle the starvation bar (2,662 main hits against a bar of 4,108 on one, 10,221 on
+  the next), so the second is a rung-64 walk to an 80% window.
+- **wedgelow** (a walk armed a restart threshold below `rates.smoothed` is first-round): never
+  fires on the alternating trace, because every sample is a shift and `rates.reset()` re-seeds the
+  smoothed rate to the arm sample itself.
+- **wedgeshift** (a walk armed on the sample the rate fell into by a restart threshold is
+  first-round; the guard the shipped rule can carry): measured and not landed. It restores DS1 and
+  `deadphase` bit-for-bit and removes `phases_d050`'s two seed flips, is bit-identical on every
+  non-wedge cell run (arc_P8, arc_S3, cp_w015, cp_w050, mixture_d050, straywall2, slowswap, moat),
+  and gives back `strad_p8@4097` +1.9 → +0.5, `widepin` +1.7 → −0.8 and `phases_d050@32k` +4.8 →
+  +2.7. Its evidence for the floors is one cell (DS1 is the only floor cell with any starvation
+  confirm), so the pass is by construction; the instrument that would price it is the unspent
+  stillness holdout. Add it if trough-armed deep walks show up at scale.
 
 ### Killed by the 2026-08-12 start-knob sweep: the 1% initial window is not worth moving (measured; 37 cells / 29 workloads x 5 starts x 3 seeds, stratified by measured optimum)
 
@@ -2101,6 +2155,72 @@ a reference curve flat within 0.5pp, where the product's parked position earned 
 the reference at the same window; the two implementations differ on that terrain and small gaps
 on flat-zipf synthetics should not be read to the half-point until it is understood.
 
+**2026-08-15 (the wedge: a starvation confirm the density arm reverses now deepens the ladder;
+worked in the local climber-shallowmoat workspace).** The repair of `shallowmoat`'s reach half,
+and the census that reframed it. A wedge is a starvation confirm whose density steer in the same
+sample opposes the walk: the verdict (window against the probation density frozen at the arm)
+says keep, the steering law (window against main's average) says go home, and ship rewarded it,
+resetting the rung to 1 and re-arming as soon as the corner was blind again. Over the 600
+battery-plus-corpus trajectory dumps of the depressed-window census, **668 of 881 starvation
+confirms are wedges** (bandtrap2 293 of 293, `arc_ConCat` 191 of 260, deadphase 40 of 40,
+strad_p8@4097 32 of 32, widepin 25 of 38, trickle_s7 20 of 27, phases_d050 17 of 29, trickle_s11
+16 of 24; none on demoflood, the moats, straywall2, the mixtures, slowswap or the other corpus
+cells), so the wedge is the ordinary ending of a first-round up-probe wherever the window is
+sparser than main per entry and denser than a thin probation, and §4's sentence that a starvation
+confirm hands to a density arm "which agrees with it" described the minority. The change: a
+reversed confirm escalates the ladder as a completed experiment does, keeping the confirm's
+handoff and its zero refractory; a kept confirm still rewards.
+
+Seeded, arms rotated inside each seed, at N=8 unless noted: `shallowmoat` wedge seeds 1/7/8
+28.50 / 28.38 / 28.49 → 30.66 / 30.02 / 30.61 (the rung-64 walk crosses the cliff at s17; the
+basin-B seeds are bit-identical, no wedge occurs there), `bandtrap2` 72.10 → 76.15 (8 of 8),
+`trickle_s7` 70.70 → 73.52 (8 of 8), `trickle_s11` 72.46 → 73.40 (8 of 8), `strad_p8@4097` 74.83
+→ 76.76 on every seed with @4096 unmoved (the D2 cliff narrows 7.58 → 5.65), `phases_d050@32k`
+51.63 → 56.41 (4 up, 4 unchanged), `widepin` 49.58 → 51.32 (7 up, one −5.6, the recorded coin),
+`phases_d050` 57.16 → 57.44 (six seeds land at 60–61 where ship read 57–60, two fall to 48; the
+N=8 mean clears the row), `deadphase` 49.16 → 49.00 (0 of 8: each dead phase's probe now walks
+×2/×4 and the live phase's opening sample lands farther out), `arc_ConCat` 34.95 → 34.94 over
+seeds 1–4 (noise), `arc_DS1@1051635` 14.16 → 13.44 (a 10-sample trace whose samples alternate a
+near-dead 3% and a live 29%: after the first wedge the ×2 walk armed on a low sample spans two
+live samples at a 27–39% window, the v7 shape, a walk armed in a trough with no crash abort), and
+`norank_rep_r6` 56.49 → 53.89 (seven seeds bit-identical; seed 3 41.12 → 20.32: a reversed
+confirm at rung 4 deepens the ladder to 8, the fail that follows serves 16 samples where the
+rewarded ladder served 2, an audit crash re-imposes it, and the ×1 walk that reached the 45%
+escape at s50 re-arms at s69), and every other cell run bit-identical at the seeds run (1–8 on
+the seeded rows, 1–2 elsewhere: moat_h3000/h4000/h5000,
+straywall2 and @16k, mixture_d050 and its long form, mixture_d025, spread3/5, demoflood,
+balloonflip, shieldtrap s7/s11/s13, crashnoise_a12, resphase_k1_s7, whisper_mod_p6, mixmod_a010,
+blindlock_blind, slowswap_step, arc_P8, arc_S3, cp_w015, cp_w050, cp_w050@123038, arc_S1/S2/S3,
+posjam_j50, whisper_quarter). The unseeded battery (`gate.py`, per-cell N) moves the same rows;
+its other movers (balloonflip −1.2, shieldtrap_s13 −1.3, crashnoise_a12 +1.4, rep_r6 +9.3) are
+unpaired-draw noise, bit-identical seeded. `real.py` at five runs: every cell within ±0.1;
+`floors.py`: DS1 14.15 → 13.36, the other four within noise. The DS1, deadphase and rep_r6 costs
+were accepted; the guard that removes the first two (`wedgeshift`, §5) is recorded and not
+landed. The gate skill's rows and its reactive-anchor column carry the re-bases.
+
+Three record corrections came out of the trajectories. (1) `blindaudit`, an arm that lets a due
+audit clock arm at a blind corner ahead of the starvation probe, never fires on any seed: the
+round's "the blind-corner branch outranks the due audit clock" read the dump's post-tick `stable`
+column; at every blind-corner decision of the cycle the clock read 0–3 against a wait of 4, since
+the position never holds still for four samples inside the cycle. Same outcome, no audit; wrong
+mechanism. (2) "The density law is directionally right on both sides of the cliff" is false. On
+the far side, after a walk from the floor, main holds the protected core and density drifts the
+window down and off the cliff within ~15 samples (two trajectories); the guard rail never vetoes,
+because the fall inflates `rates.deviation` faster than the smoothed rate falls (a 3σ margin of
+0.18–0.24 against a shortfall of 0.13); the deep walk's confirm at the top corner is itself a
+wedge, so nothing parks. The report's plant@70% "hold" was one audit park inside a 64-sample
+horizon: density had drifted the planted window from 5,989 toward the cliff (−60 → −15 per
+sample) when an up-audit confirmed at 6,570 and parked. (3) The row's fix bar therefore splits:
+"the window crossing 58%" is met; "the mean rising toward 42" needs the retention half. Measured
+for that half in the workspace, on top of the wedge pricing: a deepest-rung wedge that satisfies
+the audit's own confirm test parks as an audit does (31.4 on the row; the calibration audit arms
+down from the park one sample later, crashes at the cliff, and its crash stands the park down,
+the depressed-window thread's C1), and with that thread's `auditshield` **36.4 on the row and
+37.1 at repeat 2**, the residual being the top corner's down-audit crashing at the cliff every
+16 → 32 → 64 samples and the undo's arrival read as a shift (C2). So the full repair is this
+change plus the sibling thread's park retention, and it composes with §8 item 1's far-side rest
+point rather than replacing it.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor
@@ -2367,18 +2487,23 @@ the shipped arming time on a settling workload. Note this is **no longer on marg
 critical path** — the gain halving covers that coupling — so it is now a standalone thread with a
 smaller prize, and it should be sequenced after (1).
 
-**4. First-round walk endings on a wide shallow valley (`shallowmoat`, 2026-08-15).** The
-starvation probe's first-round exit (adjudicate at 4×bar hits, commitment 0) and the audit's raw
-streak confirm both end a walk three or four strides out, and on a valley wider than that with
-no crash-bar depth neither ever reaches the prize; a confirm the density arm reverses in the same
-sample resets the ladder, so §4.5's escalation, which carries the recorded deep-band escapes,
-never begins. The repair lives in the walk endings (a confirm that density immediately overrides
-is not a confirm; or the escalation survives it), and it must hold the moat rows (a valley that
-must crash), straywall2 and mixture_d050 (fails that must escalate), demoflood (the frozen
-baseline), and the real corpus, since the cheap first-round exit exists for the thin-signal
-floors (§4.5, §5's v7/v9). Measured against the ramp variants too: from above the density law
-gives back 5–7pp there (item 1's rest point), so a fix for reach alone does not close the ramp
-cells. Below item 1 in expected value; above item 3.
+**4. Keeping a found position past a cliff (`shallowmoat`'s retention half, 2026-08-15).** The
+reach half is done: a confirm the density arm reverses deepens the ladder (§4.5, §7's wedge
+entry), and the wedge seeds cross the cliff at s17. What remains is that the found position is
+not kept. After a walk from the floor, density's rest point on the far side is at or below the
+cliff (main is the protected core), so density walks the window back over the edge within ~15
+samples; the guard rail cannot catch a fall whose own deviation prices its margin; and the deep
+walk's confirm at the top is itself reversed, so it never parks. The measured shape of the repair
+(workspace arms, not landed): a deepest-rung wedge that satisfies the audit's own confirm test
+parks as an audit does, and the park must survive its own audits' crash at the cliff and their
+undo's arrival (the depressed-window thread's C1 `auditshield` and C2 `arrive`); with both, the
+row reads 36.4 and repeat 2 reads 37.1 against 42, the residual being the top corner's periodic
+down-audit crashing at the cliff. Two things belong to other items: the far-side rest point is
+item 1's average-vs-marginal error seen from a cliff, and the park's fragility is the sibling
+thread's. The ramp variants add item 1's give-back from above (5–7pp), so a reach-plus-park
+repair does not close them either. Below item 1 in expected value; above item 3. The basin-B
+seeds (the calibration audit's trend misconfirm at 32%, class 9, `regimeramp`'s sentinel) are the
+open trend thread, not this item.
 
 **Do not reopen** (each has a measured negative with a mechanism): a hysteresis band on the
 reactive reversal (§5); `parkbound` on `shieldtrap`, absent a mechanism for its s7 tail; any

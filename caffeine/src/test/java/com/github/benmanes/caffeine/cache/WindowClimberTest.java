@@ -24,6 +24,7 @@ import static com.github.benmanes.caffeine.cache.WindowClimber.DensityClimber.DE
 import static com.github.benmanes.caffeine.cache.WindowClimber.DensityClimber.DENSITY_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_INITIAL;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_MAX;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_COMMITMENT_DEEP;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_CRASH_ESCALATION;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Rates.DEVIATION_SEED;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Reading.DENSITY_EPSILON;
@@ -2256,14 +2257,17 @@ final class WindowClimberTest {
   void probeEnding_upProbe_confirmsAgainstFrozenBaseline() {
     // The up-probe verdict prices opportunity cost at main's margin: a thin reuse band whose
     // window density loses to main's protected-core AVERAGE still confirms by out-earning the
-    // probation baseline frozen at the probe's start (the trickle family's repair).
+    // probation baseline frozen at the probe's start (the trickle family's repair). Density then
+    // walks the window home in the same sample, and the ladder prices that reversal as a completed
+    // experiment, so the next walk commits deeper (the band past a first-round stride is reached
+    // by the deeper rungs, not by the confirm)
     var climber = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.5,
         /* baseProbationDensity= */ 0.002);
     long adjustment = sample(climber, /* windowMax= */ 2000,
         /* windowHits= */ 30, /* mainHits= */ 940, /* misses= */ 30);
 
     assertThat(climber.walk).isNull();
-    assertThat(climber.starvation.rung).isEqualTo(1);
+    assertThat(climber.starvation.rung).isEqualTo(2 * PROBE_BACKOFF_INITIAL);
     assertThat(climber.refractoryLeft).isEqualTo(0);
     assertThat(adjustment).isEqualTo(densityStep(
         /* windowMax= */ 2000, /* windowHits= */ 30, /* mainHits= */ 940));
@@ -2338,16 +2342,56 @@ final class WindowClimberTest {
   void probeEnding_upProbe_zeroBaselineConfirmsOnAnySignal() {
     // A probation region earning nothing at arm time prices the claimed capacity at ~zero, so
     // any watched earnings above the adjudication bar confirm. The opportunity cost of a dead
-    // boundary is nothing (perpetual cheap probing at a dead equilibrium is harmless).
+    // boundary is nothing; the confirm hands to density, which reverses the sparser window, and
+    // that reversal deepens the ladder rather than resetting it
     var climber = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.5,
         /* baseProbationDensity= */ 0.0);
     long adjustment = sample(climber, /* windowMax= */ 2000,
         /* windowHits= */ 30, /* mainHits= */ 940, /* misses= */ 30);
 
     assertThat(climber.walk).isNull();
-    assertThat(climber.starvation.rung).isEqualTo(1);
+    assertThat(climber.starvation.rung).isEqualTo(2 * PROBE_BACKOFF_INITIAL);
     assertThat(adjustment).isEqualTo(densityStep(
         /* windowMax= */ 2000, /* windowHits= */ 30, /* mainHits= */ 940));
+  }
+
+  @Test
+  void probeEnding_starvationConfirm_reversedByDensity_escalatesTheLadder() {
+    // A confirm the density arm reverses in the same sample keeps nothing: the window is walked
+    // home and the corner re-arms, so a reward here restarts the ladder on every cycle of a dither
+    // whose first-round stride never reaches the band it is looking for. The reversal is priced as
+    // the completed experiment it is, so the next walk commits deeper; the handoff to density and
+    // the zero refractory of a confirm are unchanged, and the ladder's cap still holds
+    var reversed = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.5,
+        /* baseProbationDensity= */ 0.002);
+    long adjustment = sample(reversed, /* windowMax= */ 2000,
+        /* windowHits= */ 30, /* mainHits= */ 940, /* misses= */ 30);
+    assertThat(reversed.walk).isNull();
+    assertThat(reversed.starvation.rung).isEqualTo(2 * PROBE_BACKOFF_INITIAL);
+    assertThat(reversed.refractoryLeft).isEqualTo(0);
+    assertThat(reversed.anchor.held).isFalse();
+    assertThat(adjustment).isLessThan(0L);
+    assertThat(adjustment).isEqualTo(densityStep(
+        /* windowMax= */ 2000, /* windowHits= */ 30, /* mainHits= */ 940));
+
+    // the same verdict where density agrees with the walk keeps the reward
+    var agreed = probingDown(/* stepSize= */ -STRIDE, /* baseHitRate= */ 0.9);
+    sample(agreed, /* windowMax= */ 2000,
+        /* windowHits= */ 5, /* mainHits= */ 900, /* misses= */ 95);
+    assertThat(agreed.walk).isNull();
+    assertThat(agreed.starvation.rung).isEqualTo(1);
+    assertThat(agreed.refractoryLeft).isEqualTo(0);
+
+    // at the deepest rung a reversal cannot deepen the ladder further
+    var deepest = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.5,
+        /* baseProbationDensity= */ 0.002);
+    deepest.starvation.rung = PROBE_BACKOFF_MAX;
+    walkOf(deepest).samples = PROBE_COMMITMENT_DEEP;
+    sample(deepest, /* windowMax= */ 2000,
+        /* windowHits= */ 30, /* mainHits= */ 940, /* misses= */ 30);
+    assertThat(deepest.walk).isNull();
+    assertThat(deepest.starvation.rung).isEqualTo(PROBE_BACKOFF_MAX);
+    assertThat(deepest.refractoryLeft).isEqualTo(0);
   }
 
   @Test

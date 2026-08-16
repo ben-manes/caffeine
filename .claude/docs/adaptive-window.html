@@ -2430,7 +2430,7 @@ window = max(window + step, 0.02·C)</pre>
     <path d="M200,84 H330" fill="none" stroke="#1baf7a" stroke-width="2.6"/>
     <circle cx="206" cy="84" r="5" fill="#1baf7a" stroke="#ffffff" stroke-width="1.4"/>
     <text x="212" y="70" fill="#1baf7a" font-weight="600">watched region earned 4× the bar:</text>
-    <text x="212" y="102" fill="#1baf7a" font-weight="600">confirmed → kept, ladder resets</text>
+    <text x="212" y="102" fill="#1baf7a" font-weight="600">confirmed → kept, ladder resets (deepens if steering reverses it)</text>
   </g>
   <g transform="translate(370,0)">
     <text x="10" y="16" fill="#1a1f24" font-weight="600" font-size="12" class="paneltitle">B · reversal</text>
@@ -2536,8 +2536,10 @@ window = max(window + step, 0.02·C)</pre>
   confirms only if the grown window out-earned, per slot, <b>probation's density as
   it was frozen when the probe armed</b>. The two densities come from different
   samples, so the frozen one is scaled to the current sample's length before they are
-  compared. A confirmed position is kept and the retry ladder resets; anything else,
-  including "no better, no worse", is undone in full.</div>
+  compared. A confirmed position is kept and the retry ladder resets; if steering
+  reverses the position in the same sample the walk kept nothing, and the ladder
+  deepens instead (§6.5). Anything else, including "no better, no worse", is undone in
+  full.</div>
 <details class="fold">
   <summary>Why probation, why frozen: five designs, and the one priced trade</summary>
   <p>That verdict took five designs, and both of its choices are load-bearing. Why
@@ -2580,15 +2582,23 @@ window = max(window + step, 0.02·C)</pre>
   families were measured onto exactly this tradeoff.</p>
 <div class="rule"><b>Escalating commitment</b> prices the two cases apart over time.
   First-attempt probes may exit at the first judgment opportunity: cheap, and on
-  healthy workloads that is the whole story. Each <i>failed</i> round doubles the
-  refractory wait (16 → 32 → 64 samples), and the deeper rungs <b>commit</b> the
-  next walk to a minimum depth (2 samples, then 10) before the early exit may fire,
-  pushing it past the stray zone. A steady trap escalates itself out in about three
+  healthy workloads that is the whole story. Each round that keeps nothing doubles the
+  rung (16 → 32 → 64): a <i>failed</i> verdict, which also serves the refractory
+  wait, or a confirm that steering reverses at once, which serves none. The deeper rungs
+  <b>commit</b> the next walk to a minimum depth (2 samples, then 10) before the early
+  exit may fire, pushing it past the stray zone. A steady trap escalates itself out in about three
   rounds (~100 samples: a bounded dip instead of a permanent pin); a workload whose
   floor is genuinely correct never escalates far enough to pay the deep-walk price,
   its retries just get rarer. Confirmation is not exempt from the gate; early
   confirms on stray evidence reset the ladder and neuter the escalation (measured:
   a long-trace escape fell from 53.3 to 38.7 with the exemption).</div>
+<p>A confirm can be reversed because the two prices differ. The verdict compares the
+  grown window with the probation it displaced; steering compares it with main's
+  average, which the protected core dominates. When the window out-earns a thin
+  probation edge but not the core, the verdict keeps the position and steering walks it
+  home in the same sample. That round kept nothing, so the ladder counts it as a failure.
+  Rewarded instead, the probe would repeat at the first rung and never commit a walk past
+  a band that a first-round stride cannot reach.</p>
 <p>One full episode, on a constructed reuse band behind a wide stray zone:</p>
 <figure>
 <svg viewBox="0 0 740 250" role="img" font-family="system-ui,sans-serif" font-size="11.5">
@@ -2810,7 +2820,8 @@ window = max(window + step, 0.02·C)</pre>
     </tr>
     <tr>
       <td><b>on a confirm</b></td>
-      <td>keep it, plant the anchor, reset the ladder; steering resumes</td>
+      <td>keep it, plant the anchor, reset the ladder (deepen it if steering reverses
+        the position at once); steering resumes</td>
       <td>keep it, plant the anchor, and park, since density disagrees with the
         position by construction</td>
     </tr>
@@ -3044,8 +3055,8 @@ window = max(window + step, 0.02·C)</pre>
   the audit cycle.</p>
 <details class="fold">
   <summary>The companion repairs, and the ablations that prove each is load-bearing</summary>
-  <p>After a confirmed probe, the retry ladder resets so re-probing is cheap
-    (load-bearing for phase alternation). An audit inheriting that reset would re-arm
+  <p>After a confirmed probe that density keeps, the retry ladder resets so re-probing
+    is cheap (load-bearing for phase alternation). An audit inheriting that reset would re-arm
     within a sample or two, so the audit retry is floored at the initial refractory
     (16 samples). On the periodic-swing construction the defended value is 63.7
     against an undisturbed control's 63.8, and disabling either the positional clock
@@ -3547,7 +3558,8 @@ window = max(window + step, 0.02·C)</pre>
         failed walk at the deepest audit rung; a crash — even streak-escalated —
         keeps the cadence)
       starvation walk → watched ≥ 4·bar at committed depth: density
-        verdict; confirm: keep + plant anchor + ladder reset; else fail
+        verdict; confirm: keep + plant anchor + ladder reset (×2 instead if
+        steering reverses it at once); else fail
       budget out → undo, ladder ×2
       else → rung-scaled bold-driver stride, reversing only on a
         sample-to-sample drop past reversalBar

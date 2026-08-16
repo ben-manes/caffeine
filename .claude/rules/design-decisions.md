@@ -290,6 +290,22 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   `anchor.returning` in the router, so `returning` is false for the whole drain and both planting
   branches would otherwise claim a position the probe was charged a ladder escalation for
   rejecting. Don't narrow it back to `walk != null`.
+- **A starvation confirm the density arm reverses deepens the ladder; it is not a success** (2026-08-15).
+  The up-probe's verdict prices the window against the probation density frozen at the arm, the
+  steering law prices it against main's average, and where they disagree the confirmed position is
+  walked home in the same sample and the corner re-arms. That was 668 of 881 starvation confirms
+  across the battery and corpus dumps, and rewarding it (rung → 1) restarted the ladder on every
+  cycle of a dither that never reaches the band it is looking for (`bandtrap2` 4.4pp below LRU,
+  `shallowmoat` absorbing). `Walk.isReversedBy` prices such a confirm as a completed experiment
+  (`escalate()`), keeping the handoff and the zero refractory; a kept confirm still rewards. Don't
+  restore the reward on the reversed branch, don't add a refractory to it (holding the floor lets
+  the calibration audit misconfirm on the warmup trend: `wedgefail`/`wedgehold`, dead), and don't
+  let the walk continue past it (the v9 family). Its accepted price is a deep walk armed in a
+  trough on a thin-signal floor with a dither (`arc_DS1@1051635` −0.7 on a 10-sample trace,
+  `deadphase` −0.2) and, on a rewarded ladder mid-dither, the fail after a wedge waiting 16 samples
+  instead of 2 (`norank_rep_r6` seed 3, 41 → 20; seven seeds identical); the guard that removes the
+  first two is measured and recorded in `hill-climber.md` §5 (`wedgeshift`), not landed. Don't
+  re-derive it without the stillness holdout.
 - **The SLRU main space still earns its keep against a plain LRU main** (measured 2026-08-08, 276
   cells). It was introduced in 2015 and the sketch has been fixed several times since, so it was
   re-asked by disabling promotion entirely (threshold above the sketch's 4-bit ceiling leaves

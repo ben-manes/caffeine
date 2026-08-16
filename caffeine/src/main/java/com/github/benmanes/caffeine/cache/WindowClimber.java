@@ -315,7 +315,8 @@ final class WindowClimber {
    * Keeps the position a walk just validated, returning whether the climber parks on this sample.
    * The position becomes the anchor at once so the guard rail can defend what the walk paid for. An
    * audit's confirm parks as well, since density disagreed with this position by construction and
-   * would dismantle it; a starvation confirm hands back to density, which agrees with it.
+   * would dismantle it; a starvation confirm hands back to density, whose disagreement, if any, the
+   * ladder has already priced.
    */
   private boolean keepConfirmedPosition(Walk walk, Reading reading) {
     anchor.plant(reading.windowMax, rates.smoothed);
@@ -428,14 +429,21 @@ final class WindowClimber {
   /**
    * Returns how a starvation probe's walk ends. A density verdict for the probed direction keeps
    * the position; any other verdict must fail the probe, or else density walks the window home
-   * and the probe simply refires.
+   * and the probe simply refires. A confirm that the density arm reverses in the same sample keeps
+   * nothing either, so it deepens the ladder as a failure does. The reward belongs to a kept
+   * position; resetting the ladder here would restart it on every cycle of a dither that stops
+   * short of the band.
    */
   private ProbeEnding starvationEnding(Walk walk, Reading reading) {
     if (walk.canAdjudicate(reading, starvation.commitmentDepth())) {
       endWalk();
       walk.ladder.crashStreak = 0;
       if ((walk.verdictSignal(reading) * walk.direction()) > 0.0) {
-        walk.ladder.reward();
+        if (walk.isReversedBy(reading)) {
+          walk.ladder.escalate();
+        } else {
+          walk.ladder.reward();
+        }
         refractoryLeft = 0;
         return ProbeEnding.CONFIRMED;
       }
@@ -1029,14 +1037,23 @@ final class WindowClimber {
     boolean isConfirmed() {
       return (samples >= AUDIT_COMMITMENT) && (aboveStreak >= AUDIT_CONFIRM_STREAK) && beatBase;
     }
+
+    /**
+     * Whether the density arm's command on this sample opposes the walk, so that a confirmed
+     * position is walked home in the same sample rather than kept.
+     */
+    boolean isReversedBy(Reading r) {
+      return (r.steeringError() * direction()) < 0.0;
+    }
   }
 
   /**
-   * A layer's retry ledger: the refractory rung that a completed, failed experiment deepens, and
-   * the run of consecutive crash endings after which a crash stops being priced as an exogenous
-   * workload shift. The starvation machine and the audit layer own one each, and an ending may only
-   * deepen the ledger of the layer that produced it; sharing one lets rate pulses irrelevant to the
-   * window drive the other layer to its deepest rung.
+   * A layer's retry ledger: the refractory rung that a completed experiment deepens when it keeps
+   * nothing (a failure, or a confirm the density arm reverses), and the run of consecutive crash
+   * endings after which a crash stops being priced as an exogenous workload shift. The starvation
+   * machine and the audit layer own one each, and an ending may only deepen the ledger of the
+   * layer that produced it; sharing one lets rate pulses irrelevant to the window drive the other
+   * layer to its deepest rung.
    */
   static final class Ladder {
     /** The initial period after a failed probe, in samples. */
@@ -1067,7 +1084,7 @@ final class WindowClimber {
       crashStreak = 0;
     }
 
-    /** Deepens the rung, as a completed and failed experiment does. */
+    /** Deepens the rung, as a completed experiment that keeps nothing does. */
     void escalate() {
       rung = Math.min(PROBE_BACKOFF_MAX, 2 * rung);
     }
@@ -1077,7 +1094,7 @@ final class WindowClimber {
       crashStreak = Math.min(PROBE_CRASH_ESCALATION, crashStreak + 1);
     }
 
-    /** Rewards a confirmed probe: the crash run is forgiven and the next arm is nearly free. */
+    /** Rewards a kept confirm: the crash run is forgiven and the next arm is nearly free. */
     void reward() {
       crashStreak = 0;
       rung = 1;
