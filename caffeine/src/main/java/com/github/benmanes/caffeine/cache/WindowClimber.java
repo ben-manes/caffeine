@@ -312,7 +312,7 @@ final class WindowClimber {
    */
   private double armEquilibriumAudit(Reading reading) {
     var armed = armProbe(reading, auditClock.chooseDirection(
-        reading, audit.stride(reading)), /* isAudit= */ true);
+        reading, audit.stride(reading), rates.smoothed, anchor.held), /* isAudit= */ true);
     auditClock.restart();
     return walkStep(armed, /* entry= */ true, reading);
   }
@@ -424,7 +424,7 @@ final class WindowClimber {
       walk.ladder.reset();
       refractoryLeft = 0;
       starvation.reward();
-      auditClock.settle();
+      auditClock.settle(walk.down, rates.smoothed);
       return ProbeEnding.CONFIRMED;
     } else if (walk.isBudgetSpent()) {
       endWalk();
@@ -438,20 +438,25 @@ final class WindowClimber {
    * Returns how a starvation probe's walk ends. A density verdict for the probed direction keeps
    * the position; any other verdict must fail the probe, or else density walks the window home
    * and the probe simply refires. A confirm that the density arm reverses in the same sample keeps
-   * nothing either, so it deepens the ladder as a failure does. The reward belongs to a kept
-   * position; resetting the ladder here would restart it on every cycle of a dither that stops
-   * short of the band.
+   * nothing either, so it deepens the ladder as a failure does, and so does a confirm at or short
+   * of the farthest window the ladder's walks have already confirmed: that ground was found and
+   * lost, and a walk that only finds it again has not earned the reward, which would pin the
+   * ladder at its first rung on every cycle. The reward belongs to a kept position on new ground;
+   * resetting the ladder otherwise would restart it on every cycle of a dither that stops short
+   * of the band.
    */
   private ProbeEnding starvationEnding(Walk walk, Reading reading) {
     if (walk.canAdjudicate(reading, starvation.commitmentDepth())) {
       endWalk();
       walk.ladder.crashStreak = 0;
       if ((walk.verdictSignal(reading) * walk.direction()) > 0.0) {
-        if (walk.isReversedBy(reading)) {
+        if (walk.isReversedBy(reading)
+            || walk.ladder.isRepeat(walk.down, reading.windowMax, reading.band)) {
           walk.ladder.escalate();
         } else {
           walk.ladder.reward();
         }
+        walk.ladder.remember(walk.down, reading.windowMax);
         refractoryLeft = 0;
         return ProbeEnding.CONFIRMED;
       }
@@ -468,7 +473,8 @@ final class WindowClimber {
    * Returns the stride back to where the probe started, pricing the ending on the owning layer's
    * ladder. A walk arrives here crashed or failed, and a crash is priced as a failure once its run
    * escalates. The refractory is the starvation machine's own backoff, armed by its own endings;
-   * an audit's retreat leaves whatever hold is running to run out.
+   * an audit's retreat leaves whatever hold is running to run out. A starvation walk that keeps
+   * nothing also shows that the terrain its ladder remembers has moved, so the memory goes.
    */
   private double undoProbe(Walk walk, ProbeEnding ending, Reading reading) {
     boolean crashed = (ending == ProbeEnding.CRASHED);
@@ -480,6 +486,7 @@ final class WindowClimber {
       auditClock.reschedule(failed, crashed, audit.rung);
     } else {
       refractoryLeft = starvation.rung;
+      starvation.forget();
     }
     return returnToBase(walk, reading);
   }
@@ -1068,11 +1075,12 @@ final class WindowClimber {
 
   /**
    * A layer's retry ledger: the refractory rung that a completed experiment deepens when it keeps
-   * nothing (a failure, or a confirm the density arm reverses), and the run of consecutive crash
-   * endings after which a crash stops being priced as an exogenous workload shift. The starvation
-   * machine and the audit layer own one each, and an ending may only deepen the ledger of the
-   * layer that produced it; sharing one lets rate pulses irrelevant to the window drive the other
-   * layer to its deepest rung.
+   * nothing (a failure, a confirm the density arm reverses, or a confirm that only re-finds ground
+   * already confirmed and lost), the run of consecutive crash endings after which a crash stops
+   * being priced as an exogenous workload shift, and the farthest window the layer's walks have
+   * confirmed. The starvation machine and the audit layer own one each, and an ending may only
+   * deepen the ledger of the layer that produced it; sharing one lets rate pulses irrelevant to
+   * the window drive the other layer to its deepest rung.
    */
   static final class Ladder {
     /** The initial period after a failed probe, in samples. */
@@ -1090,7 +1098,9 @@ final class WindowClimber {
     /** The walk samples committed before the stray exit may fire, at the deepest rung. */
     static final int PROBE_COMMITMENT_DEEP = 10;
 
+    boolean farthestDown;
     int crashStreak;
+    long farthest;
     int rung;
 
     Ladder() {
@@ -1101,6 +1111,33 @@ final class WindowClimber {
     void reset() {
       rung = PROBE_BACKOFF_INITIAL;
       crashStreak = 0;
+      forget();
+    }
+
+    /** Forgets the farthest confirmed window, as a walk that keeps nothing does. */
+    void forget() {
+      farthest = -1;
+    }
+
+    /**
+     * Whether a confirm here is at or short of the farthest window a walk in the same direction
+     * has already confirmed, so it re-finds ground the machine has since lost.
+     */
+    boolean isRepeat(boolean down, long window, long band) {
+      if ((farthest < 0) || (down != farthestDown)) {
+        return false;
+      }
+      return down ? (window >= (farthest - band)) : (window <= (farthest + band));
+    }
+
+    /** Records a confirmed window that lies beyond the farthest, or in the other direction. */
+    void remember(boolean down, long window) {
+      boolean farther = (farthest < 0) || (down != farthestDown)
+          || (down ? (window < farthest) : (window > farthest));
+      if (farther) {
+        farthestDown = down;
+        farthest = window;
+      }
     }
 
     /** Deepens the rung, as a completed experiment that keeps nothing does. */
@@ -1185,7 +1222,10 @@ final class WindowClimber {
     int stillSamples;
     int waitSamples;
     long lastWindow;
-    boolean down;
+    /** Whether the next audit explores downward first; the audit after it takes the other side. */
+    boolean down = true;
+    /** The smoothed rate at the last confirm, until the park's first audit has read it. */
+    double settledRate;
 
     AuditClock() {
       reset();
@@ -1198,6 +1238,7 @@ final class WindowClimber {
      */
     void reset() {
       waitSamples = AUDIT_WAIT_FIRST;
+      settledRate = Double.NaN;
       stillSamples = 0;
       lastWindow = -1;
     }
@@ -1207,9 +1248,16 @@ final class WindowClimber {
       stillSamples = 0;
     }
 
-    /** Restores the standard wait between audits, as a confirmed audit does. */
-    void settle() {
+    /**
+     * Restores the standard wait between audits and points the next audit along the confirmed
+     * walk, keeping the rate the walk confirmed at, as a confirmed audit does. A confirm ends a
+     * walk on evidence of improvement rather than its exhaustion, so the ground beyond it is the
+     * unexplored side.
+     */
+    void settle(boolean down, double rate) {
       waitSamples = AUDIT_WAIT_INITIAL;
+      settledRate = rate;
+      this.down = down;
     }
 
     /**
@@ -1242,22 +1290,35 @@ final class WindowClimber {
     }
 
     /**
-     * Returns the direction the next audit explores: towards the farther rail first, alternating
-     * at interior equilibria. A direction with less than one stride of room is refused, since the
-     * walk would clamp at the wall and burn its whole budget producing no evidence. The stride is
-     * the one the arming ladder's rung will actually take, not the flat restart magnitude.
+     * Returns the direction the next audit explores: the side it was pointed at when that has a
+     * stride of room, otherwise the other; the audit after it takes the opposite side for
+     * coverage. A park's first audit follows the confirmed walk only while the park stands and
+     * the smoothed rate has held within a restart threshold since the confirm; a rate that moved
+     * that much with the window still says the workload moved, and the walk's direction says
+     * nothing about the terrain. A direction with less than one stride of room is refused, since
+     * the walk would clamp at the wall and burn its whole budget producing no evidence. The
+     * stride is the one the arming ladder's rung will actually take, not the flat restart
+     * magnitude.
      */
-    boolean chooseDirection(Reading r, double stride) {
+    boolean chooseDirection(Reading r, double stride, double rate, boolean parked) {
+      if (!Double.isNaN(settledRate)) {
+        if (!parked || (Math.abs(rate - settledRate) >= RESTART_THRESHOLD)) {
+          down = !down;
+        }
+        settledRate = Double.NaN;
+      }
       if (r.windowMax <= (long) (2 * r.floor)) {
         return false;
       } else if (r.windowMax >= r.upperCorner()) {
         return true;
       }
-      double room = down ? (r.upperCorner() - r.windowMax) : (r.windowMax - r.floor);
-      if (room >= stride) {
+      double room = down ? (r.windowMax - r.floor) : (r.upperCorner() - r.windowMax);
+      if (room < stride) {
         down = !down;
       }
-      return down;
+      boolean chosen = down;
+      down = !chosen;
+      return chosen;
     }
   }
 

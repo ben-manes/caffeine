@@ -2791,7 +2791,8 @@ window = max(window + step, 0.02·C)</pre>
     <tr>
       <td><b>direction</b></td>
       <td>away from the wall the starved region is pinned against</td>
-      <td>toward the farther wall, alternating between audits</td>
+      <td>toward the farther wall, alternating between audits; a park's first audit follows
+        the walk that confirmed it while the claim stands</td>
     </tr>
     <tr>
       <td><b>crash bar</b><br><span class="gloss">level, vs the rate frozen at the arm</span></td>
@@ -2841,7 +2842,10 @@ window = max(window + step, 0.02·C)</pre>
   confirm leaves the audit schedule untouched.</p>
 <details class="fold">
   <summary>The schedule's fine print: direction, calibration, ordering, cadence</summary>
-  <p><b>Direction.</b> The walk alternates at interior positions but refuses a
+  <p><b>Direction.</b> The walk alternates at interior positions, except that a park's
+    first audit follows the walk that confirmed it while the park stands and the smoothed
+    rate has held within a restart threshold since the confirm (a confirm ends a walk on
+    evidence of improvement, not its exhaustion), and it refuses a
     direction with less than one stride of room: a walk sent into a nearer wall
     clamps on its entry stride, stands still for the rest of its budget, and that
     information-free expiry would be priced as a failed experiment, doubling both
@@ -3057,7 +3061,8 @@ window = max(window + step, 0.02·C)</pre>
 <details class="fold">
   <summary>The companion repairs, and the ablations that prove each is load-bearing</summary>
   <p>After a confirmed probe that density keeps, the retry ladder resets so re-probing
-    is cheap (load-bearing for phase alternation). An audit inheriting that reset would re-arm
+    is cheap (load-bearing for phase alternation), unless the confirm only re-finds ground the
+    ladder had already confirmed and lost, which deepens it instead. An audit inheriting that reset would re-arm
     within a sample or two, so the audit retry is floored at the initial refractory
     (16 samples). On the periodic-swing construction the defended value is 63.7
     against an undisturbed control's 63.8, and disabling either the positional clock

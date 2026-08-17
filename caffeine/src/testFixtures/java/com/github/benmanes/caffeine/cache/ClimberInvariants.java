@@ -82,6 +82,14 @@ final class ClimberInvariants {
           .that(walk.baseRequestCount).isGreaterThan(0L);
     }
 
+    assertWithMessage("a ladder's memory is a window or unset")
+        .that(climber.starvation.farthest).isAtLeast(-1L);
+    assertWithMessage("a ladder's memory is a window or unset")
+        .that(climber.starvation.farthest).isAtMost(maximum);
+    // the audit layer's endings are adjudicated by the goal metric and never consult the memory
+    assertWithMessage("the audit ladder keeps no memory")
+        .that(climber.audit.farthest).isEqualTo(-1L);
+
     assertWithMessage("the audit rung stays within its schedule")
         .that(climber.audit.rung).isAtLeast(PROBE_BACKOFF_INITIAL);
     assertWithMessage("the audit rung stays within its schedule")
@@ -109,6 +117,12 @@ final class ClimberInvariants {
             || (climber.audit.rung == PROBE_BACKOFF_MAX)).isTrue();
     assertWithMessage("the stillness count is non-negative")
         .that(climber.auditClock.stillSamples).isAtLeast(0);
+    if (!Double.isNaN(climber.auditClock.settledRate)) {
+      assertWithMessage("the settled rate is a rate")
+          .that(climber.auditClock.settledRate).isAtLeast(0.0);
+      assertWithMessage("the settled rate is a rate")
+          .that(climber.auditClock.settledRate).isAtMost(1.0);
+    }
 
     assertWithMessage("the fresh-park shield lives and dies with the park")
         .that((climber.anchor.freshLeft == 0) || climber.anchor.held).isTrue();

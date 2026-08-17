@@ -108,6 +108,11 @@ CELLS = [
     # /audit-regret round 1: the reactive law beats the machine here (a burst three samples in ten
     # that the audit's down-walk cannot ride out); a reactive-anchor sentinel, not a family
     ("scarburst", "scarburst_8192.lirs", 8192, 2),
+    # /audit-regret round 2 (2026-08-16): a pulsed lure inside a wide valley. `absolve` (period 16,
+    # 128 samples) prices the ladder's reach through the lure-paced escalation; `absolve_p8` (period
+    # 8, 256 samples) is the absorbing form where every confirm is kept and the rung is pinned at 1
+    ("absolve", "absolve_8192.lirs", 8192, 2),
+    ("absolve_p8", "absolve_p8_8192.lirs", 8192, 2),
 ]
 
 

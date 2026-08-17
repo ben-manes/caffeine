@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.WindowClimber.RESTART_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.VETO_RETURN_BUDGET;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.VETO_STREAK;
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_FIRST;
@@ -1322,6 +1323,50 @@ final class WindowClimberTest {
   }
 
   @Test
+  void audit_parksFirstAudit_followsTheConfirmedWalk() {
+    // A confirm ends a walk on evidence of improvement rather than its exhaustion, so the ground
+    // beyond it is the unexplored side: the park's first audit continues that direction, where the
+    // alternation would send it back through the ground the walk just covered
+    var climber = confirmedAuditPark(/* windowMax= */ 5000, /* baseRate= */ 0.70,
+        /* walkedRate= */ 0.74);
+    assertThat(climber.anchor.window).isLessThan(5000L);
+    armNextAudit(climber, climber.anchor.window, /* hitRate= */ 0.74);
+    assertThat(walkOf(climber).down).isTrue();
+
+    // and the audit after that alternates
+    var settled = confirmedAuditPark(/* windowMax= */ 5000, /* baseRate= */ 0.70,
+        /* walkedRate= */ 0.74);
+    long parked = settled.anchor.window;
+    armNextAudit(settled, parked, /* hitRate= */ 0.74);
+    for (int i = 0; (i < PROBE_WALK_BUDGET) && (settled.walk != null); i++) {
+      steadySample(settled, parked, /* hitRate= */ 0.74);
+    }
+    assertThat(settled.walk).isNull();
+    settled.refractoryLeft = 0;
+    settled.undoRemaining = 0;
+    armNextAudit(settled, parked, /* hitRate= */ 0.74);
+    assertThat(walkOf(settled).down).isFalse();
+  }
+
+  @Test
+  void audit_parksFirstAudit_alternatesWhenTheClaimMoved() {
+    // a smoothed rate that moved by a restart threshold while the window stood still says the
+    // workload moved, and the walk's direction says nothing about the terrain (the trend-misconfirm
+    // family): the alternation stands. So does a park that was stood down before its first audit
+    var trended = confirmedAuditPark(/* windowMax= */ 5000, /* baseRate= */ 0.70,
+        /* walkedRate= */ 0.74);
+    armNextAudit(trended, trended.anchor.window, /* hitRate= */ 0.74 + RESTART_THRESHOLD + 0.01);
+    assertThat(walkOf(trended).down).isFalse();
+
+    var released = confirmedAuditPark(/* windowMax= */ 5000, /* baseRate= */ 0.70,
+        /* walkedRate= */ 0.74);
+    long parked = released.anchor.window;
+    released.anchor.release();
+    armNextAudit(released, parked, /* hitRate= */ 0.74);
+    assertThat(walkOf(released).down).isFalse();
+  }
+
+  @Test
   void audit_commitmentDepth_blocksAnImmediateConfirm() {
     // the verdict needs samples along the walk before it says anything, so an audit may not
     // confirm before its committed depth even when every stride clears the frozen reference
@@ -2417,6 +2462,108 @@ final class WindowClimberTest {
   }
 
   @Test
+  void probeEnding_starvationConfirm_repeatOfTheFarthest_escalatesTheLadder() {
+    // A kept confirm at or short of the farthest window the ladder's walks have already confirmed
+    // re-finds ground the machine found and then lost, so it is priced as a completed experiment
+    // rather than rewarded: rewarding it pins the ladder at its first rung on every cycle of a lure
+    // that a first-round stride catches and density dismantles when it stops (the absolve family).
+    // The handoff to density and the zero refractory are unchanged; a confirm beyond the farthest
+    // is new ground and still rewards, moving the memory with it
+    var climber = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.5);
+    sample(climber, /* windowMax= */ 2000, /* windowHits= */ 500, /* mainHits= */ 400,
+        /* misses= */ 100);
+    assertThat(climber.walk).isNull();
+    assertThat(climber.starvation.rung).isEqualTo(1);
+    assertThat(climber.starvation.farthest).isEqualTo(2000);
+    assertThat(climber.starvation.farthestDown).isFalse();
+
+    reprobeUp(climber, /* baseHitRate= */ 0.5);
+    long adjustment = sample(climber, /* windowMax= */ 1800, /* windowHits= */ 500,
+        /* mainHits= */ 400, /* misses= */ 100);
+    assertThat(climber.walk).isNull();
+    assertThat(climber.starvation.rung).isEqualTo(2);
+    assertThat(climber.refractoryLeft).isEqualTo(0);
+    assertThat(climber.starvation.farthest).isEqualTo(2000);
+    assertThat(adjustment).isEqualTo(densityStep(
+        /* windowMax= */ 1800, /* windowHits= */ 500, /* mainHits= */ 400));
+
+    // within the stable band of the farthest is still a repeat
+    reprobeUp(climber, /* baseHitRate= */ 0.5);
+    sample(climber, /* windowMax= */ 2100, /* windowHits= */ 500, /* mainHits= */ 400,
+        /* misses= */ 100);
+    assertThat(climber.starvation.rung).isEqualTo(4);
+    assertThat(climber.starvation.farthest).isEqualTo(2100);
+
+    reprobeUp(climber, /* baseHitRate= */ 0.5);
+    sample(climber, /* windowMax= */ 2600, /* windowHits= */ 500, /* mainHits= */ 400,
+        /* misses= */ 100);
+    assertThat(climber.starvation.rung).isEqualTo(1);
+    assertThat(climber.starvation.farthest).isEqualTo(2600);
+  }
+
+  @Test
+  void probeEnding_starvationConfirm_theOtherDirection_startsTheMemoryOver() {
+    // the memory is per direction: a down-walk's confirm after up-walk confirms is new ground, and
+    // farthest for a down-walk is the smallest window
+    var climber = probingDown(/* stepSize= */ -STRIDE, /* baseHitRate= */ 0.9);
+    climber.starvation.remember(/* down= */ false, 2000);
+    sample(climber, /* windowMax= */ 2000, /* windowHits= */ 5, /* mainHits= */ 900,
+        /* misses= */ 95);
+    assertThat(climber.walk).isNull();
+    assertThat(climber.starvation.rung).isEqualTo(1);
+    assertThat(climber.starvation.farthestDown).isTrue();
+    assertThat(climber.starvation.farthest).isEqualTo(2000);
+
+    reprobeDown(climber, /* baseHitRate= */ 0.9);
+    sample(climber, /* windowMax= */ 2100, /* windowHits= */ 5, /* mainHits= */ 900,
+        /* misses= */ 95);
+    assertThat(climber.starvation.rung).isEqualTo(2);
+    assertThat(climber.starvation.farthest).isEqualTo(2000);
+
+    reprobeDown(climber, /* baseHitRate= */ 0.9);
+    sample(climber, /* windowMax= */ 1500, /* windowHits= */ 5, /* mainHits= */ 900,
+        /* misses= */ 95);
+    assertThat(climber.starvation.rung).isEqualTo(1);
+    assertThat(climber.starvation.farthest).isEqualTo(1500);
+  }
+
+  @Test
+  void undoProbe_starvationFailOrCrash_forgetsTheFarthest() {
+    // a walk that keeps nothing shows the terrain the memory was found on has moved; an audit's
+    // endings leave the starvation ladder's memory alone
+    var failed = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.5);
+    sample(failed, /* windowMax= */ 2000, /* windowHits= */ 500, /* mainHits= */ 400,
+        /* misses= */ 100);
+    assertThat(failed.starvation.farthest).isEqualTo(2000);
+    reprobeUp(failed, /* baseHitRate= */ 0.5).samples = PROBE_WALK_BUDGET;
+    sample(failed, /* windowMax= */ 1500, /* windowHits= */ 0, /* mainHits= */ 500,
+        /* misses= */ 500);
+    assertThat(failed.walk).isNull();
+    assertThat(failed.starvation.farthest).isEqualTo(-1);
+
+    var crashed = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.5);
+    sample(crashed, /* windowMax= */ 2000, /* windowHits= */ 500, /* mainHits= */ 400,
+        /* misses= */ 100);
+    reprobeUp(crashed, /* baseHitRate= */ 0.5);
+    sample(crashed, /* windowMax= */ 1500, /* windowHits= */ 0, /* mainHits= */ 100,
+        /* misses= */ 900);
+    assertThat(crashed.walk).isNull();
+    assertThat(crashed.starvation.crashStreak).isEqualTo(1);
+    assertThat(crashed.starvation.farthest).isEqualTo(-1);
+
+    var audited = probingUp(/* stepSize= */ STRIDE, /* baseHitRate= */ 0.5);
+    sample(audited, /* windowMax= */ 2000, /* windowHits= */ 500, /* mainHits= */ 400,
+        /* misses= */ 100);
+    injectWalk(audited, /* isAudit= */ true, /* down= */ true, /* baseWindow= */ 2000,
+        /* baseHitRate= */ 0.5, /* baseAnchorRate= */ 0.5).samples = PROBE_WALK_BUDGET;
+    audited.sample.previousHitRate = 0.5;
+    sample(audited, /* windowMax= */ 1800, /* windowHits= */ 400, /* mainHits= */ 100,
+        /* misses= */ 500);
+    assertThat(audited.walk).isNull();
+    assertThat(audited.starvation.farthest).isEqualTo(2000);
+  }
+
+  @Test
   void probeEnding_deepReversedConfirm_goalConfirmed_parksAsAnAudit() {
     // A starvation walk that took the deepest commitment, whose confirm density reverses, and
     // that satisfies the audit's own confirm test is an audit in all but name: it is kept as a
@@ -2757,6 +2904,69 @@ final class WindowClimberTest {
 
   private static WindowClimber probingUp(double stepSize, double baseHitRate) {
     return probingUp(stepSize, baseHitRate, /* baseProbationDensity= */ 0.0);
+  }
+
+  /** Puts a fresh up-probe in flight on a climber whose ladder already carries a history. */
+  @CanIgnoreReturnValue
+  private static WindowClimber.Walk reprobeUp(WindowClimber climber, double baseHitRate) {
+    return reprobe(climber, /* down= */ false, /* baseWindow= */ 1024, STRIDE, baseHitRate);
+  }
+
+  /** Puts a fresh down-probe in flight on a climber whose ladder already carries a history. */
+  @CanIgnoreReturnValue
+  private static WindowClimber.Walk reprobeDown(WindowClimber climber, double baseHitRate) {
+    return reprobe(climber, /* down= */ true, /* baseWindow= */ 7000, -STRIDE, baseHitRate);
+  }
+
+  private static WindowClimber.Walk reprobe(WindowClimber climber, boolean down,
+      long baseWindow, double stepSize, double baseHitRate) {
+    var walk = injectWalk(climber, /* isAudit= */ false, down, baseWindow, baseHitRate,
+        /* baseAnchorRate= */ 0.0);
+    walk.samples = 1;
+    climber.step.size = stepSize;
+    climber.sample.previousHitRate = baseHitRate;
+    climber.refractoryLeft = 0;
+    climber.undoRemaining = 0;
+    return walk;
+  }
+
+  /**
+   * Arms an audit at a quiet equilibrium and walks it to a confirmed park at the improved rate,
+   * returning the climber parked below the position (the first interior audit explores down).
+   */
+  private static WindowClimber confirmedAuditPark(
+      long windowMax, double baseRate, double walkedRate) {
+    var climber = makeClimber();
+    for (int i = 0; i < (AUDIT_WAIT_INITIAL + 2); i++) {
+      steadySample(climber, windowMax, baseRate);
+      if (climber.walk != null) {
+        break;
+      }
+    }
+    assertThat(walkOf(climber).isAudit).isTrue();
+    assertThat(walkOf(climber).down).isTrue();
+    @Var long walked = windowMax + climber.adjustment();
+    for (int i = 0; i < PROBE_WALK_BUDGET; i++) {
+      walked += steadySample(climber, walked, walkedRate);
+      if (climber.walk == null) {
+        break;
+      }
+    }
+    assertThat(climber.walk).isNull();
+    assertThat(climber.anchor.held).isTrue();
+    assertThat(climber.anchor.window).isEqualTo(walked);
+    return climber;
+  }
+
+  /** Holds the position still at the rate until the next audit arms, asserting it does. */
+  private static void armNextAudit(WindowClimber climber, long windowMax, double hitRate) {
+    for (int i = 0; i < (2 * AUDIT_WAIT_INITIAL); i++) {
+      steadySample(climber, windowMax, hitRate);
+      if (climber.walk != null) {
+        break;
+      }
+    }
+    assertThat(walkOf(climber).isAudit).isTrue();
   }
 
   private static WindowClimber probingUp(

@@ -344,6 +344,18 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   +5.1 (the low basin lifted), `rep_r6` seed 3 +5.4, `shallowmoat` +1.1 against `metronome` −0.9,
   `balloonflip` −0.3, `cp_w050` −0.55; accepted as a small loss for big ones. Don't restore the
   re-arm without that ledger, and don't extend it the other way (a starvation undo must arm it).
+  **A repeat confirm deepens the ladder** (2026-08-17): the starvation ladder remembers the farthest
+  window its walks have confirmed, per direction, and a kept confirm at or short of it is priced as a
+  completed experiment; a starvation fail or crash forgets it (`absolve_p8` 27.95 → 46.3, bit-identical
+  everywhere else). Don't clear the memory on the anchor's discard (the confirm sample is the lure's own
+  step and lands on the anchor: the chain breaks, 41.4 against 46.4), and don't let audit endings touch
+  it (pinned). **A park's first audit follows the walk that confirmed it while the claim stands**
+  (2026-08-17): the confirm ends a walk on evidence, not exhaustion; the guard is the park still held
+  at the arm and the smoothed rate within a restart threshold of its value at the confirm, consumed at
+  that arm, and every later audit alternates as before. Don't drop the guard (`climbtrend_up` and
+  `whisper_mod_p6` sentinels, `moat_h5000` −1.75), don't read the raw sample instead of the smoothed
+  rate (fragile to a lure's phase: `absolve_p12` falls back into its trap), and don't extend it past the
+  first audit. The alternation bit's rule stands otherwise: a corner-forced walk leaves it untouched.
 - **The SLRU main space still earns its keep against a plain LRU main** (measured 2026-08-08, 276
   cells). It was introduced in 2015 and the sketch has been fixed several times since, so it was
   re-asked by disabling promotion entirely (threshold above the sketch's 4-bit ceiling leaves

@@ -29,7 +29,7 @@ import static javax.cache.event.EventType.UPDATED;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
@@ -575,9 +575,9 @@ final class EventDispatcherTest {
     }
   }
 
-  @ParameterizedTest(name = "{0}")
+  @ParameterizedTest
   @MethodSource("committedMutationOperations")
-  void synchronousListenerFailure_committedMutationRetainsStatistics(String description,
+  void synchronousListenerFailure_committedMutationRetainsStatistics(
       Consumer<Cache<Integer, Integer>> prepare, Consumer<Cache<Integer, Integer>> operation,
       @Nullable Integer expectedValue, EventType expectedEvent,
       long hits, long misses, long puts, long removals) {
@@ -613,53 +613,53 @@ final class EventDispatcherTest {
     Consumer<Cache<Integer, Integer>> empty = cache -> {};
     Consumer<Cache<Integer, Integer>> present = cache -> cache.put(KEY_1, VALUE_1);
     return Stream.of(
-        arguments("put create", empty, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("put create", empty, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.put(KEY_1, VALUE_1), VALUE_1, CREATED, 0L, 0L, 1L, 0L),
-        arguments("getAndPut create", empty, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("getAndPut create", empty, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.getAndPut(KEY_1, VALUE_1), VALUE_1, CREATED, 0L, 1L, 1L, 0L),
-        arguments("putIfAbsent create", empty, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("putIfAbsent create", empty, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.putIfAbsent(KEY_1, VALUE_1), VALUE_1, CREATED, 0L, 1L, 1L, 0L),
-        arguments("put update", present, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("put update", present, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.put(KEY_1, VALUE_2), VALUE_2, UPDATED, 0L, 0L, 1L, 0L),
-        arguments("getAndPut update", present, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("getAndPut update", present, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.getAndPut(KEY_1, VALUE_2), VALUE_2, UPDATED, 1L, 0L, 1L, 0L),
-        arguments("replace", present, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("replace", present, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.replace(KEY_1, VALUE_2), VALUE_2, UPDATED, 1L, 0L, 1L, 0L),
-        arguments("conditional replace", present, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("conditional replace", present, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.replace(KEY_1, VALUE_1, VALUE_2),
             VALUE_2, UPDATED, 1L, 0L, 1L, 0L),
-        arguments("getAndReplace", present, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("getAndReplace", present, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.getAndReplace(KEY_1, VALUE_2), VALUE_2, UPDATED, 1L, 0L, 1L, 0L),
-        arguments("remove", present, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("remove", present, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.remove(KEY_1), null, REMOVED, 0L, 0L, 0L, 1L),
-        arguments("conditional remove", present, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("conditional remove", present, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.remove(KEY_1, VALUE_1), null, REMOVED, 1L, 0L, 0L, 1L),
-        arguments("getAndRemove", present, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("getAndRemove", present, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.getAndRemove(KEY_1), null, REMOVED, 1L, 0L, 0L, 1L),
-        arguments("iterator remove", present, (Consumer<Cache<Integer, Integer>>) cache -> {
+        argumentSet("iterator remove", present, (Consumer<Cache<Integer, Integer>>) cache -> {
           var iterator = cache.iterator();
           iterator.next();
           iterator.remove();
         }, null, REMOVED, 1L, 0L, 0L, 1L),
-        arguments("putAll create", empty, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("putAll create", empty, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.putAll(Map.of(KEY_1, VALUE_1)),
             VALUE_1, CREATED, 0L, 0L, 1L, 0L),
-        arguments("putAll update", present, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("putAll update", present, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.putAll(Map.of(KEY_1, VALUE_2)),
             VALUE_2, UPDATED, 0L, 0L, 1L, 0L),
-        arguments("removeAll", present, (Consumer<Cache<Integer, Integer>>)
+        argumentSet("removeAll", present, (Consumer<Cache<Integer, Integer>>)
             cache -> cache.removeAll(Set.of(KEY_1)), null, REMOVED, 0L, 0L, 0L, 1L),
-        arguments("invoke create", empty, (Consumer<Cache<Integer, Integer>>) cache ->
+        argumentSet("invoke create", empty, (Consumer<Cache<Integer, Integer>>) cache ->
             cache.invoke(KEY_1, (entry, arguments) -> {
               entry.setValue(VALUE_1);
               return null;
             }), VALUE_1, CREATED, 0L, 1L, 1L, 0L),
-        arguments("invoke update", present, (Consumer<Cache<Integer, Integer>>) cache ->
+        argumentSet("invoke update", present, (Consumer<Cache<Integer, Integer>>) cache ->
             cache.invoke(KEY_1, (entry, arguments) -> {
               entry.setValue(VALUE_2);
               return null;
             }), VALUE_2, UPDATED, 1L, 0L, 1L, 0L),
-        arguments("invoke remove", present, (Consumer<Cache<Integer, Integer>>) cache ->
+        argumentSet("invoke remove", present, (Consumer<Cache<Integer, Integer>>) cache ->
             cache.invoke(KEY_1, (entry, arguments) -> {
               entry.remove();
               return null;

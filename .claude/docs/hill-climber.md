@@ -298,7 +298,58 @@ owns it; a confirmed family lands here and in the gate table, and its open direc
   landed 2026-08-16 (§7's entry): a reversed confirm at the deepest commitment that the goal metric
   confirms parks as an audit's does, and the park survives its own audits' crash-scale moves; the
   wedge seeds read 36.5 / 36.4 / 36.3 (repeat 2: 37.1) against the 42.0 ceiling, the residual being
-  the top corner's periodic down-audit crashing at the cliff.
+  the top corner's periodic down-audit crashing at the cliff. Two facts from `/audit-regret` round 2
+  (2026-08-16): the basin is decided by the first sample's window hits against the bar (30–31 hits arm a
+  probe at s1 against a fat frozen probation, which fails, basin B; 32–34 leave the floor sighted until
+  s3, when a probe against a thin one confirms, the wedge), so a regenerated trace reshuffles which seeds
+  cross; and both repairs live on the starvation ladder, so a rider that keeps the floor sighted removes
+  them: `veilmoat` (the same trace plus a k=8 burst re-read 40 requests apart at 0.06% of traffic, worth
+  0.3pp) arms no starvation probe on any seed, and every seed then takes the audit path (26.84 ± 0.34 at
+  64 samples on 8 of 8 against a paired unmasked control of 4 of 8 crossing; the rung-32 up-audit crosses
+  at ~s88, 32.02 at 128 samples), and after the recorded top-corner loss the guard rail's veto and
+  density's slide form a ~17-sample limit cycle with no re-escape (32.45 ± 0.07 at 256 samples, where the
+  unmasked geometry re-escapes through the deep starvation walk to 34–40). The mask holds from ~3e-4 of
+  traffic (below that the ladder is the parent's own lottery); a dose note, not a family. A park's first
+  audit following its walk (2026-08-17, §7) turns the basin-B seeds' second audit up from the 32% park
+  into the cliff crossing at s52 (27.4 → 30.1 on the 64-sample row, 32.2 → 34.0 at repeat 2; the wedge
+  seeds identical) and does the same for `veilmoat` (26.84 → 30.54 on 8 of 8, 32.02 → 33.93 at 128
+  samples, 32.45 → 33.11 at 256); the retention residual after each escape is unchanged.
+- **absolve** (`/audit-regret` round 2, 2026-08-16; specs `audit-regret/specs/absolve.json` and
+  `absolve_p8.json`): a lure population (pairs 1,300 requests apart, 10% of traffic) pulsed on and off
+  with a period of 16 samples inside a wide flat valley, a far band (pairs 6,000 apart, 45%) caught only
+  past ~54% of the cache, and a zipf core in main. Static: 18.8 to 10%, a +5pp shelf from the lure's knee
+  to 50%, 52.5 at 70%; LRU 51.5. Seeded 1–8: 22.59 ± 0.18 at 64 samples, 24.77 ± 0.11 at 128, an escape at
+  s144–159 (36.4 at 256 on seeds 1–4), reactive 25.5 and noaudit 22.9 trapped as well, and the same product
+  planted at 70% holds (51.07 ± 0.21). Two mechanisms by trace length. Through 64 samples it is the audit
+  tier: the calibration audit's level-test confirm at 32% on a phase step (the lure switching off raises
+  main's hits by 5pp against a stale reference), a 32-sample park, the down-first alternation and its crash
+  when the lure returns mid-walk, the undo's arrival discarding the anchor: `shallowmoat`'s basin B at
+  another dose, on every seed. From s60 a cycle paced by the lure: the off phase blanks the window and the
+  corner arms a ×1 walk, the on phase confirms it at 2,200–3,400 on the lure's own hits (the verdict cannot
+  attribute the watched region's hits, and the lure is dense per slot and worth nothing above its 8% knee,
+  `flood_j100`'s shape pulsed), density rests on the lure at ~37% then slams the window home when it goes
+  off, and the ladder gains one rung per period because it gets one walk per period, with the kept
+  confirms resetting it to 1 (`Ladder.reward`); the escape needs a walk longer than any first-round one
+  (six ×1 strides from an arm caught mid-slam at ~1,650, or the rung-32 ×2 walk) and comes ~140 samples in.
+  The average law also abandons a partial catch of the band at 4,300–4,400 (window density 1.30 against
+  main's 1.59). At a period of 8 (`absolve_p8`, 256 samples) every confirm is kept, the rung reads 1 or 2 on
+  223 of 255 samples and never reaches 32, the audit clock never fires (the position never stills 16
+  samples), and the cell is absorbing: 27.92 ± 0.19 against a 57.4 ceiling and LRU 55.6. Robust to the
+  grid (period 12: 26.35 ± 0.16 at 128 samples; a phase offset: 28.52 ± 0.86; period 20 a 2-of-8 escape
+  lottery), to the band distance and to 16384 (18 of 18 neighborhood cells at 32–34pp at 64 samples), and
+  a knife edge on the lure's share at ~1.6% of traffic, where the calibration audit's direction flips from
+  up-from-the-floor to down-from-an-interior-position. Reach (class 4) through the verdict's attribution
+  (class 3), density's chase (class 5) and the ladder reset (class 6); the period-8 form is class 6
+  outright, the `deferreward` shape (§5, §7 2026-08-15) made deterministic. §7's 2026-08-16 audit-regret
+  entry; §8 item 5. **Repaired 2026-08-17** (§7's entry): the starvation ladder prices a confirm at or
+  short of the farthest window its walks have confirmed as a completed experiment, so the period-8 form
+  escalates 1 → 64 over six periods and the rung-64 ×4 walk crosses the valley in two strides (27.95 →
+  46.29 at 256 samples, above the reactive law's 45.28); and a park's first audit follows the walk that
+  confirmed it while the claim stands, so the period-16 form's second audit walks up from the 32% park
+  into the band instead of down into the lure's knee (24.77 → 41.46 at 128 samples; 36.45 → 46.89 at 256;
+  period 12 and the phase offset 26.4 / 28.5 → 44.0 / 43.1). Period 20 stays a 2-of-8 lottery. What
+  remains after each escape is the recorded top-corner residual (the down-audit crashing at the cliff and
+  the undo's arrival discarding the anchor).
 
 ## 4. The shipped design (the probe machine, >4096)
 
@@ -454,6 +505,24 @@ Non-starved samples are the pure density step. The additions:
    (`isWorkloadShift`); a shift with no walk in flight still does. Measured on shallowmoat, where
    a deep walk finds a band density then dismantles (36.4 on the wedge seeds against 30.7), and
    on `flood_j100` (+1.1 at N=8); bit-identical on the rest of the seeded battery and corpus.
+   A kept confirm at or short of the farthest window the ladder's walks have already confirmed is
+   a repeat (2026-08-17): the machine found that ground and lost it, so a walk that only finds it
+   again has not earned the reward, and the confirm keeps its handoff and its zero refractory but
+   deepens the ladder as a reversed one does. The ladder remembers the farthest confirmed window
+   per direction (`Ladder.remember`/`isRepeat`, kept and reversed confirms alike) and forgets it
+   when a walk fails or crashes, since a walk that keeps nothing shows the terrain it was found on
+   has moved. On `absolve_p8` the reward had pinned the rung at 1 on every lure period (a
+   first-round stride catches the lure's +5pp shelf, density dismantles it when the lure stops, the
+   corner re-arms); with repeats priced the ladder reaches 64 in six periods and the ×4 walk
+   crosses the valley in two strides, parking as an audit-grade confirm at the top: 27.95 → 46.29
+   at 8 seeds. Bit-identical to ship on every other cell of the seeded battery (64 cells at seeds
+   1–2, the movers at 3–8) and the corpus (`arc_ConCat` −0.03 over four seeds, noise): the census
+   of the shipped machine (15 cells × 8 seeds) found no kept confirms at all on `bandtrap2`,
+   `trickle`, `deadphase`, `strad_p8` and `shallowmoat` (all wedges), and the kept confirms on
+   `rep_r6`, `widepin` and `phases_d050` are followed by crashes, which forget. The memory is not
+   cleared on the anchor's discard: the confirm sample is itself the lure's on-step, and where the
+   walk lands at the previous anchor that step discards the anchor on the very sample the confirm
+   is judged (measured 41.4 against 46.4 on `absolve_p8` seed 1).
 6. **Refractory ladder**: length starts 16 and doubles per adjudicated failure to 64 (the arming
    doubles first, so effective waits are 32 → 64; after a kept confirm the next failure waits 2;
    a confirm the density arm reverses doubles the rung without a wait).
@@ -504,9 +573,9 @@ grouping is the write-owner map made structural: each row below is one object, s
 write has to name the other owner to happen at all (landed object-by-object, each stage verified
 bit-close against the pre-refactor tree by the paired battery). The tuning constants live inside
 the class that reads them; the one exception is `RESTART_THRESHOLD`, kept on `WindowClimber`
-deliberately because three mechanisms in three classes read it (the reactive restart, the walk's
-audit-side bars, the stand-down's shift trigger) and giving it to any one would misstate who owns
-it. Where a constant has one owner but a second reader, the second names it
+deliberately because four mechanisms in four classes read it (the reactive restart, the walk's
+audit-side bars, the stand-down's shift trigger, the audit direction's stale test) and giving it to
+any one would misstate who owns it. Where a constant has one owner but a second reader, the second names it
 (`Rates.VETO_MARGIN_MIN` floors the audit confirm; the fresh-park shield is
 `AuditClock.AUDIT_WAIT_INITIAL` long), which keeps the sharing visible.
 
@@ -609,8 +678,31 @@ audit wait; the **guard rail** vetoes a noise-cleared sustained shortfall back t
 The margins are deliberately split (rail 3·dev; confirm run-length plus beat-base), each layer
 owns its ladder, crash streak and schedule with exactly two journaled bridge writes, and audit
 crashes price persistence in **time** (`AUDIT_CRASH_PERSISTENCE` on the retry) rather than bar
-depth. Invariants and don't-harmonize warnings live in `rules/design-decisions.md`; the
-per-round evidence is §7's ledger.
+depth. A park's first audit follows the walk that confirmed it (2026-08-17): the confirm ends a
+walk on evidence of improvement rather than its exhaustion, so the ground beyond is unexplored
+while the ground behind was just covered, and the alternation was sending that audit back through
+it (`absolve` p16: down from the 32% park into the lure's knee, a crash, the undo's arrival
+discarding the anchor; `shallowmoat` basin B and `veilmoat`: down from the calibration park toward
+the floor it came from). It follows only while the claim stands, the park still held at the arm
+and the smoothed rate within a restart threshold of its value at the confirm
+(`AuditClock.settle`/`chooseDirection`); a rate that moved that much with the window still says
+the workload moved and the walk's direction says nothing about the terrain. Unguarded, the rule
+swept `climbtrend_up`'s trend misconfirms wall to wall (−0.9 at N=8, its sentinel: the 6570 park
+starves main of the growing hot set) and re-phased `whisper_mod_p6`'s re-escape (−1.76, its
+sentinel), and on `moat_h5000` its far-slope walk (five strides down a 1.5pp-per-stride decline
+before the 5pp bar trips) made the next audit the tolerant retry, whose undo evicted the band
+(−1.75); the guard returns all three to ship. It also fires, incidentally, after a step confirm
+whose smoothed rate at the confirm still reflected the walk's path (`moat_h3000/h4000`,
+`flood_j100` on seven seeds of eight, `shieldtrap_s13` seed 1), where the continued direction had
+been a coin flip (moat_h3000 +1.6, h4000 +0.8, h5000 −1.75, flood +4.1); those stay on the
+alternation. Priced at N=8, arms rotated: `absolve` 24.77 → 41.46, `absolve_x4` 36.45 → 46.89,
+`veilmoat` +3.7, `shallowmoat` basin B +2.7, `flood_j100` +0.81 (one seed +6.5), `saw_p40` +0.77
+(8 of 8), `whisper_mod_a12` +0.24, `shieldtrap` +0.2, `scarburst` +0.19; `mixture_d010_long`
+−0.27 (8 of 8), `demoflood` −0.16 (8 of 8; the calibration audit's confirm overshoots the walk's
+own best sample and the continued audit wastes two samples before the crash returns it),
+`whisper_mod_p12` −0.05; the corpus `cp_w050` +1.07 and `cp_w044` −0.17 on one seed each, the
+rest bit-identical. Alternation resumes after that audit. Invariants and don't-harmonize warnings
+live in `rules/design-decisions.md`; the per-round evidence is §7's ledger.
 
 ## 5. The graveyard (do not re-explore without new insight)
 
@@ -671,6 +763,22 @@ by construction — victims are always sketch-hotter — and the equilibrium-gat
 and four honest-window-hits verdict forms (absolute / vs-main-average / vs-own-baseline /
 vs-baseline-with-bar-floor), each trading a distinct family — the verdict-design tradeoff surface
 in the study report §6.1. The one survivor SHIPPED: the rung-scaled walk stride (§4.3).
+
+### Killed by the 2026-08-17 absolve repair (measured; the local climber-absolve workspace, §7's entry has the numbers)
+
+- **The repeat memory cleared on the anchor's discard**: the confirm sample is the lure's on-step and,
+  where the walk lands at the previous anchor, that step discards the anchor on the sample the confirm
+  is judged; the chain breaks (`absolve_p8` seed 1 41.4 against 46.4 for the fail/crash-reset form).
+- **The park's first audit following the confirmed walk unguarded** (`momentum`): `absolve` +16.7,
+  `veilmoat` +3.7, `shallowmoat` basin B +2.7, `flood_j100` +4.1 (N=8), `moat_h3000` +1.6, `moat_h4000`
+  +0.8, `crashnoise_a12` +0.5, `shieldtrap_s13` +0.6 against `moat_h5000` −1.75 (four seeds at −3.4: the
+  far slope's gentle decline takes five strides to trip the 5pp bar, the next audit is the tolerant retry
+  and its undo evicts the band), `whisper_mod_p6` −1.76 (its sentinel), `climbtrend_up` −0.9 (its
+  sentinel: trend misconfirms swept wall to wall), `saw_p40` −0.5. The guard on the smoothed rate is what
+  ships.
+- **The guard on the confirm sample's raw rate against the arm sample's**: fragile to the lure's phase
+  (`absolve_p12` seed 1 falls back into the trap, +0.6 against +17.6) and keeps `moat_h5000` −3.4 and
+  `saw_p40` −1.4; the smoothed reference is robust to the phase and fires on the trend.
 
 ### Killed by the 2026-08-15 depressed-window study (measured; the local climber-depressed-window workspace, §7's entry has the numbers)
 
@@ -2449,6 +2557,113 @@ same day** under the "a small loss is acceptable where it fixes big losses" rule
 arms the refractory only for a starvation walk's undo; the gate rows for `widepin`, `rep_r6`,
 `metronome`, `balloonflip`, `strad_p8@4097` and `shallowmoat` carry the re-base.
 
+**2026-08-16 (`/audit-regret` round 2, the skill's second run; report in the fable-5 audit tree).**
+Two proposal lanes again, sighted and blind, both on Opus in the end (the session-model blind lane
+stalled and was replaced), fifteen specs, one new family and one dose note, evaluated on the session
+model. **`absolve`** (§3, two gate rows): a lure population pulsed at 16 samples inside a wide flat
+valley with a far band behind it. Through 64 samples the cell is the audit tier's, and it is
+`shallowmoat`'s basin B forced on every seed: the calibration audit's level test is satisfied by a
+phase step (the lure switching off raises main's hits 5pp against a reference frozen in the on phase),
+the confirm parks at 32% for 32 samples, the alternation sends the next audit down into the returning
+lure and it crashes, and the undo's arrival discards the anchor. From s60 the ladder runs a cycle the
+lure paces: the off phase blanks the window and arms a ×1 walk from the corner, the on phase confirms
+it on the lure's own hits at 2,200–3,400 (a verdict on hits the walk cannot attribute, `flood_j100`'s
+population pulsed), density rests on the lure at ~37% and slams the window home when the lure goes
+off, and the kept confirms reset the rung to 1 while the reversed ones deepen it, so the ladder gains
+one rung per period. The escape comes at s144–159 by a walk longer than any first-round one (an arm
+caught mid-slam at ~1,650 that reaches the band in six ×1 strides, or the rung-32 ×2 walk); on the way
+the average law abandons a partial catch of the band at 4,300–4,400. Seeded 1–8: 22.59 ± 0.18 at 64
+samples, **24.77 ± 0.11 at 128** (the gate row), 36.4 at 256 on seeds 1–4, against 52.5–53.4 at 70%
+and LRU 51.5; the same product planted at 70% holds (51.07 ± 0.21). The arms are the round's sharpest
+number: at 128 samples `noaudit` reads 32.69 ± 5.13 (its cycle starts at s18 rather than s60, six of
+eight seeds escape earlier than the machine) and the reactive law 38.48 ± 1.56, so on this cell the
+audit layer costs ~8pp and the density tier ~14pp against its own alternatives. At a period of 8
+(**`absolve_p8`**, the second row, 256 samples) every confirm is kept, `Ladder.reward` pins the rung at
+1–2 for 223 of 255 samples, no walk is ever longer than two strides, the audit clock never fires, and
+the cell is absorbing: **27.95 ± 0.19 against 57.4, LRU 55.6, reactive 45.28 ± 0.18**. Not an
+alignment artifact (period 12: 26.35 ± 0.16 at 128 samples; the lure off at s0: 28.52 ± 0.86; period
+20 a 2-of-8 escape lottery), invariant across the band distance and 16384 (18 of 18 cells), and a knife
+edge on the lure's share at ~1.6% of traffic, where the calibration audit's direction flips from up
+from the floor (12–13 strides to the band, 42.4 at 64 samples) to down from an interior position. The
+lane predicted the class-6 mechanism (a kept confirm absolves the ladder) and it holds on the period-8
+dose; the period-16 witness is class 4 through classes 3, 5, 6 and 1. Nearest recorded: `shallowmoat`
+(the valley; there the wedge dither reaches rung 64 in ~10 samples, here the lure's period paces it),
+`flood_j100` (the population, pulsed), `rep_r6`'s burst confirms and the `deferreward` arm (§5), whose
+redistribution on `rep_r6`'s seeds this cell turns into a deterministic loss. **`veilmoat`** (a dose
+note on `shallowmoat` and `whisper`, §3): shallowmoat's own trace plus a k=8 burst re-read 40 requests
+apart at 0.06% of traffic keeps the floor sighted on every sample, no starvation probe arms, both
+repairs are unreachable, and every seed takes the audit path (26.84 ± 0.34 at 64 samples on 8 of 8
+against a paired unmasked control of 4 of 8 crossing on the same geometry; the rung-32 up-audit crosses
+at ~s88; at 256 samples the guard rail's veto and density's slide form a ~17-sample limit cycle with no
+re-escape, 32.45 ± 0.07, where the unmasked geometry re-escapes through the deep starvation walk to
+34–40). The evaluator corrected two readings: the mask holds only from ~3e-4 of traffic (the ladder's
+flip at 1e-4 was the parent's own lottery, which turns on the first sample's window hits against the
+bar, 30–31 arming a probe that fails against a fat frozen probation and 32–34 leaving the floor
+sighted until a probe against a thin one confirms), and the calibration audit's confirm at 32–38% is
+not the warmup trend but a real transient advantage of the walked window over the concurrent floor
+(+1.7..+2.8pp through s24, under it after s36), so a detrended reference would confirm too and what is
+missing is a re-test of the park against the floor. Dropped: `s_slowwarm` (the upper corner's cadence,
+2.6pp), `o_seesaw` (LRU = the swept ceiling, the recorded lag limit), four transients, three
+flat-zipf-plus-scan cells that beat the reference (the anchor-fidelity note again, +1.6pp at the same
+window), and the sighted lane's aliasing pair (its premise failed at the bar's knife edge; the `pair`
+instrument was exercised). Nothing was fixed. Two instrument notes: `search.py`'s CSV resume key now
+carries the seeds, and `regret.py`'s linear interpolation of the static curve misreads a park just above
+a cliff between two swept windows as a position cost.
+
+**2026-08-17 (the `absolve` repair: a repeat confirm deepens the starvation ladder; a park's first
+audit follows the walk that confirmed it while the claim stands; workspace `climber-absolve`).** §8
+item 5's two directions, both in the recovery layer. (a) The starvation ladder remembers the farthest
+window its walks have confirmed, per direction, kept and reversed alike; a kept confirm at or short of
+it is a repeat and is priced as a completed experiment (`escalate()`), keeping the handoff and the zero
+refractory; a walk that fails or crashes forgets the memory. The census that scoped it (the shipped
+machine, 15 cells × 8 seeds, `census_confirms.py`): `bandtrap2`, `trickle_s7/s11`, `deadphase`,
+`strad_p8@4097` and `shallowmoat` have no kept confirms (all wedges); `rep_r6` (17 kept), `widepin`
+(14) and `phases_d050` (7) have kept confirms followed by crashes, which forget; `absolve_p8` has 171
+kept confirms, 166 followed by another confirm and 96 of those at or below the previous kept window.
+Open loop the rule fires 161 times on `absolve_p8` and once on `rep_r6`, nowhere else. Closed loop
+`absolve_p8` 27.95 ± 0.13 → **46.29 ± 0.06** (8 seeds; the reactive law 45.28): repeats escalate 1 → 2 →
+… → 64 over six lure periods, the rung-64 ×4 walk crosses the valley in two strides at s79–81 (272 →
+2320 → 4327 → 6375), commits ten and parks as an audit-grade confirm at 6570 (hr 0.56) by s89, and what
+follows is the top corner's known down-audit residual. **Bit-identical to ship on all 64 other battery
+cells at seeds 1–2, on the 30 movers and bimodal rows at seeds 3–8, and on the corpus** (`arc_ConCat`
+0.00 / −0.15 / 0.00 / +0.04 over four seeds, the one real cell with kept confirms); the p16 rows are
+untouched by it (one kept confirm per seed). (b) A park's first audit follows the walk that confirmed
+it, while the park stands at the arm and the smoothed rate has held within a restart threshold since
+the confirm (`AuditClock.settle(down, rate)`; the test at `chooseDirection`, consumed there); otherwise,
+and for every later audit, the alternation stands. The confirm ends a walk on evidence of improvement,
+not its exhaustion, and on the three families the alternation had been sending the next audit back
+through the walk's own ground: `absolve` p16 (down from the 32% park into the lure's knee, the crash at
+s49, the undo's arrival discarding the anchor, the ladder cycle to s144), `shallowmoat` basin B and
+`veilmoat` (down from the calibration park toward the floor). Seeded 1–8, arms rotated: **`absolve`
+24.77 ± 0.08 → 41.46 ± 0.10** (the s45 audit walks up into the band and parks at 5689 by s51),
+`absolve_x4` 36.45 → 46.89, `absolve_p12` 26.35 → 44.0, `absolve_off0` 28.52 → 43.1, `absolve_p20` a
+2-of-8 lottery either way, `veilmoat` 26.84 → 30.54 (8 of 8), `_x2` 32.02 → 33.93, `_x4` 32.45 → 33.11,
+`shallowmoat` 30.79 → 32.49 (basin-B seeds 27.4 → 30.1, the cliff crossed at s52 instead of s84–88;
+wedge seeds identical), `_x2` 34.47 → 35.57; on the battery `flood_j100` +0.81 (one seed +6.5, the
+guard firing on the other seven), `saw_p40` +0.77 (8 of 8), `whisper_mod_a12` +0.24, `shieldtrap`
+s7/s11/s13 +0.20/+0.23/+0.19, `scarburst` +0.19, `moat_h7800` +0.13, `mixture_d010_long` −0.27 (8 of
+8), `demoflood` −0.16 (8 of 8), `whisper_mod_p12` −0.05, bit-identical on the other 51 cells; the
+corpus `cp_w050` +1.07 and `cp_w044` −0.17 on one seed each (a phase-timing lottery on noisy cells:
+where the guard's flip and the alternation land the misconfirm when the phase changes mid-walk),
+`cp_w038` ±0.06, `arc_ConCat` −0.15 on the seed `repeat` moves, the other 27 rows 0.00. The guard is
+what makes it land: unguarded, the rule swept `climbtrend_up`'s trend misconfirms wall to wall (55.16 →
+54.26 at N=8, the 6570 park starving main of the growing hot set; its sentinel) and re-phased
+`whisper_mod_p6`'s re-escape (64.48 → 62.72; its sentinel), and on `moat_h5000` its far-slope walk
+(five strides down a 1.5pp-per-stride decline before the 5pp bar trips) made the next audit the
+tolerant retry, whose undo evicted the band (57.81 → 56.06, four seeds at −3.4); the guard returns all
+three to ship, giving up the step-confirm coin flips (`moat_h3000` +1.6, `moat_h4000` +0.8,
+`flood_j100` +4.1 → +0.8, `crashnoise_a12` +0.5, `shieldtrap_s13` seed 1 +2.8) where the smoothed rate
+at the confirm still reflects the walk's path. A raw-sample reference was tried and is dead (§5). Two
+side records. The retention after each escape is the recorded top-corner residual (`shallowmoat_x2`
+basin B under the repair: escape at s52, the down-audit crashes at the cliff at s92, the undo's arrival
+discards the anchor, density drifts off the cliff by s105 and the floor's ×1 walks fail; §8 items 1
+and 4). And the audit's confirm fires when its streak completes rather than at the walk's best sample,
+so it overshoots a crest (`demoflood`: 0.737 at 20% → parked at 32% earning 0.689; the repaired
+`shallowmoat` second audit parks at the 6570 wall above the cliff's crest at ~5100–5600), which is what
+the C2 discard accidentally corrects on `demoflood` and why `arrive` cannot land; an observation for §8,
+not worked. Verified: `WindowClimberTest` (five pins added), `WindowClimberGateTest`, the fuzzer
+(1,535 tests, 735k runs), the stock build on the two witnesses (41.48 / 46.38).
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor
@@ -2733,6 +2948,22 @@ a shift (the depressed-window thread's C2) is priced there and costs `demoflood`
 the ramp variants add item 1's give-back from above (5–7pp); and the basin-B seeds (the
 calibration audit's trend misconfirm at 32%, class 9, `regimeramp`'s sentinel) are the open
 trend thread. Below item 1 in expected value; above item 3.
+
+**5. The ladder's memory across a kept confirm, and the calibration audit's level test on a phase step
+(`absolve`, 2026-08-16). BOTH LANDED 2026-08-17 (§7's entry).** (a) A kept confirm at or short of the
+farthest window the ladder's walks have confirmed is a repeat and deepens the ladder; `absolve_p8` 27.95
+→ 46.3, bit-identical everywhere else. (b) A park's first audit follows the walk that confirmed it while
+the claim stands (the park held, the smoothed rate within a restart threshold of its value at the
+confirm); `absolve` 24.8 → 41.5, `veilmoat` +3.7, `shallowmoat` basin B +2.7, `saw_p40` +0.8 against
+`mixture_d010_long` −0.3 and `demoflood` −0.2. What remains, and where it lives: the escape's retention
+(the top corner's down-audit crashing at the cliff and the undo's arrival discarding the anchor, item
+4's residual, seen again on `shallowmoat_x2` and `veilmoat_x4`); the audit confirm's overshoot of the
+walk's crest (it parks where the streak completes: `demoflood` at 32% having passed 0.737 at 20%, the
+repaired `shallowmoat` audit at the 6570 wall), which is why the calibration audit's park sits short of
+or past where it should and what the C2 discard accidentally corrects on `demoflood`; and the audit's
+direction after a step confirm, which the guard leaves to the alternation as a measured coin flip.
+`absolve_p20` (a 2-of-8 lottery) and the period-16 form's audit crash on the lure's off-step at other
+doses are the family's open cells. Below item 1 in expected value.
 
 **Do not reopen** (each has a measured negative with a mechanism): a hysteresis band on the
 reactive reversal (§5); `parkbound` on `shieldtrap`, absent a mechanism for its s7 tail; any

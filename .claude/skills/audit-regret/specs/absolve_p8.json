@@ -1,0 +1,39 @@
+{
+ "max": 8192,
+ "seed": 7,
+ "repeat": 4,
+ "members": {
+  "lure": {
+   "kind": "pairs",
+   "d": 0.1587,
+   "k": 2
+  },
+  "deep": {
+   "kind": "pairs",
+   "d": 0.7324,
+   "k": 2
+  },
+  "core": {
+   "kind": "zipf",
+   "n": 0.55,
+   "alpha": 0.9
+  }
+ },
+ "segments": [
+  {
+   "samples": 64,
+   "shares": {
+    "lure": {
+     "share": 0.1,
+     "mod": {
+      "kind": "square",
+      "period": 8,
+      "amp": 1.0
+     }
+    },
+    "deep": 0.45,
+    "core": 0.35
+   }
+  }
+ ]
+}

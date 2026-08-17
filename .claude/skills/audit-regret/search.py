@@ -45,21 +45,26 @@ import workload as W  # noqa: E402
 
 # ----------------------------------------------------------------------------- evaluation
 
+def seeds_tag(args):
+    """The seeds column regret.py writes for this run: '1/2/3' for seeded arms, 'xN' unseeded."""
+    return "/".join(args.seeds.split(",")) if args.seeds else f"x{args.runs}"
+
+
 def done_labels(path):
-    """Rows already measured, keyed by (label, variant, size) so one spec run at two maxima is
-    two rows rather than a skip."""
+    """Rows already measured, keyed by (label, variant, size, seeds) so one spec run at two
+    maxima, or the same cell at a second seed, is two rows rather than a skip."""
     if not path or not os.path.exists(path):
         return set()
     with open(path) as f:
-        return {(r["label"], r["variant"], r["size"]) for r in csv.DictReader(f)}
+        return {(r["label"], r["variant"], r["size"], r["seeds"]) for r in csv.DictReader(f)}
 
 
-def find_row(path, label, variant, size):
+def find_row(path, label, variant, size, seeds):
     if not path or not os.path.exists(path):
         return None
     with open(path) as f:
         for r in csv.DictReader(f):
-            if (r["label"], r["variant"], r["size"]) == (label, variant, str(size)):
+            if (r["label"], r["variant"], r["size"], r["seeds"]) == (label, variant, str(size), seeds):
                 return r
     return None
 
@@ -146,7 +151,7 @@ def cmd_eval(args):
     for sp in specs:
         label = os.path.splitext(os.path.basename(sp))[0]
         size = args.size or W.load(sp)["max"]
-        if all((label, v, str(size)) in done for v in variants):
+        if all((label, v, str(size), seeds_tag(args)) in done for v in variants):
             print(f"{label} @{size}: done, skipping")
             continue
         rows = evaluate(sp, args, label)
@@ -248,7 +253,7 @@ def cmd_shrink(args):
         path = write_spec(spec, os.path.join(work, f"{stem}__{tag}__{h}.json"))
         label = f"{stem}__{tag}__{h}"
         size = args.size or spec["max"]
-        row = find_row(args.csv, label, args.variant, size) or \
+        row = find_row(args.csv, label, args.variant, size, seeds_tag(args)) or \
             evaluate(path, args, label).get(args.variant)
         return float(row["gap"]), primary(row)
 
@@ -301,7 +306,7 @@ def cmd_bisect(args):
         set_path(spec, args.knob, val)
         label = f"{stem}__{knob}={val:g}"
         path = write_spec(spec, os.path.join(work, label + ".json"))
-        prior = find_row(args.csv, label, args.variant, args.size or spec["max"])
+        prior = find_row(args.csv, label, args.variant, args.size or spec["max"], seeds_tag(args))
         g = float(prior["gap"]) if prior else gap_of(evaluate(path, args, label), args.variant)
         ladder.append((val, g))
         return g
