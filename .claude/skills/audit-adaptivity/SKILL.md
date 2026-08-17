@@ -72,7 +72,7 @@ from an older flat-field layout means the note predates it): `sample` (`Sample`:
 `windowHits`, `probationHits`, `previousHitRate`), `step` (`Step`: `size`), `reactive` and
 `density` (a `ReactiveClimber`/`DensityClimber`, each holding that same `Step`), `walk` (`Walk`,
 null while none is in flight:
-`ladder`, `isAudit`, `down`, `baseWindow`, `baseHitRate`, `baseAnchorRate`,
+`ladder`, `isAudit`, `down`, `baseWindow`, `baseHitRate`, `baseSmoothedRate`,
 `baseProbationDensity`, `samples`, `belowBarStreak`, `aboveStreak`, `beatBase`), `starvation` and
 `audit` (a `Ladder` each: `rung`, `crashStreak`), `auditClock` (`AuditClock`: `down`,
 `waitSamples`, `stillSamples`, `lastWindow`), `anchor` (`Anchor`: `window`, `rate`, `held`,

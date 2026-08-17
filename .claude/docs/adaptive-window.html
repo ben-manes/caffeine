@@ -2892,7 +2892,28 @@ window = max(window + step, 0.02·C)</pre>
   pre-walk reference <b>frozen when the audit armed</b> (the same self-contamination
   logic as the frozen probation baseline) plus the 1% margin floor, <b>and</b> only if
   the walk matched or beat the sample it started from at least once. Otherwise the
-  walk runs out its budget and undoes in full.</div>
+  walk runs out its budget and undoes in full. The reference is the smoothed rate of
+  the position the walk leaves, never the anchor's claim. Whether that position is
+  measurably worse than the anchor is the rail's question, and a claim earned in a
+  regime that has ended is a bar no walk can clear.</div>
+<details class="fold">
+  <summary>The audit measured against the anchor's claim, and what it cost</summary>
+  <p>The claim was the reference for as long as an anchor was planted. It re-syncs to
+    the live rate only while the window stands on the anchor, so a claim planted
+    before a regime shift that lands with the window elsewhere outlives the regime
+    that earned it, and every audit armed away from the anchor was judged against
+    it. On the constructed witness the audit walked from a 23% hit rate to a 53%
+    wall and sat there for ten samples, and failed at budget against a claim of
+    58% (31.2 against a 54.1 ceiling at 128 samples); on a real cloud-physics
+    trace a claim planted while the cache filled held the confirm off a genuine
+    prize and the walk ran past it to the floor (44.1 → 46.1 with the reference
+    it leaves). Measured against the rate it leaves, the witness reads 48.5, sixty
+    of the sixty-eight battery rows are bit-identical at eight seeds, and the rest
+    move by 0.2 or less, or by a redraw. The alternative, discarding the claim on a swing that
+    lands with the window still, is dead: the terrain's own collapse at the position
+    a retreat left the window on is a still swing too, and there the claim is the
+    memory the rail recovers the prize with (see the anchor rules below).</p>
+</details>
 <details class="fold">
   <summary>How the verdict was priced, and the misconfirm the beats-start gate closes</summary>
   <p>The bar is deliberately not priced by the rate deviation the way the rail's is.
@@ -3126,9 +3147,12 @@ window = max(window + step, 0.02·C)</pre>
     the controller having wandered somewhere worse. Distance decides: refute claims
     where they were made. A discarding stand-down also re-seeds the smoothed rate
     and its deviation, because the regime that earned the discarded claim also
-    produced the reference it was measured against.
+    produced the reference it was measured against. Stillness does not decide: a
+    swing that lands with the window motionless is as often the retreat's own echo,
+    or the terrain eroding under a position the retreat left the window on, as it
+    is the workload's, and there the claim is what recovers the prize.
     <details class="fold">
-      <summary>Why the re-seed, and the aging alternatives that died</summary>
+      <summary>Why the re-seed, and the aging and still-discard alternatives that died</summary>
       <p>Re-sync runs only on-anchor, so without the re-seed the claim froze the
         moment steering left the anchor, and with the reference still ~80% composed
         of the ended regime no later audit could confirm at any position (the repro
@@ -3138,7 +3162,17 @@ window = max(window + step, 0.02·C)</pre>
         gentler-looking alternative, aging the claim toward the live rate, is
         measured dead in both forms: symmetric aging lets the claim chase the rate
         upward so no position can ever clear it by the margin that moves the anchor
-        (regimeramp −11.9), and one-sided aging disarms the rail.</p>
+        (regimeramp −11.9), and one-sided aging disarms the rail. Discarding on a
+        still swing fixes the stale-claim witness exactly as the audit's reference
+        change does and costs the moat rows, the rail's own control: on the h4000
+        dose the undo's arrival lands the window inside a band of where it then
+        stands and the collapse arrives one sample later, on h3000 the window sits
+        still for fourteen samples while its hits erode and then break, and both
+        times the discarded claim was the position the rail vetoes home to (0.62
+        kept, 0.46 discarded; −0.7 to −1.9 on every seed with two or three boundaries
+        of stillness required). Re-seeding the goal metric on a still swing while
+        keeping the claim is worse still: the re-seeded deviation reads the shortfall
+        as real and the rail vetoes into the dead anchor within four samples.</p>
     </details></li>
   <li><b>Confirms plant it.</b> A confirmed walk's endpoint becomes the anchor at the
     walk's own measured rate, so the rail can defend a paid-for position from the

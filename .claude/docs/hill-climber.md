@@ -350,6 +350,25 @@ owns it; a confirmed family lands here and in the gate table, and its open direc
   period 12 and the phase offset 26.4 / 28.5 → 44.0 / 43.1). Period 20 stays a 2-of-8 lottery. What
   remains after each escape is the recorded top-corner residual (the down-audit crashing at the cliff and
   the undo's arrival discarding the anchor).
+- **ghostclaim** (`/audit-regret` round 3, 2026-08-17; spec `audit-regret/specs/ghostclaim.json`): two
+  phases, a zipf core with a band 2,000 requests apart and a scan for 28 samples, where density rests
+  at ~43%, then a sleeper population 6,400 apart at half the traffic, caught only past a ~64% window.
+  Static: 19.9 at the start, 54.1 at 70%; LRU 51.8. The stale-claim family's away-anchor case: the
+  calibration audit's down-walk re-syncs the anchor's claim to phase 1's rate as it passes 20%, density
+  holds the window at 43%, and the shift lands with the window still and off the anchor, so the
+  stand-down keeps the claim (the 2026-08-03 carve-out). Seeded 1–8: 41.88 ± 0.17 at 64 samples (the s37
+  up-audit sits at the top for ten samples at +30pp and fails at budget against the claim), 31.24 ± 2.10
+  at 128 (the same claim then vetoes the window to the phase-1 anchor and its hold, the down alternation
+  and the deepest-rung wait pin it), reactive 37.96 (bimodal), noaudit 30.30. Knife edges by
+  construction: the stand-down's band (a phase-1 band share of 0.16 lands the shift on the anchor and the
+  claim is discarded) and the prize's rate against the claim (a sleeper referenced three times clears it).
+  Class 6 with class 4 as the pin. §7's 2026-08-17 audit-regret entry; §8 item 6. **Repaired 2026-08-17**
+  (§7's entry): the audit's walk is measured against the smoothed rate it leaves rather than the anchor's
+  claim (31.24 → 48.45 at 128 samples, above the reactive law; the witness 41.88 → 46.86; `cp_w100` +2.0
+  on the corpus). The discard shape died on the moat rows (§5). What remains is the shift landing on the
+  audit's arm sample or during its walk (`ghostclaim_p35..p40`), where the walk crashes on a
+  contaminated base and the stale veto's hold pins the machine, and an audit arming inside the smoothing
+  horizon after a shift, which measures against a blend of the regimes.
 
 ## 4. The shipped design (the probe machine, >4096)
 
@@ -605,7 +624,7 @@ H4-C1/F2 repairs restored; keep new writes inside their owner:
 | Owner | Fields | Notes |
 |---|---|---|
 | Observation | `sample` (a `Sample`: `hits`, `misses`, `windowHits`, `probationHits`, `previousHitRate`) | the counters are zeroed at sample close; `previousHitRate` deliberately keeps a different lifetime, since it is the memory ACROSS samples that the reactive climber's direction and the walk's bold driver compare against — `close(hitRate)` carries it forward while zeroing the rest, and only `reset()` (a resize) discards it. `WindowClimber` keeps thin `recordHit`/`recordMiss`/`resetSample` delegates because `BoundedLocalCache` calls them on the read and write paths |
-| The active walk | `walk` (a `Walk`, null while none is in flight: `ladder`, `isAudit`, `down`, `baseWindow`, `baseHitRate`, `baseAnchorRate`, `baseProbationDensity`, `samples`, `belowBarStreak`, `aboveStreak`, `beatBase`), `undoRemaining` | one walk at a time. Since 2026-08-02 it is an object rather than eleven flat fields, so "dead state while not probing" is the absent object rather than a comment, and a reader must hold a walk to ask it anything — `armProbe` is the complete constructor, `endWalk` clears the field, and the router keeps the ended walk in a local because the undo that prices it still reads the bases. The bases are `final`: frozen-at-arm is the property the verdict studies keep re-deriving (§4's "why frozen"), so the compiler now holds it. `walk.ladder` is the arming layer's ledger, which makes "an ending may only deepen the machine that produced it" a reference rather than a lookup; `refractoryLeft` is the starvation refractory alone and belongs to the row below |
+| The active walk | `walk` (a `Walk`, null while none is in flight: `ladder`, `isAudit`, `down`, `baseWindow`, `baseHitRate`, `baseSmoothedRate`, `baseProbationDensity`, `samples`, `belowBarStreak`, `aboveStreak`, `beatBase`), `undoRemaining` | one walk at a time. Since 2026-08-02 it is an object rather than eleven flat fields, so "dead state while not probing" is the absent object rather than a comment, and a reader must hold a walk to ask it anything — `armProbe` is the complete constructor, `endWalk` clears the field, and the router keeps the ended walk in a local because the undo that prices it still reads the bases. The bases are `final`: frozen-at-arm is the property the verdict studies keep re-deriving (§4's "why frozen"), so the compiler now holds it. `walk.ladder` is the arming layer's ledger, which makes "an ending may only deepen the machine that produced it" a reference rather than a lookup; `refractoryLeft` is the starvation refractory alone and belongs to the row below |
 | Starvation retry | `starvation` (a `Ladder`: `rung`, `crashStreak`), `refractoryLeft` | moved by starvation endings only (an audit undo re-imposes `refractoryLeft` and an audit confirm cheapens `starvation.rung` — the two journaled bridge writes, spelled out at their sites rather than hidden behind `Ladder`'s methods) |
 | Audit retry + schedule | `audit` (a `Ladder`), `auditClock` (an `AuditClock`: `down`, `waitSamples`, `stillSamples`, `lastWindow`) | moved by audit endings and the position-stillness clock only. The clock owns `tick`/`isDue`/`restart`/`reset`, so the stillness rule (a moving sample **decays** the run, it does not zero it) lives with the counter it governs rather than in a climber method. `reset` deliberately leaves `down` standing — it alternates across audits for coverage and a resize has no opinion about which side to explore next, which is why a resize did not clear it before either. `rescheduleAudit` stays on the climber: it reads the ladder's rung and writes the clock, so it belongs to neither alone |
 | Goal guard | `anchor` (an `Anchor`: `window`, `rate`, `held`, `freshLeft`, `returning`, `returnLeft`, `shortfallStreak`), `rates` (a `Rates`: `smoothed`, `deviation`) | anchor/park/veto authority and the rate references. `Anchor` is the memory *and* its defense in one object because the layer's three invariants run between those parts, and it now holds them by construction rather than by assertion: a shield lives and dies with its park (`park`/`hold`/`release` are the only writers — an audit's confirm arms a shield, a rail veto holds without arming or spending one, since the shield's clock belongs to the confirm that armed it), a park defends only a planted anchor (`discard` takes the hold with it), and a return implies the park that follows it (`beginReturn` arms both). `isAt`/`isAwayFrom` give the band test one definition instead of three inline copies, and they are deliberately not each other's negation — an unplanted anchor is neither at nor away, and there is no claim to veto against. `Rates` owns the EMA pair and the two bars priced off it — `noiseBand()` is the three-deviation width, `vetoMargin()` is that floored at `VETO_MARGIN_MIN` — so the rail's margin and the starvation probe's walk-interior bar read one definition instead of recomputing `VETO_MARGIN_SCALE * deviation` apiece. The deviation is read LIVE, and the audit's confirming streak is deliberately not priced off it; both notes live on `noiseBand()` itself. A stand-down that discards the claim re-seeds the pair (2026-08-03, below): the event that invalidates a claim invalidates the reference the claim would be re-planted from, and the two are one layer's state |
@@ -763,6 +782,24 @@ by construction — victims are always sketch-hotter — and the equilibrium-gat
 and four honest-window-hits verdict forms (absolute / vs-main-average / vs-own-baseline /
 vs-baseline-with-bar-floor), each trading a distinct family — the verdict-design tradeoff surface
 in the study report §6.1. The one survivor SHIPPED: the rung-scaled walk stride (§4.3).
+
+### Killed by the 2026-08-17 ghostclaim repair (measured; the local climber-ghostclaim workspace, §7's entry has the numbers)
+
+- **Discarding the claim on a crash-scale swing that lands with the window still** (`stilldiscard`,
+  `still2`, `still3`, `quiet`): fixes the family exactly as the landed reference change does, and
+  costs the rail's control rows because a still swing is not necessarily the workload's. The one-
+  boundary form mistakes a retreat's echo (`moat_h4000`: the undo arrives, the collapse lands one
+  sample later inside the band, −2.3 / −3.4); two or three boundaries excuse the echo but not the
+  terrain's erosion at a still window (`moat_h3000`: fourteen still samples, the window's hits fall
+  5,662 → 112 with main's flat, then a −7pp break: −0.7 to −1.9 on eight of eight). The claim the
+  swing discards is the machine's memory of the prize the rail then recovers (veto to 0.62 kept,
+  0.46 discarded). Region composition would separate the cases seen (a shift moves main's hits, the
+  terrain's collapse only the window's) and was not built: a second threshold on a heuristic.
+- **Re-seeding the goal metric on a still swing while keeping the claim** (`resetstill`,
+  `freshreset`): the re-seeded deviation prices the shortfall against the kept claim as real, the
+  rail vetoes into the dead anchor within four samples and the audit that then arms from it confirms
+  a mediocre position (`ghostclaim_p30` 41.2 against the reference change's 49.2). The deviation
+  spike a shift leaves is what holds the rail off while the audit walks first.
 
 ### Killed by the 2026-08-17 absolve repair (measured; the local climber-absolve workspace, §7's entry has the numbers)
 
@@ -1577,7 +1614,9 @@ is the authoritative continuation** — the frontier, the gated arm, and the
 rest-point-tracking screen.
 
 Open threads, roughly in order of expected value (each has a ledger entry with its data):
-- **The away-shift stale claim — MEASURED 2026-08-06 (Terra r4); cost zero, parked.** The
+- **The away-shift stale claim — MEASURED 2026-08-06 (Terra r4); cost zero, parked. REOPENED by
+  `/audit-regret` round 3's `ghostclaim` (an audit surviving to its confirm test inside a stale run,
+  the evidence this thread asked for) and CLOSED 2026-08-17: `freshref` landed (§7's entry).** The
   2026-08-03 repair keys on the discard, which happens only when a crash-scale shift lands
   **at** the anchor; a shift arriving while the window is **away** deliberately keeps both the
   claim and the reference (a far crash is usually the controller's own retreat). The r4
@@ -2723,6 +2762,58 @@ itself drifted to a different mechanism on this cell (dropping the band leaves t
 blind, so a density-adjudicated starvation probe finds the wall regardless of the claim), which is
 why the witness stayed the four-member spec.
 
+**2026-08-17 (the `ghostclaim` repair: an audit's walk is measured against the rate it leaves, not
+the anchor's claim).** `armProbe` froze the anchor's claim as the confirm reference whenever an anchor
+was planted, and the smoothed rate only when none was, so an audit armed away from the anchor was
+judged against a rate earned somewhere else, in a regime that may have ended. The walk now freezes
+`rates.smoothed` at the arm on every path (`Walk.baseSmoothedRate`; the field was `baseAnchorRate`).
+Whether the position the walk leaves is measurably worse than the anchor is the guard rail's
+question, and the rail has answered it by not vetoing; `Anchor.rate` is read by the rail and by the
+on-anchor re-sync alone. Seeded 1–8, arms rotated: **`ghostclaim` 31.24 ± 1.48 → 48.45 ± 0.29** (the
+s37 up-audit confirms at s46 against 0.27 and parks at the top; the tail is the top corner's known
+down-audit crash and the C2 discard, §8 item 4; reactive 37.96, LRU 51.75, ceiling 54.09), the
+64-sample witness 41.88 → 46.86 ± 0.59, `band016` 46.5 ± 3.6 → 52.62 ± 0.11, `band018` 46.1 → 51.90,
+the 16384 cell 41.05 → 46.57, `pairdown`, the on-anchor transient and `p16_long` bit-identical, the
+face-(b) cell unchanged (below). Battery, 68 cells at eight seeds: 60 cells bit-identical on every
+seed; `zigzag_s7` +0.22 and `climbtrend_dn` +0.17 on eight of eight, `posjam_j50` +0.08,
+`shieldtrap_s13` −0.20 (one seed −1.59, seven identical), `norank_flood_j100` −0.61 as a redraw
+(−4.61 / −2.39 / −2.11 against +2.45 / +1.76, three identical: the calibration audit's down-walk
+confirms one stride earlier, at 3374 against the smoothed 0.4417, where the claim 0.4731 that
+density's slide had planted at 4578 held it to 2912). Corpus and floors at two seeds: `cp_w100`
+**44.07 → 46.05 on both seeds**, the same face on a real trace (a claim planted at 2750 while the
+cache filled, 0.4417, stood above the top corner's rate, 0.4187 at the arm; the s45 down-audit finds
+0.50 at 8082 but its streak against the claim breaks and the walk runs to the floor and fails at
+budget; against the rate it left it confirms at s50 and parks), `arc_P8` +0.58 / +0.35, `cp_w060`
++0.33 / −0.30, the other fourteen cells identical. Stock build on the row 48.81 / 48.19 (unseeded N=2,
+was 30.56), on the witness 46.6.
+
+The other shape §8 item 6 named, discarding the claim on a still swing, is dead with a mechanism
+(§5): a crash-scale swing at a motionless window is not necessarily the workload's. On `moat_h4000` the
+undo's arrival lands the window inside a band of where it then stands and the retreat's echo arrives
+one sample later (−5.5pp with main's hits flat), on `moat_h3000` the window sits still for fourteen
+samples while its hits erode (5,662 → 1,844 → 112 with main's hits flat) and the rate breaks −7pp,
+and both are the terrain the retreat left the window on, which the rail's claim then recovers by
+veto (0.62; discarded and re-planted at the collapse, the veto goes to 0.46). Two boundaries of
+stillness excuse the echo and nothing excuses the erosion: `moat_h3000` −0.7 to −1.9 on eight of eight
+under `still2` and `still3`, the rail's own control row. Re-seeding the goal metric on a still swing
+while keeping the claim (the residual note's "different objects" direction) unmasks the rail into the
+dead anchor at once, since the re-seeded deviation prices the shortfall as real: `ghostclaim_p30`
+41.2 against 49.2. The deviation spike a shift leaves is what holds the rail off while the audit
+walks first, and it stays.
+
+Two residuals, both timing faces of the family (`ghostclaim_p30..p40` moves the shift against the
+audit's arm at s35–37): a shift landing on the arm sample or during the walk (p35–p40) crashes the
+walk on a base the shift contaminated, the stale claim then vetoes and its hold, the alternation
+sending the retry down and the deepest-rung wait pin the machine, and no arm here helps (p36–p40
+bit-identical across seven arms; p35 seed 2 escapes only under the dead discard); and an audit
+arming inside the smoothing horizon after a shift measures against a blend of the regimes (p34 arms
+one sample after: reference 0.48 against the top's 0.53, and confirms; a prize inside that blend
+would not). Verified: `WindowClimberTest` 127 (the away-shift pin
+`audit_afterAnAwayShift_confirmsAgainstTheNewRegime` red on the anchor reference, green on the
+smoothed one; `audit_confirmUsesReferenceFrozenAtArm` now moves the smoothed rate mid-walk),
+`WindowClimberGateTest`, the fuzzer (1,885 tests, 794k runs). Workspace: the local
+climber-ghostclaim experiment tree.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor
@@ -3024,23 +3115,19 @@ direction after a step confirm, which the guard leaves to the alternation as a m
 `absolve_p20` (a 2-of-8 lottery) and the period-16 form's audit crash on the lure's off-step at other
 doses are the family's open cells. Below item 1 in expected value.
 
-**6. The stale claim's away-anchor case (`ghostclaim`, 2026-08-17; the 2026-08-03 fix's carve-out).**
-`Anchor.standDown` discards a claim only when the crash-scale swing lands on the anchor, because a
-swing far from it is usually the controller's own retreat across a band edge; when it is instead a
-regime shift that lands with the window still and off the anchor, the previous regime's claim survives
-and is then both the reference the next audit's confirm streak is measured against (a walk that finds
-a +30pp position fails at budget) and the reference the guard rail vetoes on (the window dragged to a
-position worse in the new regime and held there while the claim decays by re-sync): 41.9 against 55.1
-at 64 samples, 31.2 against 54.1 at 128, with the hit-rate law ahead on five of eight seeds. What
-separates the two readings of a far swing is whether the window moved. A retreat moves it; this shift
-did not (3,492 → 3,509, inside the band), and that is the distinction the audit clock already draws
-("what must be still is the position, never the rate"). The remedy shape is not aging (§5's two arms
-are dead: symmetric aging freezes the anchor where the window left it, one-sided aging disarms the
-rail) and not a widening; it is which reference the walk is measured against, or which swings discard.
-The recorded controls for any change here are `slowswap_r20`, `regimeramp` and `widepin`, and the
-witness pair is `ghostclaim` against the band-share 0.16 cell where the claim is discarded (4.2). Its
-neighbor `hazefloor` prices item 4's residual on its own (a note in §7's round-3 entry). Below item 1
-in expected value; comparable to item 4.
+**6. The stale claim's away-anchor case (`ghostclaim`, 2026-08-17; the 2026-08-03 fix's carve-out).
+LANDED 2026-08-17 (§7's entry): an audit's walk is measured against the smoothed rate it leaves rather
+than the anchor's claim.** `ghostclaim` 31.2 → 48.5, the 64-sample witness 41.9 → 46.9, `cp_w100` +2.0
+on the corpus, the battery otherwise a redraw on `norank_flood_j100` and +0.2 on two rows. The discard
+shape is dead (§5): stillness does not separate a shift from the terrain's own collapse at the position
+a retreat left the window on, and the moat rows are where the rail's memory pays. What remains, and
+where it lives: a shift landing on the audit's arm sample or during its walk (`ghostclaim_p35..p40`,
+the round's face-(b) cells) crashes the walk on a contaminated base, and the stale claim's veto, its
+hold, the down alternation and the deepest-rung wait then pin the machine, which is the recovery
+layer's thread (item 4's residual, the veto's hold after a claim proves false on arrival, the retry
+direction after a crashed walk); and an audit arming inside the smoothing horizon after a shift
+measures against a blend of the regimes (`p34` clears it by 3.5pp; a smaller prize would not). The
+recorded controls stay `slowswap_r20`, `regimeramp` and `widepin`, all bit-identical.
 
 **Do not reopen** (each has a measured negative with a mechanism): a hysteresis band on the
 reactive reversal (§5); `parkbound` on `shieldtrap`, absent a mechanism for its s7 tail; any

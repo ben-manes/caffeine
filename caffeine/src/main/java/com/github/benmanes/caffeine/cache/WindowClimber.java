@@ -342,13 +342,15 @@ final class WindowClimber {
    * Returns a probe armed for this sample, whose entry stride the caller takes. The caller gates
    * and directs it: a large region earning nothing is visible to density and must not arm one, or a
    * scan-filled main beside a small window earning everything would shrink the one region that is
-   * working.
+   * working. The walk is measured against the smoothed rate of the position it leaves rather than
+   * the anchor's claim. Whether that position is measurably worse than the anchor is the guard
+   * rail's question, and a claim the workload can no longer produce would be a bar no walk could
+   * clear.
    */
   private Walk armProbe(Reading reading, boolean down, boolean isAudit) {
     var ladder = isAudit ? audit : starvation;
-    double rate = anchor.isPlanted() ? anchor.rate : rates.smoothed;
     walk = new Walk(ladder, isAudit, down, reading.windowMax,
-        reading.requestCount, reading.hitRate, rate, reading.probationDensity);
+        reading.requestCount, reading.hitRate, rates.smoothed, reading.probationDensity);
     return walk;
   }
 
@@ -406,7 +408,7 @@ final class WindowClimber {
       walk.ladder.crash();
       return ProbeEnding.CRASHED;
     }
-    walk.aboveStreak = (reading.hitRate > (walk.baseAnchorRate + VETO_MARGIN_MIN))
+    walk.aboveStreak = (reading.hitRate > (walk.baseSmoothedRate + VETO_MARGIN_MIN))
         ? (walk.aboveStreak + 1)
         : 0;
     walk.beatBase |= (reading.hitRate >= walk.baseHitRate);
@@ -919,13 +921,14 @@ final class WindowClimber {
      * and park at the extremes.
      *
      * Confirm. An audit confirms on AUDIT_CONFIRM_STREAK consecutive raw samples above a reference
-     * frozen at the arm, taken at AUDIT_COMMITMENT depth. The streak is not deviation-priced the
-     * way the rail's margin is: the deviation is workload-scale while an audit resolves the
-     * window's few-percent contribution, so a priced bar never fires. The two want opposite
-     * pricings and must not share one, since a false confirm self-heals at the next audit while a
-     * false veto churns the anchor. The streak alone is not sufficient: its reference is absolute
-     * and can be colder than the walk, so a confirm also requires beatBase. That test is inclusive
-     * because a saturating arming sample makes any strictly-greater bar unsatisfiable.
+     * frozen at the arm, the smoothed rate of the position the walk leaves, taken at
+     * AUDIT_COMMITMENT depth. The streak is not deviation-priced the way the rail's margin is: the
+     * deviation is workload-scale while an audit resolves the window's few-percent contribution,
+     * so a priced bar never fires. The two want opposite pricings and must not share one, since a
+     * false confirm self-heals at the next audit while a false veto churns the anchor. The streak
+     * alone is not sufficient: its reference is absolute and can be colder than the walk, so a
+     * confirm also requires beatBase. That test is inclusive because a saturating arming sample
+     * makes any strictly-greater bar unsatisfiable.
      *
      * Verdict. A starvation probe is adjudicated by density once the watched region earns
      * PROBE_EXIT_BAR_MULTIPLE times the starvation bar. An up-probe is priced against main's margin
@@ -967,7 +970,7 @@ final class WindowClimber {
     final boolean isAudit;
     final long baseWindow;
     final double baseHitRate;
-    final double baseAnchorRate;
+    final double baseSmoothedRate;
     final long baseRequestCount;
     final double baseProbationDensity;
 
@@ -977,10 +980,10 @@ final class WindowClimber {
     boolean beatBase;
 
     Walk(Ladder ladder, boolean isAudit, boolean down, long baseWindow, long baseRequestCount,
-        double baseHitRate, double baseAnchorRate, double baseProbationDensity) {
+        double baseHitRate, double baseSmoothedRate, double baseProbationDensity) {
       this.baseProbationDensity = baseProbationDensity;
+      this.baseSmoothedRate = baseSmoothedRate;
       this.baseRequestCount = baseRequestCount;
-      this.baseAnchorRate = baseAnchorRate;
       this.baseHitRate = baseHitRate;
       this.baseWindow = baseWindow;
       this.isAudit = isAudit;

@@ -315,6 +315,20 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   `anchor.returning` in the router, so `returning` is false for the whole drain and both planting
   branches would otherwise claim a position the probe was charged a ladder escalation for
   rejecting. Don't narrow it back to `walk != null`.
+- **An audit's walk is measured against the smoothed rate it leaves, never the anchor's claim**
+  (2026-08-17, `Walk.baseSmoothedRate`). The claim describes another position, possibly in a regime
+  that has ended, and a walk judged against it fails at budget on a position 30pp better than where
+  it started (`ghostclaim`, 31.2 → 48.5; `cp_w100` +2.0 on the corpus, where a claim planted while
+  the cache filled held the confirm off a real prize). Whether the position the walk leaves is
+  measurably worse than the anchor is the guard rail's question, answered by the rail not having
+  vetoed; `Anchor.rate` is read by the rail and by the on-anchor re-sync alone. Don't discard the
+  claim on a still swing instead: a crash-scale swing at a motionless window is the retreat's echo
+  one sample after an undo's arrival (`moat_h4000`) or the terrain's erosion at the position the
+  retreat left the window on (`moat_h3000`, fourteen still samples, −0.7 to −1.9 on eight of eight),
+  and the claim is the memory the rail then recovers the prize with. Don't re-seed the goal metric
+  on a still swing while keeping the claim either: the re-seeded deviation reads the shortfall as
+  real and the rail vetoes into the dead anchor within four samples (`ghostclaim_p30` 41.2 against
+  49.2); the deviation spike a shift leaves is what holds the rail off while the audit walks first.
 - **A starvation confirm the density arm reverses deepens the ladder; it is not a success** (2026-08-15).
   The up-probe's verdict prices the window against the probation density frozen at the arm, the
   steering law prices it against main's average, and where they disagree the confirmed position is

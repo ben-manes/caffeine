@@ -3782,7 +3782,7 @@ final class BoundedLocalCacheTest {
   private static WindowClimber.Walk injectWalk(BoundedLocalCache<?, ?> cache, boolean down,
       long baseWindow, long baseRequestCount, double baseHitRate, double baseProbationDensity) {
     var walk = new WindowClimber.Walk(cache.climber().starvation, /* isAudit= */ false, down,
-        baseWindow, baseRequestCount, baseHitRate, /* baseAnchorRate= */ 0.0,
+        baseWindow, baseRequestCount, baseHitRate, /* baseSmoothedRate= */ 0.0,
         baseProbationDensity);
     cache.climber().walk = walk;
     return walk;

@@ -78,7 +78,7 @@ final class WindowClimberTest {
   void resized_resetsProbeState() {
     var climber = makeClimber();
     injectWalk(climber, /* isAudit= */ false, /* down= */ false,
-        /* baseWindow= */ 1024, /* baseHitRate= */ 0.5, /* baseAnchorRate= */ 0.5).samples = 5;
+        /* baseWindow= */ 1024, /* baseHitRate= */ 0.5, /* baseSmoothedRate= */ 0.5).samples = 5;
     climber.refractoryLeft = 5;
     climber.carryOver(100);
 
@@ -940,12 +940,12 @@ final class WindowClimberTest {
 
   @Test
   void audit_walkThatNeverBeatsItsStart_cannotConfirm() {
-    // the confirm's reference is an absolute rate frozen at arm, and it can be older and colder
-    // than the walk -- most sharply for the cold-start calibration audit, where the anchor still
-    // holds the rate the cache earned while filling. A streak against that stale reference
-    // completes on the warm-up ramp alone, so the confirm also requires the walk to have
-    // out-earned the sample it started from at least once: here every walk sample clears the
-    // stale reference by a wide margin yet none beats the arming rate, and the walk fails.
+    // the confirm's reference is the smoothed rate frozen at arm, and it can be colder than the
+    // walk, most sharply for the cold-start calibration audit, where the smoothing still carries
+    // the rate the cache earned while filling. A streak against that reference completes on the
+    // warm-up ramp alone, so the confirm also requires the walk to have out-earned the sample it
+    // started from at least once: here every walk sample clears the reference by a wide margin
+    // yet none beats the arming rate, and the walk fails.
     var climber = makeClimber();
     for (int i = 0; i < AUDIT_WAIT_INITIAL + 2; i++) {
       steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.70);
@@ -954,7 +954,7 @@ final class WindowClimberTest {
       }
     }
     assertThat(walkOf(climber).isAudit).isTrue();
-    assertThat(rebaseAnchorRate(climber, 0.40).baseHitRate).isEqualTo(0.70);
+    assertThat(rebaseReference(climber, 0.40).baseHitRate).isEqualTo(0.70);
 
     @Var long walked = 2000 + climber.adjustment();
     for (int i = 0; (climber.walk != null) && (i < (2 * PROBE_WALK_BUDGET)); i++) {
@@ -977,7 +977,7 @@ final class WindowClimberTest {
       }
     }
     assertThat(walkOf(climber).isAudit).isTrue();
-    assertThat(rebaseAnchorRate(climber, 0.40).baseHitRate).isEqualTo(1.0);
+    assertThat(rebaseReference(climber, 0.40).baseHitRate).isEqualTo(1.0);
 
     @Var long walked = 2000 + climber.adjustment();
     for (int i = 0; (climber.walk != null) && (i < PROBE_WALK_BUDGET); i++) {
@@ -1035,8 +1035,8 @@ final class WindowClimberTest {
 
   @Test
   void audit_confirmUsesReferenceFrozenAtArm() {
-    // a mid-walk re-plant (or discard) of the live anchor must not move the bar the audit is
-    // judged against; the reference freezes when the probe arms
+    // a mid-walk move of the smoothed rate, or a re-plant of the anchor, must not move the bar the
+    // audit is judged against; the reference freezes when the probe arms
     var climber = makeClimber();
     for (int i = 0; i < AUDIT_WAIT_INITIAL + 2; i++) {
       steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.70);
@@ -1045,6 +1045,7 @@ final class WindowClimberTest {
       }
     }
     assertThat(walkOf(climber).isAudit).isTrue();
+    climber.rates.smoothed = 0.99;
     climber.anchor.rate = 0.99;
 
     @Var long walked = 2000 + climber.adjustment();
@@ -1081,7 +1082,54 @@ final class WindowClimberTest {
     }
     assertThat(armed).isTrue();
     assertThat(walkOf(climber).isAudit).isTrue();
-    assertThat(walkOf(climber).baseAnchorRate).isLessThan(0.25);
+    assertThat(walkOf(climber).baseSmoothedRate).isLessThan(0.25);
+
+    // a position the new regime can actually hold clears the bar and is kept
+    @Var long walked = 5000 + climber.adjustment();
+    for (int i = 0; i < PROBE_WALK_BUDGET; i++) {
+      walked += steadySample(climber, walked, /* hitRate= */ 0.24);
+      if (climber.walk == null) {
+        break;
+      }
+    }
+    assertThat(climber.walk).isNull();
+    assertThat(climber.anchor.held).isTrue();
+    assertThat(climber.anchor.window).isEqualTo(walked);
+  }
+
+  @Test
+  void audit_afterAnAwayShift_confirmsAgainstTheNewRegime() {
+    // the stale claim's away-anchor case end to end: the window rests off the anchor when the
+    // regime shifts, so the swing does not test the claim and the guard keeps it, as it must for
+    // the terrain's own collapses at a still window that the rail then recovers from. Measured
+    // against that claim, an audit that walked to a far better position would fail at budget; the
+    // walk is measured against the rate it left instead, and confirms on the new regime
+    var climber = makeClimber();
+    for (int i = 0; i < 30; i++) {
+      steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.70);
+    }
+    for (int i = 0; i < 4; i++) {
+      steadySample(climber, /* windowMax= */ 5000, /* hitRate= */ 0.70);
+    }
+    steadySample(climber, /* windowMax= */ 5000, /* hitRate= */ 0.20);
+    assertThat(climber.anchor.window).isEqualTo(2000);
+    assertThat(climber.anchor.rate).isWithin(0.01).of(0.70);
+
+    // the clock is not due at the shift, as on the witness, so the smoothing has re-learned the
+    // regime by the time the audit arms
+    climber.auditClock.restart();
+    @Var boolean armed = false;
+    for (int i = 0; i < (2 * AUDIT_WAIT_INITIAL); i++) {
+      steadySample(climber, /* windowMax= */ 5000, /* hitRate= */ 0.20);
+      if (climber.walk != null) {
+        armed = true;
+        break;
+      }
+    }
+    assertThat(armed).isTrue();
+    assertThat(walkOf(climber).isAudit).isTrue();
+    assertThat(climber.anchor.rate).isWithin(0.01).of(0.70);
+    assertThat(walkOf(climber).baseSmoothedRate).isLessThan(0.25);
 
     // a position the new regime can actually hold clears the bar and is kept
     @Var long walked = 5000 + climber.adjustment();
@@ -1104,7 +1152,7 @@ final class WindowClimberTest {
     var climber = makeClimber();
     climber.starvation.rung = 1;
     var walk = injectWalk(climber, /* isAudit= */ true, /* down= */ true,
-        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseAnchorRate= */ 0.99);
+        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.99);
     walk.samples = PROBE_WALK_BUDGET;
     climber.rates.smoothed = 0.70;
     climber.sample.previousHitRate = 0.70;
@@ -1396,7 +1444,7 @@ final class WindowClimberTest {
     climber.auditClock.waitSamples = PROBE_BACKOFF_MAX;
     for (int expectedWait : expected) {
       var walk = injectWalk(climber, /* isAudit= */ true, /* down= */ true,
-          /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseAnchorRate= */ 0.99);
+          /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.99);
       walk.samples = PROBE_WALK_BUDGET;
       climber.rates.smoothed = 0.70;
       climber.sample.previousHitRate = 0.70;
@@ -1418,7 +1466,7 @@ final class WindowClimberTest {
     var climber = makeClimber();
     climber.auditClock.waitSamples = 4 * PROBE_BACKOFF_MAX;
     var walk = injectWalk(climber, /* isAudit= */ true, /* down= */ true,
-        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseAnchorRate= */ 0.99);
+        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.99);
     walk.samples = PROBE_WALK_BUDGET - 10;
     climber.rates.smoothed = 0.70;
     climber.sample.previousHitRate = 0.70;
@@ -1443,7 +1491,7 @@ final class WindowClimberTest {
     climber.auditClock.waitSamples = PROBE_BACKOFF_MAX;
     climber.audit.crashStreak = 1;
     var walk = injectWalk(climber, /* isAudit= */ true, /* down= */ true,
-        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseAnchorRate= */ 0.99);
+        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.99);
     walk.samples = PROBE_WALK_BUDGET - 10;
     climber.rates.smoothed = 0.70;
     climber.sample.previousHitRate = 0.70;
@@ -1473,7 +1521,7 @@ final class WindowClimberTest {
     int[] expectedRung = {PROBE_BACKOFF_INITIAL, 2 * PROBE_BACKOFF_INITIAL, PROBE_BACKOFF_MAX};
     for (int crash = 0; crash < 3; crash++) {
       var walk = injectWalk(climber, /* isAudit= */ true, /* down= */ true,
-          /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseAnchorRate= */ 0.99);
+          /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.99);
       walk.samples = PROBE_WALK_BUDGET - 10;
       climber.rates.smoothed = 0.70;
       climber.sample.previousHitRate = 0.70;
@@ -1498,7 +1546,7 @@ final class WindowClimberTest {
     var climber = makeClimber();
     climber.audit.crashStreak = 1;
     var walk = injectWalk(climber, /* isAudit= */ true, /* down= */ true,
-        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseAnchorRate= */ 0.99);
+        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.99);
     walk.samples = PROBE_WALK_BUDGET - 10;
     climber.rates.smoothed = 0.70;
     climber.sample.previousHitRate = 0.70;
@@ -1516,7 +1564,7 @@ final class WindowClimberTest {
     // rate cannot be satisfied at all and only the budget bounds a walk doing real damage
     var climber = makeClimber();
     injectWalk(climber, /* isAudit= */ true, /* down= */ false,
-        /* baseWindow= */ 1024, /* baseHitRate= */ 0.04, /* baseAnchorRate= */ 0.0);
+        /* baseWindow= */ 1024, /* baseHitRate= */ 0.04, /* baseSmoothedRate= */ 0.0);
     climber.sample.previousHitRate = 0.04;
 
     // 0.033 falls past 0.04 - (AUDIT_BAR_FRACTION * 0.04) but not past the negative 0.04 - 5pp
@@ -1533,7 +1581,7 @@ final class WindowClimberTest {
     // own rate exceeds it keeps the 5pp depth the pricing graveyard is written against
     var climber = makeClimber();
     injectWalk(climber, /* isAudit= */ true, /* down= */ false,
-        /* baseWindow= */ 1024, /* baseHitRate= */ 0.60, /* baseAnchorRate= */ 0.0);
+        /* baseWindow= */ 1024, /* baseHitRate= */ 0.60, /* baseSmoothedRate= */ 0.0);
     climber.sample.previousHitRate = 0.60;
 
     // 0.53 falls past the absolute 5pp but not past the proportional 9pp, so it discriminates:
@@ -1552,7 +1600,7 @@ final class WindowClimberTest {
     // fraction of the arming rate aborts however scattered the workload is
     var climber = makeClimber();
     injectWalk(climber, /* isAudit= */ true, /* down= */ false,
-        /* baseWindow= */ 1024, /* baseHitRate= */ 0.04, /* baseAnchorRate= */ 0.0);
+        /* baseWindow= */ 1024, /* baseHitRate= */ 0.04, /* baseSmoothedRate= */ 0.0);
     climber.rates.smoothed = 0.04;
     climber.rates.deviation = 0.05;
     climber.sample.previousHitRate = 0.04;
@@ -1575,7 +1623,7 @@ final class WindowClimberTest {
     var climber = makeClimber();
     climber.audit.crashStreak = 1;
     var walk = injectWalk(climber, /* isAudit= */ true, /* down= */ false,
-        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseAnchorRate= */ 0.40);
+        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.40);
     climber.rates.smoothed = 0.70;
     climber.sample.previousHitRate = 0.70;
     climber.step.size = STRIDE;
@@ -1604,7 +1652,7 @@ final class WindowClimberTest {
     climber.starvation.crashStreak = 1;
     climber.audit.crashStreak = 1;
     var walk = injectWalk(climber, /* isAudit= */ true, /* down= */ true,
-        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseAnchorRate= */ 0.99);
+        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.99);
     walk.samples = PROBE_WALK_BUDGET;
     climber.rates.smoothed = 0.70;
     climber.sample.previousHitRate = 0.70;
@@ -1628,7 +1676,7 @@ final class WindowClimberTest {
       climber.starvation.crashStreak = 1;
       climber.audit.crashStreak = 1;
       var walk = injectWalk(climber, audit, /* down= */ false,
-          /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseAnchorRate= */ 0.99);
+          /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.99);
       walk.samples = 1;
       climber.rates.smoothed = 0.70;
       climber.rates.deviation = 0.001;
@@ -1652,7 +1700,7 @@ final class WindowClimberTest {
     // invariant this pins; weakening either leaves such a walk unbounded.
     var climber = makeClimber();
     var walk = injectWalk(climber, /* isAudit= */ true, /* down= */ false,
-        /* baseWindow= */ (long) FLOOR, /* baseHitRate= */ 0.06, /* baseAnchorRate= */ 0.99);
+        /* baseWindow= */ (long) FLOOR, /* baseHitRate= */ 0.06, /* baseSmoothedRate= */ 0.99);
     walk.samples = 1;
     climber.rates.smoothed = 0.06;
     climber.rates.deviation = 0.001;
@@ -2160,7 +2208,7 @@ final class WindowClimberTest {
     // holdout and rejected, so this asymmetry is load-bearing
     var climber = makeClimber();
     var walk = injectWalk(climber, /* isAudit= */ true, /* down= */ false,
-        /* baseWindow= */ 1024, /* baseHitRate= */ 0.60, /* baseAnchorRate= */ 0.99);
+        /* baseWindow= */ 1024, /* baseHitRate= */ 0.60, /* baseSmoothedRate= */ 0.99);
     walk.samples = PROBE_WALK_BUDGET - 10;
     climber.step.size = STRIDE;
     climber.rates.smoothed = 0.70;
@@ -2182,7 +2230,7 @@ final class WindowClimberTest {
     for (boolean noisy : new boolean[] {false, true}) {
       var climber = makeClimber();
       var walk = injectWalk(climber, /* isAudit= */ true, /* down= */ false,
-          /* baseWindow= */ 1024, /* baseHitRate= */ 0.04, /* baseAnchorRate= */ 0.99);
+          /* baseWindow= */ 1024, /* baseHitRate= */ 0.04, /* baseSmoothedRate= */ 0.99);
       walk.samples = PROBE_WALK_BUDGET - 10;
       climber.step.size = STRIDE;
       climber.rates.smoothed = 0.05;
@@ -2270,7 +2318,7 @@ final class WindowClimberTest {
     assertThat(climber.starvation.rung).isEqualTo(PROBE_BACKOFF_INITIAL);
 
     var walk = injectWalk(climber, /* isAudit= */ false, /* down= */ true,
-        /* baseWindow= */ 7000, /* baseHitRate= */ 0.5, /* baseAnchorRate= */ 0.0);
+        /* baseWindow= */ 7000, /* baseHitRate= */ 0.5, /* baseSmoothedRate= */ 0.0);
     walk.samples = 1;
     climber.step.size = -STRIDE;
     climber.sample.previousHitRate = 0.5;
@@ -2555,7 +2603,7 @@ final class WindowClimberTest {
     sample(audited, /* windowMax= */ 2000, /* windowHits= */ 500, /* mainHits= */ 400,
         /* misses= */ 100);
     injectWalk(audited, /* isAudit= */ true, /* down= */ true, /* baseWindow= */ 2000,
-        /* baseHitRate= */ 0.5, /* baseAnchorRate= */ 0.5).samples = PROBE_WALK_BUDGET;
+        /* baseHitRate= */ 0.5, /* baseSmoothedRate= */ 0.5).samples = PROBE_WALK_BUDGET;
     audited.sample.previousHitRate = 0.5;
     sample(audited, /* windowMax= */ 1800, /* windowHits= */ 400, /* mainHits= */ 100,
         /* misses= */ 500);
@@ -2875,25 +2923,25 @@ final class WindowClimberTest {
    */
   @CanIgnoreReturnValue
   private static WindowClimber.Walk injectWalk(WindowClimber climber, boolean isAudit,
-      boolean down, long baseWindow, double baseHitRate, double baseAnchorRate) {
+      boolean down, long baseWindow, double baseHitRate, double baseSmoothedRate) {
     var walk = new WindowClimber.Walk(isAudit ? climber.audit : climber.starvation, isAudit, down,
-        baseWindow, /* baseRequestCount= */ 1000, baseHitRate, baseAnchorRate,
+        baseWindow, /* baseRequestCount= */ 1000, baseHitRate, baseSmoothedRate,
         /* baseProbationDensity= */ 0.0);
     climber.walk = walk;
     return walk;
   }
 
   /**
-   * Re-freezes the live walk's anchor reference to the colder rate an audit armed against a stale
-   * anchor would carry. The bases are final by design, since the frozen-at-arm property is the one the
-   * verdict studies keep re-deriving, so this swaps in a copy, carrying the strides already
-   * taken.
+   * Re-freezes the live walk's confirm reference to a rate colder than its start, as an arm whose
+   * smoothed rate lags a warming sample carries. The bases are final by design, since the
+   * frozen-at-arm property is the one the verdict studies keep re-deriving, so this swaps in a
+   * copy, carrying the strides already taken.
    */
   @CanIgnoreReturnValue
-  private static WindowClimber.Walk rebaseAnchorRate(WindowClimber climber, double anchorRate) {
+  private static WindowClimber.Walk rebaseReference(WindowClimber climber, double reference) {
     var armed = walkOf(climber);
     var walk = new WindowClimber.Walk(armed.ladder, armed.isAudit, armed.down, armed.baseWindow,
-        armed.baseRequestCount, armed.baseHitRate, anchorRate, armed.baseProbationDensity);
+        armed.baseRequestCount, armed.baseHitRate, reference, armed.baseProbationDensity);
     walk.samples = armed.samples;
     walk.belowBarStreak = armed.belowBarStreak;
     walk.aboveStreak = armed.aboveStreak;
@@ -2921,7 +2969,7 @@ final class WindowClimberTest {
   private static WindowClimber.Walk reprobe(WindowClimber climber, boolean down,
       long baseWindow, double stepSize, double baseHitRate) {
     var walk = injectWalk(climber, /* isAudit= */ false, down, baseWindow, baseHitRate,
-        /* baseAnchorRate= */ 0.0);
+        /* baseSmoothedRate= */ 0.0);
     walk.samples = 1;
     climber.step.size = stepSize;
     climber.sample.previousHitRate = baseHitRate;
@@ -2992,7 +3040,7 @@ final class WindowClimberTest {
   private static WindowClimber failingDownProbe() {
     var climber = makeClimber();
     injectWalk(climber, /* isAudit= */ false, /* down= */ true, /* baseWindow= */ 7000,
-        /* baseHitRate= */ 0.70, /* baseAnchorRate= */ 0.0).samples = 1;
+        /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.0).samples = 1;
     climber.sample.previousHitRate = 0.70;
     climber.rates.deviation = 0.001;
     climber.rates.smoothed = 0.70;
@@ -3004,7 +3052,7 @@ final class WindowClimberTest {
       double baseHitRate, long baseWindow, double baseProbationDensity) {
     var climber = makeClimber();
     var walk = new WindowClimber.Walk(climber.starvation, /* isAudit= */ false, down, baseWindow,
-        /* baseRequestCount= */ 1000, baseHitRate, /* baseAnchorRate= */ 0.0,
+        /* baseRequestCount= */ 1000, baseHitRate, /* baseSmoothedRate= */ 0.0,
         baseProbationDensity);
     walk.samples = 1;
     climber.walk = walk;
