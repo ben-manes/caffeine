@@ -440,6 +440,21 @@ maintenance/access, and it's sub-millisecond (inside `EXPIRE_TOLERANCE`) unless 
 the ticker per element — it judges keys of the same call at different instants (a downgrade
 of the snapshot) and adds a `nanoTime` read per key on the hot path.
 
+**A hit probes the value future's readiness only where an expiration policy consumes the
+answer.** `hasExpired` returns false before `isComputingAsync` when no policy is configured,
+and the successful-read blocks in `getIfPresent` and `computeIfAbsent`'s optimistic hit test
+`expiresAfterRead()` (access or variable) before their own probe, since `setAccessTime` and
+`tryExpireAfterRead` early-return otherwise. `Async.getIfReady` calls `isDone`,
+`isCompletedExceptionally` and `join`, each an acquire load of `CompletableFuture.result` that
+the JIT cannot elide or coalesce, so a `maximumSize`-only async hit was paying six of them for
+a result no branch could read. Measured on `AsyncGetPutBenchmark.read_only` (M3 Max, JDK 26, 8
+threads, 3 forks, ABA): 238–246M ops/s before, 370–384M after, **+53%**; an acquire load is
+`ldar` on arm64, so x86 should gain less. The probe count per hit is now 0 with no expiration,
+1 for expire-after-write, 2 for expire-after-access and 3 for variable expiry (the extra one is
+`AsyncExpiry.expireAfterRead`'s own `getIfReady`), pinned by
+`BoundedLocalCacheTest.getIfPresent_readinessProbes`. Don't cache the first probe's answer to
+save the second: a future can complete, or be obtruded, between the two observations.
+
 **writeTime uses plain write** (not opaque like accessTime). It's always written
 under `synchronized(node)`, which provides stronger guarantees than opaque.
 
@@ -491,6 +506,39 @@ backlogged node that gets `deschedule`d unlinks transparently (same links), but 
 must move it out of the backlog and back into a wheel bucket, and the flush must tolerate the
 list shrinking under it. That concurrent-mutation surface in the codebase's most intricate
 structure is why it's deferred, not the mechanism itself.
+
+**Collected references are drained at `REFERENCE_THRESHOLD` (1000) per queue per maintenance
+cycle**, then `PROCESSING_TO_REQUIRED` re-arms the backlog like every other budget here. The
+budget counts *polls* rather than evictions, so a run of stale references cannot extend the
+hold, and each queue gets its own so both make progress. This is the expiration cap's shape
+with a different trigger: a garbage collection clears an arbitrary number of keys or values at
+once, with no user action to blame it on, and the drain then ran to exhaustion under
+`evictionLock`. Measured (M3 Max, JDK 26, 1M weak keys cleared and enqueued at once): one
+`cleanUp()` held the lock **130–190 ms**; capped it is 0.12–0.5 ms per cycle over 1000 cycles,
+and a concurrent writer completed 2.8k–81k operations during the backlog where it had completed
+~1,100. The cost is ~45% more total drain time from the extra cycles. **What the cap does not
+do is bound a concurrent operation's wait**: `rescheduleCleanUpIfIncomplete` re-submits
+immediately on the common pool and `evictionLock` is not fair, so the drainer barges back in
+and the backlog as a whole still holds the lock (a probe acquiring and releasing every 100 µs
+got in 2–92 times over the backlog, capped or not). That residual is shared with the expiration
+budget and is a lock-fairness question, not a reason to drop the cap or to widen it.
+
+**The maintenance consumer never waits for a producer's publication.** `MpscGrowableArrayQueue`
+publishes in two steps, a CAS of the producer index and then a release store of the element, and
+the strong `poll()` spins on that element when the index says the queue is non-empty. Both
+consumers (`drainWriteBuffer` and `clear`) hold `evictionLock`, so a producer descheduled
+between those two instructions — a container throttling a thread, say — stalled every other
+policy operation for its whole pause and burned a core doing it. Both use `relaxedPoll()`, which
+returns null instead, and JCTools offers exactly that pairing for a consumer that must not
+block. Nothing is stranded: every production `offer` is `afterWrite`'s, and `scheduleAfterWrite`
+runs after `offer` returns, so the passed-over task is re-armed by its own producer (IDLE →
+REQUIRED, or PROCESSING_TO_IDLE → PROCESSING_TO_REQUIRED, which makes maintenance's final CAS
+fail). `clear` is safe for a second reason: it already abandons the buffer once a concurrent
+writer refills it past `WRITE_BUFFER_MAX / 2`, `AddTask` links only `if (isAlive)`, deque
+removal is contains-guarded, and `makeDead` takes the weight from the node rather than from the
+policy precisely because an update may still be buffered, so a task that outlives the entry it
+describes costs a weight swing that telescopes back to zero. It ends with
+`rescheduleCleanUpIfIncomplete`, which is what carries the remainder forward.
 
 ## Exception Handling
 
@@ -849,9 +897,12 @@ backlog rides that fire rather than stacking a second schedule. An *expiration*
 backlog stays prompt regardless — a >`EXPIRATION_THRESHOLD` backlog leaves an
 already-expired deque/wheel head, so `getExpirationDelay` returns `≤ 0` and
 `expireEntries` already scheduled the pacer at `TOLERANCE` (~1s). Size eviction is
-uncapped (drains fully in one cycle), so it never backlogs. The lone deferral is a
+uncapped (drains fully in one cycle), so it never backlogs. A *reference* backlog defers
+the same way a write-buffer one does, and its entries are already unreachable, so the
+delay costs a late `COLLECTED` notification rather than a stale read. The shape is a
 *write-buffer* backlog (`drainWriteBuffer`'s `WRITE_BUFFER_MAX` cap, reached only when
-a concurrent writer refills during the drain) on a cache whose next expiration is
+a concurrent writer refills during the drain, or its `relaxedPoll` passing over a slot a
+producer has not published) on a cache whose next expiration is
 distant, that then goes idle: the buffered policy tasks — LRU/weight bookkeeping over
 CHM mappings that are *already committed and visible* — wait for that distant fire or
 any later write / read-stripe / `cleanUp`. Worst observable is a transient over-

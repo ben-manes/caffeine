@@ -42,7 +42,6 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
-import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.time.Duration;
@@ -231,6 +230,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final int QUEUE_TRANSFER_THRESHOLD = 1_000;
   /** The maximum number of entries that can be expired per maintenance cycle. */
   static final int EXPIRATION_THRESHOLD = 1_000;
+  /** The maximum number of collected references that can be drained per maintenance cycle. */
+  static final int REFERENCE_THRESHOLD = 1_000;
   /** The maximum time window between touches for expiration updates. */
   static final long EXPIRE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
   /** The maximum duration before an entry expires. */
@@ -473,6 +474,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   /** Returns the {@link Pacer} used to schedule the maintenance task. */
   protected @Nullable Pacer pacer() {
     return null;
+  }
+
+  /** Returns if the cache expires entries by any of its policies. */
+  final boolean expires() {
+    return expiresAfterAccess() || expiresAfterWrite() || expiresVariable();
+  }
+
+  /** Returns if a read may extend when the entry expires. */
+  final boolean expiresAfterRead() {
+    return expiresAfterAccess() || expiresVariable();
   }
 
   /** Returns if the cache expires entries after a variable time threshold. */
@@ -1002,7 +1013,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   /** Returns if the entry has expired. */
   @SuppressWarnings("ShortCircuitBoolean")
   boolean hasExpired(Node<K, V> node, long now, V value) {
-    if (isComputingAsync(value)) {
+    if (!expires() || isComputingAsync(value)) {
       return false;
     }
     return (expiresAfterAccess() && (now - node.getAccessTime() >= expiresAfterAccessNanos()))
@@ -1805,13 +1816,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (!collectKeys()) {
       return;
     }
-    @Var Reference<? extends K> keyRef;
-    while ((keyRef = keyReferenceQueue().poll()) != null) {
+    for (int i = 0; i <= REFERENCE_THRESHOLD; i++) {
+      var keyRef = keyReferenceQueue().poll();
+      if (keyRef == null) {
+        return;
+      }
       Node<K, V> node = data.get(keyRef);
       if (node != null) {
         evictEntry(node, RemovalCause.COLLECTED, 0L);
       }
     }
+    setDrainStatusOpaque(PROCESSING_TO_REQUIRED);
   }
 
   /** Drains the weak / soft value references queue. */
@@ -1820,8 +1835,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (!collectValues()) {
       return;
     }
-    @Var Reference<? extends V> valueRef;
-    while ((valueRef = valueReferenceQueue().poll()) != null) {
+    for (int i = 0; i <= REFERENCE_THRESHOLD; i++) {
+      var valueRef = valueReferenceQueue().poll();
+      if (valueRef == null) {
+        return;
+      }
       @SuppressWarnings("unchecked")
       var ref = (InternalReference<V>) valueRef;
       Node<K, V> node = data.get(ref.getKeyReference());
@@ -1829,6 +1847,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         evictEntry(node, RemovalCause.COLLECTED, 0L);
       }
     }
+    setDrainStatusOpaque(PROCESSING_TO_REQUIRED);
   }
 
   /** Drains the read buffer. */
@@ -1909,7 +1928,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @GuardedBy("evictionLock")
   void drainWriteBuffer() {
     for (int i = 0; i <= WRITE_BUFFER_MAX; i++) {
-      Runnable task = writeBuffer.poll();
+      Runnable task = writeBuffer.relaxedPoll();
       if (task == null) {
         return;
       }
@@ -2137,9 +2156,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       // Discard all pending reads
       readBuffer.drainTo(e -> {});
 
-      // Apply all pending writes
-      @Var Runnable task;
-      while ((task = writeBuffer.poll()) != null) {
+      // Apply the pending writes
+      for (var task = writeBuffer.relaxedPoll(); task != null; task = writeBuffer.relaxedPoll()) {
         task.run();
       }
 
@@ -2283,7 +2301,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return null;
     }
 
-    if (!isComputingAsync(value)) {
+    if (expiresAfterRead() && !isComputingAsync(value)) {
       @SuppressWarnings("unchecked")
       var castedKey = (K) key;
       setAccessTime(node, now);
@@ -2771,7 +2789,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if (node != null) {
       V value = node.getValue();
       if ((value != null) && !hasExpired(node, now, value)) {
-        if (!isComputingAsync(value)) {
+        if (expiresAfterRead() && !isComputingAsync(value)) {
           tryExpireAfterRead(node, key, value, expiry(), now);
           setAccessTime(node, now);
         }

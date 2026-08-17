@@ -243,6 +243,37 @@ final class AsyncCacheFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void completion_zeroExpiry_concurrentCleanup() throws InterruptedException {
+    var ticker = new FakeTicker();
+    AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .expireAfter(Expiry.creating((key, value) -> Duration.ZERO))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(10)
+        .buildAsync();
+    var future = new CompletableFuture<Integer>();
+    cache.put(1, future);
+
+    var threadA = new Thread(() -> future.complete(42));
+    var threadB = new Thread(() -> cache.synchronous().cleanUp());
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+
+    // the completion sets the entry's real duration, so a zero-duration value is expired as soon
+    // as it arrives; the wheel sweeps it once the clock passes its bucket
+    assertThat(cache.synchronous().getIfPresent(1)).isNull();
+
+    ticker.advance(Duration.ofMinutes(1));
+    cache.synchronous().cleanUp();
+
+    assertThat(cache.synchronous().estimatedSize()).isEqualTo(0);
+    assertThat(cache).isValid();
+  }
+
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
   void cancellation_cleanup() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)

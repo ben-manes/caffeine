@@ -16,6 +16,25 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   never the cascade, and a cascade cap must never reuse the rewind (it livelocks). Don't flag it
   as under-expiring or remove the re-arm. Read the doc.
 - **Transient negative weightedSize** is acceptable eventual consistency. Instead verify convergence after maintenance completes.
+- **Collected references are drained at `REFERENCE_THRESHOLD` (1000) per queue per maintenance
+  cycle**, counting polls rather than evictions, then re-armed with `PROCESSING_TO_REQUIRED`. A
+  garbage collection can clear an arbitrary number of entries at once, and the drain otherwise ran
+  to exhaustion under `evictionLock` (130–190 ms for 1M cleared keys). The cap bounds the *hold*,
+  not a concurrent operation's *wait*: the re-arm re-submits immediately and the lock is not fair,
+  so the backlog still monopolizes it. Don't read that residual as the cap failing, and don't
+  raise the budget to "make the drain finish" — the slicing is the point.
+- **Neither write-buffer consumer waits for a producer's publication.** `drainWriteBuffer` and
+  `clear` both use `relaxedPoll()`, so a producer descheduled between its index CAS and its
+  element store no longer spins the lock holder. The task is not stranded: `scheduleAfterWrite`
+  runs after `offer` returns and re-arms the drain. Don't restore the strong `poll()` in either
+  place; `clear` in particular does not need exhaustiveness, since it already abandons the buffer
+  at `WRITE_BUFFER_MAX / 2`, `AddTask` links only when the node is alive, and `makeDead` reads the
+  weight from the node so a late task telescopes back to zero.
+- **A hit probes the value future's readiness only where an expiration policy reads the answer**
+  (`hasExpired` tests `expires()` first, the read blocks test `expiresAfterRead()`). Six acquire
+  loads of `CompletableFuture.result` per `maximumSize`-only async hit were dead; removing them is
+  +53% on `AsyncGetPutBenchmark.read_only`. Don't cache one probe's answer for the other — a
+  future can complete or be obtruded in between.
 - **accessTime uses opaque write (not CAS)** to avoid contention storms. Instead verify that stale reads cause only benign early expiration.
 - **Read-path expiry extension can briefly resurrect a just-expired entry** (`tryExpireAfterRead`'s `casVariableTime`, or `setAccessTime`) — accepted, not a bug. A reader that saw the entry live and then extends it can land the write just after the entry crossed its boundary, leaving it visible slightly later than expiry. Inherent to lock-free read-extension over lazy expiration (the CAS only checks the field is unchanged, so it can't reject an expired entry; a fresh-clock guard before the write still races a context switch — only a read-path lock, rejected, closes it). Wide window needs a slow `expireAfterRead` (callback misuse). "Never later" is best-effort here; over-stay is bounded by one duration and self-heals on maintenance. Don't add a *fresh-clock* re-check guard (distinct from the load-bearing `node.getValue() == value` value-identity check that blocks rebinding a read duration onto a replaced value — keep that one).
 - **`maximum` and `weightedSize` have a plain reader and an acquire reader, and no public-facing

@@ -41,7 +41,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -77,12 +76,11 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
     "PreferredInterfaceType", "PreferredInterfaceType", "PrivateConstructorForUtilityClass",
     "rawtypes", "RedundantStringConversion", "unchecked", "UnnecessaryFinal", "unused",
     "Var", "Varifier", "YodaCondition"})
-@SuppressFBWarnings({"DLS_DEAD_LOCAL_STORE", "ES_COMPARING_PARAMETER_STRING_WITH_EQ",
-    "ES_COMPARING_STRINGS_WITH_EQ", "IMC_IMMATURE_CLASS_COLLECTION_RETURN",
-    "LUI_USE_SINGLETON_LIST", "PSC_PRESIZE_COLLECTIONS", "MUI_CALLING_SIZE_ON_SUBCONTAINER",
-    "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE", "PSC_SUBOPTIMAL_COLLECTION_SIZING",
-    "RC_REF_COMPARISON", "UP_UNUSED_PARAMETER", "UPM_UNCALLED_PRIVATE_METHOD",
-    "UTAO_TESTNG_ASSERTION_ODDITIES_ACTUAL_CONSTANT"})
+@SuppressFBWarnings({"ES_COMPARING_PARAMETER_STRING_WITH_EQ", "ES_COMPARING_STRINGS_WITH_EQ",
+    "IMC_IMMATURE_CLASS_COLLECTION_RETURN", "LUI_USE_SINGLETON_LIST", "PSC_PRESIZE_COLLECTIONS",
+    "MUI_CALLING_SIZE_ON_SUBCONTAINER", "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE",
+    "PSC_SUBOPTIMAL_COLLECTION_SIZING", "RC_REF_COMPARISON", "UP_UNUSED_PARAMETER",
+    "UPM_UNCALLED_PRIVATE_METHOD", "UTAO_TESTNG_ASSERTION_ODDITIES_ACTUAL_CONSTANT"})
 public class Defaults {
 
     @Test(dataProvider = "Map<IntegerEnum,String> rw=all keys=withNull values=withNull")
@@ -900,7 +898,7 @@ public class Defaults {
         return Arrays.asList(
             // null key and value hostile
             new Object[]{"Bounded", makeMap(bounded, false, false)},
-            new Object[]{"Unbounded", makeMap(Hashtable::new, false, false)}
+            new Object[]{"Unbounded", makeMap(unbounded, false, false)}
 
 
 //            new Object[]{"Hashtable", makeMap(Hashtable::new, false, false)},

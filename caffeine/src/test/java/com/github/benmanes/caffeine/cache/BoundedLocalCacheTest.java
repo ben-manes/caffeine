@@ -21,12 +21,17 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_REQUIRED;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
+import static com.github.benmanes.caffeine.cache.BaseMpscLinkedArrayQueue.lvProducerIndex;
+import static com.github.benmanes.caffeine.cache.BaseMpscLinkedArrayQueue.modifiedCalcElementOffset;
+import static com.github.benmanes.caffeine.cache.BaseMpscLinkedArrayQueue.soElement;
+import static com.github.benmanes.caffeine.cache.BaseMpscLinkedArrayQueue.soProducerIndex;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.ADMIT_HASHDOS_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRATION_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_TOLERANCE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.MAXIMUM_EXPIRY;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.QUEUE_TRANSFER_THRESHOLD;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.REFERENCE_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WARN_AFTER_LOCK_WAIT_NANOS;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.WRITE_BUFFER_MAX;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.isRefreshing;
@@ -652,6 +657,70 @@ final class BoundedLocalCacheTest {
     }
   }
 
+  @Test
+  void drainKeyReferences_capped() {
+    var cache = asBoundedLocalCache(Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .maximumSize(10_000)
+        .weakKeys()
+        .build());
+    var entries = new ArrayList<Int>();
+    for (int i = 0; i < 2_500; i++) {
+      var key = Int.valueOf(i);
+      var prior = cache.put(key, key);
+      assertThat(prior).isNull();
+      entries.add(key);
+    }
+
+    // a garbage collection cleared the cache's keys all at once; the list holds them until then
+    for (var node : cache.data.values()) {
+      var keyReference = (Reference<?>) node.getKeyReference();
+      keyReference.clear();
+      assertThat(keyReference.enqueue()).isTrue();
+    }
+    assertThat(cache.data).hasSize(entries.size());
+
+    cache.cleanUp();
+    assertThat(cache.data).hasSize(2_500 - (REFERENCE_THRESHOLD + 1));
+    assertThat(cache.drainStatus).isEqualTo(REQUIRED);
+
+    cache.cleanUp();
+    cache.cleanUp();
+    assertThat(cache.data).isEmpty();
+  }
+
+  @Test
+  void drainValueReferences_capped() {
+    var cache = asBoundedLocalCache(Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .maximumSize(10_000)
+        .weakValues()
+        .build());
+    var entries = new ArrayList<Int>();
+    for (int i = 0; i < 2_500; i++) {
+      var value = Int.valueOf(-i);
+      var prior = cache.put(Int.valueOf(i), value);
+      assertThat(prior).isNull();
+      entries.add(value);
+    }
+
+    // a garbage collection cleared the cache's values all at once; the list holds them until then
+    for (var node : cache.data.values()) {
+      var valueReference = (Reference<?>) node.getValueReference();
+      valueReference.clear();
+      assertThat(valueReference.enqueue()).isTrue();
+    }
+    assertThat(cache.data).hasSize(entries.size());
+
+    cache.cleanUp();
+    assertThat(cache.data).hasSize(2_500 - (REFERENCE_THRESHOLD + 1));
+    assertThat(cache.drainStatus).isEqualTo(REQUIRED);
+
+    cache.cleanUp();
+    cache.cleanUp();
+    assertThat(cache.data).isEmpty();
+  }
+
   @ParameterizedTest
   @CheckMaxLogLevel(ERROR)
   @SuppressFBWarnings("MDM_LOCK_ISLOCKED")
@@ -903,6 +972,47 @@ final class BoundedLocalCacheTest {
     assertThat(cache.evictionLock.isLocked()).isFalse();
     assertThat(queued[0]).isEqualTo(WRITE_BUFFER_MAX);
     assertThat(triggered[0]).isEqualTo(WRITE_BUFFER_MAX + 1);
+  }
+
+  @Test
+  @SuppressWarnings("PMD.LooseCoupling")
+  void drainWriteBuffer_unpublishedTask() {
+    var cache = asBoundedLocalCache(Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .maximumSize(100)
+        .build());
+    var ran = new AtomicBoolean();
+    Runnable task = () -> ran.set(true);
+
+    // a producer reserved the buffer's head and was descheduled before publishing its task
+    BaseMpscLinkedArrayQueue<?> buffer = cache.writeBuffer;
+    Object[] elements = requireNonNull(buffer.producerBuffer);
+    long index = lvProducerIndex(buffer);
+    long offset = modifiedCalcElementOffset(index, buffer.producerMask);
+    soProducerIndex(buffer, index + 2);
+
+    var drained = new AtomicBoolean();
+    var consumer = new Thread(() -> {
+      cache.evictionLock.lock();
+      try {
+        cache.drainWriteBuffer();
+      } finally {
+        cache.evictionLock.unlock();
+      }
+      drained.set(true);
+    });
+    consumer.setDaemon(true);
+    consumer.start();
+    try {
+      await().untilTrue(drained);
+    } finally {
+      // publish, releasing a consumer that waited for the element rather than returning
+      soElement(elements, offset, task);
+    }
+
+    assertThat(ran.get()).isFalse();
+    cache.cleanUp();
+    assertThat(ran.get()).isTrue();
   }
 
   @Test @CheckMaxLogLevel(ERROR)
@@ -2675,6 +2785,45 @@ final class BoundedLocalCacheTest {
     assertThat(cache.readBuffer.reads()).isEqualTo(1);
   }
 
+  @Test
+  void getIfPresent_readinessProbes() {
+    // an async hit inspects the future only where an expiration policy consumes the answer
+    Executor discarding = task -> {};
+    assertThat(readinessProbes(Caffeine.newBuilder().executor(discarding)
+        .maximumSize(100).buildAsync())).isEqualTo(0);
+    assertThat(readinessProbes(Caffeine.newBuilder().executor(discarding)
+        .maximumSize(100).expireAfterWrite(Duration.ofDays(1)).buildAsync())).isEqualTo(1);
+    assertThat(readinessProbes(Caffeine.newBuilder().executor(discarding)
+        .maximumSize(100).expireAfterAccess(Duration.ofDays(1)).buildAsync())).isEqualTo(2);
+    assertThat(readinessProbes(Caffeine.newBuilder().executor(discarding).maximumSize(100)
+        .expireAfter(Expiry.writing((Int key, Int value) -> Duration.ofDays(1)))
+        .buildAsync())).isEqualTo(3);
+  }
+
+  /**
+   * Returns how often a hit inspected the completion state of the entry's future. The cache
+   * discards its maintenance task so that only the read path is counted.
+   */
+  private static int readinessProbes(AsyncCache<Int, Int> cache) {
+    var probes = new AtomicInteger();
+    var future = new CompletableFuture<Int>() {
+      @Override public boolean isDone() {
+        probes.incrementAndGet();
+        return super.isDone();
+      }
+    };
+    future.complete(Int.valueOf(1));
+
+    cache.put(Int.valueOf(1), future);
+    var localCache = asBoundedLocalCache(cache);
+    localCache.cleanUp();
+
+    probes.set(0);
+    var value = localCache.getIfPresent(Int.valueOf(1), /* recordStats= */ false);
+    assertThat(value).isSameInstanceAs(future);
+    return probes.get();
+  }
+
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
   void drain_onRead(BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -4199,6 +4348,62 @@ final class BoundedLocalCacheTest {
 
     writerDone.join();
     assertThat(node.getVariableTime()).isEqualTo(now + ASYNC_EXPIRY);
+  }
+
+  @Test
+  void computeIfAbsent_expiredOptimistic_liveUnderLock() {
+    var ticker = new FakeTicker();
+    var removed = new ArrayList<Int>();
+    Cache<Int, Int> cache = Caffeine.newBuilder()
+        .removalListener((@Nullable Int key, @Nullable Int value, RemovalCause cause) ->
+            removed.add(key))
+        .expireAfterAccess(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .recordStats()
+        .build();
+    var localCache = asBoundedLocalCache(cache);
+
+    var key = Int.valueOf(1);
+    var value = Int.valueOf(100);
+    cache.put(key, value);
+    var node = requireNonNull(localCache.data.get(localCache.nodeFactory.newLookupKey(key)));
+
+    // Expire the entry so that computeIfAbsent's optimistic read falls through to the locked
+    // recheck, then stand in for the concurrent write that makes the entry live again before it
+    // is reached. The mapping function must not run and the entry must not be evicted.
+    ticker.advance(Duration.ofMinutes(2));
+    long now = ticker.read();
+
+    var reader = new AtomicReference<@Nullable Thread>();
+    var started = new AtomicBoolean();
+    var mappings = new AtomicInteger();
+
+    CompletableFuture<Int> readerDone;
+    synchronized (node) {
+      readerDone = CompletableFuture.supplyAsync(() -> {
+        reader.set(Thread.currentThread());
+        await().untilTrue(started);
+        return cache.get(key, k -> {
+          mappings.incrementAndGet();
+          return Int.valueOf(-1);
+        });
+      }, executor);
+
+      started.set(true);
+      await().until(() -> {
+        var thread = reader.get();
+        return (thread != null) && (thread.getState() == BLOCKED);
+      });
+
+      node.setAccessTime(now);
+    }
+
+    assertThat(readerDone.join()).isEqualTo(value);
+    assertThat(mappings.get()).isEqualTo(0);
+    assertThat(removed).isEmpty();
+    assertThat(cache.stats().evictionCount()).isEqualTo(0);
+    assertThat(cache).isValid();
   }
 
   @ParameterizedTest
