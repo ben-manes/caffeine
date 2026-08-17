@@ -1,0 +1,15 @@
+{
+  "max": 8192,
+  "seed": 7,
+  "repeat": 1,
+  "members": {
+    "core": {"kind": "zipf", "n": 0.6, "alpha": 0.95},
+    "band": {"kind": "pairs", "dreq": 2000, "k": 2},
+    "cold": {"kind": "scan"},
+    "sleeper": {"kind": "pairs", "dreq": 6400, "k": 2}
+  },
+  "segments": [
+    {"samples": 28, "shares": {"core": 0.5, "band": 0.36, "cold": 0.14, "sleeper": 0.0}},
+    {"samples": 100, "shares": {"core": 0.3, "band": 0.1, "cold": 0.1, "sleeper": 0.5}}
+  ]
+}

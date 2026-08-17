@@ -2664,6 +2664,65 @@ the C2 discard accidentally corrects on `demoflood` and why `arrive` cannot land
 not worked. Verified: `WindowClimberTest` (five pins added), `WindowClimberGateTest`, the fuzzer
 (1,535 tests, 735k runs), the stock build on the two witnesses (41.48 / 46.38).
 
+**2026-08-17 (`/audit-regret` round 3, the skill's third run; report in the fable-5 audit tree).**
+Three proposal lanes (sighted and blind on Opus, a third non-blocking lane on the session model that
+delivered three specs in nine minutes), seventeen specs, one finding and one note, evaluated on the
+session model. **`ghostclaim`** (a gate row; the sighted lane's `s_pairup`, aimed at an aliasing pair):
+the stale-claim family's away-anchor case, priced. Two phases: a core, a band 2,000 requests apart and
+a scan for 28 samples, where density rests at ~43%; then a sleeper population 6,400 requests apart at
+half the traffic, caught only past a ~64% window (0.52–0.53 at the top corner against 0.21–0.23 at
+20–43%). The calibration audit's down-walk re-syncs the anchor's claim to phase 1's rate as it passes
+the anchor at 20% (s16); density then holds the window at 43%, off the anchor, and the claim freezes;
+the shift at s28 lands with the window still and off the anchor, so `standDown` releases the claim
+without discarding it (the 2026-08-03 carve-out: a crash-scale swing far from the anchor is "usually
+the controller's own retreat"; a retreat moves the window, and this shift did not); the s37 up-audit
+crosses the wall at s43 and sits at the top for ten samples earning 0.52–0.53, but `armProbe` had
+taken the planted claim (0.5776) over the smoothed rate (0.27) as `baseAnchorRate`, so the confirm
+streak, which counts only samples above the reference plus a point, never starts (the walk's `mode`
+suffix reads `auditWalk0` throughout) and the walk fails at budget (s53). Seeded 1–8 at 64 samples
+41.88 ± 0.17 against 55.08 @70% (reactive 34.66, noaudit 37.47; the audit layer +4.4 for the ten
+samples at the top). At 128 samples (the row) the same claim then vetoes the window to the phase-1
+anchor at 20% (s65), worse in phase 2 (0.15 against 0.21), the veto's hold pins it while the claim
+decays by re-sync, the alternation sends the s84 audit down into the floor wall, its deepest-rung
+failure doubles the wait to 128, and the machine is held at 20% to the end: **31.24 ± 2.10** against
+54.09 @70% and LRU 51.75 (seeds 2/5 re-escape at s125 through a floor probe and a rung-2 up-audit),
+reactive 37.96 ± 6.77 (the hit-rate law crosses the wall on five seeds), noaudit 30.30. Two knife
+edges, both by construction: the stand-down's `isAt` band (phase-1 band share 0.18 → 12.6, 0.16 → 4.2:
+where density's phase-1 rest point sits within the band of the anchor when the shift lands, the claim
+is discarded and the audit confirms at s39) and the prize's rate against the claim (a sleeper referenced
+three times instead of two lifts the top to 0.628 > 0.5876 and the same audit confirms at s47). The
+neighborhood is three mechanisms (six witness cells at 11.6–13.1; three cells whose phase-1 audit is
+at the top when the shift lands and crashes on its own frozen base before the stale veto; six cells
+where the shift lands on the anchor and the claim is discarded, leaving a 10.6pp audit-cadence
+transient; three shielded phase-1 parks at 16384 that survive the shift, on a 0.6pp razor of the
+phase-1 top rate). Class 6 (`Anchor.rate`, read by `Walk.isConfirmed`'s reference and by the guard
+rail) with class 4 as the pin; §8 item 6. **`hazefloor`** (a note, not rowed): a uniform haze, a
+core, a band 7,200 requests apart and a scan, static flat 33.7 → 32.5 to 50% then 51.45 @70%: the
+calibration audit crosses and parks at the top by s24, and the rest of the run is §8 item 4's residual
+by itself: the corner audit forced down (the follow rule cannot apply at the top corner), the crash at
+the cliff, the undo's arrival discarding the anchor, density's slide off the cliff, the floor's ×1
+walks failing against the haze, the rung-16 audit re-crossing at ~s129; 42.68 ± 3.95 at 80 samples (a
+reach lottery: five seeds through the calibration audit, two through a failed down-audit first, one
+through a flat-walk misconfirm at 32%), 42.70 ± 1.25 at 160 (three shapes: the crash cycle, a
+reversal-escalated ×2 audit crossing the cliff in two strides, the veto/drift cycle whose replanted
+anchor ratchets toward the cliff), reactive 35.3, noaudit 34.2. A sentinel candidate for the residual
+at fixed seeds with per-seed bars, after an x4 run and a 60/65% re-sweep. Dropped: `s_farecho` (a
+lure at 40% pulsed at period 8 flips the sample rate by 20pp, so every walk armed in the off phase
+crash-aborts the moment the on phase returns, the level test across a phase boundary at an extreme
+dose, and density slams the window home each off phase), `f_ghostlure` (the density chase of a period-8
+lure; the repeat-confirm memory never accumulates because a failed walk forgets it), the lag-limit
+alternations (`b_seesaw`, `b_stradchase`), `f_cornerloop` (the band needs the top corner), and the
+new-rule attacks that read clean: `b_farmemory` (era 2's rest point is interior, the memory is never
+re-tested), `b_pulseconfirm` / `s_falsefollow` (no park ever forms for the follow rule to point),
+`f_crestshelf` / `s_crestjump` (the calibration audit's overshoot lands on a flat shelf). Nothing was
+fixed. Instrument notes: `regret.py --windows` sweeps and caches extra static windows (the dense
+re-sweep the round-2 note asked for); `search.py`'s shrink no longer aborts on a member drop that
+leaves a segment without a positive share and prefers a firm hint over an uncertain one when it
+names the class to preserve (the first pass here had chosen `irreversible-damage?/…`); the shrink
+itself drifted to a different mechanism on this cell (dropping the band leaves the phase-2 floor
+blind, so a density-adjudicated starvation probe finds the wall regardless of the claim), which is
+why the witness stayed the four-member spec.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor
@@ -2964,6 +3023,24 @@ or past where it should and what the C2 discard accidentally corrects on `demofl
 direction after a step confirm, which the guard leaves to the alternation as a measured coin flip.
 `absolve_p20` (a 2-of-8 lottery) and the period-16 form's audit crash on the lure's off-step at other
 doses are the family's open cells. Below item 1 in expected value.
+
+**6. The stale claim's away-anchor case (`ghostclaim`, 2026-08-17; the 2026-08-03 fix's carve-out).**
+`Anchor.standDown` discards a claim only when the crash-scale swing lands on the anchor, because a
+swing far from it is usually the controller's own retreat across a band edge; when it is instead a
+regime shift that lands with the window still and off the anchor, the previous regime's claim survives
+and is then both the reference the next audit's confirm streak is measured against (a walk that finds
+a +30pp position fails at budget) and the reference the guard rail vetoes on (the window dragged to a
+position worse in the new regime and held there while the claim decays by re-sync): 41.9 against 55.1
+at 64 samples, 31.2 against 54.1 at 128, with the hit-rate law ahead on five of eight seeds. What
+separates the two readings of a far swing is whether the window moved. A retreat moves it; this shift
+did not (3,492 → 3,509, inside the band), and that is the distinction the audit clock already draws
+("what must be still is the position, never the rate"). The remedy shape is not aging (§5's two arms
+are dead: symmetric aging freezes the anchor where the window left it, one-sided aging disarms the
+rail) and not a widening; it is which reference the walk is measured against, or which swings discard.
+The recorded controls for any change here are `slowswap_r20`, `regimeramp` and `widepin`, and the
+witness pair is `ghostclaim` against the band-share 0.16 cell where the claim is discarded (4.2). Its
+neighbor `hazefloor` prices item 4's residual on its own (a note in §7's round-3 entry). Below item 1
+in expected value; comparable to item 4.
 
 **Do not reopen** (each has a measured negative with a mechanism): a hysteresis band on the
 reactive reversal (§5); `parkbound` on `shieldtrap`, absent a mechanism for its s7 tail; any

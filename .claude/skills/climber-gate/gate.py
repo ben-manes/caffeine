@@ -113,6 +113,11 @@ CELLS = [
     # 8, 256 samples) is the absorbing form where every confirm is kept and the rung is pinned at 1
     ("absolve", "absolve_8192.lirs", 8192, 2),
     ("absolve_p8", "absolve_p8_8192.lirs", 8192, 2),
+    # /audit-regret round 3 (2026-08-17): the stale-claim family's away-anchor witness. A regime
+    # shift lands with the window off the anchor, the stand-down keeps the phase-1 claim, the audit
+    # walk that then finds a +30pp position cannot confirm against it, and the guard rail's veto
+    # on the same claim drags the window to a position worse in the new regime (128 samples)
+    ("ghostclaim", "ghostclaim_8192.lirs", 8192, 2),
 ]
 
 

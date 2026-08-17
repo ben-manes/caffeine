@@ -150,6 +150,11 @@ class Member:
         raise AssertionError(k)
 
 
+def base_share(entry):
+    """A segment share entry's unmodulated share (number or {share, mod})."""
+    return float(entry) if isinstance(entry, (int, float)) else float(entry["share"])
+
+
 def weight(entry, t, seg_samples):
     """A segment share entry (number or {share, mod}) evaluated at segment time t (samples)."""
     if isinstance(entry, (int, float)):

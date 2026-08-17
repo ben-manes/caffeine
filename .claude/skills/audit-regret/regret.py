@@ -4,7 +4,9 @@
 Regret is measured against what the climber could have earned, not against LRU or an absolute
 hit rate. Anchors, all from one static sweep of `sketch.WindowTinyLfu` plus `linked.Lru`:
   start    the static window the product starts at (1%, or --start for a planted window)
-  ceiling  the best static window in the reachable range (1..80%; the window cannot exceed 80%)
+  ceiling  the best static window in the reachable range (1..80%; the window cannot exceed 80%);
+           --windows adds points to the swept ten and caches them, for a dense re-sweep around a
+           peak between two swept windows or a cliff the linear interpolation misreads
   LRU      the floor ("better than doing nothing"), and Belady with --belady (structural limit)
 Per arm:
   gap      ceiling - cache (pp; the number gate rows are barred on)
@@ -25,8 +27,8 @@ trajectory, from which the gap is decomposed and the machine's signature is read
 
 Usage:
   regret.py <trace.lirs | spec.json> --size N [--seeds 1,2,..,8 | --runs N] [--variants hybrid]
-            [--start 0.01] [--belady] [--fmt lirs] [--traces-dir DIR] [--dump-dir DIR]
-            [--csv out.csv] [--label NAME] [--max-override N] [--traj FILE]
+            [--start 0.01] [--belady] [--windows 0.15,0.25] [--fmt lirs] [--traces-dir DIR]
+            [--dump-dir DIR] [--csv out.csv] [--label NAME] [--max-override N] [--traj FILE]
   regret.py --traj FILE --size N --static '1:60.1,2:61.0,...' --lru 55.0   # analyze a dump alone
 CAF_TREE selects the tree (a harness worktree for trajectories and ablation arms); CAF_EXTRA
 appends properties to every run, as climber-gate's run.py does.
@@ -71,8 +73,10 @@ def resolve_trace(path, traces_dir, max_override, seed_override):
     return out, spec
 
 
-def anchors(trace, size, fmt, belady):
-    """LRU, the static curve {pct: hr}, and Belady (or None), cached beside the trace."""
+def anchors(trace, size, fmt, belady, windows=None):
+    """LRU, the static curve {pct: hr}, and Belady (or None), cached beside the trace. Extra
+    windows (fractions) not yet in the cache are swept and merged, so a dense re-sweep around a
+    peak or a cliff sharpens the ceiling and the position regret without a second tool."""
     side = f"{trace}.anchors.{size}.json"
     data = {}
     if os.path.exists(side):
@@ -83,6 +87,12 @@ def anchors(trace, size, fmt, belady):
         if lru is None or not static:
             sys.exit("anchor run failed (see simulator output above)")
         data.update({"lru": lru, "static": {str(k): v for k, v in static.items()}})
+    missing = [w for w in (windows or []) if str(int(round(100 * w))) not in data["static"]]
+    if missing:
+        _, extra = R.curve(trace, size, fmt, windows=missing)
+        if not extra:
+            sys.exit("dense anchor sweep failed (see simulator output above)")
+        data["static"].update({str(k): v for k, v in extra.items()})
     if belady and "belady" not in data:
         r = R.gradle(size, trace, ["-Dcaffeine.simulator.policies.0=opt.Clairvoyant"], fmt)
         for ln in r.stdout.splitlines():
@@ -445,6 +455,8 @@ def main():
     ap.add_argument("--start", type=float, default=0.01,
                     help="the window fraction the product starts at (harness startwin if != 0.01)")
     ap.add_argument("--belady", action="store_true")
+    ap.add_argument("--windows", default=None,
+                    help="extra static windows to sweep and cache, as fractions: 0.15,0.25")
     ap.add_argument("--fmt", default="lirs")
     ap.add_argument("--traces-dir", default=os.path.join(os.getcwd(), "traces"))
     ap.add_argument("--dump-dir", default=os.path.join(os.getcwd(), "dumps"))
@@ -493,8 +505,9 @@ def main():
         results = {"dump": ([statistics.mean(float(r["hr"]) for r in parse(lines)) * 100], [lines])}
     else:
         results = None
+    windows = [float(w) for w in a.windows.split(",")] if a.windows else None
     rows_out = evaluate_cell(trace, spec, size, a.fmt, variants, seeds, a.runs, a.start, a.belady,
-                             a.dump_dir, label, results=results, json_path=a.json)
+                             a.dump_dir, label, results=results, json_path=a.json, windows=windows)
     if a.csv and rows_out:
         new = not os.path.exists(a.csv)
         with open(a.csv, "a", newline="") as f:
@@ -505,11 +518,11 @@ def main():
 
 
 def evaluate_cell(trace, spec, size, fmt, variants, seeds, runs, start, belady, dump_dir, label,
-                  results=None, json_path=None):
+                  results=None, json_path=None, windows=None):
     """Anchors, product runs (unless `results` is supplied), decomposition and report for one
     cell; returns one CSV row per arm. Shared by regret.py and search.py so the two cannot drift."""
     extra = [] if abs(start - 0.01) < 1e-9 else [f"-Dcaffeine.climber.startwin={start}"]
-    lru, static, bel = anchors(trace, size, fmt, belady)
+    lru, static, bel = anchors(trace, size, fmt, belady, windows)
     curve = Curve(static)
     start_hr = curve.at(100.0 * start)
     headroom = curve.ceiling - start_hr

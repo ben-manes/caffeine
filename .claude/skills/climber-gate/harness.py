@@ -293,17 +293,19 @@ EDITS = [
      "          : (HARDRESET ? 0 : Math.max(0, stillSamples - 1));\n"),
 
     ("flatroom", W,
-     "    boolean chooseDirection(Reading r, double stride) {\n",
-     "    boolean chooseDirection(Reading r, @Var double stride) {\n"),
+     "    boolean chooseDirection(Reading r, double stride, double rate, boolean parked) {\n",
+     "    boolean chooseDirection(Reading r, @Var double stride, double rate, boolean parked) {\n"),
 
     ("flatroom-body", W,
-     "      double room = down ? (r.upperCorner() - r.windowMax) : (r.windowMax - r.floor);\n",
+     "      double room = down ? (r.windowMax - r.floor) : (r.upperCorner() - r.windowMax);\n",
      "      if (FLATROOM) {\n        stride = r.restartMagnitude();\n      }\n"
-     "      double room = down ? (r.upperCorner() - r.windowMax) : (r.windowMax - r.floor);\n"),
+     "      double room = down ? (r.windowMax - r.floor) : (r.upperCorner() - r.windowMax);\n"),
 
     ("nocal", W,
-     "      waitSamples = AUDIT_WAIT_FIRST;\n      stillSamples = 0;\n      lastWindow = -1;\n",
-     "      waitSamples = WAIT_FIRST;\n      stillSamples = 0;\n      lastWindow = -1;\n"),
+     "      waitSamples = AUDIT_WAIT_FIRST;\n      settledRate = Double.NaN;\n"
+     "      stillSamples = 0;\n      lastWindow = -1;\n",
+     "      waitSamples = WAIT_FIRST;\n      settledRate = Double.NaN;\n"
+     "      stillSamples = 0;\n      lastWindow = -1;\n"),
 
     # anchored on the preceding CODE line so the block lands before the javadoc, not between
     # the javadoc and the field it documents

@@ -205,8 +205,8 @@ def reductions(spec, min_samples=G.SHORT_SAMPLES):
         ok = True
         for seg in s["segments"]:
             seg["shares"].pop(m, None)
-            if not seg["shares"]:
-                ok = False
+            if not any(W.base_share(e) > 0 for e in seg["shares"].values()):
+                ok = False   # a segment left with no positive share cannot generate
         if ok:
             s["members"].pop(m)
             out.append((f"drop member {m}", s))
@@ -234,13 +234,13 @@ def reductions(spec, min_samples=G.SHORT_SAMPLES):
 
 
 def primary(row):
-    """The first hint that names a class (flags like SHORT/peak-at-edge/left-optimum skipped)."""
+    """The first hint that names a class (flags like SHORT/peak-at-edge/left-optimum skipped); a
+    hint the analyzer itself marks uncertain ("...?/...") yields to any firm one."""
     flags = ("SHORT", "peak-at-edge", "left-optimum", "clean", "beats-static-ceiling")
-    for h in (row.get("hints") or "").split("|"):
-        h = h.split(" x")[0].strip()
-        if h and h not in flags:
-            return h
-    return None
+    named = [h.split(" x")[0].strip() for h in (row.get("hints") or "").split("|")]
+    named = [h for h in named if h and h not in flags]
+    firm = [h for h in named if "?" not in h]
+    return (firm or named or [None])[0]
 
 
 def cmd_shrink(args):

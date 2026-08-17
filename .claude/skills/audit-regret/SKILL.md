@@ -124,7 +124,7 @@ already in the record so a new witness is compared to it, not re-derived.
 | 3 | **masked signal** `masked-signal` | the observed statistic reads healthy while the harmed population's misses are invisible to it | as class 1 with `probes = 0` and `steer` dominant (sighted); `wh` above the bar from traffic worth nothing at the margin; a rider that keeps a starved region "sighted" | `Sample.windowHits/probationHits` attribution, `Reading.steeringError`, the starvation bar (`MIN_SIGNAL_SHIFT`) | controller (estimator) or the goal-metric layer that must judge what density cannot | `whisper` (the trickle keeps the window sighted); `deadphase` rider (six window hits authorize the maximum step); `flood_j100` (dense per slot, zero at the margin); `veilmoat` (whisper's mask on shallowmoat's terrain: no starvation probe arms, so both 2026-08-15/16 repairs are unreachable and every seed takes the audit path, ~88 samples; a dose note); `absolve`'s walks (the verdict confirms on the lure's hits at 2,200–3,400, unattributable and worthless above the lure's knee) |
 | 4 | **insufficient exploration** `insufficient-exploration` | the machine holds a position and never tests far or often enough to find the better one | `park`+`hold` dominant, `audits` rare, `max_wait` 128–512, `max_rung` 64; `/reach` when every walk ends `crash`/`fail` short of the ceiling window (`repeat_arms`, `top_frac`/`floor_frac`) | `AuditClock.stillSamples/waitSamples`, `Ladder.rung`, `refractoryLeft`, `Anchor.held/freshLeft`, `Walk.samples` and its crash bar | recovery layer | `metronome` (positional clock jam); H4-C1 ratchet; the r3 blind-corner lockout; the moat (a valley deeper than the audit's crash bar); `rep_r6`'s top corner re-probing every refractory cycle; `shallowmoat` (a valley 2pp deep and 57% wide: the first-round walk adjudicated three or four strides out and never reached the prize; repaired 2026-08-16, now a gate row); `absolve` (a lure pulsed at 16 samples inside a wide valley: one walk per period, one rung per period, kept confirms reset the rung, escape at s144–159; round 2, gate row at 128 samples) |
 | 5 | **oscillation / chasing** `oscillation` | the loop follows the workload's phase instead of stabilizing; a fixed window at the mean position wins | `settle` never, `flips` ≥ n/4, `residual` > `pos_regret`, `move` high; six blocks alternate | `Step` decay (reactive) / the proportional density step under alternation; `STABLE_BAND_FRACTION`; the stillness clock decaying instead of arming | controller (no damping or prediction) | `widepin`; `phases_d050` (grid-locked, bimodal); `posjam_d0`; `corda_large`'s churn (10.5pp against any fixed window, §1) |
-| 6 | **memory failure** `memory-failure` | evidence that a decision was wrong has been discarded, so it is repeated | `/stale-claim`: `bad_veto` (a veto drags to an anchor whose static value is worse, `anchorR - ema` large); `/repeat-probe`: `repeat_arms` (an arm re-launched from a band and direction that already crashed or failed) | `Anchor.window/rate` and `Rates` (the claim), `Ladder.crashStreak`, `sample.previousHitRate` after `resized`, the frozen `Walk.base*` | recovery layer; policy structure when the memory is the sketch's aging | the stale away-anchor claim (a rate claim earned before a regime shift; fixed by the stand-down, `regimeramp`/`staleclaim` rows); H4-C1/adv4-F2 (a streak cleared by the other layer's ending); the undo ledger's creep at a starved corner (fixed by the integral ledger, §7 2026-08-15); `shallowmoat` (a mid-depth confirm the density arm reversed in the same sample reset the ladder, so the escalation never started; repaired 2026-08-16: a reversed confirm now deepens the ladder, and one at the deepest commitment that the goal metric confirms parks); `absolve_p8` (a confirm density agrees with on its own sample and dismantles within the lure's 8-sample period is rewarded, so the rung reads 1 or 2 on 223 of 255 samples and never reaches 32: the `deferreward` shape absorbing and deterministic; round 2, gate row at 256 samples) |
+| 6 | **memory failure** `memory-failure` | evidence that a decision was wrong has been discarded, so it is repeated | `/stale-claim`: `bad_veto` (a veto drags to an anchor whose static value is worse, `anchorR - ema` large); `/repeat-probe`: `repeat_arms` (an arm re-launched from a band and direction that already crashed or failed) | `Anchor.window/rate` and `Rates` (the claim), `Ladder.crashStreak`, `sample.previousHitRate` after `resized`, the frozen `Walk.base*` | recovery layer; policy structure when the memory is the sketch's aging | the stale away-anchor claim (a rate claim earned before a regime shift; fixed by the stand-down, `regimeramp`/`staleclaim` rows); H4-C1/adv4-F2 (a streak cleared by the other layer's ending); the undo ledger's creep at a starved corner (fixed by the integral ledger, §7 2026-08-15); `shallowmoat` (a mid-depth confirm the density arm reversed in the same sample reset the ladder, so the escalation never started; repaired 2026-08-16: a reversed confirm now deepens the ladder, and one at the deepest commitment that the goal metric confirms parks); `absolve_p8` (a confirm density agrees with on its own sample and dismantles within the lure's 8-sample period is rewarded, so the rung reads 1 or 2 on 223 of 255 samples and never reaches 32: the `deferreward` shape absorbing and deterministic; round 2, gate row at 256 samples); `ghostclaim` (the stale away-anchor claim's other case: a regime shift lands with the window still and off the anchor, the stand-down keeps the previous regime's claim, and it is then the audit's confirm reference (`Walk.baseAnchorRate`: a walk that finds +30pp at the top fails at budget) and the guard rail's reference (a `bad_veto` to a position worse in the new regime, held there); round 3, gate row at 128 samples) |
 | 7 | **irreversible damage** `irreversible-damage` | by the time the mistake is detected the valuable residents are gone; restoring the position does not restore the rate | `undo_deficit` ≥ 2 (post-undo `hr` below `static(win)`), or a recovered window whose `hr` lags for samples | `undoRemaining` (full undo), the transfer cap, demotion into probation (the walk's own demotions) | recovery mechanism (undo policy) or policy structure (region transfer displaces) | `corda_large`'s displaced residents; `s3_25k` (171pp of 246pp of descent undone by one failed probe); the deadphase rider growing the window into main |
 | 8 | **aliasing** `aliasing` | two regimes produce the same observables at the decision but need different actions; the machine must fail one | a **pair**: one terrain, one bit flipped, `search.py pair` shows identical fields at the decision sample and divergent optima | the statistic at that decision (starvation bar, crash bar, stillness, first-difference reversal) | controller (a new estimator) or a priced trade (design) | a correct floor is as still as a trap (the `blindprobe`/`norefr` negatives, §7 2026-08-04); a monotone drawdown into the moat is a damaging walk at the crash point; a big move because the rest point is wrong is a big move because the workload changed (`margrest`, §8); window-irrelevant modulation (`whisper_mod`, `posjam`) |
 | 9 | **premature commitment** `premature-commitment` | the machine parks, confirms, or anchors on a transient (warmup, ramp, trend) and the shield holds it there | `early_confirm` (an `AUDITCONFIRM` before sample 24 at a position below the ceiling), long `park` after | the audit verdict (`AUDIT_CONFIRM_STREAK`, `beatBase`), `AUDIT_WAIT_FIRST`, `Anchor.freshLeft` | recovery layer | the cold-start misconfirm at ~33% (`flatctl`, workspace-only; `regimeramp` is its rowed sentinel); `climbtrend`/`saw_p40` (a trend clears any raw streak); `shieldtrap`; `absolve` through 64 samples (the calibration audit's level-test confirm on a phase step in main's hits against a stale reference, then the park and the down-first alternation: shallowmoat's basin B forced on every seed) |
@@ -204,8 +204,10 @@ All under this directory unless noted; the runners come from `climber-gate/` (`r
   search seeds (mixture, phases, whisper, deadphase, norank, drift), not gate rows; the gate's
   canonical generators stay in `climber-gate/`.
 - **`regret.py <trace|spec> --size N [--fmt f] [--seeds 1,..,8] [--variants hybrid,reactive,noaudit]
-  [--start f] [--belady] [--max-override N] [--csv out] [--json out]`**: one cell's anchors
-  (cached beside the trace), per-arm regret, per-seed trajectory signatures, the aggregate hint
+  [--start f] [--belady] [--windows 0.15,0.25] [--max-override N] [--csv out] [--json out]`**: one
+  cell's anchors (cached beside the trace; `--windows` sweeps extra static windows and merges them
+  into the sidecar, the dense re-sweep for a peak between two swept points or a cliff the linear
+  interpolation misreads), per-arm regret, per-seed trajectory signatures, the aggregate hint
   vote, and a CSV row. `--traj FILE --static '1:hr,2:hr,...' --lru x` analyzes an existing
   dump alone. `--variants` (other than `hybrid`), `--start`, `--seeds`, and the trajectory itself
   are harness knobs; on a stock tree they are silently ignored, so every arm is the shipped machine
@@ -222,7 +224,11 @@ All under this directory unless noted; the runners come from `climber-gate/` (`r
   spec files (scale is a `max` axis here, since every size in a spec is relative to it);
   `shrink base --csv --out min.json` is greedy delta-debugging that keeps a reduction only while
   the gap stays in `[keep·g0, g0/keep]` **and the primary class is unchanged and the trace keeps
-  ≥ 40 decisions** (a witness made by shortening measures how long the climber takes, and a
+  ≥ 40 decisions** (the class is the base row's first firm hint, an uncertain `…?/…` hint yielding
+  to a firm one; a member drop that would leave a segment without a positive share is skipped; and
+  the hint is coarser than the mechanism, so read the witness's trajectory before trusting it, as
+  round 3's `ghostclaim` shrink kept "wrong-equilibrium" while dropping the member the mechanism
+  needed) (a witness made by shortening measures how long the climber takes, and a
   reduction that amplifies the gap has changed the failure); the class it preserves is the base
   row's primary hint at the seeds given, so shrink at `--seeds 1,2,3` when the base is bimodal,
   and on a stock tree there is no class and only the gap band holds;
@@ -372,7 +378,11 @@ not read prior reports. Strike a line when it is done or dead.
 - Real-trace instances of `shallowmoat`'s or `absolve`'s shape (a large flat population, a far
   recency band, a scan or a pulsed short-reuse population): a `climber-gate/marginal.py` static
   anatomy over the corpus, or a `real.py` pass, would say whether a wide shallow valley with a prize
-  behind it exists outside the generator (round 1, 2026-08-15; still open after round 2).
+  behind it exists outside the generator (round 1, 2026-08-15; still open after round 2). Round 3's
+  screen-level answer from the 77-cell start-knob screen (w1/w2/w5/w10/w20 plus the ceiling): no
+  density-tier cell is flat to 20% with its ceiling far above at 50–70%; every recency-favorable
+  cell rises monotonically from 1% and the nearest valley is `arc_DS1@256k` (a 0.1pp dip, a 0.5pp
+  prize). Only a full anatomy (the 30–70% windows) can close it.
 - The anchor-fidelity discrepancy on flat-zipf-plus-scan synthetics: the product's parked position
   earned ~4pp more than `sketch.WindowTinyLfu` at the same window on a reference curve flat within
   0.5pp (`b_scarburn`, round 1), and the product held at its 2% floor earned +1.6pp over the
@@ -394,11 +404,10 @@ not read prior reports. Strike a line when it is done or dead.
   selector that sits within ±2 hits of the starvation bar, so read the ladder's dumps at the
   decision sample before calling a transition. `workload.py` cannot overlay a rider on a fixed base
   trace (every member draws from one RNG stream); a per-member seed would remove that confound.
-- `regret.py`'s position regret interpolates the static curve linearly between swept windows, so a
-  window parked just above a cliff that sits between two swept points reads a position cost the
-  product's own per-sample rate contradicts (`o_probfog` at 46% between the 40% and 50% anchors);
-  a `--windows` option for a dense re-sweep, or reading `pos` against the dense sweep on cliff
-  terrain, is the follow-up (round 2).
+- ~~`regret.py`'s position regret interpolates the static curve linearly between swept windows …
+  a `--windows` option for a dense re-sweep is the follow-up (round 2).~~ Done in round 3
+  (`--windows`; on `demoflood` the 15%/25% points move the position regret 6.44 → 5.91 and the
+  residual −0.51 → +0.02).
 - `absolve` was repaired 2026-08-17 (`hill-climber.md` §7): both gate rows moved (24.77 → 41.46,
   27.95 → 46.29) by a repeat-confirm memory on the starvation ladder and a park's first audit
   following its walk; the period-16 witness at 256 samples reads 46.89 on 8 seeds and the family
@@ -409,7 +418,31 @@ not read prior reports. Strike a line when it is done or dead.
   thinking turns with two tool rounds between them, then the output-token cap aborted it after ~2
   hours; nothing written): the model, not the machine (continuous timestamps, no permission or
   classifier events); the blind lane fell back to Opus, which delivered in 14 minutes. The dispatch
-  rule above now puts both lanes on Opus with a ~20-minute box.
+  rule above now puts both lanes on Opus with a ~20-minute box. Round 3 ran the third-lane shape
+  (three or four specs, each written to disk the moment it is designed, aimed at named lines) on
+  Fable: three specs and predictions in nine minutes, done before the screen; none survived the
+  screen (`f_ghostlure` recorded, `f_cornerloop` peak-at-edge, `f_crestshelf` clean), so the shape
+  works and its yield is a fair sample of one.
+- `hazefloor` (round 3): §8 item 4's residual isolated on a valid interior-peak terrain (the
+  calibration audit crosses and parks by s24, and the corner audit's crash, the C2 discard,
+  density's slide and the floor's failing ×1 walks are the rest of the run). A sentinel row needs an
+  x4 run at fixed seeds (the 80-sample mean is a reach lottery and 160 samples show three shapes),
+  per-seed bars, a 60/65% re-sweep (`--windows`), and ideally an arm with the crash-undo discard
+  disabled to say whether the 9pp is the discard or the corner audit; the workspace holds the specs
+  and dumps.
+- Two round-3 observations for the record rather than the round: after a regime shift on which
+  everything works (the claim discarded, the audit walk confirms), the machine still spends ~27
+  samples in the valley (16 of audit wait after the crash-scale swing plus a nine-stride ×1 walk;
+  `ghostclaim`'s 16-sample-phase-1 neighborhood cells at n = 80: 10.6pp, all transient), the
+  recovery latency's floor; and a walk armed in one phase of a large square-wave modulation
+  crash-aborts against its own frozen base the moment the other phase returns, at the position
+  that is right for that phase (`s_farecho`: the level test across a 20pp phase boundary; the
+  recorded exit-bar threshold at an extreme dose).
+- Class-8 pairs: round 3's `s_pairup`/`s_pairdown` held identical machine state through the
+  decision by construction (a member at share 0.0 in the shared segment, only its reuse distance
+  differing), so the `pair` instrument's premise can be met; the pair diverged at the shift sample
+  itself (hr 0.30 vs 0.55) and the regret came from the stale claim rather than the shared
+  direction bit, so no class-8 finding has yet survived a screen.
 
 ## Rules of evidence
 
