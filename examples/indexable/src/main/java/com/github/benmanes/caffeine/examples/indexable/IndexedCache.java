@@ -207,7 +207,7 @@ public final class IndexedCache<K, V> {
       checkState(hasPrimary, "The primary indexing function is required");
       requireNonNull(mappingFunction, "The mapping function to load the value is required");
       return new IndexedCache<>(cacheBuilder, mappingFunction,
-          Collections.unmodifiableSequencedSet(indexers));
+          Collections.unmodifiableSequencedSet(new LinkedHashSet<>(indexers)));
     }
   }
 }

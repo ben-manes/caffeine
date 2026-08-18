@@ -247,6 +247,73 @@ final class CaffeinatedGuavaTest {
   }
 
   @Test
+  void bulkLoad_freshKeys() throws ExecutionException {
+    var loader = new CacheLoader<Key, Integer>() {
+      @Override public Integer load(Key key) {
+        throw new IllegalStateException();
+      }
+      @Override public Map<Key, Integer> loadAll(Iterable<? extends Key> keys) {
+        var loaded = new HashMap<Key, Integer>();
+        for (var key : keys) {
+          loaded.put(new Key(key.name), key.name.length());
+        }
+        return loaded;
+      }
+    };
+    LoadingCache<Key, Integer> guava = CacheBuilder.newBuilder().build(loader);
+    LoadingCache<Key, Integer> caffeine = CaffeinatedGuava.build(Caffeine.newBuilder(), loader);
+    for (var cache : ImmutableList.of(guava, caffeine)) {
+      assertThat(cache.getAll(ImmutableList.of(new Key("ab")))).containsExactly(new Key("ab"), 2);
+    }
+  }
+
+  @Test
+  void bulkLoad_nested() {
+    var loader = new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) {
+        throw new IllegalStateException();
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        var loaded = new HashMap<Integer, Integer>();
+        loaded.put(1, -1);
+        loaded.put(3, -3);
+        loaded.put(null, -2);
+        return loaded;
+      }
+    };
+    var nested = CaffeinatedGuava.build(Caffeine.newBuilder(),
+        new CacheLoader<Integer, Integer>() {
+          @Override public Integer load(Integer key) {
+            return -key;
+          }
+        });
+    LoadingCache<Integer, Integer> guava = CacheBuilder.newBuilder()
+        .maximumWeight(Integer.MAX_VALUE)
+        .<Integer, Integer>weigher((key, value) -> loadNested(nested))
+        .build(loader);
+    LoadingCache<Integer, Integer> caffeine = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .maximumWeight(Integer.MAX_VALUE)
+        .<Integer, Integer>weigher((key, value) -> loadNested(nested)), loader);
+    for (var cache : ImmutableList.of(guava, caffeine)) {
+      cache.put(3, 0);
+      assertThrows(InvalidCacheLoadException.class, () -> cache.getAll(ImmutableList.of(1)));
+    }
+  }
+
+  /**
+   * Performs a bulk load from within the enclosing one's write, discarding its outcome so that only
+   * the enclosing load's result is asserted.
+   */
+  @SuppressWarnings("CatchingUnchecked")
+  @SuppressFBWarnings("MRC_METHOD_RETURNS_CONSTANT")
+  private static int loadNested(LoadingCache<Integer, Integer> cache) {
+    try {
+      cache.getAll(ImmutableList.of());
+    } catch (Exception expected) { /* ignored */ }
+    return 1;
+  }
+
+  @Test
   void bulkLoad_asyncReloading() throws ExecutionException {
     var cache = CaffeinatedGuava.build(Caffeine.newBuilder(),
         CacheLoader.asyncReloading(new CacheLoader<Integer, Integer>() {
@@ -665,6 +732,23 @@ final class CaffeinatedGuavaTest {
       "NullAway", "TypeParameterUnusedInFormals"})
   private static <T> @NonNull T nullRef() {
     return null;
+  }
+
+  static final class Key {
+    final String name;
+
+    Key(String name) {
+      this.name = name;
+    }
+    @Override public boolean equals(Object o) {
+      return (o instanceof Key) && name.equals(((Key) o).name);
+    }
+    @Override public int hashCode() {
+      return name.hashCode();
+    }
+    @Override public String toString() {
+      return "Key(" + name + ")";
+    }
   }
 
   enum IdentityLoader implements com.github.benmanes.caffeine.cache.CacheLoader<Object, Object> {

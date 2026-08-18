@@ -97,6 +97,8 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   public ImmutableMap<K, V> getAll(Iterable<? extends K> keys) throws ExecutionException {
     requireNonNull(keys);
     var keysToLoad = ImmutableList.copyOf(keys);
+    boolean enclosing = (nullBulkLoad.get() != null);
+    nullBulkLoad.remove();
     try {
       Map<K, V> result = cache.getAll(keysToLoad);
       if (nullBulkLoad.get() != null) {
@@ -117,7 +119,11 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     } catch (Error e) {
       throw new ExecutionError(e);
     } finally {
-      nullBulkLoad.remove();
+      if (enclosing) {
+        nullBulkLoad.set(true);
+      } else {
+        nullBulkLoad.remove();
+      }
     }
   }
 

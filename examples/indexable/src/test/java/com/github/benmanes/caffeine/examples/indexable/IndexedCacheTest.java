@@ -125,6 +125,20 @@ final class IndexedCacheTest {
   }
 
   @Test
+  void builder_reusedAfterBuild_doesNotAlterTheCache() {
+    var builder = new IndexedCache.Builder<UserKey, User>()
+        .primaryKey(user -> new UserById(user.id()))
+        .addSecondaryKey(user -> new UserByLogin(user.login()));
+    var cache = builder.build(this::findUser);
+    builder.addSecondaryKey(user -> new UserByPhone(user.phone()));
+
+    assertThat(cache.indexers).hasSize(2);
+    assertThat(cache.get(new UserById(1))).isNotNull();
+    assertThrows(IllegalStateException.class,
+        () -> cache.get(new UserByPhone("+1 (555) 555-5555")));
+  }
+
+  @Test
   void get_absent_indexesValueOnce() {
     var invocations = new AtomicInteger();
     var cache = new IndexedCache.Builder<UserKey, User>()
