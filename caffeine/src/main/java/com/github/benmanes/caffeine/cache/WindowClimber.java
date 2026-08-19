@@ -80,13 +80,11 @@ final class WindowClimber {
   int retreatLeft;
   long adjustment;
 
- 
   int sightedHoldLeft;
   int sightedArriveLeft;
   double sightedArriveClaim;
   int sightedShortfallStreak;
   boolean sightedArrivePending;
- 
 
   public WindowClimber() {
     step = new Step();

@@ -305,10 +305,14 @@ EDITS = [
 
     # 2026-08-19 (the sighted veto retreat): the streak-and-arm moved to sightedVetoTriggered and
     # Anchor.vetoTriggered is no longer reached from the router, so the ablation gates the sighted
-    # arming site; under noveto the completed streak returns false without arming the hold.
+    # arming site. Under noveto the completed streak is recycled instead of arming the hold, so
+    # the counter stays bounded on a persistent shortfall (nothing else reads it; the ablation's
+    # verdict is unchanged — the veto never returns the window either way).
     ("ablate-veto", W,
      "    if (sightedShortfallStreak < Anchor.VETO_STREAK) {\n      return false;\n    }\n    sightedShortfallStreak = 0;\n    sightedHoldLeft = SIGHTED_HOLD_SAMPLES;\n",
-     "    if (NOVETO || (sightedShortfallStreak < Anchor.VETO_STREAK)) {\n      return false;\n    }\n    fired(VETO);\n    sightedShortfallStreak = 0;\n    sightedHoldLeft = SIGHTED_HOLD_SAMPLES;\n"),
+     "    if (sightedShortfallStreak < Anchor.VETO_STREAK) {\n      return false;\n    }\n"
+     "    if (NOVETO) {\n      sightedShortfallStreak = 0;\n      return false;\n    }\n"
+     "    fired(VETO);\n    sightedShortfallStreak = 0;\n    sightedHoldLeft = SIGHTED_HOLD_SAMPLES;\n"),
 
     ("ablate-freeze", W,
      "      double baseline = baseProbationDensity\n          * ((double) r.requestCount / Math.max(1L, baseRequestCount));\n",
