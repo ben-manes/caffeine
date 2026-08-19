@@ -77,9 +77,12 @@ def main():
     for high_index, low_index in zip(high_noise[:args.swaps], low_hot[:args.swaps]):
       tokens[high_index], tokens[low_index] = tokens[low_index], tokens[high_index]
 
+  # the swap pass needs random access, so the array stays; only the write streams. Joining the
+  # whole array first materializes every record as a string, ~570MB at four million requests.
   with open(args.out, "w") as output:
-    output.write("\n".join(map(str, tokens)))
-    output.write("\n")
+    for start in range(0, len(tokens), 1 << 16):
+      block = tokens[start:start + (1 << 16)]
+      output.write("\n".join(map(str, block)) + "\n")
   print(f"{args.out}: {requests} requests, phase={args.phase}, order={args.order}, "
         f"gap={args.gap}, seed={args.seed}, swaps={args.swaps}, pairs={starts}, band={band_id}, "
         f"whisper={whisp_id}")

@@ -28,6 +28,7 @@ already dead).
 Usage: crashnoise.py --shape sine --amp 0.12 --period 12 --out path.lirs
 """
 import argparse, math, random, sys
+from traceio import TraceWriter
 
 N = 4_000_000
 HOT_BASE, HOT_N = 1_000_000, 3000
@@ -56,7 +57,7 @@ def main():
     nrnd = random.Random(90210 + (7 if a.seed is None else a.seed))
     pending = {}
     band_id = whisp_id = noise_id = 0
-    out = []
+    out = TraceWriter(a.out)
     period_req = a.period * SAMPLE
 
     def schedule(pos, key):
@@ -106,9 +107,7 @@ def main():
             out.append(NOISE_BASE + noise_id)
             noise_id += 1
 
-    with open(a.out, "w") as f:
-        f.write("\n".join(map(str, out)))
-        f.write("\n")
+    out.close()
     print(f"{a.out}: {len(out)} requests, band={band_id} whisper={whisp_id} "
           f"noise={noise_id} shape={a.shape} amp={a.amp}")
 

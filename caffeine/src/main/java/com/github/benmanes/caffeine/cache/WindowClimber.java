@@ -56,6 +56,8 @@ final class WindowClimber {
 
   /** The difference in hit rates that reads as a workload change; the climber restarts at it. */
   static final double RESTART_THRESHOLD = 0.05d;
+  /** The samples a retreat's cover spans: the stride commanded now, and the sample it lands on. */
+  static final int RETREAT_COVER = 2;
 
   final ReactiveClimber reactive;
   final DensityClimber density;
@@ -71,6 +73,7 @@ final class WindowClimber {
 
   long undoRemaining;
   int refractoryLeft;
+  int retreatLeft;
   long adjustment;
 
   public WindowClimber() {
@@ -89,6 +92,7 @@ final class WindowClimber {
   public void resized(long maximum) {
     refractoryLeft = 0;
     undoRemaining = 0;
+    retreatLeft = 0;
     adjustment = 0;
     walk = null;
 
@@ -161,6 +165,7 @@ final class WindowClimber {
   private double densityClimb(double hitRate, long requestCount,
       long maximum, long windowMax, long mainProtectedMax) {
     ageParkShield();
+    ageRetreatCover();
 
     var reading = new Reading(hitRate, requestCount, maximum, windowMax, mainProtectedMax,
         sample.windowHits, sample.hits - sample.windowHits, sample.probationHits);
@@ -179,18 +184,18 @@ final class WindowClimber {
       } else if (ending != ProbeEnding.CONFIRMED) {
         return undoProbe(walk, ending, reading);
       } else if (keepConfirmedPosition(walk, reading)) {
-        return 0.0;
+        return anchor.returning ? strideHome(reading) : 0.0;
       }
       // a starvation confirm hands control back to the density arm within this same sample
       return density.steer(reading.steeringError(), reading);
     } else if (hasPendingUndo()) {
       return undoStride(reading);
     } else if (anchor.returning) {
-      return vetoStride(reading);
+      return strideHome(reading);
     } else if (reading.hasBlindCorner()) {
       return isBackingOff() ? holdOrAudit(reading) : armStarvationProbe(reading);
     } else if (anchor.vetoTriggered(reading, rates)) {
-      return vetoStride(reading);
+      return strideHome(reading);
     } else if (auditClock.isDue()) {
       return armEquilibriumAudit(reading);
     } else if (anchor.held) {
@@ -209,6 +214,16 @@ final class WindowClimber {
   }
 
   /**
+   * Ages a retreat's cover by one sample. Every stride of the retreat re-arms it, so it runs out
+   * on the sample after the last one, which is the sample the window lands on.
+   */
+  private void ageRetreatCover() {
+    if (retreatLeft > 0) {
+      retreatLeft--;
+    }
+  }
+
+  /**
    * Whether a freshly parked confirm is riding out weather this sample. A walk stands outside the
    * shield, neither spending it nor covered by it, so a shift during a walk armed from the park
    * stands the park down and takes the shield with it.
@@ -218,14 +233,24 @@ final class WindowClimber {
   }
 
   /**
-   * Whether this sample's rate move announces a workload change. An audit's walk out of a park is
-   * the park's own re-test, and its crash-scale moves are what that test produces, so they do not
-   * stand the park down; the walk's ending returns to the park and the audit clock prices it.
+   * Whether this sample's rate move announces a workload change. A park's own re-test does not
+   * stand it down, since the crash-scale moves that test produces are the machine's own; the
+   * audit clock prices the ending.
    */
   private boolean isWorkloadShift(Reading reading) {
-    boolean auditFromPark = (walk != null) && walk.isAudit && anchor.held;
     return (Math.abs(sample.hitRateChange(reading.hitRate)) >= RESTART_THRESHOLD)
-        && !isShielded() && !auditFromPark;
+        && !isShielded() && !isParkTest();
+  }
+
+  /**
+   * Whether a held park's own re-test produced this sample's move: an audit's walk out of it, the
+   * retreat that ends the walk, or the sample the retreat lands on, where the rate recovers by a
+   * crash-scale step because the walk's damage has been undone. Read at the anchor, that recovery
+   * would otherwise discard the claim the audit had just confirmed.
+   */
+  private boolean isParkTest() {
+    boolean walking = (walk != null) && walk.isAudit;
+    return anchor.held && (walking || (retreatLeft > 0));
   }
 
   /**
@@ -265,11 +290,12 @@ final class WindowClimber {
     @SuppressWarnings("LongDoubleConversion")
     double stride = reading.cappedStride(undoRemaining);
     undoRemaining -= (long) stride;
+    retreatLeft = RETREAT_COVER;
     return step.commit(stride);
   }
 
-  /** Returns a capped stride of the veto's return towards the anchor. */
-  private double vetoStride(Reading reading) {
+  /** Returns a capped stride of a return towards the anchor. */
+  private double strideHome(Reading reading) {
     return step.commit(anchor.strideHome(reading));
   }
 
@@ -318,18 +344,23 @@ final class WindowClimber {
   }
 
   /**
-   * Keeps the position a walk just validated, returning whether the climber parks on this sample.
-   * The position becomes the anchor at once so the guard rail can defend what the walk paid for. An
+   * Keeps the position a walk validated, returning whether the climber parks on this sample. The
+   * position becomes the anchor at once so the guard rail can defend what the walk paid for, and
+   * the window returns to it when the verdict is for ground the walk has already passed. An
    * audit's confirm parks as well, since density disagreed with this position by construction and
    * would dismantle it, and so does a starvation confirm that density reverses after the deepest
    * commitment when the goal metric confirms it, which is an audit in all but name; any other
    * starvation confirm hands back to density, whose disagreement the ladder has already priced.
    */
   private boolean keepConfirmedPosition(Walk walk, Reading reading) {
-    anchor.plant(reading.windowMax, rates.smoothed);
     boolean park = walk.isAudit || walk.isAuditGrade(reading);
+    long position = walk.verdictWindow(reading);
+    anchor.plant(position, rates.smoothed);
     if (park) {
       anchor.park(AuditClock.AUDIT_WAIT_INITIAL);
+      if (position != reading.windowMax) {
+        anchor.beginReturn();
+      }
     } else {
       anchor.release();
     }
@@ -408,9 +439,9 @@ final class WindowClimber {
       walk.ladder.crash();
       return ProbeEnding.CRASHED;
     }
-    walk.aboveStreak = (reading.hitRate > (walk.baseSmoothedRate + VETO_MARGIN_MIN))
-        ? (walk.aboveStreak + 1)
-        : 0;
+    boolean above = (reading.hitRate > (walk.baseSmoothedRate + VETO_MARGIN_MIN));
+    walk.aboveStreak = above ? (walk.aboveStreak + 1) : 0;
+    walk.rememberBest(above, reading);
     walk.beatBase |= (reading.hitRate >= walk.baseHitRate);
     return walk.isAudit ? auditEnding(walk) : starvationEnding(walk, reading);
   }
@@ -490,6 +521,7 @@ final class WindowClimber {
       refractoryLeft = starvation.rung;
       starvation.forget();
     }
+    retreatLeft = RETREAT_COVER;
     return returnToBase(walk, reading);
   }
 
@@ -977,6 +1009,9 @@ final class WindowClimber {
     int samples;
     int aboveStreak;
     int belowBarStreak;
+
+    long bestWindow;
+    double bestRate;
     boolean beatBase;
 
     Walk(Ladder ladder, boolean isAudit, boolean down, long baseWindow, long baseRequestCount,
@@ -988,7 +1023,39 @@ final class WindowClimber {
       this.baseWindow = baseWindow;
       this.isAudit = isAudit;
       this.ladder = ladder;
+      this.bestWindow = -1;
+      this.bestRate = -1.0;
       this.down = down;
+    }
+
+    /**
+     * Remembers the best sample of the run that may confirm this walk. A broken run starts the
+     * memory over, so the verdict is always for a position the confirming run itself stood on.
+     * Ties are kept by the later sample, leaving a walk that finds no strictly better position
+     * than the one it ends on to park where it ends.
+     */
+    void rememberBest(boolean above, Reading r) {
+      if (!above) {
+        bestWindow = -1;
+        bestRate = -1.0;
+      } else if (r.hitRate >= bestRate) {
+        bestWindow = r.windowMax;
+        bestRate = r.hitRate;
+      }
+    }
+
+    /**
+     * Returns the position a confirm is for: the best sample of the confirming run rather than the
+     * one the run completed on. The streak needs four samples above the reference and the walk
+     * strides on through all four, so a crest it crosses early is left behind by the time the
+     * verdict comes in. The margin is the one the streak itself clears, since a walk over a flat
+     * plateau has a best sample by noise alone and parking on it is a coin flip. A starvation
+     * probe is adjudicated by density on the current sample and takes that position.
+     */
+    long verdictWindow(Reading r) {
+      boolean better = isAudit && (bestWindow >= 0)
+          && (bestRate > (r.hitRate + VETO_MARGIN_MIN));
+      return better ? bestWindow : r.windowMax;
     }
 
     /** Returns the sign of the walk's direction. */

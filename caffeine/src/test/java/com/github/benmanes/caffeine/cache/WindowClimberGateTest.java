@@ -88,6 +88,23 @@ final class WindowClimberGateTest {
     assertWithMessage("demoflood adjudication").that(hitRate).isGreaterThan(67.0);
   }
 
+  /**
+   * The moat: a hot set large enough to be capacity-limited digs a hit-rate valley between the
+   * resting window and a window-only reuse band beyond it, and a whisper keeps the corner sighted
+   * so only the audit layer may act. Every walk crosses terrain that dips below the rate it armed
+   * on, so the crash abort decides whether the far bank is reachable at all. Guards the audit's
+   * escalated crash persistence and the retention of the position it finds.
+   */
+  @Test
+  void moat() {
+    double hitRate = run(new Workload(/* seed= */ 20_260_801, /* requests= */ 4_000_000,
+        /* hotKeys= */ 4_000, /* hotRate= */ 0.55, /* bandRate= */ 0.20,
+        /* bandDistance= */ 4_000, /* whisperRate= */ 0.0038, /* whisperDistance= */ 100));
+    // healthy ~58.2 (spread under 0.2); with the audit layer off the valley is absorbing and the
+    // machine rests on the near bank at 46.2 (deterministic)
+    assertWithMessage("moat valley crossing").that(hitRate).isGreaterThan(53.0);
+  }
+
   /** Drives the workload through a real cache, single-threaded, and returns the hit rate. */
   private static double run(Workload workload) {
     Cache<Long, Boolean> cache = Caffeine.newBuilder()

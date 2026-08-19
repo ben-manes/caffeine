@@ -25,6 +25,7 @@ Usage:
 """
 import argparse
 import random
+from traceio import TraceWriter
 
 VICTIM_BASE = 1_000_000
 ATTACK_BASE = 50_000_000
@@ -85,7 +86,7 @@ def main():
     sample = 4 * a.max
     burst = tuple(int(x) for x in a.burst.split(":")) if a.burst else None
     pending = {}
-    out = []
+    out = TraceWriter(a.out, mark=TENANT_SPLIT)
     aid = 0
     lpos = 0
     vpos = 0
@@ -137,10 +138,8 @@ def main():
         out.append(VICTIM_BASE + vbuf[vi])
         vi += 1
 
-    with open(a.out, "w") as f:
-        f.write("\n".join(map(str, out)))
-        f.write("\n")
-    nat = sum(1 for k in out if k >= TENANT_SPLIT)
+    out.close()
+    nat = out.marked
     print(f"{a.out}: n={len(out)} attacker={nat} ({100.0*nat/len(out):.3f}%) "
           f"victimKeys={vkeys} dist={a.dist} mode={a.mode}")
 

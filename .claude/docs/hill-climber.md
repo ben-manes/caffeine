@@ -370,6 +370,53 @@ owns it; a confirmed family lands here and in the gate table, and its open direc
   contaminated base and the stale veto's hold pins the machine, and an audit arming inside the smoothing
   horizon after a shift, which measures against a blend of the regimes.
 
+- **crestpast** (`/audit-regret` round 4, 2026-08-17; spec `audit-regret/specs/crestpast.json`): a
+  uniform bulk over 1.2·max at 72% of traffic (main's population, its hits linear in main's capacity)
+  and a two-reference band 1,100 requests apart at 25%, caught by an 8% window. Static: 45.8 at 1%,
+  44.7 at 5%, 62.5 at 8%, 64.4 at 10%, then a decline of ~0.9pp per 6.25% stride to 54.3 at 80%; LRU
+  52.3. A crest 17pp high, one stride from the floor, with a cliff on its near side and a slope on its
+  far side. The calibration audit crosses the crest on its first stride and confirms on its fifth
+  (`AUDIT_CONFIRM_STREAK` completes at stride 4, `AUDIT_COMMITMENT` holds the verdict to stride 5),
+  so it parks at 33% earning 3.2pp less than the crest it walked over; the park's audit walks back
+  down, has the crest under foot at its fourth stride and its fifth on the cliff side, where the level
+  test crash-aborts before `auditEnding` can be reached; the undo's arrival discards the anchor (the
+  C2 shape) and density's average law, which reads the caught band as a dense window against a thin
+  main, drifts the window up and away from the crest until the next audit fails at the corner and
+  the rail vetoes back. Seeded 1–8: 57.93 ± 0.04 at 132 samples against 64.9 at 10%, reactive 46.5
+  and noaudit 46.2 both pinned at the floor (the hit-rate law steps into the 1–7% decline and never
+  crosses; density steers the sighted window down), and the same product planted at 10% leaves the
+  crest (62.4). The verdict's position is the mechanism: the confirm lands at stride max(k + 3, 5) for
+  a crest crossed at stride k, from either side, so the two endpoints the machine visits (the floor
+  and the floor's fifth stride) can neither of them confirm the crest, and what the machine holds
+  between audits is the average law's rest point above it. Planted at 40% the down-audit's fifth
+  stride lands on the crest and confirms there, and the row still reads 59.7 (gap 5.0): a confirmed
+  crest is lost after one audit cycle (the corner audit's fail, the veto, the second park's crash,
+  density's drift), so the retention half is the larger part of the steady loss and the verdict's
+  position decides where the first park lands. Each stride's sample is an arrival transient, so on
+  most cells the walk's best sample is one to two strides past the static crest, which bounds what a
+  verdict at the walk's best could recover.
+  The far side's slope prices it: bisecting the bulk's size finds the knee at 0.68·max, main's capacity
+  at the park, below which the bulk still fits from the parked position and the overshoot lands on a
+  shelf (`demoflood`'s recorded overshoot, which the C2 discard there accidentally corrects because
+  density's rest point sits at that crest). Robust across the band's distance (800–2,200 requests),
+  the bulk's size (1.0–1.5) and 16384 (ten cells at 4.4–8.0). Class 9 (the audit verdict,
+  `Walk.isConfirmed`) with class 1 holding the loss and the C2 discard handing it over. With the crest
+  beyond the fifth stride (the band 4,000–4,400 requests apart), the same verdict parks the window in
+  the valley on the cold reference instead, `regimeramp`'s recorded misconfirm at ten times its
+  sentinel's dose (`s_fatbase`: 29.6 against 44.3 at 45%, LRU 37.2, at 72 samples). §7's 2026-08-17
+  round-4 entry; §8 item 5's overshoot observation.
+- **hazefloor** (`/audit-regret` round 3's note, rowed by round 4 at 320 samples; spec
+  `audit-regret/specs/hazefloor.json`): a uniform haze over 2·max, a zipf core, a band 7,200 requests
+  apart caught only past ~60% and a scan; static flat 33.7 → 32.5 to 50% then 52.3 at 65% (a 60/65%
+  re-sweep), LRU 49.2. The calibration audit crosses and parks at the top by s24, and the rest of the
+  run is §8 item 4's residual by itself with a ~105-sample period: the corner's audit is forced down,
+  crashes at the cliff, the undo's arrival discards the anchor, density slides off the cliff, the
+  floor's ×1 walks fail against the haze, and the rung-16 audit re-crosses. Seeded 1–8 at 320
+  samples: 41.09 ± 1.80 (38.3–42.0), 8pp below LRU, against the reactive law's 36.5 and noaudit's
+  37.5, so the layer earns its keep and loses most of it every cycle. A sentinel with per-seed bars,
+  not a pass bar; the row exists so a change to the corner audit, the C2 discard or density's slide is
+  measured against it. §7's 2026-08-17 round-3 and round-4 entries.
+
 ## 4. The shipped design (the probe machine, >4096)
 
 Non-starved samples are the pure density step. The additions:
@@ -782,6 +829,32 @@ by construction — victims are always sketch-hotter — and the equilibrium-gat
 and four honest-window-hits verdict forms (absolute / vs-main-average / vs-own-baseline /
 vs-baseline-with-bar-floor), each trading a distinct family — the verdict-design tradeoff surface
 in the study report §6.1. The one survivor SHIPPED: the rung-scaled walk stride (§4.3).
+
+### Killed by the 2026-08-18 crestpast repair (measured; the local climber-crestpast workspace, §7's entry has the numbers)
+
+- **`bestgap`** (the verdict pulls back only past one stride of separation, the arrival transient's
+  own width): `cp_w097` +0.73 against **`demoflood` −3.59** and `mixture_d050` −0.33. `demoflood`'s
+  real crest and `cp_w097`'s noise spike are both one stride behind the walk's end, so the
+  pull-back's distance does not separate them.
+- **`bestrough`** (the pull-back must beat the largest sample-to-sample move of the walk itself):
+  restores `cp_w097` outright (47.61, ship's own value) and costs **`demoflood` −3.59** again plus
+  `hazefloor` −0.73. Two independent statistics refusing a real crest in order to refuse a spike is
+  the shape of item 1's finding on this layer: the signal cannot tell a crest from a peak.
+- **`monoland`** (the margin plus a monotone decline from the best to the walk's end): **inert**,
+  bit-identical to the shipped form on every decisive cell. Where the margin has decided, the shape
+  test has nothing left to refuse.
+- **`bestflip`** (a park short of the walk's end points the next audit the other way, since the
+  ground beyond is now known worse): `hazefloor` −3.92. The follow rule's value is the direction the
+  confirm earned, not the unexplored side.
+- **`landclaim` / `refclaim`** (a covered landing keeps the claim but releases the hold, so density
+  may still improve on it): `moat_h4000` −2.29, a re-derivation of the recorded `arrive` kill —
+  without the discard's `Rates.reset` the rail's margin stays at its 1pp floor and `track` re-plants
+  the anchor down density's slide.
+- **`retreatref`** (the retreat's samples judged against the rate the probe left, the `freshref`
+  rule applied to the stand-down rather than to the confirm): weaker than covering the landing
+  outright (`crestpast` −0.09, the plant-at-40 cell −0.45), because the landing's recovery is itself
+  an arrival transient that takes more than one sample, so a level test against the pre-walk rate
+  still fires while a first-difference test no longer does.
 
 ### Killed by the 2026-08-17 ghostclaim repair (measured; the local climber-ghostclaim workspace, §7's entry has the numbers)
 
@@ -1698,7 +1771,23 @@ Open threads, roughly in order of expected value (each has a ledger entry with i
   judged unrepresentative the interval (563, 2048] reopens at once. The residual is one entry:
   at exactly 4096 everything measured prefers density, and `>=` would capture it while landing
   the switch where `ceilingPowerOfTwo` does not change — recorded as an option with its trade
-  (it relocates the cliff to an unmeasured boundary), not a recommendation. Cadence alignment
+  (it relocates the cliff to an unmeasured boundary), not a recommendation.
+
+  **2026-08-18 addendum: the boundary's worst case is not the law's difference.** The study's
+  real-cell range is 1–3pp, which prices the two steering laws against each other. It does not
+  price the layer the boundary also gates. A terrain whose window response is *flat then a
+  cliff* — hit rate 17.9 from a 1% window through 25%, then 48.2 at 40% — carries no gradient at
+  all in the region a climber searches from its start, so no local law can cross it and only the
+  equilibrium audit can. Below the threshold there is no audit. Measured at maximum 4096 on such
+  a cell (`.local` pins workspace, generated by the gate test's own `Workload` at hot 500 / band
+  0.45 at distance 1500 / noise 0.30): `hybrid`, `reactive` and `noaudit` are one code path and
+  read **22.84 mean over seeds 1–4 with an 11pp spread** (17.91–29.31), while the density machine
+  forced at that same size reads **45.80 ± 0.02** against a static ceiling of 48.24 at 40% and LRU
+  46.21. The tier gate, not the workload, is worth 23pp there. Constructed, and its realism is
+  unestablished — it is recorded as the bound on what the placement can cost, not as a case for
+  moving it. The unspent 4096 holdout is what would adjudicate a move, and it stays unspent.
+
+  Cadence alignment
   across the gate is measured dead (−2.37 on the straddle; it trades families). Gate rows
   `strad_p8`/`strad_stat` pin the pair.
 - **The frozen sample grid (D4)**: the trace-start alignment offset is worth up to 12.5pp on
@@ -2814,6 +2903,107 @@ smoothed one; `audit_confirmUsesReferenceFrozenAtArm` now moves the smoothed rat
 `WindowClimberGateTest`, the fuzzer (1,885 tests, 794k runs). Workspace: the local
 climber-ghostclaim experiment tree.
 
+**2026-08-17 (`/audit-regret` round 4, the skill's fourth run; report in the fable-5 audit tree).**
+Three proposal lanes again (sighted and blind on Opus, a narrow third lane on the session model),
+seventeen specs, one finding, one sentinel rowed, evaluated on the session model. **`crestpast`** (a
+gate row; the blind lane's `b_crestpast`, aimed at the crest overshoot): a uniform bulk over 1.2·max
+and a two-reference band 1,100 requests apart, a crest 17pp high one stride from the floor with a
+cliff on its near side and a slope on its far side. The calibration audit crosses the crest on its
+first stride and confirms on its fifth (`AUDIT_CONFIRM_STREAK` completes at stride 4 and
+`AUDIT_COMMITMENT` holds the verdict to stride 5; neither exit fires on a 0.5–1pp per stride
+decline), parking at 33% and 3.2pp under the crest it walked over; the park's audit walks down (the
+follow guard trips on the EMA's lag behind the +24pp climb), has the crest under foot at its fourth
+stride and its fifth on the cliff side, where the level test crash-aborts before the verdict can be
+reached; the undo's arrival discards the anchor and density's average law, which reads the caught
+band as a dense window against a thin main, drifts the window up to 54%; the corner audit then fails
+at budget, the rail vetoes to the anchor re-planted at 34%, and that park's audit crashes at the cliff
+again and ends the park with the anchor kept. Seeded 1–8: 57.55 ± 0.08 at 132 samples against 64.7 at
+10% and LRU 52.1 (reactive 46.4, noaudit 46.2, both pinned at the floor; the two-member witness 57.77
+at 66 samples; deterministic on every seed). Planted at 40% the down-audit confirms at the crest and
+the row still reads 59.7: the retention cycle loses a confirmed crest after one audit cycle, so at
+steady state that half is the larger part (5.0 of 7.2) and the verdict's position decides where the
+first park lands (4.5pp on the park samples). Bisecting the bulk's size finds the knee at 0.68·max,
+main's capacity at the park (below it the far side is a shelf, `demoflood`'s recorded overshoot,
+which the C2 discard there accidentally corrects because density's rest point sits at that crest);
+robust across the band's distance, the bulk's size and 16384 (ten cells at 4.5–8.7). Class 9 by
+signature and responder (`Walk.isConfirmed`; the confirm's position on the walk rather than a
+transient, which the class table's definition should widen to) with classes 1 and 6 as co-requisites
+of any repair; §8 item 7. The evaluator's amendments, taken: the two-member witness's first stride is
+a marginal catch (0.44 at 675) and the walk's best there is stride 3, because each stride's sample is
+an arrival transient (on most cells the walk's best is one to two strides past the static crest,
+which bounds a walk's-best verdict at 4–12% of window past the crest); the second cycle keeps the
+anchor and steers away, so the C2 discard is the first cycle's path only; and the far-crest face
+(the band 4,000–4,400 requests apart, the crest beyond the fifth stride: the sighted lane's
+`s_fatbase`, 29.6 ± 0.05 against 44.3 at 45% and LRU 37.2, reactive 25.4, noaudit 26.3) is
+`regimeramp`'s cold-reference misconfirm at ten times its sentinel's dose (the calibration walk
+declines from its first stride into a valley and confirms at the fifth because every sample clears a
+reference frozen while the cache filled; the park in the valley is ~10 of the 14.7), filed there with
+the cross-reference that a verdict reading the walk's shape would blunt that face too.
+**`hazefloor`** rowed at 320 samples as the top-corner retention cycle's sentinel (41.09 ± 1.80 at
+seeds 1–8 against a 52.3 ceiling after a 65% re-sweep and LRU 49.2; reactive 36.5, noaudit 37.5;
+per-seed bars). Dropped: `b_causepair_b` (a hot zipf phasing into main at s6 makes the calibration
+audit's level-step confirm at 33% on a hold cell, `absolve`'s calibration mechanism; the reactive law
+48.7 against the machine's 42.9 ± 1.9 and noaudit's 47.0, a reactive-anchor sentinel candidate like
+`scarburst`), `b_scarloop` and `s_stalerung` (the same trend/step misconfirm), `s_swapfollow` and
+`b_farmemory` (phase blends whose audits walk a flat plateau to the far wall; no park ever forms for
+the follow rule), `b_dipconfirm` (a 40pp scan swing crashes the calibration audit, `crashnoise` at
+an extreme dose; the trough-armed confirm the lane predicted lands on a flat shelf at no cost),
+`s_blendarm` (a reference blended across a three-step decline did not stop a +10pp prize from
+confirming at the top), the class-8 pair `b_causepair_a/b` (its premise failed at the decision:
++22pp against +6pp on the arm's first stride), and every attack on the three newest rules read clean
+(`f_dipref`, `s_dipconfirm`, `b_followwalk`, `s_thrashundo`, `f_probetax`, three of them beating
+the reference on zipf-plus-scan terrain, the anchor-fidelity note again). Nothing was fixed.
+
+**2026-08-18 (the `crestpast` repair: what an audit's confirm is a verdict about, and the retreat
+that ends a park's own test).** §8 item 7's two halves, worked together because they turn out to be
+co-requisites in one direction: the retention cover alone keeps whatever the verdict parked on, and
+on `demoflood` that is a recorded overshoot the discard had been accidentally correcting (−1.59 on
+its bar). **The round-4 attribution was wrong and this study's first result is the correction.** The
+plant-at-40 cell read as "the crest is confirmed" parks at 1773 = 21.6%, where the static curve
+reads 62.7 against 64.4 at 10%: it confirms the far-side slope, not the crest. Of the 5.0 that
+reading assigned to retention, the cover recovers 1.4 and the rest is the same overshoot again.
+
+*The verdict.* An audit's confirm is a verdict about a position, and the position it names is the
+best sample of the run that confirmed it rather than the one the run completed on; the window
+returns there on the confirming sample, through the anchor's own return. The margin is the one the
+streak itself clears (`VETO_MARGIN_MIN`), because a walk over a flat plateau has a best sample by
+noise alone: on `absolve` the walk reads 0.1971 / 0.2039 / 0.1976 / 0.1973 / 0.2016 across 675 →
+2660 and the unmargined rule parks 1,473 entries short on a **0.23pp** difference, costing that row
+17.4 and undoing the 2026-08-17 repair. Ties are kept by the later sample, so a walk that finds
+nothing strictly better than where it ends parks where it ends, as ship does.
+
+*The retreat.* A park's own re-test is one experiment: the walk out, the retreat that ends it, and
+the sample the retreat lands on. The walk out was already covered (2026-08-16); the landing was not,
+and it is where the rate recovers by a crash-scale step because the walk's damage has been undone.
+Read at the anchor, that recovery is a workload shift and discards the claim the audit had just
+confirmed, which is the depressed-window thread's C2 seen from the audit layer. The cover spans the
+retreat's strides and the sample it lands on; a veto's return is untouched, which is what keeps the
+moat rows' `Rates.reset` and separates this from the dead `arrive`.
+
+Measured (70-cell battery at seeds 1–2, corpus at seeds 1–2, the loser rows at 8): the mean over
+the 36 rows that move is **+0.64**, and the corpus mean is **−0.05** (26 rows; `arc_ConCat` −0.26 on one seed). Gains: `hazefloor` +5.5, `crestpast` +4.5 (gap 7.1 → 2.6), `demoflood`
++2.7, `moat_h4000` +2.6, `moat_h7800` +2.4, `moat_h5000` +2.3, `moat_h3000` +1.5, `whisper_mod_p6`
++1.6, `bandtrap2` +1.3, `straywall2` +0.9, the long mixtures +0.5 to +0.7. Costs: `crashnoise_a12`
+−0.9, `absolve` −0.5 and `absolve_p8` −0.3 at N=8 (both a hair under their recorded bars), the
+`whisper_mod` a12/p12 doses −0.6 and −0.6 at N=8, and on the corpus `cp_w097` −0.5 with `cp_w015`
+−0.1. `crashnoise_a12` is the largest and is partly a basin shift: its low basin goes from 1 of 8
+seeds to 4.
+What the margin gives up is every sub-margin pull-back, `scarburst` +5.4 and `norank_flood_j100`
++2.1 among them.
+
+Against the recorded bars it is not a clean pass: `crashnoise_a12` lands at 61.69 on a ≥62.3 bar
+(the only material miss, and partly a basin shift, its low basin going from 1 of 8 seeds to 4),
+`whisper_mod_a12` at 63.59 on ≥63.7 with one seed collapsing, and `absolve` and `absolve_p8` at
+40.98 and 45.95 on bars of 41.0 and 46.0. `whisper_mod_p12` holds above LRU on every seed with its
+margin cut from +0.64 to +0.05, and `crestpast` reaches the row's verdict-only repair target
+without reaching its family target.
+
+The residual exposure, and the reason no further screen was built: on a workload whose rate is
+modulated independently of the window, the walk's best sample is the modulation's peak, and a 12%
+amplitude clears any margin the confirm's own reference sets. The `whisper_mod` and `crashnoise`
+doses are what that costs. Three screens for it are dead in §5, and two of them refuse a real crest
+to refuse a spike, which is item 1's structural finding on this layer's terrain.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor
@@ -3128,6 +3318,38 @@ layer's thread (item 4's residual, the veto's hold after a claim proves false on
 direction after a crashed walk); and an audit arming inside the smoothing horizon after a shift
 measures against a blend of the regimes (`p34` clears it by 3.5pp; a smaller prize would not). The
 recorded controls stay `slowswap_r20`, `regimeramp` and `widepin`, all bit-identical.
+
+**7. The audit verdict's position on the walk (`crestpast`, 2026-08-17). REPAIRED 2026-08-18
+(§7's entry): a confirm's verdict is the best sample of its confirming run, by the margin that
+streak itself clears, and a park's retreat and its landing are the park's own test.** `crestpast`
+57.6 → 62.1 against a 64.7 ceiling, `hazefloor` +5.5, `demoflood` +2.7, the moat family +1.5 to
++2.6, against `crashnoise_a12` −0.9, `absolve` −0.5, `cp_w097` −0.5 and the `whisper_mod` doses.
+Two things the round-4 report got wrong, corrected by measurement: the plant-at-40 cell it read as
+"the crest is confirmed" parks on the far-side slope, so **the verdict was the larger half, not
+retention**, roughly 3:1; and the halves are co-requisites in one direction only, since retention
+alone keeps whatever the verdict parked on.
+
+What remains, and where it lives: a rate modulated independently of the window puts the walk's best
+sample on the modulation's peak, and at a 12% amplitude no margin priced off the confirm's own
+reference can refuse it (`whisper_mod_a12`/`p12`, `crashnoise_a12`); that is the same signal
+problem the F1 family has always posed to this layer, now reaching the verdict's position as well
+as its timing. On the corpus the same shape is a one-sample spike one stride from the walk's end
+(`cp_w097`). Three screens for it are dead in §5 — the pull-back's distance and the walk's own
+roughness both refuse `demoflood`'s real crest in order to refuse `cp_w097`'s spike, and a shape
+test is inert wherever the margin has already decided. **A verdict corroborated after the fact was tried 2026-08-18 and is dead as built** (the local
+climber-corrob workspace): a pull-back arms a counter, and if the park's first
+`AUDIT_CONFIRM_STREAK` samples never reach within `VETO_MARGIN_MIN` of the rate the verdict
+claimed, the machine goes to the walk's end instead. It does what it was built to do on two of the
+three rows — `crashnoise_a12` 62.19 → 62.71 with its low basin gone, `whisper_mod_p12` 64.55 →
+65.22, its pre-repair margin restored — and every gain is bit-identical (`crestpast`, `demoflood`,
+`absolve` on four seeds). But `whisper_mod_a12` reads **63.90 → 61.92**, deterministically, so the
+family is a net −0.80. The mechanism is the symmetric error and is the thing to carry forward: a
+modulation deep enough to fool the verdict also fools the corroboration, because the park's first
+samples land in the trough and a *correct* position then fails to reproduce its own claim. The two
+doses differ only in amplitude (0.08 helped, 0.12 hurt) at the same period, which is what says the
+depth rather than the timing is what defeats it. What that leaves untried: corroborating against
+the fallback position's own rate rather than an absolute claim (unmeasurable without going there),
+or against the smoothed rate rather than the raw sample.
 
 **Do not reopen** (each has a measured negative with a mechanism): a hysteresis band on the
 reactive reversal (§5); `parkbound` on `shieldtrap`, absent a mechanism for its s7 tail; any

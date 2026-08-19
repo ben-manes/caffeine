@@ -1,0 +1,35 @@
+{
+  "max": 8192,
+  "seed": 7,
+  "repeat": 1,
+  "members": {
+    "haze": {
+      "kind": "uniform",
+      "n": 2.0
+    },
+    "core": {
+      "kind": "zipf",
+      "n": 0.35,
+      "alpha": 1.05
+    },
+    "far": {
+      "kind": "pairs",
+      "dreq": 7200,
+      "k": 2
+    },
+    "cold": {
+      "kind": "scan"
+    }
+  },
+  "segments": [
+    {
+      "samples": 320,
+      "shares": {
+        "haze": 0.3,
+        "core": 0.38,
+        "far": 0.24,
+        "cold": 0.08
+      }
+    }
+  ]
+}

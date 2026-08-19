@@ -118,6 +118,14 @@ CELLS = [
     # walk that then finds a +30pp position cannot confirm against it, and the guard rail's veto
     # on the same claim drags the window to a position worse in the new regime (128 samples)
     ("ghostclaim", "ghostclaim_8192.lirs", 8192, 2),
+    # /audit-regret round 4 (2026-08-17): the audit verdict's position on the walk. A crest one stride
+    # from the floor with a cliff on its near side and a slope on its far side: the calibration audit
+    # confirms at its fifth stride, three past the crest, the park's down-audit crashes on the cliff at
+    # its fifth, and density's rest point above the crest holds the loss between audits (132 samples).
+    # `hazefloor` is the same retention cycle at the top corner (round 3's note, rowed at x4 = 320
+    # samples: 10.5M requests, the battery's longest cell after moat_h7800), seeded per-seed bars only
+    ("crestpast", "crestpast_8192.lirs", 8192, 2),
+    ("hazefloor", "hazefloor_8192.lirs", 8192, 2),
 ]
 
 

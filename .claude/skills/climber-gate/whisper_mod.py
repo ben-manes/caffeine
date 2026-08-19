@@ -19,6 +19,7 @@ Usage: whisper_mod.py --amp 0.08 --period 12 --out path.lirs
        (--amp is in units of request share; --period is in climber samples of 4*8192 requests)
 """
 import argparse, math, random
+from traceio import TraceWriter
 
 N = 4_000_000
 HOT_BASE, HOT_N = 1_000_000, 3000
@@ -41,7 +42,7 @@ def main():
     rnd = random.Random(20260726)
     pending = {}
     band_id = whisp_id = noise_id = 0
-    out = []
+    out = TraceWriter(a.out)
     period_req = a.period * SAMPLE
 
     def schedule(pos, key):
@@ -86,9 +87,7 @@ def main():
             out.append(NOISE_BASE + noise_id)
             noise_id += 1
 
-    with open(a.out, "w") as f:
-        f.write("\n".join(map(str, out)))
-        f.write("\n")
+    out.close()
     print(f"{a.out}: {len(out)} requests, band={band_id} whisper={whisp_id} noise={noise_id} "
           f"amp={a.amp} period={a.period} samples")
 

@@ -28,13 +28,14 @@ monotone instead of a valley.
 """
 import argparse
 import random
+from traceio import TraceWriter
 
 
-def build(max_size, n, hotn, bandd, w_hot, w_band, w_whisp, seed, blindat=0):
+def build(path, max_size, n, hotn, bandd, w_hot, w_band, w_whisp, seed, blindat=0):
     rnd = random.Random(seed)
     HOT_BASE, BAND_BASE, WHISP_BASE, NOISE_BASE = 1_000_000, 5_000_000, 3_000_000, 9_000_000
     WHISP_D = 100
-    pending, out = {}, []
+    pending, out = {}, TraceWriter(path)
     band_id = whisp_id = noise_id = 0
 
     def schedule(pos, key):
@@ -66,6 +67,7 @@ def build(max_size, n, hotn, bandd, w_hot, w_band, w_whisp, seed, blindat=0):
         else:
             out.append(NOISE_BASE + noise_id)
             noise_id += 1
+    out.close()
     return out, band_id, whisp_id, noise_id
 
 
@@ -85,11 +87,8 @@ def main():
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
 
-    out, band, whisp, noise = build(a.max, a.n, a.hotn, a.bandd,
+    out, band, whisp, noise = build(a.out, a.max, a.n, a.hotn, a.bandd,
                                     a.whot, a.wband, a.whisper, a.seed, a.blindat)
-    with open(a.out, "w") as f:
-        f.write("\n".join(map(str, out)))
-        f.write("\n")
     print(f"{a.out}: {len(out)} requests, max={a.max} hotn={a.hotn} bandd={a.bandd} "
           f"band={band} whisper={whisp} noise={noise} samples={len(out)//(4*a.max)}")
 

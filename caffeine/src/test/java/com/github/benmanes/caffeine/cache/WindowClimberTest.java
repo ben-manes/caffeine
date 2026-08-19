@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.WindowClimber.RESTART_THRESHOLD;
+import static com.github.benmanes.caffeine.cache.WindowClimber.RETREAT_COVER;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.VETO_RETURN_BUDGET;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.VETO_STREAK;
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_FIRST;
@@ -1431,6 +1432,91 @@ final class WindowClimberTest {
     assertThat(climber.walk).isNull();
     assertThat(climber.anchor.held).isTrue();
     assertThat(climber.starvation.rung).isEqualTo(1);
+  }
+
+  @Test
+  void audit_confirm_parksAtTheWalksBestSample() {
+    // the streak needs four samples above the reference and the walk strides on through all four,
+    // so a crest crossed on the way is behind the window by the time the verdict comes in. The
+    // confirm is for the position the walk earned most at, and the window returns there: on
+    // crestpast the calibration audit crosses the optimum on its first stride and confirms four
+    // strides past it, and the position it parks on is what it then defends and re-tests
+    var climber = makeClimber();
+    injectWalk(climber, /* isAudit= */ true, /* down= */ false,
+        /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.40);
+    climber.rates.smoothed = 0.70;
+    climber.sample.previousHitRate = 0.70;
+    climber.step.size = STRIDE;
+
+    double[] rates = {0.80, 0.78, 0.77, 0.76, 0.755, 0.75};
+    @Var long confirmStep = 0;
+    for (int i = 0; i < rates.length; i++) {
+      confirmStep = steadySample(climber, /* windowMax= */ 2200 + (200 * i), rates[i]);
+    }
+
+    assertThat(climber.walk).isNull();
+    assertThat(climber.anchor.held).isTrue();
+    assertThat(climber.anchor.window).isEqualTo(2200);
+    // the confirm's own sample commands the return rather than standing where the streak ended,
+    // and a return within one step arrives on that sample
+    assertThat(confirmStep).isEqualTo(2200 - 3200);
+    assertThat(climber.anchor.returning).isFalse();
+  }
+
+  @Test
+  void audit_confirm_onAnImprovingWalk_parksWhereItStopped() {
+    // a walk still improving when its streak completes has its best sample last, so the verdict is
+    // the position it stands on, and a walk over a flat plateau has a best sample by noise alone,
+    // which the verdict's margin refuses: both park where the walk ended and command no return
+    double[][] walks = {{0.72, 0.73, 0.74, 0.75, 0.76, 0.80}, {0.75, 0.755, 0.75, 0.752, 0.75, 0.753}};
+    for (double[] rates : walks) {
+      var climber = makeClimber();
+      injectWalk(climber, /* isAudit= */ true, /* down= */ false,
+          /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.40);
+      climber.rates.smoothed = 0.70;
+      climber.sample.previousHitRate = 0.70;
+      climber.step.size = STRIDE;
+
+      @Var long confirmStep = 0;
+      for (int i = 0; i < rates.length; i++) {
+        confirmStep = steadySample(climber, /* windowMax= */ 2200 + (200 * i), rates[i]);
+      }
+
+      assertThat(climber.walk).isNull();
+      assertThat(climber.anchor.window).isEqualTo(3200);
+      assertThat(climber.anchor.returning).isFalse();
+      assertThat(confirmStep).isEqualTo(0);
+    }
+  }
+
+  @Test
+  void audit_retreatLandingAtThePark_keepsTheAnchor() {
+    // the retreat that ends a park's audit restores the rate the walk had spent, and that
+    // recovery is a crash-scale move at the anchor's own position, where a workload shift
+    // discards the claim. It is the machine's own move, so the park survives its own re-test
+    var climber = armAudit(/* windowMax= */ 2000);
+    climber.anchor.held = true;
+    climber.anchor.freshLeft = 0;
+    climber.anchor.plant(2000, /* claimed= */ 0.70);
+    long walked = 2000 + climber.adjustment();
+
+    long undo = steadySample(climber, walked, /* hitRate= */ 0.50);
+    assertThat(climber.walk).isNull();
+    assertThat(undo).isEqualTo(2000 - walked);
+    assertThat(climber.retreatLeft).isEqualTo(RETREAT_COVER);
+
+    // the landing sample: the rate returns to what the park earns, a crash-scale step up
+    long held = steadySample(climber, 2000, /* hitRate= */ 0.70);
+    assertThat(held).isEqualTo(0);
+    assertThat(climber.anchor.held).isTrue();
+    assertThat(climber.anchor.window).isEqualTo(2000);
+    assertThat(climber.retreatLeft).isEqualTo(RETREAT_COVER - 1);
+
+    // and the cover runs out with it: the next crash-scale move is the workload's again
+    steadySample(climber, 2000, /* hitRate= */ 0.70);
+    assertThat(climber.retreatLeft).isEqualTo(0);
+    steadySample(climber, 2000, /* hitRate= */ 0.30);
+    assertThat(climber.anchor.isPlanted()).isFalse();
   }
 
   @Test

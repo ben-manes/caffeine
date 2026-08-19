@@ -47,8 +47,10 @@ jobs:
           allowed-endpoints: >
             api.github.com:443
             azure.archive.ubuntu.com:80
+            dl.google.com:443
             github.com:443
             raw.githubusercontent.com:443
+            security.ubuntu.com:443
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

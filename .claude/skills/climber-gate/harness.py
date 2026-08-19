@@ -111,6 +111,67 @@ FLAGS = '''
    * regime shift, so the claim re-planted from it was mostly the old regime's rate.
    */
   static final boolean STALECLAIM = VARIANT.equals("staleclaim");
+  /*
+   * MECHANISM ABLATIONS (the /climber-minimize set). The arms above restore an older machine to
+   * price a landed change; these remove one algorithmic step from the current one to price the
+   * step itself. Each is a single disable at the step's own site, so an arm that reads
+   * bit-identical to ship across the battery is a step that never changes an outcome.
+   */
+  /** nocorner: the upper corner arms no starvation probe; dead samples still do. */
+  static final boolean NOCORNER = VARIANT.equals("nocorner");
+  /** nostarve: no blind corner ever arms a starvation probe. */
+  static final boolean NOSTARVE = VARIANT.equals("nostarve");
+  /** noladder: a completed experiment never deepens its rung, so every retry is first-round. */
+  static final boolean NOLADDER = VARIANT.equals("noladder");
+  /** noscale: deep rungs walk at the flat stride instead of 2x/4x. */
+  static final boolean NOSCALE = VARIANT.equals("noscale");
+  /** nocommit: the stray exit may fire at any depth, so deep rungs buy no committed walk. */
+  static final boolean NOCOMMIT = VARIANT.equals("nocommit");
+  /** norepeat: a confirm that only re-finds ground already confirmed is rewarded, not escalated. */
+  static final boolean NOREPEAT = VARIANT.equals("norepeat");
+  /** nowedge: a confirm the density arm reverses is rewarded, as it was before 2026-08-16. */
+  static final boolean NOWEDGE = VARIANT.equals("nowedge");
+  /** nofollow: a park's first audit always alternates instead of following the confirmed walk. */
+  static final boolean NOFOLLOW = VARIANT.equals("nofollow");
+  /** noshield: a fresh park is never shielded from crash-scale weather. */
+  static final boolean NOSHIELD = VARIANT.equals("noshield");
+  /** noveto: the guard rail never returns the window to the anchor. */
+  static final boolean NOVETO = VARIANT.equals("noveto");
+  /** nofreeze: an up-probe is judged against live probation, not the density frozen at the arm. */
+  static final boolean NOFREEZE = VARIANT.equals("nofreeze");
+  /*
+   * FIRING COUNTS. `-Dcaffeine.climber.counts` dumps, at exit, how often each step's own site
+   * was reached and true under whatever arm is running. This is what separates a step that is
+   * DEAD (its branch never executes, so removing it cannot change behavior) from one that is
+   * merely INERT on the cells measured. Only the first is safe to delete on evidence alone.
+   */
+  static final boolean COUNTS = Boolean.getBoolean("caffeine.climber.counts");
+  static final String[] STEP_NAMES = {"corner", "starve", "ladder", "scale", "commit",
+      "repeat", "wedge", "follow", "shield", "veto", "freeze"};
+  static final int CORNER = 0, STARVE = 1, LADDER = 2, SCALE = 3, COMMIT = 4, REPEAT = 5,
+      WEDGE = 6, FOLLOW = 7, SHIELD = 8, VETO = 9, FREEZE = 10;
+  static final java.util.concurrent.atomic.AtomicLongArray FIRED =
+      new java.util.concurrent.atomic.AtomicLongArray(STEP_NAMES.length);
+
+  static {
+    if (COUNTS) {
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        var sb = new StringBuilder("STEPFIRE");
+        for (int i = 0; i < STEP_NAMES.length; i++) {
+          sb.append(' ').append(STEP_NAMES[i]).append('=').append(FIRED.get(i));
+        }
+        System.err.println(sb);
+      }));
+    }
+  }
+
+  /** Records that a step's site was reached and true; returns true so it can sit in a condition. */
+  @CanIgnoreReturnValue
+  static boolean fired(int step) {
+    FIRED.incrementAndGet(step);
+    return true;
+  }
+
   /**
    * auditbar: the audit's crash-bar fraction of the rate frozen at arm; 0 restores the pre-fix
    * absolute bar, where nothing floors the level test.
@@ -194,6 +255,64 @@ EDITS = [
      "      auditClock.tick(windowMaximum, Reading.stableBand(maximum));\n    }\n" + TRACE
      + "    sample.close(hitRate);\n"),
 
+    ("ablate-corner", W,
+     "      return isDeadSample() || (windowStarved && (windowMax <= (maximum >>> 2)))\n"
+     "          || (mainStarved && (windowMax >= upperCorner()));\n",
+     "      if (NOSTARVE) {\n        return false;\n      }\n"
+     "      boolean blind = isDeadSample() || (windowStarved && (windowMax <= (maximum >>> 2)))\n"
+     "          || (!NOCORNER && mainStarved && (windowMax >= upperCorner()) && fired(CORNER));\n"
+     "      return blind && fired(STARVE);\n"),
+
+    ("ablate-ladder", W,
+     "    void escalate() {\n      rung = Math.min(PROBE_BACKOFF_MAX, 2 * rung);\n",
+     "    void escalate() {\n      fired(LADDER);\n"
+     "      rung = NOLADDER ? rung : Math.min(PROBE_BACKOFF_MAX, 2 * rung);\n"),
+
+    ("ablate-scale", W,
+     "      return (rung >= PROBE_BACKOFF_MAX)\n          ? PROBE_STRIDE_SCALE_DEEP\n",
+     "      if ((rung >= (2 * PROBE_BACKOFF_INITIAL)) && !NOSCALE) {\n        fired(SCALE);\n      }\n"
+     "      return NOSCALE ? 1 : (rung >= PROBE_BACKOFF_MAX)\n          ? PROBE_STRIDE_SCALE_DEEP\n"),
+
+    ("ablate-commit", W,
+     "      return (rung >= PROBE_BACKOFF_MAX)\n          ? PROBE_COMMITMENT_DEEP\n",
+     "      if ((rung >= (2 * PROBE_BACKOFF_INITIAL)) && !NOCOMMIT) {\n        fired(COMMIT);\n      }\n"
+     "      return NOCOMMIT ? 0 : (rung >= PROBE_BACKOFF_MAX)\n          ? PROBE_COMMITMENT_DEEP\n"),
+
+    ("ablate-repeat", W,
+     "    boolean isRepeat(boolean down, long window, long band) {\n      if ((farthest < 0) || (down != farthestDown)) {\n",
+     "    boolean isRepeat(boolean down, long window, long band) {\n      if (NOREPEAT || (farthest < 0) || (down != farthestDown)) {\n"),
+
+    ("count-repeat", W,
+     "      return down ? (window >= (farthest - band)) : (window <= (farthest + band));\n",
+     "      boolean repeat = down ? (window >= (farthest - band)) : (window <= (farthest + band));\n"
+     "      return repeat && fired(REPEAT);\n"),
+
+    ("ablate-wedge", W,
+     "        if (walk.isReversedBy(reading)\n",
+     "        if ((!NOWEDGE && walk.isReversedBy(reading) && fired(WEDGE))\n"),
+
+    ("ablate-follow", W,
+     "      if (!Double.isNaN(settledRate)) {\n        if (!parked || (Math.abs(rate - settledRate) >= RESTART_THRESHOLD)) {\n",
+     "      if (!Double.isNaN(settledRate)) {\n"
+     "        if (!NOFOLLOW && parked && (Math.abs(rate - settledRate) < RESTART_THRESHOLD)) {\n"
+     "          fired(FOLLOW);\n        }\n"
+     "        if (NOFOLLOW || !parked || (Math.abs(rate - settledRate) >= RESTART_THRESHOLD)) {\n"),
+
+    ("ablate-shield", W,
+     "    void park(int shield) {\n      freshLeft = shield;\n",
+     "    void park(int shield) {\n      if ((shield > 0) && !NOSHIELD) {\n        fired(SHIELD);\n      }\n"
+     "      freshLeft = NOSHIELD ? 0 : shield;\n"),
+
+    ("ablate-veto", W,
+     "        if (shortfallStreak >= VETO_STREAK) {\n",
+     "        if (!NOVETO && (shortfallStreak >= VETO_STREAK) && fired(VETO)) {\n"),
+
+    ("ablate-freeze", W,
+     "      double baseline = baseProbationDensity\n          * ((double) r.requestCount / Math.max(1L, baseRequestCount));\n",
+     "      fired(FREEZE);\n"
+     "      double baseline = (NOFREEZE ? r.probationDensity : baseProbationDensity)\n"
+     "          * (NOFREEZE ? 1.0 : ((double) r.requestCount / Math.max(1L, baseRequestCount)));\n"),
+
     ("tier-override-period", W,
      "    return DensityClimber.appliesTo(maximum)\n        ? density.samplePeriod(maximum, sketchSampleSize)\n",
      "    return isDensePeriod(maximum)\n        ? density.samplePeriod(maximum, sketchSampleSize)\n"),
@@ -216,20 +335,22 @@ EDITS = [
      "        return undoProbe(walk, ending, reading);\n"),
 
     ("mode-auditconfirm", W,
-     "      } else if (keepConfirmedPosition(walk, reading)) {\n        return 0.0;\n",
      "      } else if (keepConfirmedPosition(walk, reading)) {\n"
-     "        dbgMode = \"AUDITCONFIRM\";\n        return 0.0;\n"),
+     "        return anchor.returning ? strideHome(reading) : 0.0;\n",
+     "      } else if (keepConfirmedPosition(walk, reading)) {\n"
+     "        dbgMode = anchor.returning ? \"AUDITCONFIRM+home\" : \"AUDITCONFIRM\";\n"
+     "        return anchor.returning ? strideHome(reading) : 0.0;\n"),
 
     ("mode-confirm-steer", W,
-     "      return density.steer(reading.steeringError(), reading);\n    } else if (hasPendingUndo()) {\n      return undoStride(reading);\n    } else if (anchor.returning) {\n      return vetoStride(reading);\n    } else if (reading.hasBlindCorner()) {\n",
+     "      return density.steer(reading.steeringError(), reading);\n    } else if (hasPendingUndo()) {\n      return undoStride(reading);\n    } else if (anchor.returning) {\n      return strideHome(reading);\n    } else if (reading.hasBlindCorner()) {\n",
      "      dbgMode = \"CONFIRM+steer\";\n      return density.steer(reading.steeringError(), reading);\n"
      "    } else if (hasPendingUndo()) {\n      dbgMode = \"undo\";\n      return undoStride(reading);\n"
-     "    } else if (anchor.returning) {\n      dbgMode = \"vetoRet\";\n      return vetoStride(reading);\n"
+     "    } else if (anchor.returning) {\n      dbgMode = \"vetoRet\";\n      return strideHome(reading);\n"
      "    } else if (reading.hasBlindCorner()) {\n      dbgMode = isBackingOff() ? \"hold\" : \"ARM\";\n"),
 
     ("mode-veto-audit-park", W,
-     "    } else if (anchor.vetoTriggered(reading, rates)) {\n      return vetoStride(reading);\n    } else if (auditClock.isDue()) {\n      return armEquilibriumAudit(reading);\n    } else if (anchor.held) {\n",
-     "    } else if (anchor.vetoTriggered(reading, rates)) {\n      dbgMode = \"VETO\";\n      return vetoStride(reading);\n"
+     "    } else if (anchor.vetoTriggered(reading, rates)) {\n      return strideHome(reading);\n    } else if (auditClock.isDue()) {\n      return armEquilibriumAudit(reading);\n    } else if (anchor.held) {\n",
+     "    } else if (anchor.vetoTriggered(reading, rates)) {\n      dbgMode = \"VETO\";\n      return strideHome(reading);\n"
      "    } else if (AUDITS && auditClock.isDue()) {\n      dbgMode = \"AUDIT\";\n      return armEquilibriumAudit(reading);\n"
      "    } else if (anchor.held) {\n      dbgMode = \"park\";\n"),
 

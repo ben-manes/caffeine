@@ -1,0 +1,30 @@
+{
+  "max": 8192,
+  "seed": 7,
+  "repeat": 1,
+  "members": {
+    "bulk": {
+      "kind": "uniform",
+      "n": 1.2
+    },
+    "band": {
+      "kind": "pairs",
+      "dreq": 1100,
+      "k": 2
+    },
+    "rider": {
+      "kind": "trickle",
+      "gap": 1
+    }
+  },
+  "segments": [
+    {
+      "samples": 132,
+      "shares": {
+        "bulk": 0.72,
+        "band": 0.25,
+        "rider": 0.006
+      }
+    }
+  ]
+}

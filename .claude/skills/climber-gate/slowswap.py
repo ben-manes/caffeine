@@ -37,6 +37,7 @@ blind corner ever pre-empts the audit branch.
 Usage: slowswap.py --ramp 20 --out slowswap_r20.lirs
 """
 import argparse, random
+from traceio import TraceWriter
 
 HOT_BASE = 1_000_000
 BAND_BASE = 5_000_000
@@ -65,7 +66,7 @@ def main():
     rnd = random.Random(a.seed)
     pending = {}
     band_id = whisp_id = noise_id = 0
-    out = []
+    out = TraceWriter(a.out)
 
     def schedule(pos, key):
         while pos in pending:
@@ -108,9 +109,7 @@ def main():
             out.append(NOISE_BASE + noise_id)
             noise_id += 1
 
-    with open(a.out, "w") as f:
-        f.write("\n".join(map(str, out)))
-        f.write("\n")
+    out.close()
     print(f"{a.out}: {len(out)} requests ({n // sample} samples), ramp={a.ramp} "
           f"band={band_id} whisper={whisp_id} noise={noise_id}")
 

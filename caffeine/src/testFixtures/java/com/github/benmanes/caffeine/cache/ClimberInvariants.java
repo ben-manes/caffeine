@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_INITIAL;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_MAX;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_CRASH_ESCALATION;
+import static com.github.benmanes.caffeine.cache.WindowClimber.RETREAT_COVER;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Reading.MAX_STEP_FRACTION;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Step.MIN_INITIAL_STEP;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Walk.AUDIT_CRASH_PERSISTENCE;
@@ -56,6 +57,10 @@ final class ClimberInvariants {
         .that(climber.starvation.rung).isAtMost(PROBE_BACKOFF_MAX);
     assertWithMessage("the countdown is non-negative")
         .that(climber.refractoryLeft).isAtLeast(0);
+    assertWithMessage("a retreat's cover stays within its span")
+        .that(climber.retreatLeft).isAtLeast(0);
+    assertWithMessage("a retreat's cover stays within its span")
+        .that(climber.retreatLeft).isAtMost(RETREAT_COVER);
     assertWithMessage("the refractory countdown is bounded by its own rung")
         .that(climber.refractoryLeft).isAtMost(climber.starvation.rung);
 
@@ -73,6 +78,14 @@ final class ClimberInvariants {
           .that(walk.belowBarStreak).isAtMost(AUDIT_CRASH_PERSISTENCE - 1);
       assertWithMessage("a walk's ledger is the one its own layer owns")
           .that(walk.ladder).isSameInstanceAs(walk.isAudit ? climber.audit : climber.starvation);
+      assertWithMessage("a walk's best sample is a window it stood on, or unset")
+          .that(walk.bestWindow).isAtLeast(-1L);
+      assertWithMessage("a walk's best sample is a window it stood on, or unset")
+          .that(walk.bestWindow).isAtMost(maximum);
+      assertWithMessage("a walk's best sample carries the rate that position earned")
+          .that((walk.bestWindow < 0) == (walk.bestRate < 0.0)).isTrue();
+      assertWithMessage("a walk's best rate is a rate")
+          .that(walk.bestRate).isAtMost(1.0);
       assertWithMessage("the frozen probation baseline is a density")
           .that(walk.baseProbationDensity).isAtLeast(0.0);
       assertWithMessage("the frozen probation baseline is a density")

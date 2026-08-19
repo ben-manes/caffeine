@@ -43,9 +43,14 @@ it as a static contract.
 - Data structures — `FrequencySketchTest`, `TimerWheelTest`, `BoundedBufferTest`,
   `StripedBufferTest`, `MpscGrowableArrayQueueTest`, `LinkedDequeTest`, `PacerTest`,
   `InternerTest`, `WindowClimberTest`
-- Climber behavioral pins — `WindowClimberGateTest`: a three-cell deterministic subset of the
-  `/climber-gate` battery (whisper escape, position-jam control, demoflood adjudication) run as
-  plain JUnit in the standard suite (~5s, seeded synthetic streams, generous bars). It exists so
+- Climber behavioral pins — `WindowClimberGateTest`: a four-cell deterministic subset of the
+  `/climber-gate` battery (whisper escape, position-jam control, demoflood adjudication, moat
+  valley crossing) run as plain JUnit in the standard suite (~7s, seeded synthetic streams,
+  generous bars). Each cell's bar is calibrated against a measured *broken* value, not against
+  drift: the moat cell reads 58.2 healthy and 46.2 with the audit layer ablated, and is barred at
+  53. A cell whose healthy-to-broken separation is under ~5pp belongs in the manual battery
+  instead, where it is adjudicated on an N=8 mean (`whisper_mod_a12` is the worked example: 2pp
+  of separation and already below LRU, so any CI bar there is loose or flaky). It exists so
   audit-clock liveness, trap escape, and probe-adjudication regressions fail CI; the full
   battery, its sentinels, and the real corpus remain `/climber-gate` (manual). Kept separate
   from `WindowClimberTest` on purpose: pitest's `targetTests` allowlist names that class, so

@@ -28,6 +28,7 @@ Usage:
 """
 import argparse
 import random
+from traceio import TraceWriter
 
 WHISPER_D = 100
 WHISPER_BASE = 60_000_000
@@ -54,7 +55,7 @@ def zipf_sampler(n, alpha, rng):
     return sample
 
 
-def build(max_, dfrac, length_mult, hot_share, whisper, seed):
+def build(path, max_, dfrac, length_mult, hot_share, whisper, seed):
     """The gate's `gen.py mixture` trap, plus the blindness rider."""
     rng = random.Random(seed)
     hot_n = int(0.6 * max_)
@@ -63,7 +64,7 @@ def build(max_, dfrac, length_mult, hot_share, whisper, seed):
     zipf = zipf_sampler(hot_n, 0.9, rng)
     ring = [None] * d
     pending = {}
-    out = []
+    out = TraceWriter(path)
     nxt = hot_n
     whisper_id = 0
 
@@ -109,10 +110,8 @@ def main():
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
 
-    out, whisper = build(a.max, a.dfrac, a.lengthmult, a.hotshare, a.whisper, a.seed)
-    with open(a.out, "w") as f:
-        f.write("\n".join(map(str, out)))
-        f.write("\n")
+    out, whisper = build(a.out, a.max, a.dfrac, a.lengthmult, a.hotshare, a.whisper, a.seed)
+    out.close()
     print(f"{a.out}: {len(out)} requests, max={a.max} dfrac={a.dfrac} whisper={whisper} "
           f"samples={len(out) // (4 * a.max)}")
 

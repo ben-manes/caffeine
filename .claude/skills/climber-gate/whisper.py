@@ -21,6 +21,7 @@ window then earns 0, the corner is blind, a probe arms and should find the band.
 import os
 import random
 import sys
+from traceio import TraceWriter
 
 N = 4_000_000
 HOT_BASE, HOT_N = 1_000_000, 3000
@@ -38,7 +39,7 @@ def main(mode, path):
     band_id = 0
     whisp_id = 0
     noise_id = 0
-    out = []
+    out = TraceWriter(path)
 
     def schedule(pos, key):
         while pos in pending:
@@ -73,9 +74,7 @@ def main(mode, path):
             out.append(NOISE_BASE + noise_id)
             noise_id += 1
 
-    with open(path, 'w') as f:
-        f.write('\n'.join(map(str, out)))
-        f.write('\n')
+    out.close()
     print(f'{path}: {len(out)} requests, band={band_id} whisper={whisp_id} noise={noise_id}')
 
 
