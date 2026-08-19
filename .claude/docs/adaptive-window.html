@@ -3120,8 +3120,11 @@ window = max(window + step, 0.02·C)</pre>
   workload's own noise. <b>The guard rail</b>: standing away
   from the anchor with the smoothed rate below the anchor's claim by
   max(1pp, 3·MAD) for four consecutive samples is a veto: return to the anchor
-  (capped strides, small budget) and park. The rail never steers; it only refuses to
-  remain somewhere measurably worse than a place the cache has already been.</div>
+  (capped strides, small budget) and park. A return that arrives re-tests what brought
+  it: the claim is frozen when the return commits, and after a two-sample settle on the
+  anchor a rate that still falls a margin short of it stands the claim down. The rail
+  never steers; it only refuses to remain somewhere measurably worse than a place the
+  cache has already been.</div>
 <p>One dynamic looks like a bug until it doesn't: <b>the margins widen exactly when
   the rate moves</b>. A genuine step-change feeds its |Δ| into the same deviation
   estimate that sets the margins, so for the first several samples after any step the
@@ -3138,6 +3141,15 @@ window = max(window + step, 0.02·C)</pre>
     because it runs after the walk has ended and before any return begins.</li>
   <li><b>Re-sync while standing on it.</b> On-anchor samples overwrite the claim with
     the live rate, so stale glory decays into reality instead of vetoing forever.</li>
+  <li><b>Judge the return where it lands.</b> Arriving is not evidence for the claim
+    that sent the window home. The drop the arrival itself produces is the only test
+    the machine would otherwise apply, and it can fall under the crash threshold while
+    the claim is still a past regime's, leaving the window parked on it for the rest of
+    the run. The claim frozen at the return's commit is re-tested against the settled
+    rate, and one the position cannot earn is stood down as a crash would have. The
+    frozen claim is the judge because the re-sync above decays the live one into the
+    shortfall being tested. A return that spends its budget short of the anchor never
+    reached the position its claim describes, so there is nothing to test.</li>
   <li><b>Ratchet on cleared evidence.</b> Standing elsewhere with the rate a full
     margin above the claim moves the anchor there. (Requiring the new position to
     also be still first was measured: no benefit, and it destabilized an alternation
@@ -3610,6 +3622,8 @@ window = max(window + step, 0.02·C)</pre>
         sample-to-sample drop past reversalBar
     elif an undo remainder is pending: continue it (capped strides)
     elif a veto return is in progress: stride toward the anchor
+    elif a return has landed on the anchor: settle, then re-test the
+      frozen claim; short → stand down + re-seed the rate references
     elif blind corner (§6.2):
       refractory remaining → still ≥ auditWait
         ? arm an audit (§7.2)

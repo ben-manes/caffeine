@@ -137,6 +137,8 @@ FLAGS = '''
   static final boolean NOSHIELD = VARIANT.equals("noshield");
   /** noveto: the guard rail never returns the window to the anchor. */
   static final boolean NOVETO = VARIANT.equals("noveto");
+  /** noretest: a return's arrival never re-tests the claim that sent it, as before 2026-08-19. */
+  static final boolean NORETEST = VARIANT.equals("noretest");
   /** nofreeze: an up-probe is judged against live probation, not the density frozen at the arm. */
   static final boolean NOFREEZE = VARIANT.equals("nofreeze");
   /*
@@ -147,9 +149,9 @@ FLAGS = '''
    */
   static final boolean COUNTS = Boolean.getBoolean("caffeine.climber.counts");
   static final String[] STEP_NAMES = {"corner", "starve", "ladder", "scale", "commit",
-      "repeat", "wedge", "follow", "shield", "veto", "freeze"};
+      "repeat", "wedge", "follow", "shield", "veto", "freeze", "retest"};
   static final int CORNER = 0, STARVE = 1, LADDER = 2, SCALE = 3, COMMIT = 4, REPEAT = 5,
-      WEDGE = 6, FOLLOW = 7, SHIELD = 8, VETO = 9, FREEZE = 10;
+      WEDGE = 6, FOLLOW = 7, SHIELD = 8, VETO = 9, FREEZE = 10, RETEST = 11;
   static final java.util.concurrent.atomic.AtomicLongArray FIRED =
       new java.util.concurrent.atomic.AtomicLongArray(STEP_NAMES.length);
 
@@ -307,6 +309,10 @@ EDITS = [
      "        if (shortfallStreak >= VETO_STREAK) {\n",
      "        if (!NOVETO && (shortfallStreak >= VETO_STREAK) && fired(VETO)) {\n"),
 
+    ("ablate-retest", W,
+     "      return rates.smoothed < (claimed - rates.vetoMargin());\n",
+     "      return !NORETEST && (rates.smoothed < (claimed - rates.vetoMargin())) && fired(RETEST);\n"),
+
     ("ablate-freeze", W,
      "      double baseline = baseProbationDensity\n          * ((double) r.requestCount / Math.max(1L, baseRequestCount));\n",
      "      fired(FREEZE);\n"
@@ -342,10 +348,11 @@ EDITS = [
      "        return anchor.returning ? strideHome(reading) : 0.0;\n"),
 
     ("mode-confirm-steer", W,
-     "      return density.steer(reading.steeringError(), reading);\n    } else if (hasPendingUndo()) {\n      return undoStride(reading);\n    } else if (anchor.returning) {\n      return strideHome(reading);\n    } else if (reading.hasBlindCorner()) {\n",
+     "      return density.steer(reading.steeringError(), reading);\n    } else if (hasPendingUndo()) {\n      return undoStride(reading);\n    } else if (anchor.returning) {\n      return strideHome(reading);\n    } else if (anchor.isRetestDue(reading)) {\n      retestReturn(reading);\n      return 0.0;\n    } else if (reading.hasBlindCorner()) {\n",
      "      dbgMode = \"CONFIRM+steer\";\n      return density.steer(reading.steeringError(), reading);\n"
      "    } else if (hasPendingUndo()) {\n      dbgMode = \"undo\";\n      return undoStride(reading);\n"
      "    } else if (anchor.returning) {\n      dbgMode = \"vetoRet\";\n      return strideHome(reading);\n"
+     "    } else if (anchor.isRetestDue(reading)) {\n      dbgMode = \"retest\";\n      retestReturn(reading);\n      return 0.0;\n"
      "    } else if (reading.hasBlindCorner()) {\n      dbgMode = isBackingOff() ? \"hold\" : \"ARM\";\n"),
 
     ("mode-veto-audit-park", W,

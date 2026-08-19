@@ -830,6 +830,18 @@ and four honest-window-hits verdict forms (absolute / vs-main-average / vs-own-b
 vs-baseline-with-bar-floor), each trading a distinct family — the verdict-design tradeoff surface
 in the study report §6.1. The one survivor SHIPPED: the rung-scaled walk stride (§4.3).
 
+### Killed by the 2026-08-19 return-retest round (measured; the local pr2000-sighted-veto workspace, §7's entry has the numbers)
+
+- **A hold before the retreat commits.** A completed shortfall streak stands the window still for
+  two samples and re-samples, cancelling the retreat if the rate recovers to within the veto
+  margin. Endpoint +1.16 against the retest alone's +1.39, three negative seeds of sixteen against
+  none, `norank_flood_j100` −0.08 and `shieldtrap_s11` −0.01 where the retest alone is
+  bit-identical, and `cp_w081` −0.42 on the corpus where the retest alone is +0.07. The mechanism
+  is self-defeating: spreading the arrival drop across the hold's own samples is what puts it
+  under the crash-scale threshold, so the hold manufactures the masking the retest then repairs.
+  The cancel branch never fired on any cell. Do not re-propose a pre-retreat hold without a cell
+  where a veto is shown to fire on noise.
+
 ### Killed by the 2026-08-18 crestpast repair (measured; the local climber-crestpast workspace, §7's entry has the numbers)
 
 - **`bestgap`** (the verdict pulls back only past one stride of separation, the arrival transient's
@@ -3004,6 +3016,42 @@ amplitude clears any margin the confirm's own reference sets. The `whisper_mod` 
 doses are what that costs. Three screens for it are dead in §5, and two of them refuse a real crest
 to refuse a spike, which is item 1's structural finding on this layer's terrain.
 
+**2026-08-19 (a veto's return re-tests the claim that sent it).** §8 item 6's residual: a shift
+that lands on the audit's arm sample crashes the walk, and the stale claim then vetoes the window
+home and pins it there (`ghostclaim_p35..p40`). Arriving was treated as proof of the claim. It is
+not: the drop the window takes on arrival is the only test the machine applied, and at these doses
+it lands under the crash-scale threshold while the claim is still the previous regime's, so the
+park stands for the rest of the trace. `beginReturn` now freezes the claim the return sets out
+for, and a return that ends on the anchor settles `RETEST_SETTLE` samples and judges the frozen
+claim against the settled rate within the veto margin. A position that cannot earn it is stood
+down exactly as a crash-scale swing would be, goal metric included. The claim must be the frozen
+one: the on-anchor re-sync decays the live claim into the very shortfall being tested.
+
+`ghostclaim_p35` 31.72 → 33.87 and `p40` 31.44 → 33.47 at N=8, `p30` bit-identical on all eight
+(the veto does not fire there). The gain tracks how long the stale claim pinned the machine, one
+for one: a 61-sample park is worth +3.3, a 17-sample park +0.9, and the park count is zero on
+every seed afterwards. The battery is 138 of 140 rows bit-identical with no negative row, the two
+being `climbtrend_dn` +0.47 on both seeds, where a trend's stale claim is discarded on arrival
+instead of pinning. On the corpus `cp_w081` is +0.165 at N=8 (8 of 8, spread 0.139 → 0.012) and
+`cp_w015` is −0.079 (3 of 8 up, spread 0.174 → 0.075); the other eleven cells are bit-identical.
+`WindowClimberFuzzer` 808,898 runs clean.
+
+The settle is priced, not inherited: at one sample the endpoint is +1.38 with one negative seed,
+at two +1.39 with none, at three +1.23 with one. Two is the only length that never loses a seed.
+
+The thread came in as [#2000](https://github.com/ben-manes/caffeine/pull/2000), which paired the
+retest with a two-sample hold before the retreat commits, so a veto that recovers during the hold
+cancels. The hold is dead (§5): it is a net −0.37 on its own and is the sole source of the
+proposal's three negative seeds, because spreading the arrival drop across its own samples is what
+puts that drop under the crash-scale threshold in the first place. Its cancel branch never fired
+in any measured run.
+
+Their own iteration log carried one shape worth checking here, since the machine is a port of this
+one: a walk budget enforced on only one of two verdict branches, which an alternating walk outlives
+by half again. Checked and clean, in both directions: `auditEnding` and `starvationEnding` each
+carry `isBudgetSpent()` as the branch after the verdict, so the budget binds on every sample the
+verdict did not end. Recorded so it is not re-derived.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor
@@ -3314,10 +3362,15 @@ a retreat left the window on, and the moat rows are where the rail's memory pays
 where it lives: a shift landing on the audit's arm sample or during its walk (`ghostclaim_p35..p40`,
 the round's face-(b) cells) crashes the walk on a contaminated base, and the stale claim's veto, its
 hold, the down alternation and the deepest-rung wait then pin the machine, which is the recovery
-layer's thread (item 4's residual, the veto's hold after a claim proves false on arrival, the retry
-direction after a crashed walk); and an audit arming inside the smoothing horizon after a shift
-measures against a blend of the regimes (`p34` clears it by 3.5pp; a smaller prize would not). The
-recorded controls stay `slowswap_r20`, `regimeramp` and `widepin`, all bit-identical.
+layer's thread (item 4's residual, the retry direction after a crashed walk); and an audit arming
+inside the smoothing horizon after a shift measures against a blend of the regimes (`p34` clears it
+by 3.5pp; a smaller prize would not). The recorded controls stay `slowswap_r20`, `regimeramp` and
+`widepin`, all bit-identical. **The pin itself was worked 2026-08-19 (§7's entry): a return
+re-tests the claim that sent it, `p35` 31.7 → 33.9 and `p40` 31.4 → 33.5.** That is a partial
+escape rather than a repair, and the size of what is left is the point: the family reads 20.5pp
+below LRU at these doses (LRU 52.07 / 52.29), and the retest recovers two of them. The audit
+still crashes on a contaminated base and the walk still cannot confirm from it; the retest only
+stops the machine parking on the lie afterwards.
 
 **7. The audit verdict's position on the walk (`crestpast`, 2026-08-17). REPAIRED 2026-08-18
 (§7's entry): a confirm's verdict is the best sample of its confirming run, by the margin that
@@ -3350,6 +3403,19 @@ doses differ only in amplitude (0.08 helped, 0.12 hurt) at the same period, whic
 depth rather than the timing is what defeats it. What that leaves untried: corroborating against
 the fallback position's own rate rather than an absolute claim (unmeasurable without going there),
 or against the smoothed rate rather than the raw sample.
+
+**8. The probe's entry stride, never priced (2026-08-19, unmeasured).** Every arm takes its entry
+stride in the same sample that arms it (`armStarvationProbe`), so one sample decides both that an
+experiment is warranted and where it starts. The alternative is to freeze the base at the arm and
+take the first stride on the next qualifying sample, which is what the WaveCounter port does
+(their ADR-0045 §II). Nothing in §5 prices it, which is the only reason it is listed: a blank in
+the record is what §6's process note keeps finding. The prior is that it loses. They rejected a
+two-sample delay themselves for cutting confirms, the walk's own verdict machinery is the designed
+noise filter in both machines, our sample period is thousands of requests where theirs is a
+wall-clock tide that can hold very few, and the entry stride is what produces the first evidence
+there is to judge. Price it as a `/climber-minimize` arm against the rows where the probe machine
+is load-bearing (`moat_h4000`, `demoflood`, `norank_rep_r6`) plus the starvation families, not as
+a battery sweep.
 
 **Do not reopen** (each has a measured negative with a mechanism): a hysteresis band on the
 reactive reversal (§5); `parkbound` on `shieldtrap`, absent a mechanism for its s7 tail; any

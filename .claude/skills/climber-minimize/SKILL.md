@@ -56,6 +56,7 @@ the rest were wired 2026-08-18.
 | `nofollow` | a park's first audit follows the walk that confirmed it |
 | `noshield` | a fresh park is shielded from crash-scale weather |
 | `noveto` | the guard rail returns the window to the anchor |
+| `noretest` | a veto's return re-tests the claim that sent it, on arrival |
 | `nofreeze` | an up-probe is judged against probation frozen at the arm |
 | `noaudit` | the whole equilibrium-audit layer |
 
@@ -89,14 +90,21 @@ nothing on that sample may still be the only thing standing between a real deplo
 5pp hole, and nobody would ever file that bug, because a user cannot see a hit rate they did not
 get. So an inert arm earns a second pass, not a patch:
 
-1. **Count the firings.** `ablate.py` does this for you: it runs ship once per cell with
-   `-Dcaffeine.climber.counts`, which dumps `STEPFIRE <step>=<n>` at exit, and folds the totals
-   into the verdict. A branch that never executes **on the full cell set** is dead and can go on
-   that evidence alone — a reachability fact, not a measurement. A branch that executes and
-   changes no outcome is inert, which is weaker, and a branch that never executes on a *narrow*
-   set is neither: it is unexercised, and the tool says so. `norepeat` never fires on `demoflood`
-   and is worth 18.61 on `absolve_p8`, which is why the DEAD verdict is gated on the `full`
-   preset and everything short of it prints PROVISIONAL.
+1. **Count the firings, then prove the state unreachable.** `ablate.py` does the counting for
+   you: it runs ship once per cell with `-Dcaffeine.climber.counts`, which dumps
+   `STEPFIRE <step>=<n>` at exit, and folds the totals into the verdict. A branch that executes
+   and changes no outcome is inert, which is weak; a branch that never executes on a *narrow* set
+   is unexercised, which is weaker still, and the tool says so. `norepeat` never fires on
+   `demoflood` and is worth 18.61 on `absolve_p8`, which is why the DEAD verdict is gated on the
+   `full` preset and everything short of it prints PROVISIONAL.
+
+   A zero count on the full set is still a fact about a **sample**, though, and a delete needs a
+   fact about the **machine**. Close that gap with an argument from the gates themselves: read the
+   conditions that guard the site and show they cannot hold together, or probe the machine's own
+   readings for the state rather than the cells for the outcome. The worked example is external —
+   the WaveCounter port's ADR-0055 rejected an input by probing 15,693 governor readings for the
+   target state, finding it zero times, **and then** showing its two gates mutually exclusive by
+   construction. The probe alone would have licensed the same delete on much thinner evidence.
 2. **Name the shape it was for.** `hill-climber.md` §3 lists every family and what defeats it. A
    step whose family is still in the list and still passes is doing its job on a cell that the
    preset skipped; widen the cells before concluding anything.

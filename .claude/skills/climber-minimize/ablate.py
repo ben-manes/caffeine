@@ -25,7 +25,7 @@ import real as REAL
 
 # Every mechanism ablation harness.py wires. Keep this list in step with its FLAGS block.
 ARMS = ["nocorner", "nostarve", "noladder", "noscale", "nocommit", "norepeat",
-        "nowedge", "nofollow", "noshield", "noveto", "nofreeze", "noaudit"]
+        "nowedge", "nofollow", "noshield", "noveto", "noretest", "nofreeze", "noaudit"]
 
 # Cell presets. `quick` is a smoke pass over the families most mechanisms touch; `standard`
 # adds the rest of the constructed families and the whole real corpus, which is what a
@@ -82,7 +82,8 @@ def summarize(rows, arms, fired=None, complete=False):
     # "never fired" is only evidence of death over a cell set wide enough to exercise the step.
     # On a narrow set it means unexercised, and saying otherwise invites deleting a step that a
     # cell one preset over depends on: `norepeat` never fires on demoflood and is worth 18.61 on
-    # absolve_p8.
+    # absolve_p8. Even on the full set the count is a fact about the sample, so DEAD names the
+    # remaining work rather than licensing the delete: the gates have to be shown unsatisfiable.
     if not complete:
         provisional = provisional or " (PROVISIONAL — partial cell set)"
     width = max(len(a) for a in arms)
@@ -103,7 +104,7 @@ def summarize(rows, arms, fired=None, complete=False):
         hits = None if (fired is None) else fired.get(step)
         if same == len(deltas):
             if (hits == 0) and complete:
-                verdict = "DEAD — its site never fired on any cell; delete on reachability"
+                verdict = "DEAD — its site never fired on any cell; prove it unreachable, then delete"
             elif hits == 0:
                 verdict = "UNEXERCISED — its site never fired here" + provisional
             elif hits:

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.WindowClimber.RESTART_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.WindowClimber.RETREAT_COVER;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.RETEST_SETTLE;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.VETO_RETURN_BUDGET;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.VETO_STREAK;
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_FIRST;
@@ -1962,6 +1963,93 @@ final class WindowClimberTest {
 
     long held = steadySample(climber, /* windowMax= */ 7500, /* hitRate= */ 0.66);
     assertThat(held).isEqualTo(0);
+  }
+
+  @Test
+  void guardRail_returnArrival_falsifiesAStaleClaim() {
+    // arriving proves nothing about the claim that sent the window here: the arrival's own drop
+    // can fall under the crash-scale threshold while the claim is still a past regime's. The
+    // position is settled and then judged against the claim frozen when the return committed,
+    // and one that cannot earn it is stood down exactly as a crash-scale swing would have
+    var climber = seededShortfall();
+    climber.auditClock.waitSamples = AUDIT_WAIT_INITIAL;
+    for (int i = 0; i < VETO_STREAK; i++) {
+      steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.66);
+    }
+    assertThat(climber.anchor.held).isTrue();
+    assertThat(climber.anchor.returning).isFalse();
+    assertThat(climber.anchor.retestClaim).isWithin(1.0e-6).of(0.70);
+
+    for (int i = 0; i < RETEST_SETTLE - 1; i++) {
+      steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.66);
+      assertThat(climber.anchor.isPlanted()).isTrue();
+    }
+    // the on-anchor re-sync has decayed the live claim into the shortfall being tested, which is
+    // why the frozen one is the judge
+    assertThat(climber.anchor.rate).isWithin(0.005).of(0.66);
+    assertThat(climber.anchor.retestClaim).isWithin(1.0e-6).of(0.70);
+
+    steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.66);
+    assertThat(climber.anchor.isPlanted()).isFalse();
+    assertThat(climber.anchor.held).isFalse();
+    assertThat(climber.rates.isUnseeded()).isTrue();
+  }
+
+  @Test
+  void guardRail_returnArrival_keepsAClaimThePositionEarns() {
+    // the retest is a test, not a discard: a rate that recovers on the way home leaves the
+    // window at a position that does earn the claim, and the park stands
+    var climber = seededShortfall();
+    climber.auditClock.waitSamples = AUDIT_WAIT_INITIAL;
+    for (int i = 0; i < VETO_STREAK; i++) {
+      steadySample(climber, /* windowMax= */ 7500, /* hitRate= */ 0.66);
+    }
+    assertThat(climber.anchor.returning).isTrue();
+
+    // strides home under a recovery no single sample announces as a workload change
+    @Var long windowMax = 7500;
+    @Var double hitRate = 0.66;
+    for (int i = 0; i < 20; i++) {
+      hitRate = Math.min(0.76, hitRate + 0.02);
+      windowMax += steadySample(climber, windowMax, hitRate);
+      if (!climber.anchor.returning) {
+        break;
+      }
+    }
+    assertThat(climber.anchor.returning).isFalse();
+    assertThat(climber.anchor.isAt(windowMax, WindowClimber.Reading.stableBand(MAXIMUM))).isTrue();
+    assertThat(climber.anchor.retestClaim).isWithin(1.0e-6).of(0.70);
+
+    for (int i = 0; i < RETEST_SETTLE; i++) {
+      assertThat(steadySample(climber, windowMax, hitRate)).isEqualTo(0);
+    }
+    assertThat(climber.anchor.retestClaim).isEqualTo(-1);
+    assertThat(climber.anchor.isPlanted()).isTrue();
+    assertThat(climber.anchor.held).isTrue();
+    assertThat(climber.rates.isUnseeded()).isFalse();
+  }
+
+  @Test
+  void guardRail_returnShortOfTheAnchor_hasNothingToRetest() {
+    // a return that spends its budget without arriving never reached the position its claim
+    // describes, so there is no claim to judge and the reached position keeps its park
+    var climber = seededShortfall();
+    climber.auditClock.waitSamples = AUDIT_WAIT_INITIAL;
+    for (int i = 0; i < 20; i++) {
+      steadySample(climber, /* windowMax= */ 7500, /* hitRate= */ 0.66);
+      if (climber.anchor.held && !climber.anchor.returning) {
+        break;
+      }
+    }
+    assertThat(climber.anchor.returning).isFalse();
+    assertThat(climber.anchor.isAt(7500, WindowClimber.Reading.stableBand(MAXIMUM))).isFalse();
+
+    for (int i = 0; i <= RETEST_SETTLE; i++) {
+      steadySample(climber, /* windowMax= */ 7500, /* hitRate= */ 0.66);
+    }
+    assertThat(climber.anchor.isPlanted()).isTrue();
+    assertThat(climber.anchor.window).isEqualTo(2000);
+    assertThat(climber.anchor.retestClaim).isEqualTo(-1);
   }
 
   @Test

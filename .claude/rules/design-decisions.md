@@ -329,6 +329,20 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   on a still swing while keeping the claim either: the re-seeded deviation reads the shortfall as
   real and the rail vetoes into the dead anchor within four samples (`ghostclaim_p30` 41.2 against
   49.2); the deviation spike a shift leaves is what holds the rail off while the audit walks first.
+- **A veto's return re-tests the claim that sent it, against the claim frozen at the return's start**
+  (2026-08-19, `Anchor.retestClaim`/`isRetestDue`/`retestFails`). Arriving is not evidence for the
+  claim: the arrival's own drop is the only test the machine applied, and where a shift landed on
+  the audit's arm sample that drop reads under `RESTART_THRESHOLD` while the claim is still the
+  previous regime's, so the park stands for the rest of the trace (`ghostclaim_p35`/`p40`, a
+  61-sample park; 31.7 → 33.9 and 31.4 → 33.5). The frozen claim is load-bearing: the on-anchor
+  `resync` decays the live one into the very shortfall being tested, so a live-claim retest can
+  never fail. `RETEST_SETTLE` is 2 because it is the only length that never loses a seed (1 and 3
+  each cost one). Don't add a hold before the retreat commits — it is dead in `hill-climber.md` §5
+  and self-defeating, since spreading the arrival drop across the hold's own samples is what puts
+  it under the threshold. Don't move the retest ahead of `anchor.returning` in the router, and
+  don't arm it on `endReturn`: a return that spends its budget short of the anchor never reached
+  the position the claim describes, which is why `isRetestDue` re-checks `isAt` every sample and
+  `discard` takes any pending retest with it.
 - **A starvation confirm the density arm reverses deepens the ladder; it is not a success** (2026-08-15).
   The up-probe's verdict prices the window against the probation density frozen at the arm, the
   steering law prices it against main's average, and where they disagree the confirmed position is
