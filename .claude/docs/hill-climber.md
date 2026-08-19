@@ -3054,6 +3054,13 @@ unobservable on this battery (no cell fires the veto with a fresh claim); its wo
 bit-identity with the shipped park. The two-sample hold and settle are the transferred constants,
 not re-tuned — the endpoint was met before any tuning.
 
+*Post-review fix.* The arrival retest's cancel path first cleared only the pending flag: a retest
+canceled mid-settle (a crash-scale swing stands the anchor down during the settle) left the settle
+counter behind, and a later retest would arm with the leftover count and shorten its settle
+window. The cancel branch clears the counter too. The chain never fired in the measured battery
+(every commit completed the full retest), and the fix re-verified bit-identical on all 53 seeded
+runs; a unit test pins the cancelled settle against shortening the next one.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor

@@ -2004,7 +2004,7 @@ final class WindowClimberTest {
     steadySample(vetoed, /* windowMax= */ 1500, /* hitRate= */ 0.66);
     assertThat(vetoed.anchor.held).isFalse();
 
-    long adjustment = steadySample(vetoed, /* windowMax= */ 1500, /* hitRate= */ 0.66);
+    @Var long adjustment = steadySample(vetoed, /* windowMax= */ 1500, /* hitRate= */ 0.66);
     assertThat(vetoed.anchor.held).isTrue();
     assertThat(adjustment).isEqualTo(2000 - 1500);
 
@@ -2055,7 +2055,7 @@ final class WindowClimberTest {
     for (int i = 0; i < VETO_STREAK; i++) {
       steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.685);
     }
-    long adjustment = steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.685);
+    @Var long adjustment = steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.685);
     assertThat(adjustment).isEqualTo(2000 - 1500);
     assertThat(climber.anchor.held).isTrue();
 
@@ -2065,6 +2065,38 @@ final class WindowClimberTest {
     assertThat(adjustment).isEqualTo(0);
     assertThat(climber.anchor.isPlanted()).isTrue();
     assertThat(climber.anchor.held).isTrue();
+  }
+
+  @Test
+  void guardRail_sightedArrival_cancelledSettleDoesNotShortenTheNext() {
+    // a retest canceled mid-settle (a crash-scale swing stands the anchor down) must not leak
+    // its leftover settle counter into the next retest: the next committed retreat settles the
+    // full window before judging the frozen claim
+    var climber = seededShortfall();
+    climber.auditClock.waitSamples = AUDIT_WAIT_INITIAL;
+    for (int i = 0; i < VETO_STREAK; i++) {
+      steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.66);
+    }
+    steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.66); // hold expires -> commit
+    steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.66); // settle begins (2 -> 1)
+    steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.60); // a shift cancels the settle
+
+    assertThat(climber.anchor.isPlanted()).isFalse();
+
+    // a second shortfall cycle on the same machine: the settle must start clean again
+    climber.anchor.window = 2000;
+    climber.anchor.rate = 0.70;
+    climber.rates.smoothed = 0.66;
+    climber.sample.previousHitRate = 0.66;
+    climber.rates.deviation = 0.0;
+    for (int i = 0; i < VETO_STREAK; i++) {
+      steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.66);
+    }
+    steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.66); // commit again
+    steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.66); // settle sample 1 of 2
+    assertThat(climber.anchor.isPlanted()).isTrue(); // no early retest from a leftover count
+    steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.66); // settle sample 2 -> retest
+    assertThat(climber.anchor.isPlanted()).isFalse();
   }
 
   /**

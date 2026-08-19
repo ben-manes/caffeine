@@ -312,6 +312,13 @@
       AT_STALE_THREAD_WRITE_OF_PRIMITIVE"/>
   </Match>
   <Match>
+    <!-- The arrival retest judges the frozen claim and never moves the window; it returns the
+         router's adjustment type to stay uniform with the other steps -->
+    <Class name="com.github.benmanes.caffeine.cache.WindowClimber"/>
+    <Method name="sightedArriveStep"/>
+    <Bug pattern="MRC_METHOD_RETURNS_CONSTANT"/>
+  </Match>
+  <Match>
     <Or>
       <Field name="maximum"/>
       <Field name="weightedSize"/>

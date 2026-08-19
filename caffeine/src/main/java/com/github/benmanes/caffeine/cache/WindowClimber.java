@@ -380,7 +380,9 @@ final class WindowClimber {
       return false;
     }
     if (!anchor.isAt(reading.windowMax, reading.band)) {
+      // Clear the settle too: a leftover count would shorten the next retest's settle window
       sightedArrivePending = false;
+      sightedArriveLeft = 0;
       return false;
     }
     if (sightedArriveLeft == 0) {
