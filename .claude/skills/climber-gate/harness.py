@@ -303,9 +303,12 @@ EDITS = [
      "    void park(int shield) {\n      if ((shield > 0) && !NOSHIELD) {\n        fired(SHIELD);\n      }\n"
      "      freshLeft = NOSHIELD ? 0 : shield;\n"),
 
+    # 2026-08-19 (the sighted veto retreat): the streak-and-arm moved to sightedVetoTriggered and
+    # Anchor.vetoTriggered is no longer reached from the router, so the ablation gates the sighted
+    # arming site; under noveto the completed streak returns false without arming the hold.
     ("ablate-veto", W,
-     "        if (shortfallStreak >= VETO_STREAK) {\n",
-     "        if (!NOVETO && (shortfallStreak >= VETO_STREAK) && fired(VETO)) {\n"),
+     "    if (sightedShortfallStreak < Anchor.VETO_STREAK) {\n      return false;\n    }\n    sightedShortfallStreak = 0;\n    sightedHoldLeft = SIGHTED_HOLD_SAMPLES;\n",
+     "    if (NOVETO || (sightedShortfallStreak < Anchor.VETO_STREAK)) {\n      return false;\n    }\n    fired(VETO);\n    sightedShortfallStreak = 0;\n    sightedHoldLeft = SIGHTED_HOLD_SAMPLES;\n"),
 
     ("ablate-freeze", W,
      "      double baseline = baseProbationDensity\n          * ((double) r.requestCount / Math.max(1L, baseRequestCount));\n",
@@ -342,15 +345,17 @@ EDITS = [
      "        return anchor.returning ? strideHome(reading) : 0.0;\n"),
 
     ("mode-confirm-steer", W,
-     "      return density.steer(reading.steeringError(), reading);\n    } else if (hasPendingUndo()) {\n      return undoStride(reading);\n    } else if (anchor.returning) {\n      return strideHome(reading);\n    } else if (reading.hasBlindCorner()) {\n",
+     "      return density.steer(reading.steeringError(), reading);\n    } else if (hasPendingUndo()) {\n      return undoStride(reading);\n    } else if (sightedHoldActive()) {\n      return sightedHoldStep(reading, rates);\n    } else if (anchor.returning) {\n      return strideHome(reading);\n    } else if (sightedArriveActive(reading)) {\n      return sightedArriveStep(reading, rates);\n    } else if (reading.hasBlindCorner()) {\n",
      "      dbgMode = \"CONFIRM+steer\";\n      return density.steer(reading.steeringError(), reading);\n"
      "    } else if (hasPendingUndo()) {\n      dbgMode = \"undo\";\n      return undoStride(reading);\n"
+     "    } else if (sightedHoldActive()) {\n      dbgMode = \"srHold\";\n      return sightedHoldStep(reading, rates);\n"
      "    } else if (anchor.returning) {\n      dbgMode = \"vetoRet\";\n      return strideHome(reading);\n"
+     "    } else if (sightedArriveActive(reading)) {\n      dbgMode = \"srArrive\";\n      return sightedArriveStep(reading, rates);\n"
      "    } else if (reading.hasBlindCorner()) {\n      dbgMode = isBackingOff() ? \"hold\" : \"ARM\";\n"),
 
     ("mode-veto-audit-park", W,
-     "    } else if (anchor.vetoTriggered(reading, rates)) {\n      return strideHome(reading);\n    } else if (auditClock.isDue()) {\n      return armEquilibriumAudit(reading);\n    } else if (anchor.held) {\n",
-     "    } else if (anchor.vetoTriggered(reading, rates)) {\n      dbgMode = \"VETO\";\n      return strideHome(reading);\n"
+     "    } else if (sightedVetoTriggered(reading, rates)) {\n      return sightedHoldStep(reading, rates);\n    } else if (auditClock.isDue()) {\n      return armEquilibriumAudit(reading);\n    } else if (anchor.held) {\n",
+     "    } else if (sightedVetoTriggered(reading, rates)) {\n      dbgMode = \"VETO\";\n      return sightedHoldStep(reading, rates);\n"
      "    } else if (AUDITS && auditClock.isDue()) {\n      dbgMode = \"AUDIT\";\n      return armEquilibriumAudit(reading);\n"
      "    } else if (anchor.held) {\n      dbgMode = \"park\";\n"),
 

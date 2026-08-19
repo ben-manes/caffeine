@@ -1021,12 +1021,15 @@ final class WindowClimberTest {
     // the fresh-park shield belongs to audit confirms alone: a guard-rail veto's park earned no
     // validation walk, so the very next crash-scale swing releases it (a starvation confirm
     // between audits must not leave a stale shield for the veto to inherit. The shield lives
-    // and dies with the park)
+    // and dies with the park). The sighted veto holds and re-samples before it commits, so the
+    // park is earned one hold past the streak, still without a shield
     var climber = seededShortfall();
     climber.auditClock.waitSamples = AUDIT_WAIT_INITIAL;
     for (int i = 0; i < VETO_STREAK; i++) {
       steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.66);
     }
+    assertThat(climber.anchor.held).isFalse();
+    steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.66);
     assertThat(climber.anchor.held).isTrue();
     assertThat(climber.anchor.freshLeft).isEqualTo(0);
 
@@ -1985,8 +1988,10 @@ final class WindowClimberTest {
   @Test
   void guardRail_blindCorner_outranksTheVeto() {
     // a starved sample cannot honestly adjudicate a shortfall: blindness routes to the probe
-    // machinery before the veto may fire, while an identically-placed sighted sample vetoes
-    // (and, with the anchor one stride away, completes its return and parks within the call)
+    // machinery before the veto may fire, while an identically-placed sighted sample vetoes —
+    // sighted, the completed streak holds and re-samples first, and the hold expiring in
+    // shortfall commits the return (with the anchor one stride away, the commit's stride
+    // completes the return and parks within the call)
     var vetoed = seededShortfall();
     var probed = seededShortfall();
     for (int i = 0; i < 3; i++) {
@@ -1997,14 +2002,69 @@ final class WindowClimberTest {
     assertThat(probed.anchor.held).isFalse();
 
     steadySample(vetoed, /* windowMax= */ 1500, /* hitRate= */ 0.66);
-    assertThat(vetoed.anchor.held).isTrue();
-    assertThat(vetoed.adjustment()).isEqualTo(2000 - 1500);
+    assertThat(vetoed.anchor.held).isFalse();
 
-    long adjustment = sample(probed, /* windowMax= */ 1500,
+    long adjustment = steadySample(vetoed, /* windowMax= */ 1500, /* hitRate= */ 0.66);
+    assertThat(vetoed.anchor.held).isTrue();
+    assertThat(adjustment).isEqualTo(2000 - 1500);
+
+    adjustment = sample(probed, /* windowMax= */ 1500,
         /* windowHits= */ 0, /* mainHits= */ 660, /* misses= */ 340);
     assertThat(probed.walk).isNotNull();
     assertThat(probed.anchor.held).isFalse();
     assertThat(adjustment).isEqualTo((long) STRIDE);
+  }
+
+  @Test
+  void guardRail_sightedArrival_falsifiesAStaleClaim() {
+    // a committed sighted retreat that ends on its anchor has proved nothing yet: the hold that
+    // preceded it spreads the arrival drop across its own samples, so the one-sample swing that
+    // stands a stale claim down can land under the restart threshold while the claim is still
+    // wrong. The claim frozen at the commit is therefore re-tested after a short settle, and a
+    // settled rate still short of it stands the claim down with the goal metric — the exact
+    // disposition the masked crash-scale swing would have taken
+    var climber = seededShortfall();
+    climber.auditClock.waitSamples = AUDIT_WAIT_INITIAL;
+    for (int i = 0; i < VETO_STREAK; i++) {
+      steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.66);
+    }
+    long adjustment = steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.66);
+    assertThat(adjustment).isEqualTo(2000 - 1500);
+    assertThat(climber.anchor.held).isTrue();
+
+    steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.66);
+    assertThat(climber.anchor.isPlanted()).isTrue();
+    steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.66);
+    assertThat(climber.anchor.isPlanted()).isFalse();
+    assertThat(climber.anchor.held).isFalse();
+    assertThat(Double.isNaN(climber.rates.smoothed)).isTrue();
+  }
+
+  @Test
+  void guardRail_sightedArrival_keepsAnEarnedClaim() {
+    // the same re-test keeps a claim the settled rate earns: the on-anchor re-sync cannot be the
+    // judge (it decays the claim into the very shortfall being tested), so the frozen claim is
+    // compared against the settled rate, and the park stands as shipped
+    var climber = makeClimber();
+    climber.auditClock.waitSamples = AUDIT_WAIT_INITIAL;
+    climber.anchor.window = 2000;
+    climber.anchor.rate = 0.70;
+    climber.rates.smoothed = 0.685;
+    climber.sample.previousHitRate = 0.685;
+    climber.rates.deviation = 0.0;
+    for (int i = 0; i < VETO_STREAK; i++) {
+      steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.685);
+    }
+    long adjustment = steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.685);
+    assertThat(adjustment).isEqualTo(2000 - 1500);
+    assertThat(climber.anchor.held).isTrue();
+
+    steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.71);
+    assertThat(climber.anchor.isPlanted()).isTrue();
+    adjustment = steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.71);
+    assertThat(adjustment).isEqualTo(0);
+    assertThat(climber.anchor.isPlanted()).isTrue();
+    assertThat(climber.anchor.held).isTrue();
   }
 
   /**

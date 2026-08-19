@@ -3004,6 +3004,56 @@ amplitude clears any margin the confirm's own reference sets. The `whisper_mod` 
 doses are what that costs. Three screens for it are dead in §5, and two of them refuse a real crest
 to refuse a spike, which is item 1's structural finding on this layer's terrain.
 
+**2026-08-19 (the sighted veto retreat: the guard rail's veto looks before it steps back, and
+re-tests what it arrives at).** §8 item 6's residual — a shift lands on the audit's arm and the
+stale claim's veto, hold and deepest-rung wait pin the machine (`ghostclaim_p35..p40`) — worked
+with a transfer from the local WaveCounter study, whose sighted retreat (its ADR-0058/0059)
+evolved on top of this machine's own guard rail and is here handed back to it.
+
+*The mechanism, two parts, no knob.* (1) The veto does not step back blind: when the
+noise-cleared shortfall streak completes, the window holds two samples while the goal metric
+re-samples. A hold that recovers to within the veto margin re-plants the anchor where the window
+stands and cancels the retreat — the veto chased a noise streak. A hold that expires still in
+shortfall commits: the claim is frozen and the return strides home as shipped. (2) A committed
+return that ends on the anchor has not proved the claim. The hold spreads the arrival drop across
+its own samples, so the one-sample swing that stands a stale claim down can land under the
+restart threshold while the claim is still wrong — measured on `ghostclaim_p35` seed 3: 0.043
+against the 0.05 threshold, where the shipped same-sample arrival reads 0.067 and does stand
+down. The machine therefore settles two samples on the anchor and re-tests the claim frozen at
+the commit (the live claim cannot discriminate: the on-anchor re-sync decays it into the very
+shortfall) against the settled rate within the veto margin. Earning it keeps the park as shipped;
+falling short stands the claim down exactly as the masked crash would have — discard plus goal
+metric reset.
+
+*Measured (seeded N=8, arms interleaved inside each seed, endpoint and gates pre-registered).*
+The dose set {p30, p35, p40} reads **+1.16pp mean-of-cell-means** (p30 +0.00 bit-identical — the
+veto never fires there; p35 +1.57; p40 +1.91) against the pre-registered ≥+0.5 mean and ≥−0.3
+every cell. Where the veto fires before the shift's arrival swing can mask, ship pins on the
+stale claim for the rest of the trace (final third 0.16–0.18) and the arrival re-test is the only
+escape route (+4.7..+6.0pp on those seeds); where the crash lands with the veto, both arms
+discard and the candidate trails its own hold-plus-settle by a 5–9 sample phase (−2.8..−8.6pp in
+the final third of the 127-sample traces, same basin). The 69-cell battery at two arms is 66
+bit-identical, median Δ +0.00, worst cell −0.02pp, with `climbtrend_dn` **+0.41pp on all three
+seeds** — a trend's stale anchor claims discarded at arrival instead of pinning. The corpus
+(corda + the lirs trio) is bit-identical at N=8, and all sixteen veto sentinels are
+bit-identical: the mechanism acts only after a veto commits, and no veto fires outside the
+stale-claim family on this tree. Knob-off bit-identity re-verified on corda (33.00 / LRU 33.33,
+hits and misses exact).
+
+*The two extra layers were tried and did not earn their complexity.* A mid-descent slope
+falsification and a mid-descent recovery park never fired in over 600 armed runs across two rounds
+(the ≤8-stride descent to a nearby anchor completes inside the goal metric's lag, so no streak
+signal can form), and the arms carrying them are bit-identical to the bare probe everywhere.
+Dropped from the landing shape (minimize); recorded so they are not re-tuned.
+
+*Costs and caveats.* The candidate's negative seeds are bounded phase lag, not basin changes.
+`slowswap_r1`'s absolute bar (≥40 on every seed) is now missed by the control itself (39.76 on
+seed 5, against the row's recorded draws 40.12–40.85) — tree drift since the row was recorded,
+the candidate reads +0.00 there; the row needs a rebase. The arrival re-test's keep branch is
+unobservable on this battery (no cell fires the veto with a fresh claim); its worst case is
+bit-identity with the shipped park. The two-sample hold and settle are the transferred constants,
+not re-tuned — the endpoint was met before any tuning.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor
@@ -3315,7 +3365,10 @@ where it lives: a shift landing on the audit's arm sample or during its walk (`g
 the round's face-(b) cells) crashes the walk on a contaminated base, and the stale claim's veto, its
 hold, the down alternation and the deepest-rung wait then pin the machine, which is the recovery
 layer's thread (item 4's residual, the veto's hold after a claim proves false on arrival, the retry
-direction after a crashed walk); and an audit arming inside the smoothing horizon after a shift
+direction after a crashed walk) — **the pin was worked 2026-08-19 (§7's sighted veto retreat): the
+veto looks before it steps back and re-tests the frozen claim after it arrives, +1.16pp mean on
+the p30/p35/p40 dose set with every sentinel bit-identical**; and an audit arming inside the
+smoothing horizon after a shift
 measures against a blend of the regimes (`p34` clears it by 3.5pp; a smaller prize would not). The
 recorded controls stay `slowswap_r20`, `regimeramp` and `widepin`, all bit-identical.
 
