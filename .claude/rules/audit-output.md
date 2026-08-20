@@ -10,7 +10,7 @@ records **who produced it**:
 
 - **`<model>`** — the short id of the model that produced the report, lowercased, no vendor
   prefix and no context-window suffix: `opus-5`, `fable-5`, `sonnet-5`, `haiku-4.5`,
-  `gpt-5-codex`. When a run spans models (an auditor on one, an evaluator on another), use the
+  `gpt-5.6-sol`. When a run spans models (an auditor on one, an evaluator on another), use the
   model that **orchestrated** it.
 - **`shared`** occupies the `<model>` slot for artifacts that are not one model's output: the
   consolidated backlog, a bug spec worked across sessions, anything aggregating several runs.
@@ -28,7 +28,7 @@ Examples:
 
 ```
 .local/audits/opus-5/audit-jmm.md
-.local/audits/gpt-5-codex/audit-jmm.md                  # same audit, other provider
+.local/audits/gpt-5.6-sol/audit-jmm.md                  # same audit, other provider
 .local/audits/fable-5/audit-adversarial.md
 .local/audits/fable-5/audit-adversarial-evidence/r1-challenges.md
 .local/audits/shared/audit-consolidated.md              # cross-model working backlog

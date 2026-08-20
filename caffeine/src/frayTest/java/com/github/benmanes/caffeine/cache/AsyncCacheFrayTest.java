@@ -54,6 +54,7 @@ final class AsyncCacheFrayTest {
     threadB.join();
 
     assertThat(cache.synchronous().getIfPresent(1)).isEqualTo(42);
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -79,6 +80,8 @@ final class AsyncCacheFrayTest {
       assertWithMessage("Key 1 should be absent or have value 99, but was %s", value)
           .that(value).isEqualTo(99);
     }
+
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -105,6 +108,7 @@ final class AsyncCacheFrayTest {
     cache.synchronous().cleanUp();
 
     assertThat(cache.synchronous().estimatedSize()).isAtMost(3);
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -129,6 +133,8 @@ final class AsyncCacheFrayTest {
     assertThat(value).isNotNull();
     assertWithMessage("Key 1 should be 42 or 99, but was %s", value)
         .that(value).isAnyOf(42, 99);
+
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -155,6 +161,7 @@ final class AsyncCacheFrayTest {
     assertThat(cache.synchronous().getIfPresent(2)).isEqualTo(20);
     assertThat(cache.synchronous().getIfPresent(1)).isEqualTo(10);
     assertThat(cache.synchronous().getIfPresent(3)).isEqualTo(30);
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -187,6 +194,8 @@ final class AsyncCacheFrayTest {
     for (int k = 1; k <= 5; k++) {
       assertThat(cache.synchronous().getIfPresent(k)).isEqualTo(k * 10);
     }
+
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -212,6 +221,7 @@ final class AsyncCacheFrayTest {
     int actualWeight = cache.synchronous().asMap().values().stream()
         .mapToInt(Integer::intValue).sum();
     assertThat(reportedWeight).isEqualTo(actualWeight);
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -240,6 +250,7 @@ final class AsyncCacheFrayTest {
     cache.synchronous().cleanUp();
 
     assertThat(cache.synchronous().getIfPresent(1)).isNull();
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -296,6 +307,8 @@ final class AsyncCacheFrayTest {
       assertWithMessage("Key 1 should be absent or have value 99, but was %s", value)
           .that(value).isEqualTo(99);
     }
+
+    assertThat(cache).isValid();
   }
 
   /* --------------- Async Eviction Variants --------------- */
@@ -353,6 +366,7 @@ final class AsyncCacheFrayTest {
         .mapToInt(Integer::intValue).sum();
     assertThat(reportedWeight).isEqualTo(actualWeight);
     assertThat(reportedWeight).isAtMost(20);
+    assertThat(cache).isValid();
   }
 
   /**
@@ -388,5 +402,7 @@ final class AsyncCacheFrayTest {
     assertThat(cache.synchronous().estimatedSize()).isAtMost(1);
     assertThat(cache.synchronous().estimatedSize())
         .isEqualTo(cache.synchronous().asMap().size());
+
+    assertThat(cache).isValid();
   }
 }

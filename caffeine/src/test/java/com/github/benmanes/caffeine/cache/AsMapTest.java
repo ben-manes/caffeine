@@ -3706,7 +3706,8 @@ final class AsMapTest {
 
   @CheckNoStats
   @ParameterizedTest
-  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG)
+  @CacheSpec(population = Population.FULL,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   void entrySet_removeAll_byCollection(Map<Int, Int> map, CacheContext context) {
     var entries = Mockito.spy(Sets.union(context.original().entrySet(), context.absent().entrySet()));
     when(entries.size()).thenReturn(3);
@@ -3720,7 +3721,8 @@ final class AsMapTest {
 
   @CheckNoStats
   @ParameterizedTest
-  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG)
+  @CacheSpec(population = Population.FULL,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   void entrySet_removeAll_bySet(Map<Int, Int> map, CacheContext context) {
     var entries = Mockito.spy(Sets.union(context.original().entrySet(), context.absent().entrySet()));
 
@@ -3746,6 +3748,25 @@ final class AsMapTest {
     } else {
       assertThat(map.entrySet().removeAll(Set.of(distinctEntry))).isTrue();
       assertThat(map).doesNotContainKey(original);
+    }
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT})
+  void entrySet_removeAll_byIdentity_value(Map<Int, Int> map, CacheContext context) {
+    var key = context.firstKey();
+    var value = requireNonNull(context.original().get(key));
+    var distinctEntry = Map.entry(key, new Int(value.intValue()));
+
+    if (context.isGuava()) {
+      // Inherited from AbstractSet.removeAll, which asks whichever side is smaller
+      assertThat(map.entrySet().removeAll(Set.of(distinctEntry))).isFalse();
+      assertThat(map).containsKey(key);
+    } else {
+      assertThat(map.entrySet().removeAll(Set.of(distinctEntry))).isTrue();
+      assertThat(map).doesNotContainKey(key);
     }
   }
 

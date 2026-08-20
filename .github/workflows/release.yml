@@ -27,6 +27,19 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Verify the tag matches the project version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          major=$(sed -n 's/^version\.major=//p' gradle.properties)
+          minor=$(sed -n 's/^version\.minor=//p' gradle.properties)
+          patch=$(sed -n 's/^version\.patch=//p' gradle.properties)
+          version="$major.$minor.$patch"
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Release tag $TAG does not match the project version $version"
+            exit 1
+          fi
       - name: Releasing
         uses: ./.github/actions/run-gradle
         env:

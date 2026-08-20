@@ -143,6 +143,7 @@ final class EvictionFrayTest {
     int actualWeight = cache.asMap().values().stream().mapToInt(Integer::intValue).sum();
     assertThat(reportedWeight).isEqualTo(actualWeight);
     assertThat(reportedWeight).isAtMost(20);
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -175,6 +176,7 @@ final class EvictionFrayTest {
     long reportedWeight = cache.policy().eviction().orElseThrow().weightedSize().orElseThrow();
     int actualWeight = cache.asMap().values().stream().mapToInt(Integer::intValue).sum();
     assertThat(reportedWeight).isEqualTo(actualWeight);
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -201,6 +203,7 @@ final class EvictionFrayTest {
         .that(cache.getIfPresent(0)).isNotNull();
     long reportedWeight = cache.policy().eviction().orElseThrow().weightedSize().orElseThrow();
     assertThat(reportedWeight).isAtMost(10);
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -227,6 +230,7 @@ final class EvictionFrayTest {
 
     assertThat(cache.estimatedSize()).isEqualTo(1);
     assertThat(cache.asMap().size()).isEqualTo(1);
+    assertThat(cache).isValid();
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
@@ -283,6 +287,7 @@ final class EvictionFrayTest {
     int actualWeight = cache.asMap().values().stream().mapToInt(Integer::intValue).sum();
     assertThat(reportedWeight).isEqualTo(actualWeight);
     assertThat(reportedWeight).isAtMost(15);
+    assertThat(cache).isValid();
   }
 
   /** Weighted variant of eviction_resurrection_put. */
@@ -310,6 +315,7 @@ final class EvictionFrayTest {
     int actualWeight = cache.asMap().values().stream().mapToInt(Integer::intValue).sum();
     assertThat(reportedWeight).isEqualTo(actualWeight);
     assertThat(reportedWeight).isAtMost(15);
+    assertThat(cache).isValid();
   }
 
   /** Eviction with removal listener verifying notification consistency. */
@@ -440,5 +446,6 @@ final class EvictionFrayTest {
     int actualWeight = cache.asMap().values().stream().mapToInt(Integer::intValue).sum();
     assertThat(reportedWeight).isEqualTo(actualWeight);
     assertThat(reportedWeight).isAtMost(25);
+    assertThat(cache).isValid();
   }
 }

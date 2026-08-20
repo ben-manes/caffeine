@@ -3965,7 +3965,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     public boolean removeAll(Collection<?> collection) {
       requireNonNull(collection);
       @Var boolean modified = false;
-      if (cache.collectKeys() || ((collection instanceof Set<?>) && (collection.size() > size()))) {
+      if (cache.collectKeys() || cache.collectValues()
+          || ((collection instanceof Set<?>) && (collection.size() > size()))) {
         for (var entry : this) {
           if (collection.contains(entry)) {
             modified |= remove(entry);

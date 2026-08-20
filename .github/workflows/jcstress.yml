@@ -56,4 +56,4 @@ jobs:
         with:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           java: ${{ env.JAVA_VERSION }}
-          arguments: jcstress
+          arguments: jcstress --rerun-tasks

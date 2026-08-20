@@ -6,7 +6,7 @@ module is the single place the three CLIs (walker.py, verify.py, run.py) derive 
 they cannot disagree about it.
 
 `<model>` comes from AUDIT_MODEL: the invoking agent exports its own short model id (opus-5,
-gpt-5-codex, …), because a shell-launched walk cannot know it.
+gpt-5.6-sol, …), because a shell-launched walk cannot know it.
 
 Resume safety: a walk runs for hours and is explicitly resumable, so it must not lose its
 state.json because a shell forgot to export AUDIT_MODEL. When the variable is absent and exactly

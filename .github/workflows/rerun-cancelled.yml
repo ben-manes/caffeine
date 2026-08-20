@@ -51,11 +51,14 @@ jobs:
           # Classify the outcomes. Re-run only the "a few stragglers were cancelled
           # while everything else passed" shape. Any genuine failure, or a mass-cancel
           # (manual stop / broad outage), is left for a human.
-          counts=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" \
-            --jq '[ ([.jobs[] | select(.conclusion == "failure")]   | length),
-                    ([.jobs[] | select(.conclusion == "cancelled")] | length),
-                    ([.jobs[] | select(.conclusion == "success")]   | length) ] | @tsv')
-          IFS=$'\t' read -r failure cancelled success <<< "$counts"
+          # The matrix expands past one page, so paginate; an unpaginated read hid the
+          # only cancelled job of a 126-job run behind the first 100 and did nothing.
+          conclusions=$(gh api --paginate \
+            "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" --jq '.jobs[].conclusion')
+          tally() { printf '%s\n' "$conclusions" | grep -cx "$1" || true; }
+          failure=$(tally failure)
+          cancelled=$(tally cancelled)
+          success=$(tally success)
           echo "failure=$failure cancelled=$cancelled success=$success (attempt $ATTEMPT)"
 
           if [ "$failure" -ne 0 ]; then

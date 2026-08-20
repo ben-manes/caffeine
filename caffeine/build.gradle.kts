@@ -1,4 +1,7 @@
 @file:Suppress("UnstableApiUsage")
+import java.time.Year
+import java.time.ZoneId
+
 import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
@@ -145,6 +148,7 @@ private fun JavaExec.codeGenerationTask(generator: String, directory: String) {
   })
   inputs.files(compileJavaPoetJava.map { it.outputs.files })
     .withPathSensitivity(RELATIVE)
+  inputs.property("year", providers.provider { Year.now(ZoneId.of("America/Los_Angeles")) })
   outputs.cacheIf { true }
   outputs.dir(outputDir)
 }

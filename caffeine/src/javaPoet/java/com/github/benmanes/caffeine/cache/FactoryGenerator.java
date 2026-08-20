@@ -19,6 +19,8 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
+import static com.google.common.io.MoreFiles.deleteDirectoryContents;
+import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
@@ -71,8 +73,16 @@ final class FactoryGenerator {
 
   void generate() throws IOException {
     var types = generateTypes();
+    deleteStaleSources();
     writeJavaFile(types);
     reformat();
+  }
+
+  /** Deletes the sources of a prior run so that the directory holds only the current types. */
+  private void deleteStaleSources() throws IOException {
+    if (Files.exists(directory)) {
+      deleteDirectoryContents(directory, ALLOW_INSECURE);
+    }
   }
 
   /** Generates a specialization per configuration, ordered so that a parent precedes its child. */

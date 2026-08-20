@@ -173,5 +173,6 @@ final class BufferDrainFrayTest {
         .weightedSize().orElseThrow();
     int actualWeight = cache.asMap().values().stream().mapToInt(Integer::intValue).sum();
     assertThat(weightedSize).isEqualTo(actualWeight);
+    assertThat(cache).isValid();
   }
 }

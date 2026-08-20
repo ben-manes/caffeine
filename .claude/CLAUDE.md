@@ -180,7 +180,7 @@ When to read which doc:
 | Third-party/JDK API contract misuse (adapters, simulator, examples) | `/audit-third-party-contracts` |
 
 **Audit output**: reports go to `.local/audits/<model>/<skill-name>.md` — one directory per
-producing model (`opus-5`, `gpt-5-codex`, …) plus `shared` for cross-model working documents like
+producing model (`opus-5`, `gpt-5.6-sol`, …) plus `shared` for cross-model working documents like
 the consolidated backlog. Gitignored but kept long-term; see `.claude/rules/audit-output.md`.
 
 ### Eviction Quality (a workflow, not audits)

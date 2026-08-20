@@ -6,6 +6,10 @@
 - New tests should follow the `@CacheSpec` parameterization pattern, not create caches manually
 - Use `CacheContext` for test utilities: `context.ticker()`, `context.absentKey()`, etc.
 - GC-dependent tests are inherently flaky — use `GcFinalization` and `Awaits.awaitFullGc()`
+- A value the test itself creates (a loader returning `key.negate()`, a compute remapping) must
+  be wrapped in `CacheContext.intern(...)` under `@CheckNoEvictions`, or the weak/soft cells
+  can collect it between the test body and the teardown check and report it as a `COLLECTED`
+  eviction. Values from `context.absentValue()` and `context.original()` are already pinned
 - Notification assertions: cast to `ConsumingRemovalListener`, check `listener.removed()`
 - Fray tests use direct thread creation with `@FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)`, no parameterization
 - Tests: `caffeine/src/test/java/`, fixtures: `testFixtures/`

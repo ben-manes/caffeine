@@ -262,7 +262,7 @@ race). Do not consider an escalation addressed merely because a report holds a s
 
 Write the full report to the path your orchestrator assigned you. Absent one, use
 `.local/audits/<model>/<skill-name>.md` (create the directory if absent) where
-`<model>` is your own short model id (`opus-5`, `fable-5`, `gpt-5-codex`) and `<skill-name>`
+`<model>` is your own short model id (`opus-5`, `fable-5`, `gpt-5.6-sol`) and `<skill-name>`
 matches the invoking skill — see `.claude/rules/audit-output.md`. **This write is
 mandatory — never inline-only.** Writing the file and returning your findings to
 the parent are BOTH required: write the file first, then summarize it in your

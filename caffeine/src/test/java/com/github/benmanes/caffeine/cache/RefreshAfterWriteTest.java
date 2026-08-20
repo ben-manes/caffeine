@@ -838,7 +838,7 @@ final class RefreshAfterWriteTest {
       loads.incrementAndGet();
       loadStarted.countDown();
       release.await();
-      return key.negate();
+      return intern(key.negate());
     };
     LoadingCache<Int, Int> cache = context.isAsync()
         ? context.buildAsync(loader).synchronous()
