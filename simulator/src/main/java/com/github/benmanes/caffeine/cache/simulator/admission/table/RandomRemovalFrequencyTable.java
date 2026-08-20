@@ -52,7 +52,7 @@ public final class RandomRemovalFrequencyTable implements Frequency {
 
   public RandomRemovalFrequencyTable(Config config) {
     var settings = new BasicSettings(config);
-    maxSum = Math.toIntExact(sampleFactor * settings.maximumSize());
+    maxSum = Math.toIntExact(Math.multiplyExact(sampleFactor, settings.maximumSize()));
     random = new Random(settings.randomSeed());
     table = new Long2IntOpenHashMap(maxSum);
   }

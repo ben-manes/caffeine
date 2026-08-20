@@ -229,7 +229,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
      */
     LFU {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return Collections.min(sample, Comparator.comparingInt(node -> node.frequency));
+        return Collections.min(sample, Comparator.comparingLong(node -> node.frequency));
       }
     },
 
@@ -238,7 +238,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
      */
     MFU {
       @Override Node select(List<Node> sample, Random random, long tick) {
-        return Collections.max(sample, Comparator.comparingInt(node -> node.frequency));
+        return Collections.max(sample, Comparator.comparingLong(node -> node.frequency));
       }
     },
 
@@ -273,7 +273,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     final long insertionTime;
 
     long accessTime;
-    int frequency;
+    long frequency;
     int index;
 
     public Node(long key, int index, long tick) {

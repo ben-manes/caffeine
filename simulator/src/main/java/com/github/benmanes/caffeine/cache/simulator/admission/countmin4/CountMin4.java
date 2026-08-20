@@ -78,6 +78,11 @@ public abstract class CountMin4 implements Frequency {
     tableMask = Math.max(0, table.length - 1);
   }
 
+  @Override
+  public boolean isResizable() {
+    return true;
+  }
+
   /**
    * Returns the estimated number of occurrences of an element, up to the maximum (15).
    *

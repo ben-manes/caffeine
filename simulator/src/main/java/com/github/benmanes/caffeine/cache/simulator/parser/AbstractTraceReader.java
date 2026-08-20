@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.parser;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.io.BufferedInputStream;
+import java.io.EOFException;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,9 +32,11 @@ import java.util.function.Function;
 
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
+import org.apache.commons.compress.archivers.StreamingNotSupportedException;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.jspecify.annotations.Nullable;
+import org.tukaani.xz.XZFormatException;
 import org.tukaani.xz.XZInputStream;
 
 import com.facebook.infer.annotation.SuppressLint;
@@ -103,8 +106,10 @@ public abstract class AbstractTraceReader implements TraceReader {
   private static @Nullable InputStream tryXz(InputStream input) {
     try {
       return new XZInputStream(input);
-    } catch (IOException _) {
+    } catch (XZFormatException | EOFException _) {
       return null;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 
@@ -138,6 +143,8 @@ public abstract class AbstractTraceReader implements TraceReader {
         }
       };
       return new MultiInputStream(archive, entries);
+    } catch (StreamingNotSupportedException e) {
+      throw new IllegalStateException(e);
     } catch (ArchiveException _) {
       return null;
     }

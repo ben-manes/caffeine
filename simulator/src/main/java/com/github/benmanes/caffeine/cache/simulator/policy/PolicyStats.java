@@ -226,7 +226,7 @@ public class PolicyStats {
   }
 
   public long requestsWeight() {
-    return hitsWeight + missesWeight;
+    return Math.addExact(hitsWeight, missesWeight);
   }
 
   public long admissionCount() {

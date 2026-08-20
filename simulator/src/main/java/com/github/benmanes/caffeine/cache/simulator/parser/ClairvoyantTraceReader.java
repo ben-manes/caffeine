@@ -227,6 +227,8 @@ public final class ClairvoyantTraceReader implements TraceReader {
     var writer = new MutableObject<Writer>();
     try (Stream<AccessEvent> events = delegate.events().skip(skip).limit(limit)) {
       events.forEachOrdered(event -> {
+        checkState(!weighted || !event.isPenaltyAware(),
+            "Cannot materialize both the weight and the penalties of an event");
         if (writer.get() == null) {
           state.penaltyAware = event.isPenaltyAware();
           state.recordWidth = recordWidth(weighted, state.penaltyAware);

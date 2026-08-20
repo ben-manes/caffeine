@@ -51,11 +51,11 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
   int residentFilter;
   int residentMain;
 
-  private final int pivot;
   private int sample;
-  private final int sampleSize;
+  private final int pivot;
   private int hitsInSample;
   private int missesInSample;
+  private final long sampleSize;
   private double previousHitRate;
   private boolean increaseWindow;
 
@@ -67,7 +67,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
     this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
     this.pivot = (int) (0.05 * maximumSize);
-    this.sampleSize = 10 * maximumSize;
+    this.sampleSize = 10L * maximumSize;
     this.headFilter = new Node();
     this.headMain = new Node();
     checkState(maximumMainResidentSize >= 1,

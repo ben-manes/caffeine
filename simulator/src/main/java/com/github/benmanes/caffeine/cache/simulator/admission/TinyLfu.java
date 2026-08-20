@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Locale.US;
 
 import java.util.Random;
@@ -50,6 +51,9 @@ public final class TinyLfu implements KeyOnlyAdmitter {
     this.random = new Random(settings.randomSeed());
     this.sketch = makeSketch(settings);
     this.policyStats = policyStats;
+    checkArgument((settings.maximumSize() > 0) || sketch.isResizable(),
+        "The %s sketch cannot be resized, so it requires a maximum size",
+        settings.tinyLfu().sketch());
     if (settings.tinyLfu().jitter().enabled()) {
       this.threshold = settings.tinyLfu().jitter().threshold();
       this.probability = settings.tinyLfu().jitter().probability();

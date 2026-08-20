@@ -162,7 +162,7 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
     @Nullable Node prev;
     @Nullable Node next;
 
-    int reference;
+    long reference;
     int queueIndex;
     long expireTime;
 

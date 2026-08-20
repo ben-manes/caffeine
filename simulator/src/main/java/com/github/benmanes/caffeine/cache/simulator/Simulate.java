@@ -124,13 +124,14 @@ public final class Simulate implements Runnable {
     return chart;
   }
 
-  static void main(String[] args) {
+  public static void main(String[] args) {
     Logger.getLogger("").setLevel(Level.WARNING);
-    new CommandLine(Simulate.class)
+    int exitCode = new CommandLine(Simulate.class)
         .setColorScheme(Help.defaultColorScheme(Help.Ansi.ON))
         .setCommandName(Simulate.class.getSimpleName())
         .setCaseInsensitiveEnumValuesAllowed(true)
         .execute(args);
+    System.exit(exitCode);
   }
 
   @SuppressWarnings("ImmutableEnumChecker")

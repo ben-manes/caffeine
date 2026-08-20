@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -105,6 +106,8 @@ public final class Registry {
    * set of supported characteristics.
    */
   public ImmutableSet<Policy> policies() {
+    checkArgument(settings.maximumSize() > 0,
+        "maximum size must be positive: %s", settings.maximumSize());
     return settings.policies().stream()
         .map(name -> checkNotNull(factories.get(name.toLowerCase(US)), "%s not found", name))
         .filter(factory -> factory.characteristics().containsAll(characteristics))

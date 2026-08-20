@@ -72,6 +72,8 @@ public final class ClockProPlusPolicy implements KeyOnlyPolicy {
   // Enable to print out the internal state
   private static final boolean debug = false;
 
+  // A node that leaves the clock keeps its entry so that a later access recycles it. The map
+  // therefore grows without bounds, matching the author's reference implementation.
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
 

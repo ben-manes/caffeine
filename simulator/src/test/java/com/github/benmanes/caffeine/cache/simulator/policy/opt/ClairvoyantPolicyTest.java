@@ -92,6 +92,17 @@ final class ClairvoyantPolicyTest {
   }
 
   @Test
+  void weightedPenalties_areRejected() {
+    // A record holds either the weight or the penalties, so a composite of a weighted trace and a
+    // penalty-aware one would replay with the penalties silently dropped
+    assertThrows(IllegalStateException.class, () -> {
+      try (var reader = new ClairvoyantTraceReader(weightedPenaltyTrace(), 0, Long.MAX_VALUE)) {
+        reader.characteristics();
+      }
+    });
+  }
+
+  @Test
   @SuppressWarnings("CheckReturnValue")
   void oracleFileIsDeleted() throws IOException {
     int before = oracleFiles();
@@ -145,6 +156,17 @@ final class ClairvoyantPolicyTest {
       }
       @Override @MustBeClosed public Stream<AccessEvent> events() {
         return Stream.of(AccessEvent.forKey(1), AccessEvent.forKeyAndPenalties(2, 1.0, 2.0));
+      }
+    };
+  }
+
+  private static TraceReader weightedPenaltyTrace() {
+    return new TraceReader() {
+      @Override public Set<Characteristic> characteristics() {
+        return Set.of(Characteristic.WEIGHTED);
+      }
+      @Override @MustBeClosed public Stream<AccessEvent> events() {
+        return Stream.of(AccessEvent.forKeyAndPenalties(1, 1.0, 2.0));
       }
     };
   }

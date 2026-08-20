@@ -100,7 +100,7 @@ public final class GdsfPolicy implements Policy {
     priorityQueue.add(node);
   }
 
-  private double priorityOf(AccessEvent event, int frequency) {
+  private double priorityOf(AccessEvent event, long frequency) {
     // As defined in "Improving Web Servers and Proxies Performance with GDSF Caching Policies"
     double cost = event.isPenaltyAware() ? event.missPenalty() : 1.0;
     return clock + frequency * (cost / event.weight());
@@ -189,7 +189,7 @@ public final class GdsfPolicy implements Policy {
     final long key;
 
     double priority;
-    int frequency;
+    long frequency;
     int weight;
 
     public Node(long key, int weight, double priority) {

@@ -72,13 +72,12 @@ public class AccessEvent {
   }
 
   @Override
-  @SuppressFBWarnings("FE_FLOATING_POINT_EQUALITY")
   public boolean equals(@Nullable Object o) {
     return (o instanceof AccessEvent event)
         && (key() == event.key())
         && (weight() == event.weight())
-        && (hitPenalty() == event.hitPenalty())
-        && (missPenalty() == event.missPenalty());
+        && (Double.compare(hitPenalty(), event.hitPenalty()) == 0)
+        && (Double.compare(missPenalty(), event.missPenalty()) == 0);
   }
 
   @Override

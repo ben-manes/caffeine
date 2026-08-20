@@ -104,7 +104,7 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
         var values = new ArrayList<String>();
         values.add(policy);
         for (long size : inputFiles.keySet()) {
-          values.add(table.get(new Label(policy, size)));
+          values.add(table.getOrDefault(new Label(policy, size), ""));
         }
         writer.writeRecord(values);
       }
@@ -113,22 +113,26 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
     }
   }
 
+  /** Returns the policy names in the order first seen, as a report may omit or add one. */
   private ImmutableList<String> policies() {
-    Path input = inputFiles.values().iterator().next();
-    try (var reader = CsvReader.builder().ofNamedCsvRecord(input)) {
-      var policies = reader.stream()
-          .map(record -> record.getField(POLICY_KEY))
-          .collect(toImmutableList());
-      var duplicates = HashMultiset.create(policies).entrySet().stream()
-          .filter(entry -> entry.getCount() > 1)
-          .map(Multiset.Entry::getElement)
-          .collect(toImmutableList());
-      checkState(duplicates.isEmpty(),
-          "Policies share a display name so their rows would collapse: %s", duplicates);
-      return policies;
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
+    var policies = new LinkedHashSet<String>();
+    for (var input : inputFiles.values()) {
+      try (var reader = CsvReader.builder().ofNamedCsvRecord(input)) {
+        var names = reader.stream()
+            .map(record -> record.getField(POLICY_KEY))
+            .collect(toImmutableList());
+        var duplicates = HashMultiset.create(names).entrySet().stream()
+            .filter(entry -> entry.getCount() > 1)
+            .map(Multiset.Entry::getElement)
+            .collect(toImmutableList());
+        checkState(duplicates.isEmpty(),
+            "Policies share a display name so their rows would collapse: %s", duplicates);
+        policies.addAll(names);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
     }
+    return ImmutableList.copyOf(policies);
   }
 
   private record Label(String policy, long size) implements Comparable<Label> {

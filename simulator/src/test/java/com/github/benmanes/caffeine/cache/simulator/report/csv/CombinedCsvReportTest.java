@@ -61,6 +61,34 @@ final class CombinedCsvReportTest {
   }
 
   @Test
+  void retainsPoliciesAbsentFromTheFirstReport(@TempDir Path dir) throws IOException {
+    // A policy may be reported at one size and not another, so the rows are the union of the
+    // inputs rather than whichever set the smallest size happened to produce
+    Path small = Files.writeString(dir.resolve("512.csv"), "Policy,Hit Rate\nLru,50.0\n");
+    Path large = Files.writeString(dir.resolve("1024.csv"),
+        "Policy,Hit Rate\nLru,60.0\nFifo,40.0\n");
+    Path output = dir.resolve("out.csv");
+
+    new CombinedCsvReport(
+        ImmutableMap.of(512L, small, 1024L, large), "Hit Rate", output).run();
+
+    assertThat(Files.readAllLines(output))
+        .containsExactly("Policy,512,\"1,024\"", "Lru,50.0,60.0", "Fifo,,40.0").inOrder();
+  }
+
+  @Test
+  void failsOnDuplicatePolicyNameInALaterReport(@TempDir Path dir) throws IOException {
+    Path small = Files.writeString(dir.resolve("512.csv"), "Policy,Hit Rate\nLru,50.0\n");
+    Path large = Files.writeString(dir.resolve("1024.csv"),
+        "Policy,Hit Rate\nLru,60.0\nLru,40.0\n");
+    var report = new CombinedCsvReport(
+        ImmutableMap.of(512L, small, 1024L, large), "Hit Rate", dir.resolve("out.csv"));
+
+    var error = assertThrows(IllegalStateException.class, report::run);
+    assertThat(error).hasMessageThat().contains("Lru");
+  }
+
+  @Test
   void failsOnDuplicatePolicyName(@TempDir Path dir) throws IOException {
     // Two policies reported under one display name would collapse into a single row, silently
     // dropping one of them from the comparison

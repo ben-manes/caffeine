@@ -20,6 +20,14 @@ paths:
   (append + skip-done rows) so an interruption costs nothing
 - Run multi-size with charts: `./gradlew simulator:simulate -q --maximumSize=... --metric=...`
 - Convert trace formats: `./gradlew simulator:rewrite -q --inputFormat=... --outputFormat=...`
+- `maximum-size` must be positive, rejected once in `Registry` before any policy is built. Zero was
+  accepted and not implemented: ARC nulls an empty sentinel's links and NPEs, `TinyCache` divides by
+  zero, MultiQueue reports a zero-capacity cache as if it were real, and `sampled.*` with `GUESS`
+  spins forever looking for a non-candidate to sample. The check is in `Registry` rather than
+  `BasicSettings` because `WindowTinyLfuPolicy` legitimately hands `maximum-size = 0` to its
+  weighted admitter (see Sketch sizing below)
+- `Simulate` and `Rewriter` exit with Picocli's status. Both discarded it until 2026-08-19, so a
+  missing required option printed the usage and the `JavaExec` task still reported success
 
 ## Trace Characteristics & Policy Matching
 
@@ -53,6 +61,11 @@ value — scaffolding that never expanded).
   choice. Classic LRU simply is not size-aware — the answer is to not run it on such a trace (see
   Trace Characteristics), or to implement a size-aware variant as its own policy, not to retrofit
   size-awareness into a published algorithm on its author's behalf.
+- **The rewriter's looseness is about the output, never the input.** It refuses to run when the
+  output path resolves to one of its inputs (`Files.isSameFile`, so an alias or a symlink is caught
+  too). `Files.newOutputStream` truncates before the lazily-opened reader has read a byte, so the
+  command used to destroy the trace it was given and report `Rewrote 0 events` with a zero status.
+  That is a different class from the output looseness below, and is not to be relaxed with it.
 - **The rewriter's output is best-effort for an external tool, and knowingly loose.** A `.gz`
   output name writes an *uncompressed* file under that name (nothing gzips it), `LirsTraceWriter`
   emits the full 64-bit key where the reference C readers parse one signed int per line, and
@@ -61,6 +74,16 @@ value — scaffolding that never expanded).
   it cannot read, so the cost of the looseness is a confusing minute rather than a wrong result.
   Don't add compression, range checks, or collision warnings here without a concrete need — it was
   tried and reverted as more machinery than the export path deserves.
+- **A recognized container that cannot be decoded fails loudly.** The reader probes xz, then the
+  commons-compress compressors, then its archivers, rewinding after each miss and falling through
+  to the raw bytes. There is no rejecting outcome, because the raw binary readers accept any byte
+  sequence as keys, so a probe that swallowed the wrong exception replayed the container as
+  fabricated events and reported a hit rate over them: a corrupt xz header produced two corda
+  events, a valid 7z produced seventy-one. Each probe now swallows only what means "not this
+  format". `XZFormatException` and `EOFException` for xz, `StreamingNotSupportedException` set
+  aside for archives; anything else escapes. `EOFException` has to stay swallowed because xz reads
+  a twelve-byte header eagerly and a one-event binary trace is eight bytes, which leaves a file
+  holding nothing but the xz magic still read as raw.
 - **Text traces decode as ISO-8859-1 — key identity, not display.** Every byte maps to its own
   char, so a dirty real-world trace (wikibench holds raw Latin-1 bytes) parses, and distinct
   malformed byte sequences cannot alias onto a shared U+FFFD — the lenient-UTF-8 hazard, real for
@@ -71,6 +94,10 @@ value — scaffolding that never expanded).
   axis is *categorical*, so an exponential size sweep renders equidistant rather than to scale; and
   GUESS sampling is with-replacement, so a sample may draw the same entry twice.
 
+- **The combined report's rows are the union of its inputs.** `CombinedCsvReport` took its policy
+  list from whichever input sorted first, so a policy reported at one size and not another was
+  dropped from the chart without a warning. Missing cells are written empty.
+
 ## Clairvoyant Look-Ahead (opt.Clairvoyant + admission.Clairvoyant)
 
 Bélády's MIN (`opt.Clairvoyant`) and clairvoyant admission need each request's *next-access time* — an
@@ -79,6 +106,10 @@ inherent look-ahead. When any clairvoyant usage is enabled (`isClairvoyant` in `
 reader with `ClairvoyantTraceReader`, which materializes the trace once, up front, to a fixed-width
 temporary file. Key invariants:
 
+- **A record holds the weight or the penalties, never both.** The layout is chosen once from the
+  delegate's global `WEIGHTED` characteristic and the first event's penalty-awareness, so a
+  composite of a weighted trace and a penalty-aware one is rejected during materialization rather
+  than replayed with the penalties dropped.
 - **One pointer per request, not a per-key list.** Bélády only needs the *immediate* next use, so each
   record is `[key, (weight | penalties), nextAccess]`. A forward pass appends the records; a backward pass
   then fills each `nextAccess` from a `nextSeen: key→position` map — O(distinct keys) heap, released before
@@ -114,6 +145,14 @@ temporary file. Key invariants:
 
 ## Policy Implementation
 
+- **CLOCK-Pro and CLOCK-Pro+ retain every distinct key, on purpose.** A node that leaves the clock
+  keeps its `data` entry, so the map grows with the trace's cardinality rather than with the
+  resident and ghost bounds. `clock-pro.c` does the same: `remove_from_clock` unlinks the
+  `page_struct` and leaves it in the hash table. Dropping the entry is not neutral — a later access
+  then builds a new node where the reference recycles the old one, which moved eight of
+  forty-eight canonical cells (`cs`, `multi1`, `2_pools`, `sprite` at 512 and 1024) by up to
+  0.5pp. The memory is the price of the bit-for-bit match.
+
 - Consecutive-duplicate-access dedup is a per-policy decision in `record()`, not a trace-reader/framework concern. Song Jiang's reference C code (`lirs.c`) and Chen Zhong's C++ port (`replace_lirs_base.cc` / `replace_lirs2.cc`) both put `if (ref == last_ref) continue;` at the top of the run loop to avoid counting "correlated references" — rapid re-accesses to the same block from one logical event; the 2Q paper (VLDB '94) discusses the same concern. Not in the published LIRS / CLOCK-Pro papers (author intent, confirmed via direct correspondence). **Key subtlety:** the reference increments its hit-rate denominator *before* that `continue` (`warm_pg_refs++` in `lirs.c`; `mTraceLength` in Zhong's), so a duplicate stays in the denominator as a guaranteed non-miss (≡ a hit). The dedup removes the duplicate from the *algorithm*, not from the rate.
   - **Where a per-access transition is non-idempotent** — `Lirs2Policy` (instance role-swap), `ClockProPolicy`/`ClockProPlusPolicy` (adaptive `coldTarget`) — the duplicate can't be replayed, so the guard scores it as a hit (`recordOperation()` + `recordHit()`) and returns, keeping it in the denominator as a non-miss. It must **not** bare-`return` before recording: that drops the dup from the denominator and diverges from the reference (verified — current matches `lirs.c`/Zhong/`clock-pro.c` misses bit-for-bit on `cs`, but an early `return` understated the rate ~1pp; fixed 2026-06-23). `ClockProSimplePolicy` keeps no guard (it regresses with one) and counts the dup as a hit via the normal path.
   - **`LirsPolicy` deliberately omits the guard.** After any access the block sits at the top of stack S, so a consecutive re-access is a no-op on S/Q state; the policy already records that second access as a hit, which reproduces the reference's denominator accounting exactly. It matches `lirs.c` and Zhong's base bit-for-bit on the canonical set *including* `cs` (101 consecutive dups). Adding a top-of-`record()` guard would drop dups from the denominator and *break* that match — it diverges from the reference rather than matching it.
@@ -135,7 +174,7 @@ temporary file. Key invariants:
       number is not affected; on a non-power-of-two cell the headroom figure beside it was measured
       under a slower aging rate. Judged not worth re-basing the corpus for.
     - **A wrapping sketch must forward the retrack.** `IndicatorResetCountMin4` wraps a fully resizable `ClimberResetCountMin4` but inherited the no-op default, so `reset = indicator` and `reset = periodic` rows of the same weighted report were aging at different rates and were not comparable. It forwards now; the four that genuinely cannot resize (`PerfectFrequency`, `RandomRemovalFrequencyTable`, `TinyCacheAdapter`, `CountMin64TinyLfu`) are what the javadoc's "cannot be resized" sentence refers to.
-    - **Build the admitter in the constructor, never lazily during replay.** A clairvoyant admitter takes its `Cursor` from `ClairvoyantTraceReader.currentCursor()`, and the reader is installed as a `ScopedValue` only for the scope of policy construction. `WindowTinyLfuPolicy` deferred the weighted admitter into `evict()`, so `-Dcaffeine.simulator.tiny-lfu.sketch=clairvoyant` on any weighted trace threw `IllegalStateException` at ~50% fill — and would have handed out a fresh mid-trace cursor even if bound, breaking the once-per-access lockstep. Seed the weighted sketch at `maximum-size = 0` in the constructor and let the retrack grow it; the table is reallocated (forgetting counts) at the first real retrack, so unweighted stays bit-for-bit and weighted keeps its half-fill sizing.
+    - **Build the admitter in the constructor, never lazily during replay.** A clairvoyant admitter takes its `Cursor` from `ClairvoyantTraceReader.currentCursor()`, and the reader is installed as a `ScopedValue` only for the scope of policy construction. `WindowTinyLfuPolicy` deferred the weighted admitter into `evict()`, so `-Dcaffeine.simulator.tiny-lfu.sketch=clairvoyant` on any weighted trace threw `IllegalStateException` at ~50% fill — and would have handed out a fresh mid-trace cursor even if bound, breaking the once-per-access lockstep. Seed the weighted sketch at `maximum-size = 0` in the constructor and let the retrack grow it; the table is reallocated (forgetting counts) at the first real retrack, so unweighted stays bit-for-bit and weighted keeps its half-fill sizing. A sketch that cannot resize would hold that seed forever — `count-min-64` derives `sampleSize = 0` and ages the whole table on every increment, so no frequency ever accumulates and admission collapses to ties — so `TinyLfu` rejects a zero maximum unless `Frequency.isResizable()`, which only the `CountMin4` family answers true.
 
 ## Hit-Rate Validation
 

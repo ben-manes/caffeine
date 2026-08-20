@@ -46,7 +46,7 @@ public final class CountMin64TinyLfu implements Frequency {
     var settings = new BasicSettings(config);
     sketch = new CountMin64(settings.tinyLfu().countMin64().eps(),
         settings.tinyLfu().countMin64().confidence(), settings.randomSeed());
-    sampleSize = Math.toIntExact(10 * settings.maximumSize());
+    sampleSize = Math.toIntExact(Math.multiplyExact(10, settings.maximumSize()));
     conservative = settings.tinyLfu().conservative();
   }
 

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Map;
 import java.util.Set;
@@ -119,8 +120,33 @@ final class WindowTinyLfuPolicyTest {
     assertThat(policy.stats().evictionCount()).isEqualTo(0);
   }
 
+  @Test
+  void weighted_nonResizableSketch_isRejected() {
+    // The weighted admitter is seeded at zero for the retrack to grow, which a sketch that cannot
+    // resize would hold forever, aging away every count it was given
+    var error = assertThrows(IllegalArgumentException.class,
+        () -> policy(Set.of(WEIGHTED), 100, Map.of("tiny-lfu.sketch", "count-min-64")));
+    assertThat(error).hasMessageThat().contains("count-min-64");
+  }
+
+  @Test
+  void unweighted_nonResizableSketch_isAllowed() {
+    var policy = policy(Set.of(), 3, Map.of("tiny-lfu.sketch", "count-min-64"));
+    for (int key = 1; key <= 3; key++) {
+      policy.record(AccessEvent.forKey(key));
+    }
+    policy.finished();
+    assertThat(policy.stats().missCount()).isEqualTo(3);
+  }
+
   private static WindowTinyLfuPolicy policy(Set<Characteristic> characteristics, long maximum) {
+    return policy(characteristics, maximum, Map.of());
+  }
+
+  private static WindowTinyLfuPolicy policy(Set<Characteristic> characteristics,
+      long maximum, Map<String, Object> overrides) {
     var config = ConfigFactory.parseMap(Map.of("maximum-size", maximum))
+        .withFallback(ConfigFactory.parseMap(overrides))
         .withFallback(ConfigFactory.load().getConfig("caffeine.simulator"));
     return new WindowTinyLfuPolicy(0.99, characteristics, new WindowTinyLfuSettings(config));
   }

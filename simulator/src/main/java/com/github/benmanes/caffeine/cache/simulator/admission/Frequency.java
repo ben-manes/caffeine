@@ -39,4 +39,9 @@ public interface Frequency {
    * @param maximumSize the maximum number of entries in the cache
    */
   default void ensureCapacity(long maximumSize) {}
+
+  /** Returns whether {@link #ensureCapacity} can grow the sketch after it is constructed. */
+  default boolean isResizable() {
+    return false;
+  }
 }

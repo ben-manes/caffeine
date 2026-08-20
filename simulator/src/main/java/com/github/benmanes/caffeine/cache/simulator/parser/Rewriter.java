@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Locale.US;
 import static org.apache.commons.lang3.StringUtils.substringBefore;
 
@@ -31,6 +32,7 @@ import org.apache.commons.lang3.function.Failable;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.google.common.base.CaseFormat;
+import com.google.common.base.Splitter;
 import com.google.common.base.Stopwatch;
 
 import picocli.CommandLine;
@@ -68,6 +70,7 @@ public final class Rewriter implements Runnable {
 
   @Override
   public void run() {
+    checkOutputIsNotAnInput();
     var stopwatch = Stopwatch.createStarted();
     try (var output = new BufferedOutputStream(Files.newOutputStream(outputFile));
          var reader = inputFormat.readFiles(inputFiles);
@@ -89,6 +92,22 @@ public final class Rewriter implements Runnable {
     }
   }
 
+  /** Fails if the output is also an input, which opening it for writing would truncate. */
+  private void checkOutputIsNotAnInput() {
+    if (!Files.exists(outputFile)) {
+      return;
+    }
+    for (var entry : inputFiles) {
+      var input = Path.of(Splitter.on(':').limit(2).splitToList(entry).getLast());
+      try {
+        checkArgument(!Files.exists(input) || !Files.isSameFile(input, outputFile),
+            "The output file is also an input file: %s", entry);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
+  }
+
   @SuppressWarnings("ConstantValue")
   private static String[] argumentsWithDefaults(String[] args) {
     var params = new ArrayList<>(Arrays.asList(args));
@@ -105,11 +124,12 @@ public final class Rewriter implements Runnable {
     return params.toArray(String[]::new);
   }
 
-  static void main(String[] args) {
-    new CommandLine(Rewriter.class)
+  public static void main(String[] args) {
+    int exitCode = new CommandLine(Rewriter.class)
         .setColorScheme(Help.defaultColorScheme(Help.Ansi.ON))
         .setCommandName(Rewriter.class.getSimpleName())
         .setCaseInsensitiveEnumValuesAllowed(true)
         .execute(argumentsWithDefaults(args));
+    System.exit(exitCode);
   }
 }
