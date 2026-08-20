@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.pastalab.fray.junit.junit5.FrayTestExtension;
 import org.pastalab.fray.junit.junit5.annotations.FrayTest;
@@ -323,6 +324,74 @@ final class ExpirationFrayTest {
     long reportedWeight = cache.policy().eviction().orElseThrow().weightedSize().orElseThrow();
     int actualWeight = cache.asMap().values().stream().mapToInt(Integer::intValue).sum();
     assertThat(reportedWeight).isEqualTo(actualWeight);
+    assertThat(cache).isValid();
+  }
+
+  /**
+   * A read must never return a value whose expiration a concurrent rewrite already announced. The
+   * entry is expired before the threads start, so the read may only miss or observe the rewrite;
+   * returning the original value means the reader loaded it before the rewrite and then judged
+   * expiry by the rewrite's fresh write time (see hasExpired, which the reader must consult before
+   * loading the value). Failed on the first iteration before the reads were reordered.
+   */
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void getIfPresent_expiringRewrite_neverReturnsExpiredValue() throws InterruptedException {
+    var ticker = new FakeTicker();
+    Cache<Integer, Integer> cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(10)
+        .build();
+    cache.put(1, 100);
+    ticker.advance(Duration.ofMinutes(2));
+
+    var result = new AtomicReference<@Nullable Integer>();
+    var threadA = new Thread(() -> result.set(cache.getIfPresent(1)));
+    var threadB = new Thread(() -> cache.put(1, 200));
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+    cache.cleanUp();
+
+    assertWithMessage("getIfPresent returned an expired value")
+        .that(result.get()).isAnyOf(null, 200);
+    assertThat(cache).isValid();
+  }
+
+  /**
+   * putIfAbsent's optimistic fast path must never treat an expired entry as present. The entry is
+   * expired before the threads start, so the call may only install its own value or observe the
+   * rewrite; returning the original value means the fast path judged the stale value by the
+   * rewrite's fresh timestamps. Exercises the negated presence test that the getIfPresent probe
+   * does not reach.
+   */
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void putIfAbsent_expiringRewrite_neverReturnsExpiredValue() throws InterruptedException {
+    var ticker = new FakeTicker();
+    Cache<Integer, Integer> cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(10)
+        .build();
+    cache.put(1, 100);
+    ticker.advance(Duration.ofMinutes(2));
+
+    var result = new AtomicReference<@Nullable Integer>();
+    var threadA = new Thread(() -> result.set(cache.asMap().putIfAbsent(1, 999)));
+    var threadB = new Thread(() -> cache.put(1, 200));
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+    cache.cleanUp();
+
+    assertWithMessage("putIfAbsent returned an expired value")
+        .that(result.get()).isAnyOf(null, 200);
     assertThat(cache).isValid();
   }
 }

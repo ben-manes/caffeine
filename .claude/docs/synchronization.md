@@ -49,23 +49,25 @@ lambda — which holds only the bin lock, no node monitor — e.g.
 
 | Field | Read Mode | Write Mode | Guard |
 |-------|-----------|------------|-------|
-| value (strong) | getAcquire | setRelease | synchronized(node) for mutations |
-| value (weak/soft) | getAcquire | setRelease + storeStoreFence | synchronized(node); fence publishes non-final fields of new reference |
+| value (strong) | getAcquire | setRelease + storeStoreFence | synchronized(node) for mutations; fence orders the store before subsequent timestamp stores |
+| value (weak/soft) | getAcquire | setRelease + storeStoreFence | synchronized(node); fence publishes non-final fields of new reference and orders subsequent timestamp stores |
 | key (strong) | getOpaque | set (retire/die only) | immutable after construction |
 | key (weak) | plain | set (retire/die only) | immutable after construction; getRef uses getOpaque |
 | accessTime | getOpaque | setOpaque | benign races acceptable |
-| writeTime | getOpaque | plain set | synchronized(node) |
+| writeTime | getOpaque | setOpaque | synchronized(node) |
 | variableTime | getOpaque | setOpaque, CAS | synchronized(node) for CAS |
 | weight | plain | plain | synchronized(node); unlocked reads accept staleness |
 | policyWeight | plain | plain | evictionLock; unlocked reads accept staleness |
 | queueType | plain | plain | evictionLock |
 
-Note: `writeTime`'s plain `set` is the one 64-bit plain write observed by lock-free
-`getOpaque` readers. Per the VarHandle spec, plain accesses are bitwise-atomic only for
-references and ≤32-bit primitives, and a plain-mode VarHandle access is NOT upgraded by
-the field's volatile declaration — so a torn read is formally possible on a 32-bit VM.
-Accepted: no impact on 64-bit VMs, and the consequence is bounded to one wrong
-expiry/refresh decision that self-heals on the next read/write.
+Note: the expiry read protocol pairs these modes. A rewrite stores the value and then the
+timestamps, with `setValue`'s trailing `storeStoreFence` holding that order; a lock-free
+reader calls `hasExpired` (timestamps, ending in a `loadLoadFence`) and then loads the value.
+A reader that observes a fresh timestamp is therefore guaranteed the rewritten value, so an
+already-announced EXPIRED value is never returned. Readers must not load the value before
+`hasExpired`, and writers must not store a timestamp before `setValue`; a caller acting on an
+expired verdict exempts an in-flight async load via `isComputingAsync` on a value loaded
+after the check.
 
 ## Drain Status State Machine
 

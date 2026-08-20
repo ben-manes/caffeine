@@ -440,23 +440,45 @@ maintenance/access, and it's sub-millisecond (inside `EXPIRE_TOLERANCE`) unless 
 the ticker per element — it judges keys of the same call at different instants (a downgrade
 of the snapshot) and adds a `nanoTime` read per key on the hot path.
 
-**A hit probes the value future's readiness only where an expiration policy consumes the
-answer.** `hasExpired` returns false before `isComputingAsync` when no policy is configured,
-and the successful-read blocks in `getIfPresent` and `computeIfAbsent`'s optimistic hit test
+**A hit probes the value future's readiness only where the answer is consumed.** `hasExpired`
+is timestamp-only, so a reader probes `isComputingAsync` solely on an expired verdict, and the
+successful-read blocks in `getIfPresent` and `computeIfAbsent`'s optimistic hit test
 `expiresAfterRead()` (access or variable) before their own probe, since `setAccessTime` and
 `tryExpireAfterRead` early-return otherwise. `Async.getIfReady` calls `isDone`,
 `isCompletedExceptionally` and `join`, each an acquire load of `CompletableFuture.result` that
 the JIT cannot elide or coalesce, so a `maximumSize`-only async hit was paying six of them for
 a result no branch could read. Measured on `AsyncGetPutBenchmark.read_only` (M3 Max, JDK 26, 8
 threads, 3 forks, ABA): 238–246M ops/s before, 370–384M after, **+53%**; an acquire load is
-`ldar` on arm64, so x86 should gain less. The probe count per hit is now 0 with no expiration,
-1 for expire-after-write, 2 for expire-after-access and 3 for variable expiry (the extra one is
-`AsyncExpiry.expireAfterRead`'s own `getIfReady`), pinned by
+`ldar` on arm64, so x86 should gain less. The probe count per healthy hit is 0 with no
+expiration or with expire-after-write, 1 for expire-after-access and 2 for variable expiry (the
+extra one is `AsyncExpiry.expireAfterRead`'s own `getIfReady`), pinned by
 `BoundedLocalCacheTest.getIfPresent_readinessProbes`. Don't cache the first probe's answer to
 save the second: a future can complete, or be obtruded, between the two observations.
 
-**writeTime uses plain write** (not opaque like accessTime). It's always written
-under `synchronized(node)`, which provides stronger guarantees than opaque.
+**The expiry read protocol pairs timestamp-before-value reads with value-before-timestamp
+writes.** A lock-free read must never return a value whose EXPIRED notification a concurrent
+rewrite already fired. `hasExpired` is therefore timestamp-only and every lock-free reader
+consults it before loading the value; a `loadLoadFence` at the end of `hasExpired` and a
+`storeStoreFence` in the generated `setValue` hold both orders on weak memory, and `put`
+stores the value before `setWriteTime` (the other rewrite sites already did). A reader that
+observes a fresh timestamp therefore observes the rewritten value, closing the LATE direction.
+The EARLY direction (stale timestamp with the fresh value) is one spurious miss that
+linearizes between the old value's expiry and the rewrite, a 64-bit timestamp read being
+atomic, so only the read-extension resurrection above and the bulk single-`now` scans remain
+non-linearizable. A caller acting on an expired verdict must exempt an in-flight async load by
+probing `isComputingAsync` against a value loaded after `hasExpired` returns. `writeTime`'s
+setter is opaque (it was plain, a formal tearing gap on 32-bit VMs), and the swap in `put`
+shifts a nanosecond `refreshIfNeeded` window from suppressing a refresh to launching one
+wasted best-effort reload, absorbed by the reservation re-check and the ABA commit guards.
+Pinned by `ExpirationFrayTest.getIfPresent_expiringRewrite_neverReturnsExpiredValue` (failed
+on the first iteration before the reorder) and the `ExpiredReadTear` jcstress test, whose
+old-modes model reproduced the tear at 0.21% of samples on aarch64 while the fixed pairing
+produced zero across a tough-mode soak. The measured price on the M3 Max is nil: the reader
+fence sits within run-to-run drift on `HotEntryBenchmark`'s expiring configs, and the writer
+fence is below `GetPutBenchmark.write_only`'s noise floor (interleaved baseline/fixed forks;
+that cell drifts more between forks than any fence effect, so judge it with paired runs, not a
+plain before/after). Don't move a reader's `getValue()` above its `hasExpired` call, and don't
+reorder a writer's `setValue` below its timestamp stores.
 
 **Expiration eviction is capped at `EXPIRATION_THRESHOLD` (1000) entries per maintenance
 cycle.** `expireAfterAccessEntries` (shared across its window/probation/protected deques),
@@ -924,6 +946,13 @@ without `synchronized(node)`. A stale observation could let `asyncReload` fire
 on a just-retired node, but the completion-path ABA guards (`currentValue ==
 oldValue` + `(node.getWriteTime() & ~1L) == writeTime`) discard the result. Cost
 of the rare spurious loader call is accepted to keep the refresh fast path lock-free.
+The write-time guard is itself immune to a same-instance overwrite reusing the old
+value: a refresh-eligible entry's age exceeds `refreshAfterWriteNanos`, which makes
+`exceedsWriteTimeTolerance` true in both of its refresh arms (a duration within the
+tolerance takes the always-true disjunct, a longer one is exceeded by the age), so an
+intervening write always moves `writeTime` and the stale completion cannot match it.
+That arithmetic is load-bearing; a change letting an update skip `setWriteTime` on a
+refresh-eligible entry would re-open the stale-reload commit.
 
 **The low bit of `writeTime` is a soft-lock marker, and the completion ABA check
 must mask it.** A reader probing for a refresh CASes `writeTime → writeTime | 1`

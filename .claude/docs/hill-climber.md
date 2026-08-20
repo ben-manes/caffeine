@@ -3052,6 +3052,44 @@ by half again. Checked and clean, in both directions: `auditEnding` and `starvat
 carry `isBudgetSpent()` as the branch after the verdict, so the budget binds on every sample the
 verdict did not end. Recorded so it is not re-derived.
 
+**2026-08-20 (per-tenant regret: the consolidation round and its instrument).** Prompted by
+Infinispan consolidating many workloads into one large cache. Every recorded bar is aggregate, so
+a cost concentrated on a minority tenant was unmeasurable. `audit-regret/tenants.py` now
+attributes each hit and miss to a key range inside `PolicyActor` (a worktree patch in the harness
+style, inert without `-Dcaffeine.simulator.tenantSplits`), reads per-tenant static anchors from
+the same sweep, and runs a tenant's stream alone at capacity fractions for the consolidation
+counterfactual. Validated by a bit-identical aggregate with the property set, attribution totals
+equal to the report row, `mixture_d025_long` at 61.67 against the recorded 61.69, and per-tenant
+gaps that recompose their aggregate to ±0.01.
+
+The finding, evaluator-verified and dose-mapped (`dilute-valley`, class 3 reaching the audit
+walk's exit tests): a majority zipf (n 0.6, α 0.9) over a minority two-reference band (d 0.25,
+k 2) at 8192, 160 samples. At h95 the aggregate reads clean (94.40 against a 94.74 ceiling,
+93% of headroom closed) while the band tenant takes 45.65 of a 49.99 plateau that any window
+from 5% up serves. Deterministic on 8 seeds; `noaudit` serves it fully at 94.84 aggregate,
+`reactive` at +0.84. The cost is two failed budget-length audit excursions, dominated by a
+down-excursion at s7 that parks the window at the 2% floor for ~16 samples, below the band's
+w2–w5 cliff, where the level test never trips because zeroing a 9.5% tenant moves the aggregate
+rate ~4.7% relative, under the crash bar; the 80%-corner up-walk is the same mask from the other
+side and costs a fifth of it. The valley is h95±1 (h93 +0.33, h94 +0.91, h95 +4.34, h96 +2.76,
+h97 +0.07), closes at 16384 with d 0.25 and re-opens at d 0.5 (+4.70 at 3 seeds), and a second
+trace instance reads +2.29. The excursion duty is the accepted residual already priced at ~0.4
+aggregate; what is new is its incidence, about 1/share onto the window-resident tenant,
+front-loaded and then backoff-limited (no third excursion in the final 96 samples). Candidate
+promotion, pending Ben: a per-tenant sentinel bar on the witness (band 45.65 shipped against
+49.99 noaudit), the first bar aggregate rows cannot see.
+
+The counterfactual answers the consolidation question the other way from the intuition: the best
+static two-way split of the same capacity reads 94.68 against the shared cache's 94.74 static,
+94.84 noaudit and 94.40 shipped, and the minority's best home is the shared window (a dedicated
+slice reaches 48.5 at any fraction and 45.14 at its fair-share 0.2, against 49.99 served
+shared). Negative results for the record: the admission-duel lockout did not materialize at
+2–3% minority share (a uniform and a mild-zipf minority both admitted fine against a heavy
+majority), and a sine-drifted minority share is tracked cleanly. The tenant lens on the recorded
+`mixture_d025_long` pass row shows its 4.18 gap is 76% the frequency tenant's (88.04 against
+97.56 at the row's own ceiling window), the known oscillation's incidence. Report under
+`.local/audits/` (fable-5, audit-regret); workspace, the local audit-regret consolidation tree.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor

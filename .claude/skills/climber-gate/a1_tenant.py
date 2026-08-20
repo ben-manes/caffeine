@@ -9,8 +9,8 @@ ATTACKER (keys 50_000_000 + ...)    window-shaped traffic whose hits land in the
                                     mode=loop : cycles a fixed set of L keys (hits unbounded).
 
 Tenant split for the harness accounting is 20_000_000: victim keys are below it, attacker
-keys above it, so `-Dcaffeine.simulator.tenantSplit=20000000` yields exact per-tenant
-hit/miss counts for every policy.
+keys above it, so `-Dcaffeine.simulator.tenantSplits=20000000` yields exact per-tenant
+hit/miss counts for every policy on a tree patched by `audit-regret/tenants.py`.
 
 The attack thesis: `WindowClimber.densityClimb` steers on ln(windowDensity/mainDensity),
 which is *per-slot earnings*, not total hit rate.  A tenant that concentrates its hits into

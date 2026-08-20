@@ -460,6 +460,19 @@ not read prior reports. Strike a line when it is done or dead.
   Three round-4 specs beat the reference on zipf-plus-scan terrain again (`f_dipref` −2.3, `f_probetax`
   −5.6, `s_thrashundo` −0.7): the anchor-fidelity note stands.
 
+- Round 5's leftovers (the consolidation round, 2026-08-20; per-tenant instrument `tenants.py`).
+  The `dilute-valley` family (h95±1 on the mixture terrain, class 3 reaching the audit walk's exit
+  tests; witness deterministic at 8 seeds, hybrid 45.65 / noaudit 49.99 on the band tenant) awaits
+  Ben's promotion call as a per-tenant sentinel bar. Unmapped: a d-ladder at fixed h95, the h-scan
+  at 16384/d0.5 beyond h93/h95, K>2 tenants, and per-seed per-tenant readout on a bimodal instance
+  (the second trace instance reads +2.29 with aggregate sd 0.25; `tenants.py` prints seed means).
+  The admission-duel structural construction failed at 2–3% minority share (a uniform and a
+  mild-zipf minority both admitted fine against a heavy zipf majority) — the class-0 consolidation
+  story is unconstructed, and the masked-signal main-side mirror is still untried after five
+  rounds. A weighted (byte) variant of any tenant family needs a weighted trace writer first;
+  named residue, not scheduled. Dedicated-counterfactual arms above 0.5 of the minority's fraction
+  carry warmup (n < 40); keep the load-bearing comparisons at fractions where n clears the bar.
+
 ## Rules of evidence
 
 - A gap under 2.5pp needs eight seeded, paired runs; a bimodal cell is read seed by seed and never

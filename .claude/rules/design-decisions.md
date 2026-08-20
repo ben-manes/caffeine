@@ -30,11 +30,19 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   place; `clear` in particular does not need exhaustiveness, since it already abandons the buffer
   at `WRITE_BUFFER_MAX / 2`, `AddTask` links only when the node is alive, and `makeDead` reads the
   weight from the node so a late task telescopes back to zero.
-- **A hit probes the value future's readiness only where an expiration policy reads the answer**
-  (`hasExpired` tests `expires()` first, the read blocks test `expiresAfterRead()`). Six acquire
-  loads of `CompletableFuture.result` per `maximumSize`-only async hit were dead; removing them is
-  +53% on `AsyncGetPutBenchmark.read_only`. Don't cache one probe's answer for the other — a
-  future can complete or be obtruded in between.
+- **A hit probes the value future's readiness only where the answer is consumed** (`hasExpired`
+  is timestamp-only, so the probe runs solely on an expired verdict; the read blocks test
+  `expiresAfterRead()`). Six acquire loads of `CompletableFuture.result` per `maximumSize`-only
+  async hit were dead; removing them is +53% on `AsyncGetPutBenchmark.read_only`. Don't cache one
+  probe's answer for the other — a future can complete or be obtruded in between.
+- **The expiry read protocol: readers load timestamps before the value, writers store the value
+  before the timestamps** (`hasExpired` ends in a `loadLoadFence`, the generated `setValue` in a
+  `storeStoreFence`), so a fresh timestamp is never observed with a stale value and a read never
+  returns a value whose EXPIRED notification already fired. Don't move a reader's `getValue()`
+  above its `hasExpired` call, don't store a timestamp before `setValue` in a rewrite, and check
+  `isComputingAsync` on a value loaded after the expired verdict. Pinned by
+  `ExpirationFrayTest.getIfPresent_expiringRewrite_neverReturnsExpiredValue` and the
+  `ExpiredReadTear` jcstress test. Read the doc.
 - **accessTime uses opaque write (not CAS)** to avoid contention storms. Instead verify that stale reads cause only benign early expiration.
 - **Read-path expiry extension can briefly resurrect a just-expired entry** (`tryExpireAfterRead`'s `casVariableTime`, or `setAccessTime`) — accepted, not a bug. A reader that saw the entry live and then extends it can land the write just after the entry crossed its boundary, leaving it visible slightly later than expiry. Inherent to lock-free read-extension over lazy expiration (the CAS only checks the field is unchanged, so it can't reject an expired entry; a fresh-clock guard before the write still races a context switch — only a read-path lock, rejected, closes it). Wide window needs a slow `expireAfterRead` (callback misuse). "Never later" is best-effort here; over-stay is bounded by one duration and self-heals on maintenance. Don't add a *fresh-clock* re-check guard (distinct from the load-bearing `node.getValue() == value` value-identity check that blocks rebinding a read duration onto a replaced value — keep that one).
 - **`maximum` and `weightedSize` have a plain reader and an acquire reader, and no public-facing

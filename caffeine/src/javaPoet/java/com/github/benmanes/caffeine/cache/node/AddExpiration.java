@@ -133,7 +133,7 @@ public final class AddExpiration implements Rule<NodeContext> {
         .addField(long.class, "writeTime", Modifier.VOLATILE)
         .addMethod(context.newGetter(Strength.STRONG,
             TypeName.LONG, "writeTime", Visibility.OPAQUE))
-        .addMethod(context.newSetter(TypeName.LONG, "writeTime", Visibility.PLAIN));
+        .addMethod(context.newSetter(TypeName.LONG, "writeTime", Visibility.OPAQUE));
     context.addVarHandle(NODE_FACTORY.rawType(), "writeTime", TypeName.get(long.class));
     addTimeConstructorAssignment(context.constructorByKeyRef,
         "writeTime", "BoundedLocalCache.toWriteTime(now)");

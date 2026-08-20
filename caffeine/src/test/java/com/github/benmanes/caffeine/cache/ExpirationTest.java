@@ -597,7 +597,8 @@ final class ExpirationTest {
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void getIfPresent_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
@@ -673,7 +674,8 @@ final class ExpirationTest {
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void get_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
@@ -818,7 +820,8 @@ final class ExpirationTest {
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void containsKey_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
@@ -848,7 +851,8 @@ final class ExpirationTest {
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void containsValue_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);
@@ -965,7 +969,8 @@ final class ExpirationTest {
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void put_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
     var f1 = new CompletableFuture<@Nullable Int>();
     var f2 = new CompletableFuture<@Nullable Int>();
@@ -1017,7 +1022,8 @@ final class ExpirationTest {
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void replace_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
     var f1 = new CompletableFuture<@Nullable Int>();
     var f2 = new CompletableFuture<@Nullable Int>();
@@ -1071,7 +1077,8 @@ final class ExpirationTest {
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void replaceConditionally_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
     var f1 = new CompletableFuture<@Nullable Int>();
     var f2 = new CompletableFuture<@Nullable Int>();
@@ -1723,7 +1730,8 @@ final class ExpirationTest {
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void keySet_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<@Nullable Int>();
     cache.put(context.absentKey(), future);

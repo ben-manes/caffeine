@@ -119,7 +119,11 @@ public final class AddValue implements Rule<NodeContext> {
         .addParameter(vRefQueueType, "referenceQueue");
 
     if (context.isStrongValues()) {
+      setter.addComment("The fence orders the store before any subsequent timestamp store, "
+          + "pairing with the reader's fence in BoundedLocalCache.hasExpired so that a fresh "
+          + "expiration timestamp is never observed with a stale value");
       setter.addStatement("$L.setRelease(this, $N)", varHandleName("value"), "value");
+      setter.addStatement("$T.storeStoreFence()", VarHandle.class);
     } else {
       setter.addStatement("$1T ref = ($1T) $2L.getAcquire(this)",
           context.valueReferenceType(), varHandleName("value"));

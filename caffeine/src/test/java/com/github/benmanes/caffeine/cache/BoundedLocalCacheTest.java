@@ -2787,17 +2787,18 @@ final class BoundedLocalCacheTest {
 
   @Test
   void getIfPresent_readinessProbes() {
-    // an async hit inspects the future only where an expiration policy consumes the answer
+    // a hit inspects the future only where the read-extension consumes the answer; the expiry
+    // check is timestamp-only and probes solely on an expired verdict
     Executor discarding = task -> {};
     assertThat(readinessProbes(Caffeine.newBuilder().executor(discarding)
         .maximumSize(100).buildAsync())).isEqualTo(0);
     assertThat(readinessProbes(Caffeine.newBuilder().executor(discarding)
-        .maximumSize(100).expireAfterWrite(Duration.ofDays(1)).buildAsync())).isEqualTo(1);
+        .maximumSize(100).expireAfterWrite(Duration.ofDays(1)).buildAsync())).isEqualTo(0);
     assertThat(readinessProbes(Caffeine.newBuilder().executor(discarding)
-        .maximumSize(100).expireAfterAccess(Duration.ofDays(1)).buildAsync())).isEqualTo(2);
+        .maximumSize(100).expireAfterAccess(Duration.ofDays(1)).buildAsync())).isEqualTo(1);
     assertThat(readinessProbes(Caffeine.newBuilder().executor(discarding).maximumSize(100)
         .expireAfter(Expiry.writing((Int key, Int value) -> Duration.ofDays(1)))
-        .buildAsync())).isEqualTo(3);
+        .buildAsync())).isEqualTo(2);
   }
 
   /**
@@ -5695,7 +5696,7 @@ final class BoundedLocalCacheTest {
     cache.tryExpireAfterRead(node, key, value, expiry, now);
     verify(expiry).expireAfterRead(key, value, now, 0L);
     assertThat(node.getVariableTime()).isEqualTo(now);
-    assertThat(cache.hasExpired(node, now, value)).isTrue();
+    assertThat(cache.hasExpired(node, now)).isTrue();
   }
 
   private static void checkExpiryWriteTolerance(BoundedLocalCache<Int, Int> cache,
