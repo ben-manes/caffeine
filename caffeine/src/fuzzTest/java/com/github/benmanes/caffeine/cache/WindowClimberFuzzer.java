@@ -25,6 +25,8 @@ import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A fuzzer that exercises the {@link WindowClimber} state machine with random sample sequences,
  * window positions, region geometries, and resizes. The caller-side realism is deliberate: the
@@ -80,6 +82,7 @@ final class WindowClimberFuzzer {
       long pending = climber.sample.hits + climber.sample.misses;
 
       var probing = climber.walk;
+      long anchorWindow = climber.anchor.window;
       int starvationRung = climber.starvation.rung;
       int auditRung = climber.audit.rung;
       int auditWait = climber.auditClock.waitSamples;
@@ -89,6 +92,7 @@ final class WindowClimberFuzzer {
       climber.determineAdjustment(maximum, windowMax, mainProtected, sketchSample);
       assertInvariants(climber, maximum);
       checkDeferralOwnership(climber, probing, starvationRung, auditRung, auditWait);
+      checkRetestOwnership(climber, anchorWindow);
 
       // a sample completes when the accumulated counts crossed the period and were consumed,
       // detected from the counters, since a zero-fed call can complete an accumulated sample
@@ -112,6 +116,20 @@ final class WindowClimberFuzzer {
           ? (windowMax + Math.min(applied, maximum - windowMax))
           : (windowMax + Math.max(applied, -windowMax));
     }
+  }
+
+  /**
+   * A retest judges the claim frozen for the position its return set out for, so an anchor that
+   * moves abandons one. A retest still pending after a move must therefore be the move's own,
+   * carrying the claim the move planted rather than a claim frozen for where the anchor used to
+   * be. The check is cross-sample because the stale state is well-formed at rest.
+   */
+  @SuppressFBWarnings("FE_FLOATING_POINT_EQUALITY")
+  private static void checkRetestOwnership(WindowClimber climber, long anchorWindow) {
+    boolean moved = (climber.anchor.window != anchorWindow);
+    assertWithMessage("a retest that survives the anchor moving was armed by the move")
+        .that(!moved || (climber.anchor.retestClaim < 0)
+            || (climber.anchor.retestClaim == climber.anchor.rate)).isTrue();
   }
 
   /**

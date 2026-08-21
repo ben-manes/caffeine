@@ -1474,10 +1474,15 @@ final class WindowClimber {
       return isPlanted() && !isAt(windowMax, band);
     }
 
-    /** Remembers this position and its claim, as a validated walk or a clear improvement does. */
+    /**
+     * Remembers this position and its claim, as a validated walk or a clear improvement does. A
+     * pending retest goes with the move: its claim was frozen for the position the return set out
+     * for, and this is no longer that position.
+     */
     void plant(long windowMax, double claimed) {
       window = windowMax;
       rate = claimed;
+      endRetest();
     }
 
     /** Re-syncs the claim to the live measurement, so a stale claim decays into reality. */

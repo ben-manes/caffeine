@@ -2071,6 +2071,68 @@ final class WindowClimberTest {
   }
 
   @Test
+  void guardRail_vetoReturn_shiftMidReturn_abandonsTheRetest() {
+    // a crash-scale swing mid-return interrupts the return, and the retest goes with it, since
+    // the frozen claim is judged where the return lands and an interrupted return does not land.
+    // A claim left pending survives the stand-down, and a same-sample re-plant puts the window
+    // back on the anchor, where the stale claim would judge the new position against a past
+    // regime's rate
+    var climber = seededShortfall();
+    climber.auditClock.waitSamples = AUDIT_WAIT_INITIAL;
+    climber.anchor.window = 7000; // too far to reach in one stride, so the return is in flight
+    for (int i = 0; i < VETO_STREAK; i++) {
+      steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.66);
+    }
+    assertThat(climber.anchor.returning).isTrue();
+    assertThat(climber.anchor.retestClaim).isWithin(1.0e-6).of(0.70);
+
+    // mid-return the workload recovers and then jumps crash-scale, far from the anchor; the
+    // recovery is seeded directly (an EMA pair only reaches it after a long plateau)
+    climber.rates.smoothed = 0.75;
+    climber.rates.deviation = 0.001;
+    climber.sample.previousHitRate = 0.75;
+    long adjustment = sample(climber, /* windowMax= */ 3957,
+      /* windowHits= */ 5, /* mainHits= */ 805, /* misses= */ 190);
+
+    assertThat(climber.anchor.retestClaim).isEqualTo(-1); // the interrupted retest is abandoned
+    assertThat(climber.anchor.settleLeft).isEqualTo(0);
+    assertThat(climber.anchor.returning).isFalse();
+    assertThat(climber.anchor.window).isEqualTo(3957); // the swing re-planted at its position
+    assertThat(climber.anchor.rate).isWithin(1.0e-6).of(0.762);
+    assertThat(adjustment).isNotEqualTo(0); // the sample steered rather than settled the retest
+  }
+
+  @Test
+  void guardRail_vetoReturn_budgetOut_thenAnchorMoves_abandonsTheRetest() {
+    // the same stale claim without any crash-scale swing: a return that spends its budget short
+    // of the anchor leaves the retest pending, and a rate that recovered while it strode moves
+    // the anchor onto the window on the very next sample. The window is now "at" an anchor the
+    // return never reached, so the claim frozen for the old position judges the new one
+    var climber = seededShortfall();
+    climber.auditClock.waitSamples = AUDIT_WAIT_MAX;
+    for (int i = 0; i < 20; i++) {
+      steadySample(climber, /* windowMax= */ 7500, /* hitRate= */ 0.66);
+      if (climber.anchor.held && !climber.anchor.returning) {
+        break;
+      }
+    }
+    assertThat(climber.anchor.returning).isFalse();      // the budget ran out short of the anchor
+    assertThat(climber.anchor.window).isEqualTo(2000);
+    assertThat(climber.anchor.retestClaim).isWithin(1.0e-6).of(0.70);
+
+    // the workload recovered while the return strode; seeded directly, as an EMA pair reaches it
+    // only over a long plateau. No single sample moves a crash-scale step, so nothing stands down
+    climber.rates.smoothed = 0.76;
+    climber.rates.deviation = 0.001;
+    climber.sample.previousHitRate = 0.76;
+    steadySample(climber, /* windowMax= */ 7500, /* hitRate= */ 0.76);
+
+    assertThat(climber.anchor.window).isEqualTo(7500);   // the anchor followed the better position
+    assertThat(climber.anchor.retestClaim).isEqualTo(-1);
+    assertThat(climber.anchor.settleLeft).isEqualTo(0);
+  }
+
+  @Test
   void guardRail_blindCorner_outranksTheVeto() {
     // a starved sample cannot honestly adjudicate a shortfall: blindness routes to the probe
     // machinery before the veto may fire, while an identically-placed sighted sample vetoes

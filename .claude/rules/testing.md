@@ -75,6 +75,21 @@ it as a static contract.
   `LocalCacheSubject.checkHillClimber`) pins the state-machine invariants and CI runs it; a
   stale bound there shipped as a red CI job in 2026-07 because class-scoped `test` runs never
   touch the `fuzzTest` source set
+- **New climber state must arrive with its invariants, or the fuzz run is theatre.** The oracle
+  lives in `ClimberInvariants` (shared by the fuzzer and `LocalCacheSubject`), and it only pins
+  the fields someone wrote a line for. The retest shipped 2026-08-19 with two new fields and no
+  invariants; the fuzzer then passed 808,898 runs against a reachable defect (issue #2002) purely
+  because nothing was looking at them. Add the well-formedness pins to `ClimberInvariants` and any
+  cross-sample ones to the fuzzer, which is the only oracle that sees two consecutive states.
+- **The guard rail's recovery path is close to unreachable by fuzzing, and that is by design.**
+  Reaching it needs the smoothed rate to cross from a full veto margin *below* the anchor's claim
+  to a full margin *above* it inside one sample. The margin is `max(1pp, 3·MAD)` priced from the
+  rate's own scatter, so any input distribution lively enough to produce the four-sample shortfall
+  that arms the veto also inflates the margin past what an α=0.2 EMA can cross in a step; the two
+  conditions are anti-correlated by the machine's own noise pricing. Measured 2026-08-20 over four
+  generator variants and ~2.4M executions against a tree with the #2002 defect present, all clean.
+  Pin that layer's lifetimes with deterministic tests that seed `rates.smoothed`, and do not
+  re-tune the fuzzer's rate generator hoping to reach it
 
 ### Regressions and stress
 - Issue-specific regression tests live under `issues/` (e.g., `Issue568Test`) — search

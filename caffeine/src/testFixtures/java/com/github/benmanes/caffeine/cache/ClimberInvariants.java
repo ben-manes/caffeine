@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_FIRST;
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_INITIAL;
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_MAX;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.RETEST_SETTLE;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_INITIAL;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_MAX;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_CRASH_ESCALATION;
@@ -153,6 +154,16 @@ final class ClimberInvariants {
         .that((walk == null) || (climber.undoRemaining == 0)).isTrue();
     assertWithMessage("a park defends a planted anchor")
         .that(!climber.anchor.held || climber.anchor.isPlanted()).isTrue();
+    assertWithMessage("a retest's settle lives and dies with the claim it judges")
+        .that((climber.anchor.settleLeft > 0) == (climber.anchor.retestClaim >= 0)).isTrue();
+    assertWithMessage("a retest's settle stays within its span")
+        .that(climber.anchor.settleLeft).isAtMost(RETEST_SETTLE);
+    assertWithMessage("a retest judges a planted anchor")
+        .that((climber.anchor.retestClaim < 0) || climber.anchor.isPlanted()).isTrue();
+    if (climber.anchor.retestClaim >= 0) {
+      assertWithMessage("a retest's frozen claim is a rate")
+          .that(climber.anchor.retestClaim).isAtMost(1.0);
+    }
 
     // the cap is a double the climber never truncates, so recomputing it in entries here needs one
     // of headroom. The bound is stricter than the adjudicated reality: a negative policyWeight

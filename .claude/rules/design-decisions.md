@@ -350,7 +350,16 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   it under the threshold. Don't move the retest ahead of `anchor.returning` in the router, and
   don't arm it on `endReturn`: a return that spends its budget short of the anchor never reached
   the position the claim describes, which is why `isRetestDue` re-checks `isAt` every sample and
-  `discard` takes any pending retest with it.
+  `discard` takes any pending retest with it. **`plant` takes one with it too** (2026-08-20, issue
+  #2002): `isRetestDue`'s `isAt` check asks whether the window stands on the anchor *now*, not
+  whether the return reached the anchor it set out for, and `Anchor.track` runs before the router
+  every sample. So a return that ends away from the anchor — a crash-scale swing standing the
+  layer down mid-return, or the return budget running out — leaves a pending retest that the very
+  next `track` can validate by moving the anchor **onto the window**, and the frozen claim then
+  judges a position the return never reached. Clearing at the move states the invariant the retest
+  actually has: a claim belongs to the position it was frozen for. Do not fix this in `standDown`
+  instead — it closes only the crash-scale path and leaves the budget-out one, and the confirm's
+  `keepConfirmedPosition` re-plant with no return is a third.
 - **A starvation confirm the density arm reverses deepens the ladder; it is not a success** (2026-08-15).
   The up-probe's verdict prices the window against the probation density frozen at the arm, the
   steering law prices it against main's average, and where they disagree the confirmed position is

@@ -3046,6 +3046,18 @@ proposal's three negative seeds, because spreading the arrival drop across its o
 puts that drop under the crash-scale threshold in the first place. Its cancel branch never fired
 in any measured run.
 
+*Amended 2026-08-20 (issue #2002): a re-planted anchor abandons a pending retest.* Hyshmily read
+the landed shape and found that `isRetestDue` asks whether the window stands on the anchor **now**,
+not whether the return reached the anchor it set out for. `Anchor.track` runs before the router
+every sample, so a return that ends away from the anchor leaves a retest pending that the next
+`track` can validate by moving the anchor onto the window; the claim frozen for the old position
+then judges the new one. Two reachable paths, both pinned: a crash-scale swing standing the layer
+down mid-return (theirs), and the return budget running out short of the anchor with the rate
+recovered above the claim (found while checking the fix's placement). `keepConfirmedPosition`'s
+re-plant without a return is a third. The fix is in `plant`, not `standDown`, because the move is
+what invalidates the claim; a `standDown` guard closes one path of three. Behaviourally inert on
+the battery and the corpus, as the reachability implies.
+
 Their own iteration log carried one shape worth checking here, since the machine is a port of this
 one: a walk budget enforced on only one of two verdict branches, which an alternating walk outlives
 by half again. Checked and clean, in both directions: `auditEnding` and `starvationEnding` each
@@ -3089,6 +3101,24 @@ majority), and a sine-drifted minority share is tracked cleanly. The tenant lens
 `mixture_d025_long` pass row shows its 4.18 gap is 76% the frequency tenant's (88.04 against
 97.56 at the row's own ceiling window), the known oscillation's incidence. Report under
 `.local/audits/` (fable-5, audit-regret); workspace, the local audit-regret consolidation tree.
+
+**2026-08-20 (two gate rows re-based; no code change).** Both were found by accident while
+verifying something else, which is the point. `moat_h4000`/`h5000` read 60.54 ± 0.01 / 60.14 ± 0.02
+at N=8 unseeded against a recorded 57.91 / 57.77 — real drift rather than a seeded/unseeded
+artifact, and the family became more deterministic as it rose (sd 0.05 → 0.01, 0.17 → 0.02). Both
+now sit within 1.9pp of their static ceilings. The rise accumulated across the repairs that landed
+after the 08-09 rowing and was not bisected; the crestpast verdict is the likeliest single source on
+a cell whose question is crossing a valley to a prize. A record 2.6pp low is not a failing bar, it
+is a bar that would miss a 2.6pp fall.
+
+`slowswap_step` reads 40.25 / 40.50 / 40.44 / 40.21 / 39.76 / 40.34 / 40.67 / 40.58, mean 40.34,
+identical on two trees a day apart, so the drift from the recorded 40.43 is settled. Seed 5 misses
+the row's stated "≥40 on every seed" by 0.24 while the mean sits 0.14 above the row's own stated
+real-signal floor of 40.2. The bar is restated as the criterion the row already said it adjudicated
+on — mean ≥ 40.2 at N=8, above LRU on every seed — which is §7.1's own rule that a bar stated as a
+bare level rots while one stated against a re-derivable anchor does not. `slowswap_ramp`'s two
+basins survive with ~0.1 of new internal spread each, so its "a third value is the leak" tripwire is
+restated as what it protected: no draw below 41.8, draws in two clusters near 42.0 and 42.9.
 
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
