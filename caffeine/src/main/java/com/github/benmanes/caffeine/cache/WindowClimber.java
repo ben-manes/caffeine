@@ -709,16 +709,17 @@ final class WindowClimber {
       return windowStarved && mainStarved;
     }
 
-    /** Returns whether the density signal is blind here. */
+    /**
+     * Returns whether the density signal is blind here. A starved main beside a large window is
+     * not a blind corner: the equilibrium audit owns that terrain.
+     */
     boolean hasBlindCorner() {
-      return isDeadSample() || (windowStarved && (windowMax <= (maximum >>> 2)))
-          || (mainStarved && (windowMax >= upperCorner()));
+      return isDeadSample() || (windowStarved && (windowMax <= (maximum >>> 2)));
     }
 
     /** Returns the direction a starvation probe walks out of this corner. */
     boolean shouldProbeDown() {
-      return (mainStarved && (windowMax >= upperCorner()))
-          || (isDeadSample() && (windowMax >= (maximum >>> 1)));
+      return isDeadSample() && (windowMax >= (maximum >>> 1));
     }
 
     /** Returns the raw density ratio the probe verdicts adjudicate against. */

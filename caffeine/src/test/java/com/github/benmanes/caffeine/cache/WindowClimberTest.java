@@ -273,13 +273,18 @@ final class WindowClimberTest {
   }
 
   @Test
-  void armProbe_mainBlind_probesDown() {
+  void armProbe_mainBlind_neverProbes() {
+    // a starved main beside a large window arms nothing, since the equilibrium audit owns that
+    // terrain; the sample falls through to the steering law with main priced at its floor
     var climber = makeClimber();
     long adjustment = sample(climber, /* windowMax= */ 7000,
         /* windowHits= */ 500, /* mainHits= */ 0, /* misses= */ 500);
 
-    assertThat(walkOf(climber).down).isTrue();
-    assertThat(adjustment).isEqualTo((long) -STRIDE);
+    double windowDensity = 500 / 7000.0;
+    double mainFloor = (0.125 * 4) / (MAXIMUM - 7000.0);
+    assertThat(climber.walk).isNull();
+    assertThat(adjustment).isEqualTo(
+        (long) (Math.log(windowDensity / mainFloor) * DENSITY_GAIN * MAXIMUM));
   }
 
   @Test
@@ -463,9 +468,10 @@ final class WindowClimberTest {
   }
 
   @Test
-  void blindCorner_positionBoundaries_areTheQuarterPoints() {
-    // a starved window is blind only while it holds at most a quarter of the cache, and a
-    // starved main only while the window holds at least three quarters, exact at both edges
+  void blindCorner_positionBoundaries_windowQuarterPointOnly() {
+    // a starved window is blind only while it holds at most a quarter of the cache, exact at the
+    // edge; a starved main is never blind at any window, since the equilibrium audit owns that
+    // terrain and the probe it once armed there confirmed onto positions main could not price
     var atEdge = makeClimber();
     sample(atEdge, /* windowMax= */ 2048,
         /* windowHits= */ 0, /* mainHits= */ 600, /* misses= */ 400);
@@ -476,15 +482,15 @@ final class WindowClimberTest {
         /* windowHits= */ 0, /* mainHits= */ 600, /* misses= */ 400);
     assertThat(pastEdge.walk).isNull();
 
-    var mainAtEdge = makeClimber();
-    sample(mainAtEdge, /* windowMax= */ 6144,
+    var mainAtCorner = makeClimber();
+    sample(mainAtCorner, /* windowMax= */ 6144,
         /* windowHits= */ 600, /* mainHits= */ 0, /* misses= */ 400);
-    assertThat(walkOf(mainAtEdge).down).isTrue();
+    assertThat(mainAtCorner.walk).isNull();
 
-    var mainPastEdge = makeClimber();
-    sample(mainPastEdge, /* windowMax= */ 6143,
+    var mainPastCorner = makeClimber();
+    sample(mainPastCorner, /* windowMax= */ 6600,
         /* windowHits= */ 600, /* mainHits= */ 0, /* misses= */ 400);
-    assertThat(mainPastEdge.walk).isNull();
+    assertThat(mainPastCorner.walk).isNull();
   }
 
   @Test
@@ -3049,8 +3055,10 @@ final class WindowClimberTest {
     double stride = STEP_PERCENT * maximum;
     double base = 800_000;
 
+    // the walk arms from a dead sample past the midpoint, the one down trigger left now that a
+    // starved main beside a large window steers instead of probing
     @Var long windowMax = (long) base;
-    long arming = bigSample(climber, maximum, windowMax, /* hits= */ 500);
+    long arming = bigSample(climber, maximum, windowMax, /* hits= */ 0);
     double expected = -Math.min(MAX_STEP_FRACTION * maximum, 4 * stride);
     assertThat(arming).isEqualTo((long) expected);
     assertThat(walkOf(climber).down).isTrue();
