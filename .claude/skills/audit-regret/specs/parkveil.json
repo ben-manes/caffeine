@@ -1,0 +1,19 @@
+{
+  "max": 8192,
+  "seed": 13,
+  "repeat": 1,
+  "members": {
+    "freq": {"kind": "zipf",  "n": 0.50, "alpha": 1.05},
+    "rec":  {"kind": "pairs", "d": 0.45, "k": 2},
+    "fill": {"kind": "scan"}
+  },
+  "segments": [
+    {"samples": 240,
+     "shares": {"freq": {"share": 0.55,
+                         "mod": {"kind": "square", "period": 13, "amp": 0.85}},
+                "rec":  {"share": 0.35,
+                         "mod": {"kind": "square", "period": 13, "amp": 0.85,
+                                 "phase": 3.14159265}},
+                "fill": 0.10}}
+  ]
+}

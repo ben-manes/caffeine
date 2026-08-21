@@ -24,7 +24,10 @@ import gate as G
 import real as REAL
 
 # Every mechanism ablation harness.py wires. Keep this list in step with its FLAGS block.
-ARMS = ["nocorner", "nostarve", "noladder", "noscale", "nocommit", "norepeat",
+# `cornerprobe` is a restoration, not an ablation: it re-adds the upper-corner starvation probe
+# deleted 2026-08-21, so its summary sign reads inverted (the arm "helping" means the deletion
+# was wrong on that cell).
+ARMS = ["cornerprobe", "nostarve", "noladder", "noscale", "nocommit", "norepeat",
         "nowedge", "nofollow", "noshield", "noveto", "noretest", "nofreeze", "noaudit"]
 
 # Cell presets. `quick` is a smoke pass over the families most mechanisms touch; `standard`

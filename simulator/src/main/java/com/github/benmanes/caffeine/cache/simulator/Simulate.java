@@ -124,7 +124,8 @@ public final class Simulate implements Runnable {
     return chart;
   }
 
-  public static void main(String[] args) {
+  @SuppressWarnings("SystemExitOutsideMain")
+  static void main(String[] args) {
     Logger.getLogger("").setLevel(Level.WARNING);
     int exitCode = new CommandLine(Simulate.class)
         .setColorScheme(Help.defaultColorScheme(Help.Ansi.ON))

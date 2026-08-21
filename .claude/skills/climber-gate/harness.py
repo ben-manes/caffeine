@@ -16,6 +16,9 @@ idempotent, so re-running after a rebase is safe.
     harness.py verify <worktree>     # assert every edit is present
     harness.py strip  <worktree>     # remove it again
 
+After EDITING an existing edit's replacement text, reset the worktree's touched files before
+re-applying: the idempotency test looks for the new replacement, misses the old one still wired
+in the tree, and injects a duplicate (a doubled FLAGS block fails compilation on every flag).
 NEVER commit the result: it prints to stderr and carries variant knobs, and ErrorProne flags the
 `SystemOut` by design.
 """
@@ -111,14 +114,26 @@ FLAGS = '''
    * regime shift, so the claim re-planted from it was mostly the old regime's rate.
    */
   static final boolean STALECLAIM = VARIANT.equals("staleclaim");
+  /**
+   * arrive: an undo's or a veto return's landing and settle samples are the machine's own moves
+   * and are not judged for a workload shift; the 2026-08-19 retest judges a return's claim
+   * deliberately instead. The census C2 arm re-expressed on the current machine.
+   */
+  static final boolean ARRIVE = VARIANT.equals("arrive") || VARIANT.equals("arrivepriced");
+  /** pricedshift: the stand-down's trigger priced off the rate's scatter, clamped to [1x, 3x]. */
+  static final boolean PRICEDSHIFT =
+      VARIANT.equals("pricedshift") || VARIANT.equals("arrivepriced");
   /*
    * MECHANISM ABLATIONS (the /climber-minimize set). The arms above restore an older machine to
    * price a landed change; these remove one algorithmic step from the current one to price the
    * step itself. Each is a single disable at the step's own site, so an arm that reads
    * bit-identical to ship across the battery is a step that never changes an outcome.
    */
-  /** nocorner: the upper corner arms no starvation probe; dead samples still do. */
-  static final boolean NOCORNER = VARIANT.equals("nocorner");
+  /**
+   * cornerprobe: restores the upper-corner starvation probe deleted 2026-08-21, so the deletion
+   * stays priceable. Dead samples arm probes in both forms.
+   */
+  static final boolean CORNERPROBE = VARIANT.equals("cornerprobe");
   /** nostarve: no blind corner ever arms a starvation probe. */
   static final boolean NOSTARVE = VARIANT.equals("nostarve");
   /** noladder: a completed experiment never deepens its rung, so every retry is first-round. */
@@ -258,12 +273,17 @@ EDITS = [
      + "    sample.close(hitRate);\n"),
 
     ("ablate-corner", W,
-     "      return isDeadSample() || (windowStarved && (windowMax <= (maximum >>> 2)))\n"
-     "          || (mainStarved && (windowMax >= upperCorner()));\n",
+     "      return isDeadSample() || (windowStarved && (windowMax <= (maximum >>> 2)));\n",
      "      if (NOSTARVE) {\n        return false;\n      }\n"
      "      boolean blind = isDeadSample() || (windowStarved && (windowMax <= (maximum >>> 2)))\n"
-     "          || (!NOCORNER && mainStarved && (windowMax >= upperCorner()) && fired(CORNER));\n"
+     "          || (CORNERPROBE && mainStarved && (windowMax >= upperCorner()) && fired(CORNER));\n"
      "      return blind && fired(STARVE);\n"),
+
+    ("cornerprobe-down", W,
+     "      return isDeadSample() && (windowMax >= (maximum >>> 1));\n",
+     "      return (CORNERPROBE && mainStarved && (windowMax >= upperCorner()))\n"
+     "          || (isDeadSample() && (windowMax >= (maximum >>> 1)));\n"),
+
 
     ("ablate-ladder", W,
      "    void escalate() {\n      rung = Math.min(PROBE_BACKOFF_MAX, 2 * rung);\n",
@@ -369,6 +389,20 @@ EDITS = [
      "      anchor.ageShield();\n    }\n",
      "      anchor.ageShield();\n      if (PARKBOUND && (anchor.freshLeft <= 0)) {\n"
      "        anchor.release();\n      }\n    }\n"),
+
+    ("arrive-pricedshift", W,
+     "  private boolean isWorkloadShift(Reading reading) {\n"
+     "    return (Math.abs(sample.hitRateChange(reading.hitRate)) >= RESTART_THRESHOLD)\n"
+     "        && !isShielded() && !isParkTest();\n  }\n",
+     "  private boolean isWorkloadShift(Reading reading) {\n"
+     "    double threshold = PRICEDSHIFT\n"
+     "        ? Math.min(3 * RESTART_THRESHOLD, Math.max(RESTART_THRESHOLD, rates.noiseBand()))\n"
+     "        : RESTART_THRESHOLD;\n"
+     "    boolean arrival = ARRIVE\n"
+     "        && ((retreatLeft > 0) || ((anchor.retestClaim >= 0) && !anchor.returning));\n"
+     "    return (Math.abs(sample.hitRateChange(reading.hitRate)) >= threshold)\n"
+     "        && !isShielded() && !isParkTest() && !arrival;\n  }\n"),
+
 
     ("noaudit-holdoraudit", W,
      "    return auditClock.isDue() ? armEquilibriumAudit(reading) : holdInRefractory(reading);\n",
@@ -539,6 +573,7 @@ EDITS = [
     ("marginal-node-field", P,
      "    int weight;\n    @Nullable Node prev;\n",
      "    int weight;\n    boolean inWindowTail;\n    @Nullable Node prev;\n"),
+
 ]
 
 

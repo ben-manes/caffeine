@@ -3110,7 +3110,8 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
   void adapt_largeCache_climbAppliesDownProbeStride(BoundedLocalCache<Int, Int> cache) {
-    // The mirror: a starved main behind a dominant window arms a down probe, and climb() shrinks
+    // The mirror: a dead sample past the midpoint arms a down probe (the one down trigger left,
+    // since a starved main beside a large window steers instead of probing), and climb() shrinks
     // the window by the entry stride through the transfer path
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
     cache.frequencySketch().ensureCapacity(cache.maximum());
@@ -3118,11 +3119,11 @@ final class BoundedLocalCacheTest {
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
 
-    long hits = (long) Integer.MAX_VALUE + 1;
+    long misses = (long) Integer.MAX_VALUE + 1;
     cache.climber().sample.previousHitRate = 0.50;
-    cache.climber().sample.windowHits = hits;
-    cache.climber().sample.misses = hits;
-    cache.climber().sample.hits = hits;
+    cache.climber().sample.windowHits = 0;
+    cache.climber().sample.misses = misses;
+    cache.climber().sample.hits = 0;
 
     long stride = Math.round(STEP_PERCENT * cache.maximum());
     long protectedMaximum = cache.mainProtectedMaximum();

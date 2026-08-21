@@ -22,6 +22,8 @@ import argparse, os, re, statistics, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 WT = os.environ.get("CAF_TREE", os.path.abspath(f"{HERE}/../../.."))
 WINDOWS = [0.01, 0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.70, 0.80]
+JAVA_LONG_MIN = -(1 << 63)
+JAVA_LONG_MAX = (1 << 63) - 1
 
 
 def gradle(size, trace, args, fmt="lirs"):
@@ -102,6 +104,42 @@ def summarize(lines, size):
             f"audits={audits - conf} confirms={conf} probes={arms}")
 
 
+def parse_seeds(value):
+    """Parse a non-empty, duplicate-free list of signed Java long admission seeds."""
+    if value is None:
+        return None
+    try:
+        seeds = [int(seed) for seed in value.split(",")]
+    except ValueError as error:
+        raise ValueError(f"invalid --seeds value: {value!r}") from error
+    if not seeds or any(not token for token in value.split(",")):
+        raise ValueError("--seeds must contain comma-separated integers")
+    if any(seed < JAVA_LONG_MIN or seed > JAVA_LONG_MAX for seed in seeds):
+        raise ValueError("--seeds must contain signed 64-bit integers")
+    if len(seeds) != len(set(seeds)):
+        raise ValueError("--seeds must not contain duplicates")
+    return seeds
+
+
+def parse_variants(value):
+    """Parse the variant list, preserving the supported empty-list anchor mode."""
+    variants = [variant for variant in value.split(",") if variant]
+    if len(variants) != len(set(variants)):
+        raise ValueError("--variants must not contain duplicates")
+    return variants
+
+
+def execution_plan(variants, runs, seeds):
+    """Return (variant, seed, ordinal) runs, interleaving variants within each seed."""
+    if seeds is None:
+        return [(variant, None, ordinal) for variant in variants for ordinal in range(runs)]
+    return [
+        (variant, seed, ordinal)
+        for ordinal, seed in enumerate(seeds)
+        for variant in variants
+    ]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("trace")
@@ -113,9 +151,14 @@ def main():
     ap.add_argument("--dump", default=None)
     ap.add_argument("--seeds", default=None,
                     help="comma-separated admission seeds; runs one pass per seed instead of "
-                         "--runs, so paired arms are bit-reproducible (hill-climber.md §6)")
+                         "--runs, so each arm is reproducible and arms compare seed by seed; "
+                         "not request-indexed common-random-number pairing (hill-climber.md §6)")
     args = ap.parse_args()
-    seeds = [int(s) for s in args.seeds.split(",")] if args.seeds else None
+    try:
+        seeds = parse_seeds(args.seeds)
+        variants = parse_variants(args.variants)
+    except ValueError as error:
+        ap.error(str(error))
 
     name = os.path.basename(args.trace)
     if args.anchors:
@@ -128,19 +171,32 @@ def main():
             print(f"{name} @ {args.size}:  LRU={lru:.2f}  ceiling={best:.2f} @win {bw}%")
     else:
         print(f"{name} @ {args.size}:")
-    for v in [v for v in args.variants.split(",") if v]:
-        hrs, last = [], []
-        for i, seed in enumerate(seeds if seeds else range(args.runs)):
-            hr, lines = variant(args.trace, args.size, v, args.fmt, debug=True,
-                                dump=(f"{args.dump}.{v}.traj" if args.dump and i == 0 else None),
-                                seed=(seed if seeds else None))
-            if hr is not None:
-                hrs.append(hr)
-                if i == 0:
-                    last = lines
+    results = {variant_name: [] for variant_name in variants}
+    trajectories = {variant_name: [] for variant_name in variants}
+    for variant_name, seed, ordinal in execution_plan(variants, args.runs, seeds):
+        hr, lines = variant(
+            args.trace, args.size, variant_name, args.fmt, debug=True,
+            dump=(f"{args.dump}.{variant_name}.traj" if args.dump and ordinal == 0 else None),
+            seed=seed)
+        if hr is None:
+            raise SystemExit(
+                f"missing hit rate for variant={variant_name} "
+                f"seed={seed if seed is not None else ordinal}")
+        results[variant_name].append((seed, hr))
+        if ordinal == 0:
+            trajectories[variant_name] = lines
+
+    for variant_name in variants:
+        seeded_rates = results[variant_name]
+        hrs = [hit_rate for _, hit_rate in seeded_rates]
         m = statistics.mean(hrs) if hrs else float("nan")
         sp = (max(hrs) - min(hrs)) if len(hrs) > 1 else 0.0
-        print(f"  {v:9s} hr={m:6.2f}±{sp:.2f}   {summarize(last, args.size)}")
+        seed_vector = ""
+        if seeds is not None:
+            seed_vector = "   seeds=" + ",".join(
+                f"s{seed}:{hit_rate:.2f}" for seed, hit_rate in seeded_rates)
+        print(f"  {variant_name:9s} hr={m:6.2f}±{sp:.2f}   "
+              f"{summarize(trajectories[variant_name], args.size)}{seed_vector}")
 
 
 if __name__ == "__main__":

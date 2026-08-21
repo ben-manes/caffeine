@@ -8,17 +8,79 @@ workloads-measured, with the per-workload spread visible.
 
     byworkload.py scan.csv [scan2.csv ...] [--bar 1.0]
 
-Input is the long-format CSV a threshold-scan runner writes — one row per (label, size, arm)
-with per-seed hit rates in `runs` and `_anchor` rows carrying an `lru` column — NOT gate.py's
-output, which has neither the 4096/4097 sizes nor the anchor rows.
+Input is the long-format CSV a threshold-scan runner writes, one row per (label, size, arm),
+with parallel per-seed `runs` and `seeds` fields and `_anchor` rows carrying an `lru` column.
+Legacy positional rows are rejected because a missing run would shift the comparison. This is
+not gate.py's output, which has neither the 4096/4097 sizes nor the anchor rows.
 """
-import argparse, csv, re, statistics
+import argparse
+import csv
+import re
+import statistics
 from collections import defaultdict
+
+from pair import parse_seeded_runs
+
+
+REQUIRED_COLUMNS = {"label", "size", "arm", "n", "runs", "seeds", "lru"}
 
 
 def workload(label):
     """Strip an epoch suffix: mstore_e3 -> mstore, w56_e0 -> w56, c2k_web07 -> c2k_web07."""
     return re.sub(r"_e\d+$", "", label)
+
+
+def read_inputs(paths):
+    """Read seeded 4096/4097 runs and anchors, rejecting ambiguous rows."""
+    runs = defaultdict(dict)
+    anchors = defaultdict(dict)
+    for path in paths:
+        with open(path, newline="", encoding="utf-8") as csv_file:
+            reader = csv.DictReader(csv_file)
+            missing = REQUIRED_COLUMNS - set(reader.fieldnames or ())
+            if missing:
+                raise ValueError(
+                    f"{path}: missing required CSV columns: {', '.join(sorted(missing))}")
+            for row in reader:
+                label = row["label"]
+                size = int(row["size"])
+                if row["arm"] == "hybrid":
+                    if not row["runs"]:
+                        raise ValueError(f"{label}@{size}: hybrid row has no run values")
+                    if size in runs[label]:
+                        raise ValueError(f"{label}@{size}: duplicate hybrid row")
+                    runs[label][size] = parse_seeded_runs(row)
+                elif row["arm"] == "_anchor" and row["lru"]:
+                    if size in anchors[label]:
+                        raise ValueError(f"{label}@{size}: duplicate anchor row")
+                    anchors[label][size] = float(row["lru"])
+    return runs, anchors
+
+
+def cliff_deltas(runs):
+    """Return each complete cell's 4097-minus-4096 deltas keyed by seed."""
+    cells = {}
+    for label, sizes in runs.items():
+        has_before = 4096 in sizes
+        has_after = 4097 in sizes
+        if has_before != has_after:
+            missing = 4097 if has_before else 4096
+            raise ValueError(f"{label}: missing hybrid row at size {missing}")
+        if not has_before:
+            continue
+        before, after = sizes[4096], sizes[4097]
+        before_seeds = set(before)
+        after_seeds = set(after)
+        if before_seeds != after_seeds:
+            only_before = ",".join(map(str, sorted(before_seeds - after_seeds))) or "-"
+            only_after = ",".join(map(str, sorted(after_seeds - before_seeds))) or "-"
+            raise ValueError(
+                f"{label}: 4096/4097 seed sets differ "
+                f"(4096-only={only_before}; 4097-only={only_after})")
+        cells[label] = [after[seed] - before[seed] for seed in sorted(before_seeds)]
+    if not cells:
+        raise ValueError("no cells contain both 4096 and 4097 seeded runs")
+    return cells
 
 
 def main():
@@ -27,21 +89,11 @@ def main():
     ap.add_argument("--bar", type=float, default=1.0, help="pp a cliff must reach to count")
     args = ap.parse_args()
 
-    runs = defaultdict(dict)
-    anchors = defaultdict(dict)
-    for p in args.csvs:
-        for r in csv.DictReader(open(p)):
-            if r["arm"] == "hybrid" and r["runs"]:
-                runs[r["label"]][int(r["size"])] = [float(x) for x in r["runs"].split()]
-            elif r["arm"] == "_anchor" and r["lru"]:
-                anchors[r["label"]][int(r["size"])] = float(r["lru"])
-
-    cells = {}
-    for label, sizes in runs.items():
-        if 4096 in sizes and 4097 in sizes:
-            a, b = sizes[4096], sizes[4097]
-            n = min(len(a), len(b))
-            cells[label] = [b[i] - a[i] for i in range(n)]
+    try:
+        runs, anchors = read_inputs(args.csvs)
+        cells = cliff_deltas(runs)
+    except ValueError as error:
+        ap.error(str(error))
 
     groups = defaultdict(list)
     for label, d in cells.items():

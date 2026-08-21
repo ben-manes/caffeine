@@ -24,9 +24,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.typesafe.config.ConfigFactory;
 
 /**
- * The minisim climber adapts the admission window at its period boundary regardless of whether the
- * cache is full. A trace whose working set stays below the window capacity keeps the window
- * under-filled, so the period-boundary resize walks past the resident window nodes.
+ * Verifies that the MiniSim climber remains dormant while the cache is underfilled.
  *
  * @author sahvx655@gmail.com (Sahana Bogar)
  */
@@ -35,8 +33,7 @@ final class MiniSimUnfilledResizeTest {
   @Test
   void unfilledWindowResize() {
     var policy = policy();
-    // Three keys against a 1,000-entry cache leaves the ~1% window far below its capacity; replay
-    // past the (shortened) minisim period so the boundary adaptation fires while under-filled.
+    // Replay past the shortened period; the fullness gate must still prevent adaptation.
     for (int i = 0; i < 200; i++) {
       policy.record(AccessEvent.forKey(i % 3));
     }

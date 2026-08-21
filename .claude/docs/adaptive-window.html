@@ -2386,14 +2386,18 @@ window = max(window + step, 0.02·C)</pre>
 
 <h3 id="s6-2"><a class="hl" href="#s6-2">6.2 When to probe: starved <i>and small</i></a></h3>
 <p>Starvation alone doesn't trigger. The rule is the <b>blind corner</b>: probe only
-  when the starved region is the small one (window starved at ≤ C/4 probes up; main
-  starved with the window at ≥ 3C/4 probes down; a fully dead sample probes away from
-  the nearer wall). A large starved region needs no probe, because the other region's
-  density already says what to do, and probing "on its behalf" is destructive. The
-  scar: a scan fills main, main earns nothing, and a naive rule concludes the small,
-  hard-working window should be raided mid-scan. Corda lost double digits to that
-  logic in an early variant. Small-and-starved is the only corner where nobody can
-  see.</p>
+  when the starved window is small (starved at ≤ C/4 probes up; a fully dead sample
+  probes away from the nearer wall, splitting at C/2). A large starved region needs no
+  probe, because the other region's density already says what to do, and probing "on
+  its behalf" is destructive. The scar: a scan fills main, main earns nothing, and a
+  naive rule concludes the small, hard-working window should be raided mid-scan. Corda
+  lost double digits to that logic in an early variant. A starved main beside a large
+  window arms nothing either: the ratio at that wall can only point upward, so the
+  window cannot move, stillness accrues by construction, and the equilibrium audit
+  (§7) owns the re-test there. The probe that once armed at that corner confirmed
+  onto positions main could not price, and deleting it read as a gain or a tie on
+  every cell where it fired. Small-and-starved is the only corner where nobody can
+  see and nothing else will look.</p>
 
 <h3 id="s6-3"><a class="hl" href="#s6-3">6.3 The walk</a></h3>
 <p>Inside the corner, control reverts to the goal metric: §3's climber, resurrected

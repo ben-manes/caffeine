@@ -188,7 +188,51 @@ temporary file. Key invariants:
   blank rows (the ARC cells in the real-corpus runner were declared `lirs` until 2026-08-04, and
   every ARC row it had ever written was empty).
 
-- **Noise floor — never count a sub-noise delta as a win.** `product.Caffeine` has randomized admission, giving a single-seed run-to-run hit-rate noise floor of **~0.1–0.8pp** (measured: `loop@101` spread 0.12, `multi3@2981` spread 0.49). A delta under **~1pp is not resolvable from noise** and must not be reported as a win — this is a *recurring* mistake (tiny wins overcounted as achievements, e.g. "+0.14 over the ceiling" is noise, the climber merely *matched* it). Report **absolute pp, not relative %** (relative exaggerates noise on low-HR cells); **multi-seed (≥3, ideally 5) any low-HR cell** where a single seed is dominated by the hashing seed. The bar for a change is **robust wins (≥~2pp, multi-seed) with no collapse**, judged cell-by-cell — never a `net +Npp` sum, which is inflated by the sea of sub-noise cells. The 2026-05 large-cache climber sweeps learned this the hard way (a "−68%" was 5,119→1,631 hits, both ~0% HR — pure noise).
+- **Noise floor — never count a sub-noise delta as a win.** `product.Caffeine` has randomized
+  admission, giving a single-seed run-to-run hit-rate noise floor of **~0.1–0.8pp** (measured:
+  `loop@101` spread 0.12, `multi3@2981` spread 0.49). A delta under **~1pp is not resolvable from
+  noise** and must not be reported as a win — this is a *recurring* mistake (tiny wins overcounted
+  as achievements, e.g. "+0.14 over the ceiling" is noise, the climber merely *matched* it).
+  Report **absolute pp, not relative %** (relative exaggerates noise on low-HR cells);
+  **multi-seed (≥3, ideally 5) any low-HR cell** where a single seed is dominated by the hashing
+  seed. Equal seeds make each arm reproducible and support a seed-by-seed comparison; they are not
+  request-indexed common random numbers when the arms consume randomized admission contests on
+  different requests. Claim exact pairing only when both the draw count and request-index digest
+  match. Interleaving arms bounds temporal drift but does not make them share RNG state or draws.
+  The bar for a change is **robust wins (≥~2pp, multi-seed) with no collapse**, judged cell-by-cell
+  — never a `net +Npp` sum, which is inflated by the sea of sub-noise cells. The 2026-05
+  large-cache climber sweeps learned this the hard way (a "−68%" was 5,119→1,631 hits, both ~0%
+  HR — pure noise).
+- **A shadow policy must represent a reachable host state.** A window percentage is not enough.
+  The live W-TinyLFU climber transfers capacity between window and protected while probation stays
+  fixed; an ordinary static `WindowTinyLfuPolicy(percentMain)` re-splits protected and probation
+  and therefore is not an exact counterfactual arm. Construct full-cache integer
+  `(window, protected, probation)` targets first, apply the host's clamps, deduplicate aliases,
+  and only then scale those exact triples into a miniature. Compare the shadow against both an
+  independent state model and the real simulator policy request by request; final hit rate alone
+  cannot expose a geometry or queue-order mismatch.
+- **Sampled policy panels need explicit evidence semantics.** Use `floorMod` for hash-bucket
+  selection; Java's signed `%` admits every negative hash under a `< 1` predicate. Separate the
+  host-request clock, sampled-request count, and first-full boundary. An epoch with no sampled
+  evidence abstains rather than selecting arm zero by a tie. Where admission is randomized, all
+  arms must receive one request-indexed variate from a domain distinct from membership sampling;
+  identical seeds with conditional draw consumption do not establish common randomness.
+- **Adaptations are acknowledged commands, not percentage assignments.** Compute an integral
+  delta from the actual live coordinate, validate the host's applied sign and magnitude, and carry
+  a capped command until the acknowledged coordinate reaches its approved target. Do not update a
+  nominal percentage and assume a clamp or rounding step arrived. Pin both movement directions,
+  zero/partial clamps, target changes, and the request immediately before and at every clock edge.
+- **An informative estimator is not yet a viable controller.** Gate signal quality, safe live
+  movement, and production-host cost independently. Measure retained graph size, steady-request
+  allocation, command/boundary allocation, and CPU; none is a proxy for another. A low duty cycle
+  does not make an unconditional dormant callback, counter, or branch free. Benchmark the actual
+  product splice, warm the exact measured objects and branches, and make the estimator's work
+  observable so the JIT cannot erase it.
+- **Classify terminal state before interpreting oracle regret.** A trace ending during a walk or
+  audit demonstrates finite-horizon recovery latency, not a settled rest-point error. Likewise, a
+  temporal treatment/control crossover on one drifting cache is not causal evidence: workload
+  weather and movement shocks affect the two periods differently. Causal attribution requires
+  matched state and requests, synchronized randomness, and simultaneous or replay-forked arms.
 - Canonical trace set: bundled LIRS (`loop`, `multi1/2/3`, `2_pools`, `cpp`, `cs`, `scan` at sizes 500/1k/2k); ARC's `DS1` at 1M to 8M; `S3` at 100k to 800k; the corda_large + 5×loop + corda_large phase-shift stress.
 - **The corda+loop stress must be run across the climber tiers.** The climber is tiered by size (`.claude/docs/design-decisions.md`): reactive `≤ SLOW_ADAPT_THRESHOLD` (512, small-tuned) and `≤ DENSITY_THRESHOLD` (4096, standard), density `> 4096`. Run the stress at **512, 513, 1024, 4096, 4097, 8192** and confirm `product.Caffeine` stays near its static-window ceiling and above LRU at every size, with **no cliff at either threshold boundary** (the 512→513 cliff was the original symptom of density taking over too early; density is now scoped to >4096 where it doesn't trap). The density climber is fragile at small/medium sizes — a starved region reads zero density and pins at an extreme — which is why it's scoped to large caches; don't lower `DENSITY_THRESHOLD` without re-running this. A synthetic phase-shift does *not* reliably reproduce the trap — use the real bundled `corda:trace_vaultservice_large.gz` + `lirs:loop.trace.gz`.
 - For LIRS-family bit-for-bit matching: set `non-resident-multiplier` very high (e.g. 100) so the memory bound doesn't fire — published references don't bound shadows.

@@ -1,0 +1,38 @@
+{
+ "max": 8192,
+ "seed": 149,
+ "repeat": 1,
+ "members": {
+  "core": {
+   "kind": "zipf",
+   "n": 0.72,
+   "alpha": 1.0
+  },
+  "far_band": {
+   "kind": "pairs",
+   "dreq": 5600,
+   "k": 2
+  },
+  "entry_impulse": {
+   "kind": "trickle",
+   "gap": 1
+  }
+ },
+ "segments": [
+  {
+   "samples": 96,
+   "shares": {
+    "core": 0.56,
+    "far_band": 0.26,
+    "entry_impulse": {
+     "share": 0.12,
+     "mod": {
+      "kind": "square",
+      "period": 13.5,
+      "amp": 0.98
+     }
+    }
+   }
+  }
+ ]
+}

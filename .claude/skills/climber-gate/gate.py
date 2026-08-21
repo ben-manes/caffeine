@@ -106,7 +106,8 @@ CELLS = [
     # /audit-regret round 1 (2026-08-15): the shallow wide moat; unimodal in outcome (spread 1.1)
     ("shallowmoat", "shallowmoat_8192.lirs", 8192, 2),
     # /audit-regret round 1: the reactive law beats the machine here (a burst three samples in ten
-    # that the audit's down-walk cannot ride out); a reactive-anchor sentinel, not a family
+    # that the audit's down-walk cannot ride out); a reactive-anchor sentinel whose class was
+    # family-ized by round 6's parkveil (this row keeps its own grid caveat)
     ("scarburst", "scarburst_8192.lirs", 8192, 2),
     # /audit-regret round 2 (2026-08-16): a pulsed lure inside a wide valley. `absolve` (period 16,
     # 128 samples) prices the ladder's reach through the lure-paced escalation; `absolve_p8` (period
@@ -126,6 +127,17 @@ CELLS = [
     # samples: 10.5M requests, the battery's longest cell after moat_h7800), seeded per-seed bars only
     ("crestpast", "crestpast_8192.lirs", 8192, 2),
     ("hazefloor", "hazefloor_8192.lirs", 8192, 2),
+    # /audit-regret round 6 (2026-08-21): a phase-alternating mix (zipf <-> band, square period 13)
+    # where the fixed mid window wins. Density chases the mix's alternating rest point, the
+    # ladder's deep walk parks at the top corner, and the park lives exactly one shield: the first
+    # post-shield flip is a crash-scale "shift" that stands the layer down at the anchor and
+    # discards it, so the position is re-derived every cycle. The cycle is arm-independent
+    # (noaudit runs it through the ladder alone); adjudicate the base on an N=8 seeded mean (a
+    # 6-vs-2 basin split by which confirms land on flip samples). The 60-sample witness is the
+    # first cycle in isolation and is deterministic; its noaudit arm pins the raw density law at
+    # a sighted 15% blend equilibrium.
+    ("parkveil", "parkveil_8192.lirs", 8192, 8),
+    ("parkveil_min", "parkveil_min_8192.lirs", 8192, 2),
 ]
 
 
@@ -143,9 +155,9 @@ def main():
             if not os.path.exists(path):
                 print(f"SKIP {label}: missing {path}", flush=True)
                 continue
-            # Rotate the arms INSIDE each run rather than running them in blocks: SKILL.md's
-            # pairing rule ("interleaved runs ... rather than comparing across sweeps") applies
-            # within a cell too, so the arms see the same machine state and basin draws.
+            # Rotate the arms INSIDE each run rather than running them in blocks. The processes
+            # stay temporally adjacent, which limits environmental drift, but they do not share
+            # JVM state or request-indexed admission draws.
             got = {v: [] for v in variants}
             for _ in range(runs):
                 for v in variants:

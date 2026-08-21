@@ -255,7 +255,10 @@ owns it; a confirmed family lands here and in the gate table, and its open direc
   `d25` period-2.5 rows recover to 66.4–66.5); the sample-aligned every-sample variant (`d0`)
   still jams — it needs ±¼-sample grid alignment (the D4 exposure class), is a deterministic
   9.3pp regression against the reactive arm, and is **constructed-only, priced and parked**
-  (§7's reachability entry; the stillness-measure study stays deliberately unspent).
+  (§7's reachability entry; the stillness-measure study stays deliberately unspent). A slow
+  square duty re-creates the starved clock below every-sample motion (the 2026-08-21 Sol
+  round's `entry_duty`, a dose note on the `posjam_d0` gate row); the loss there is the
+  rider's class-3 mask, not the jam.
 - **crashnoise / mixnoise** (`crashnoise.py`, `mixnoise.py`, adv3 rows): the whisper and
   mixture bases under a mean-centred, RMS-normalised rate modulation whose **amplitude** is
   the dose — the walk's exit-bar instruments. The two interior exits test different statistics
@@ -417,6 +420,34 @@ owns it; a confirmed family lands here and in the gate table, and its open direc
   not a pass bar; the row exists so a change to the corner audit, the C2 discard or density's slide is
   measured against it. §7's 2026-08-17 round-3 and round-4 entries.
 
+- **parkveil** (`/audit-regret` round 6, 2026-08-21; specs `audit-regret/specs/parkveil.json` at
+  240 samples and `parkveil_min.json` at 60): a zipf core (0.5·max, α 1.05) and a two-reference
+  band (pairs at 0.45·max) whose shares alternate in a square wave at period 13 samples, plus a
+  10% one-shot scan. The fixed mid window wins by construction (ceiling 66.82 at 50%, an interior
+  plateau wholly above LRU 66.04; the product planted at 50% holds 67.03), and every adaptive arm
+  sits below LRU: seeded 1–8 the machine reads 53.13 ± 4.09 (a 6-vs-2 basin split), `noaudit`
+  55.73 ± 0.55, the reactive law 59.91 ± 0.92. Density's rest point alternates with the mix (the
+  ratio's within-sample phase immunity holds for rate swings, not mix swings), each rec phase
+  blanks the window into a blind corner, walks crash on the phase boundaries or confirm on the
+  flips as wedges (the ladder escalates 2 → 64 as designed), the rung-64 walk parks at the top
+  corner as an audit-grade confirm earning within ~2pp of the plateau, and the park survives
+  exactly one fresh-park shield: flips inside the shield are absorbed, the park's own audit crash
+  returns to it (the 2026-08-16 cover), and the first post-shield flip fires `isWorkloadShift`,
+  whose stand-down discards the claim at the anchor and re-seeds the goal metric, so the position
+  is re-derived through the full ladder every cycle. The guard rail never fires on any seed: the
+  phase swing holds the deviation at 0.21–0.34 and the veto margin at 62–101pp. The cycle is
+  arm-independent (`noaudit` parks at s134 through the ladder alone and re-parks more reliably;
+  the audit layer's margin here is delay from a calibration flip-misconfirm's reward reset, plus
+  variance), so the loss lives in the shared stand-down and shield machinery. The last-third gap
+  is 6.0 of the whole-trace 13.7 (half the headline is one-time ascent); a ~2pp per-cycle
+  re-derivation cost and a 2-of-8 lost-seed tail persist. Robust across the period axis (gaps
+  27/27/7/27/12/17/12/13 at periods 2–32, a resonance structure with one narrow escape at 6),
+  amplitude, band distance (deepens to 22.1 at d=0.6), 16384 (21.2), phase offsets (6.7–20.2,
+  none clean) and trace regeneration (~2pp milder). Class 5 (the chase; controller) with class 6
+  (the discard; recovery layer); the census C3 observation's first cost-bearing cell, and the
+  mirror of `flashpark` (there the shield holds a wrong park through a regime end; here the
+  shield's expiry ends a right one). §7's 2026-08-21 entry; §8 item 9.
+
 ## 4. The shipped design (the probe machine, >4096)
 
 Non-starved samples are the pure density step. The additions:
@@ -424,10 +455,13 @@ Non-starved samples are the pure density step. The additions:
 1. **Starvation bar**: a region is starved when its sample hits < `max(4, requestCount >> 10)`
    (0.1%, floored at 4 — the floor binds whenever the sketch's entry-denominated cap makes the
    sample shorter than 4096 requests).
-2. **Blind corner gate**: probe only when the starved region is the *small* one (window starved at
-   ≤max/4 → probe up; main starved with window ≥3·max/4 → probe down) or the sample is dead (both
-   starved; direction away from the nearer bound). A *large* region earning nothing is visible to
-   density and must not trigger a probe (probing "for" a scan-filled main destroyed corda_large).
+2. **Blind corner gate**: probe only when the starved window is small (window starved at ≤max/4 →
+   probe up) or the sample is dead (both starved; direction away from the nearer bound, deciding
+   at half). A starved main beside a large window arms nothing: the equilibrium audit owns that
+   terrain (the upper-corner probe, main starved with window ≥3·max/4 → down, was deleted
+   2026-08-21 — §5's corner entry; the `cornerprobe` harness arm restores it). A *large* region
+   earning nothing is visible to density and must not trigger a probe (probing "for" a
+   scan-filled main destroyed corda_large).
    The gate outranks the goal-metric branches, which is right for the guard rail (it adjudicates a
    shortfall *on* the starved sample) and was wrong for the audit (it adjudicates over the samples
    that follow): a blind corner that never clears served its whole refractory motionless while the
@@ -830,6 +864,49 @@ and four honest-window-hits verdict forms (absolute / vs-main-average / vs-own-b
 vs-baseline-with-bar-floor), each trading a distinct family — the verdict-design tradeoff surface
 in the study report §6.1. The one survivor SHIPPED: the rung-scaled walk stride (§4.3).
 
+### Closed by the 2026-08-20 alternative-climber synthesis (measured)
+
+- **Marginal-loss controller: locally right is not globally sufficient.** Exact loser-refault
+  attribution was locally informative: all seven screened deltas were non-negative (0 to
+  +1.80pp). The controller built around it still failed its final-regret gate. Moving a fixed 1%
+  of capacity every 2C requests left the ten-cell nearest-rank p90 regret at least 2.83pp against a
+  1.5pp bar. P3 states the limitation cleanly: hit rate falls while moving from the 1% start toward
+  roughly 20%, then rises to a remote 80% basin. The local signal correctly points back toward the
+  floor and therefore cannot discover that basin. Adjacent-direction accuracy and global search
+  regret are separate gates. Keep the signal as a possible diagnostic or local trim input, not as
+  evidence for a replacement climber.
+- **Replicated MiniSim: useful information, rejected realization.** The first prototype was
+  invalid: ordinary static W-TinyLFU arms recomputed probation at each window size, while the live
+  host keeps probation fixed and transfers capacity between window and protected. The repaired
+  experiment constructed reachable integer segment triples, clamped and deduplicated targets
+  before scaling, followed capped moves to the exact approved coordinate, and supplied the same
+  request-indexed admission variate to every arm. At the co-minimal 128-entry, three-cohort setting,
+  its six-cell median and p90 static-oracle regret were 0.197pp and 0.305pp: remote counterfactual
+  ranking did contain useful information. The 27-policy realization then failed every production
+  cost bar: 103,816 bytes retained when empty, 314,784 bytes steady, 24 bytes per sampled hit, a
+  median 1.96 bytes/request on the natural 95/5 mix, and a 37.52% median hot-hit regression. This
+  rejects that realization, not the information source.
+  The useful correctness subset was later extracted to main: registered MiniSim now preserves the
+  live fixed-probation geometry, removes full and scaled aliases, and computes each integral move
+  from the host's actual window coordinate. The expensive replicated controller remains rejected.
+  Equal RNG seeds still do not give its arms request-indexed common draws, so MiniSim should not be
+  described as a fully paired counterfactual oracle.
+- **Bounded reuse-survival estimator.** A smaller primitive estimator was a credible attempt to
+  retain the remote-ranking information without full policies. Its registered realization missed
+  both information bars: 0.727pp median winner regret against 0.5pp, and 2.849pp p90 against
+  1.5pp. Retire that realization as controller authority. The broader reuse-survival idea was not
+  disproved by one resource setting and seed family.
+- **Compact Shadow prototype.** Its controller semantics and bounded layout checks passed, and the
+  observer allocated nothing in its steady interval. The first pair of the terminal four-cell cost
+  gate then measured 32 bytes per candidate command against 16 bytes for the baseline, so the
+  frozen stop rule ended the study before quality was scored. Compact state is possible; an
+  affordable observation seam and a quality win remain unproved. There is no superiority result.
+- **Archive boundary.** The trace-metadata prototype, compact primitives, static oracles, runners,
+  manifests, and experiment evidence plumbing have no upstream consumer or shared owner. Keep them
+  archived until one exists. Whole-file transplants and a public `SimulatorAdmissionRandom` API
+  are rejected. A future consumer needing exact randomized pairing must first show that both the
+  draw count and request-index digest match.
+
 ### Killed by the 2026-08-19 return-retest round (measured; the local pr2000-sighted-veto workspace, §7's entry has the numbers)
 
 - **A hold before the retreat commits.** A completed shortfall streak stands the window still for
@@ -1157,6 +1234,77 @@ every remedy so far picks a different denominator, while the `slowswap` diagnosi
 rejected starvation-gated one, but price it against ~+0.24pp, the corpus prize the frontier leaves
 at the bar, not against +1.22.
 
+### The remedy thread's consolidated record (moved from §8 item 1 at the 2026-08-21 wrap)
+
+The gated arm is the family's best point and its residue redirected the thread. `marggate`
+(fall back to the average law where `probationDensity` exceeds `mainDensity`, a trustworthiness
+test on two terms `Reading` already computes) reads **+0.690 mean over the nine cells with one
+−0.04 loss**, rest-point tracking Spearman **+1.000** with 12.2pp level error against ship's
+21.3, and sits at the same `slowswap` robustness as dead `margtail` for 60% more prize. Its
+structural false positive: on `flood_j100` a rotation exceeding protected demotes every promoted
+key before reuse, probation reads richer than main with no inflow at all (47 of 48 steering
+samples), and the arm is the average law there. It fixes `slowswap_r1` (5.6pp below LRU →
+38.24 ± 0.18, +1.45 above, deterministic) and not `r20` (−6.9 → −0.95, bimodal); neither meets
+the ≥40 bar. **The residue is recovery, not detection**: per-seed on `r20` the gate fires 11% of
+steering samples in the good basin and 9% in the bad one, firing rate does not predict the
+outcome, and what separates the basins is where the window ends up (30.5% against 20.0%) — the
+depressed-window thread's territory, now §8 item 4's. Dead within the gate, do not re-derive:
+a run-to-enter requirement (streaks 2 and 3 both lose to 1), an exit latch (non-monotone, never
+lifts `r20` above LRU by more than 0.00 over 1/2/4/8/16), and the gate ratio (the two rows want
+opposite settings: 1.0 gives r1 +1.45 / r20 −0.95, 0.6 gives r1 −0.62 / r20 +1.01).
+
+`margrest` (the marginal law only inside a rest band, `|steeringError()| <= REST_BAND`) solves
+`slowswap_r20` outright (42.20 ± 0.05 against ship's 42.19, deterministic) **and destroys the
+prize** (nine cells +0.133 against `marghalf`'s +0.833, `w098` collapsing +4.33 → +0.35). The
+mechanism is the wall the record now names everywhere: `w098`'s win *is* a rest-point
+correction, but a large one — the valuable corrections are long relocations, and a long
+relocation is indistinguishable from a transition by command magnitude. No size-gated rule can
+work, and the same fact underlies the frontier: the signal cannot separate "a big move because
+the rest point is wrong" from "a big move because the workload changed". Two structural facts
+fell out: the average-law error is bimodal (near zero at rest or large in transit; bands 0.5
+through 0.1 are bit-identical), and on the bad `r20` seeds the final third is a park, 95 of 103
+samples at a 16.9% window with one audit armed — the marginal law digs a hole, the anchor parks
+in it, and nothing in a steering law climbs out of one. The stillness-coupling blocker is
+repaired entirely by halving the gain (a threshold on the stable band, not a monotone trade;
+0.25 is worse than 0.5); the probation-denominator defect under heavy inflow is what the
+denominators above could not fix.
+
+External corroboration (OSDI'26 "Learning-Augmented Heuristics", Xia et al.): their model's
+feature importance puts **75% on the three queues' hit-position histograms** — per-region
+hit-rate-versus-size curves, i.e. marginal-value estimators — over 4140 production traces.
+Corpus-scale evidence for the premise from outside the project. `d_tail` is one bin against
+their 20 per region, so bin resolution is the knob if a future arm reads ambiguous; nothing
+else in the paper transfers (it is a static per-trace configuration selector). **Screen any
+successor on rest-point tracking before spending a battery**: Spearman(meanWindow, peakWindow)
+over the nine D3 cells reads ship +0.917, `marghalf` +0.983, `margtail` +0.367, and a candidate
+that does not beat +0.917 is buying stability with tracking — trap wins paid for by corpus
+losses.
+
+### Killed at the 2026-08-21 wrap: the queue's last two blanks
+
+**Verdict corroboration, the smoothed reference (`corrob2`; the raw form died 2026-08-18).** A
+pulled-back confirm must reproduce its own claim (`Walk.bestRate`) in the smoothed rate within a
+confirm-streak of samples, or the park relocates to the walk's end. It does what the raw form
+did — `crashnoise_a12`'s low basins lifted (+1.03 mean, the row near-deterministic at 62.7) and
+`whisper_mod_p12` +0.64 on 8 of 8 — and fails `whisper_mod_a12` the same way (−1.67 mean, seven
+seeds at −1.98, seed 7's low draw the one gain): at that amplitude the EMA still carries ~40% of
+the modulation, the park's first samples land in the trough, and a correct position fails its
+own claim. The reference is not the defect; the depth is. The smoothed form also adds
+relocation damage the raw one did not have: `demoflood` **−3.64 on 8 of 8** and `crestpast`
+−4.2 / −2.9, where the lagging EMA reads a fresh crest park as unproven and revokes it to the
+walk's end, re-deriving the exact overshoot the verdict repair removed, plus `straywall2`
+−0.78. Dead. Both measurable references die by the same symmetry, and the third (the fallback
+position's own rate) is unmeasurable without going there; the corroboration family is closed.
+
+**The delayed entry stride (`delayentry`, item 8's blank).** Freeze the base at the arm and
+take the entry stride on the next sample, the WaveCounter comparison. The prior held and the
+mechanism sharpened: the entry's timing is itself phase-load-bearing. `absolve` reads **−15.7
+on both seeds**, back at its pre-repair value, because the lure-paced escalation needs the walk
+to arm in the off phase and stride before the on phase returns; `straywall2` −0.88;
+`norank_rep_r6`'s escape lottery reshuffles violently (seed 3 +48.6 against seed 7 −59.8, mean
+−2.2); against `blindlock_blind` +5.8 and `demoflood` +0.7, which do not buy that. Dead; the
+record's blank is priced in the direction the prior expected.
+
 ### Killed by the 2026-08-05 margtail round (measured; 9 D3 cells at 3 seeds, 4 gate rows at 8)
 
 `ln(d_tail/d_main)`, the marginal band priced against main's **average** instead of its probation
@@ -1313,14 +1461,19 @@ co-tenant
   `BoundedLocalCache.admit`: a candidate at or above `ADMIT_HASHDOS_THRESHOLD` that does not beat
   the victim is admitted on a 1-in-128 `ThreadLocalRandom` draw (the HashDoS defense). TLR seeds
   from system entropy per JVM, and the policy runs `.executor(Runnable::run)`, so this is the only
-  live nondeterminism — nothing in the harness seeds it. On most cells the draws average out
+  live nondeterminism. The experiment harness can replace that contest-time draw with a seeded
+  stream, which makes each arm independently reproducible. Equal seeds do not make two arms use a
+  draw on the same request when their contest schedules differ. The arms are paired by seed, not
+  by request-indexed common random numbers, unless both the draw count and request-index digest
+  match. On most cells the draws average out
   (measured over five batteries: 28 of 47 cells vary by <0.05pp run-to-run, 37 by <0.20pp). On a
   constructed bistable trap an early draw can tip the region composition into the other attractor
   and the climber's own feedback locks it in, which is what a **lottery cell** is: 6 cells
   (`phases_d050`, `widepin`, `shieldtrap_s7`/`s13`, `balloonflip`, `crashnoise_a12`) vary by
   1.1–5.5pp with the code held fixed. Consequences for reading a gate: a mover inside that set is
-  evidence of nothing, the arms must be interleaved run-by-run so both see the same draws, and a
-  single-cell regression is adjudicated by basin count at N≥10, never by a mean at N=2.
+  evidence of nothing, interleaving arms limits temporal drift but does not make their draws
+  common, and a single-cell regression is adjudicated by basin count at N≥10, never by a mean at
+  N=2.
 - Adaptive N is sound and ~60% cheaper: N=2 everywhere, N=5 where |Δ| ∈ 0.5–2.5pp or spread >0.5.
 - Trajectories (window size per adaptation) are the diagnostic instrument — every fix in §4 was
   found by reading a trajectory, not a scoreboard. The debug hook pattern: stderr print in
@@ -1328,6 +1481,40 @@ co-tenant
   no hook is checked in — the 2026-07 study's working-tree harness (variant knob + debug + seeded
   admission RNG) is preserved in the
   local hill-climber-study workspace (`experiment-harness.patch`).
+- **Separate information, actuation, and deployability.** First ask whether a signal ranks
+  counterfactual window sizes on an exact simulator stream. Then ask whether its controller moves
+  the live cache safely and converges under clamps, reversals, and phase changes. Only then price
+  the actual production host for retained state, steady allocation, command/boundary allocation,
+  and CPU. Passing one layer says nothing about the next: replicated MiniSim passed its information
+  screen and failed cost, while Compact Shadow passed layout and stopped before quality.
+- **Treat movement as a two-phase command.** A decision remains pending until the host acknowledges
+  the actual signed setpoint change. Reject overlapping acknowledgements and the wrong sign or
+  magnitude; retain geometry-specific evidence after a rail-clamped zero; clear it only after a
+  validated nonzero move. Continue a capped trip from the acknowledged setpoint, not from a
+  nominal percentage or transient queue occupancy. Tests must pin partial and zero clamps,
+  reversal, cancellation, and exact arrival in both directions.
+- **Use an oracle ladder, not a self-confirming digest.** Compare a compact estimator first with an
+  independent readable model, then request by request with the actual simulator policy under the
+  same key, frequency history, and admission variate. Check hits/misses, membership, queue order,
+  promotions/demotions, and admission decisions, not only final hit rate. Accumulate live evidence
+  independently; copying an expected digest into the measured path proves only that the metadata
+  agrees with itself.
+- **Low duty cycle is not low request-path cost.** A dormant callback, counter decrement, routing
+  indirection, or branch still executes on every request. The compact studies measured zero steady
+  allocation alongside material CPU regressions. Dormant observation must be structurally absent,
+  and even that is only a hypothesis until the exact product splice passes an order-balanced
+  benchmark. Warm the exact root, actor, probe, and branch shape being measured, and make estimator
+  work externally observable so dead-code elimination cannot manufacture a win.
+- **One clock owns each lifecycle boundary.** Host requests, sampled requests, warmup, measure,
+  travel, and cooldown are different quantities. Express each transition as one absolute request
+  deadline or one remaining count, not two counters that can both charge the same interval. Pin the
+  request immediately before and at every edge, and prove that under-full or dormant requests do
+  not advance the estimator's active clock.
+- **Classify endpoint state before scoring regret.** A trace that ends in a walk or audit measures
+  recovery latency over that horizon; it does not prove a settled rest point. Report the terminal
+  phase and pending target beside static-oracle regret. For percentile gates, also pre-register the
+  monotone futility bound: stop once the observed order statistics force failure under every
+  possible value of the unrun cells.
 - **A holdout must be able to exercise the thing under test.** `AUDIT_BAR_FRACTION` is
   `min(RESTART_THRESHOLD, AUDIT_BAR_FRACTION · baseHitRate)`, so above a 1/3 hit rate it equals the
   absolute bar and every arm ties by construction. Selecting by "unspent + density tier + enough
@@ -2110,6 +2297,24 @@ blocker: at this level both `marggate` slowswap rows read 0.00 / −0.01, becaus
 scatter-to-rate ratio is 0.21, under the 0.30 the derived level needs to bind. §8 item 1 is
 unaffected.
 
+**2026-08-05 (weaning the audit layer — measured, and the answer is no; moved from §8 item 2 at
+the 2026-08-21 wrap).** The third column was run (`gate.py <traces> hybrid,noaudit,reactive`, 52
+rows at the table's per-cell N, arms rotated inside each run). The layer is worth +4.91 mean /
++0.75 median — but the mean is not the result. The asymmetry is: **+268pp of gain across the
+helped rows against −13pp of cost across the hurt ones, about 21:1**, worst row `balloonflip`
+−2.39. The gains are structural: `noaudit` collapses to a shared ~55.5 across the whole
+whisper / crashnoise_flat / posjam / h4c1 / whisper_mod family (eleven rows, +8 to +11) and to
+31–35 on `mixture_d025@32k`, `blindlock_sighted` and `mixture_d050` (+15 to +27) — one pin
+apiece, and the layer is what escapes them. The costs are small and land on benign terrain (the
+R4-F1 shape, priced). Two corrections from the same cause: `widepin` and `phases_d050` cannot be
+read from a battery mean (unseeded −6.40 and +1.62; seeded N=8 with arms rotated −1.41 and
+−0.24, basin luck in opposite directions), and on both rows the value belongs to the **tier, not
+the layer** (density +5.9 and +10.2 over the reactive arm while the audit layer is inert to
+slightly negative) — a weaning argument must not borrow one for the other. The run also
+re-derived `widepin`'s broken bar (the recorded 52.4–54.9 range was an unrepresentative high
+sample; true distribution 50.63 ± 5.25 with basins split 12/24; now a seeded row barred on
+per-seed drift): on a bimodal family an unseeded mean is not a measurement.
+
 **2026-08-06 (adversary round Terra r4 — the density tier attacked at the reviewed commit; no
 severe flaw).** Blind attack plan from the source alone, pruned against the record (8 of 12
 hypotheses were already-priced decisions), battery reproduced first (48 rows; every
@@ -2580,6 +2785,39 @@ corner to the goal-metric audit (a starved main at 80% is a graveyard, and the d
 asks whether main out-earns the window per entry, which is not the question there); neither was
 built.
 
+*Both were built 2026-08-21, and the round they anchored re-priced the probe to a deletion.*
+`cornaudit` (the corner left to the audit clock) tracks `nocorner` within noise everywhere, since
+the clock rarely comes due at the corner. `cornladder` (per-corner ladders and refractories) is
+dominated: its one unique gain, `balloonflip` +1.39 on 8 of 8 from isolating the up ladder from
+dead-sample down-endings, comes with `deadphase` −0.15 and `widepin` −0.70 while missing the
+deletion's `rep_r6` and `cp_w015`. The re-price that decided it: on the post-08-16..19 machine
+`nocorner` reads `rep_r6` +2.13 (8 of 8), `phases_d050` +0.42 / @32k +0.83, `zigzag_s7` +0.12
+(8 of 8), `slowswap_step` +0.07 (8 of 8), and, the recorded earnings inverted, `cp_w015`
+**+0.30 on 4 of 4** with `arc_ConCat` +0.09, against `widepin` −0.91 (5 down / 3 up on a ±4
+spread) and `cp_w050` −0.11 (4 of 4); 147 of 170 full-battery rows are bit-identical, every
+sentinel among them. On `cp_w015` the mechanism is Q2a's shape doing the damage: the corner's
+four down-probes confirm onto near-starved-main positions and hold the mean window at 0.446
+against the deletion's 0.661, both trajectories ending at 0.802, and the audits alone keep the
+cell's escapes (11 against ship's 16). **The upper-corner starvation probe is deleted**:
+`Reading.hasBlindCorner` and `shouldProbeDown` lose their `mainStarved` clauses, dead samples
+still probe, and the audit's corner-forcing and room rule are untouched; the `cornerprobe`
+harness arm restores the probe so the deletion stays priceable.
+
+*The deletion's one residual doubt, asked and closed (2026-08-21).* The probe was the corner's
+clock-free trigger, arming on the blind sample itself, while the audit needs stillness to
+accrue, so the origin review asked whether a posjam-style clock jam at the wall could leave the
+corner unexplored. It cannot, structurally and measured: at a sighted-window, starved-main wall
+density has no down channel (a starved main's floor price sits below any sighted window's
+density) and up-commands clamp, so stillness accrues by construction; the `topjam` cell (the
+hazefloor population without its far band, a period-2 full-amplitude dose, planted at 80%, the
+round workspace holds the spec and dumps) fires 4 audits in 119 samples, descends, earns +0.6
+over `noaudit`'s frozen wall-sit, and reads bit-identical with `cornerprobe` on 4 of 4 seeds —
+the restored probe never arms there either. Not rowed: 0.6pp of separation is below the CI
+calibration floor. The clause's origin itself is the symmetric completion of the
+small-and-starved rule (the design document names no motivating workload for the down case),
+and the 2026-08-18 `/climber-minimize` run had already flagged the probe at 0.2:1 with its keep
+resting on `cp_w015` alone, queuing exactly the N=8-then-refute pass that ran today.
+
 *The census by-catch: three ways the machine loses a position it found.* (C1) **478 audits armed
 from a park; 254 crashed and 204 of those released the park** (`isShielded()` is false during a
 walk, so the audit's own crash-scale damage reads as a workload shift and `standDown` releases the
@@ -2631,6 +2869,26 @@ slow weather, so the priced form is a trade, not a repair. All three together: t
 `flood` 54.94 ± 1.04, against demoflood −1.90 and moat_h7800 −1.48; real corpus −0.02. None of
 the four is a fix: the machine's forgetting rules are coupled hedges, and each one removed shows a
 matching cost inside the battery or the corpus.
+
+*Re-priced 2026-08-21 on the current machine* (the tree just before the corner deletion landed;
+the repairs between the pricing
+above and this one are the `isParkTest` cover, the walk's-best verdict, the walk's smoothed-rate
+reference, and the return retest; the arms are permanent harness variants now, the local
+`climber-item4-discard` workspace holds the runs). `auditshield` needs no arm: its semantics
+shipped as the `isParkTest` cover. `arrive`, re-expressed through the retest state
+(`retestClaim` and `retreatLeft` mark the landing and settle samples), is inert: bit-identical on
+16 of 17 cells at seed 1 with the rail and the retest never firing across the whole set,
+bit-identical at seeds 2–8 everywhere but `flood` seed 5 (+0.31), and −0.05..−0.12 on all four
+`cp_w081` seeds. C2's discard-at-arrival is unreachable on the current machine, and where the
+rail still vetoes the suppression costs. `pricedshift` seeded N=8: `crashnoise_a12` +2.34 (8 of
+8, the 60.7 basins lifted to a near-deterministic 64.0), `whisper_mod_a12` +0.76 (seed 7's 61.4
+draw removed), `whisper_mod_p6` +0.66 (8 of 8), `rep_r6` seed 4 15.94 → 45.92 with the other
+seven bit-identical, `flood_j100` a redraw (two seeds +2.9/+3.5, two −3.1/−2.5, mean +0.11),
+`parkveil` and `hazefloor` bit-identical on every seed, `cp_w081` −0.10 on 4 of 4 (the recorded
+−0.39 weather cost, shrunk under the repaired rail), and `moat_h7800` **−2.69 on 8 of 8, worst
+−5.52**, against the recorded −0.94: the cost moved from the corpus weather to h7800's basin
+structure, where the fixed trigger's churn is what finds the 46.2 basin. Still a trade, not
+landed.
 
 *Q3, the wedge pricing against these cells.* At `4f9a8e3c9` `flood` is bit-identical on every
 seed (no starvation probe runs there) and `rep_r6` on seven, seed 3 41.12 → 20.32 as recorded
@@ -3120,6 +3378,75 @@ bare level rots while one stated against a re-derivable anchor does not. `slowsw
 basins survive with ~0.1 of new internal spread each, so its "a third value is the leak" tripwire is
 restated as what it protected: no draw below 41.8, draws in two clusters near 42.0 and 42.9.
 
+**2026-08-21 (`/audit-regret` round 6, the skill's sixth run; report in the fable-5 audit tree).**
+Two proposal lanes on Opus (eight blind, six sighted specs; the sighted lane carried three
+directed slots), one finding, six clean rows on the newest rules, evaluated on the session model.
+**`parkveil`** (§3, two gate rows): a phase-alternating mix at a trackable period where the fixed
+mid window wins and every adaptive arm sits below LRU; the machine chases the mix's alternating
+rest point, the ladder's deep walk parks at the top corner, and the park lives exactly one
+fresh-park shield before the first post-shield flip's stand-down discards it, so the position is
+re-derived every cycle (the numbers and the full mechanism are §3's bullet and the gate rows).
+The evaluator's decomposition reshaped the writeup: half the 13.7 headline is one-time ascent
+(last-third gap 6.0), the spread is a 6-vs-2 basin split, the plant at 50% holds 67.03, and the
+cycle is arm-independent, which moves the ownership onto the shared stand-down and shield
+machinery rather than the audit layer. Dedup: the family-ization of the reactive-anchor
+phase-chase class (`scarburst`, `b_causepair_b`) with the controls round 1 left open, and the
+census C3 observation's first cost-bearing cell; the binding park exit has moved one rule
+downstream of the 2026-08-16 auditshield cover. **The round's other result is negative and worth
+the record: six targeted attacks on the 2026-08-17..20 rules all read clean or beat the static
+ceiling** — the repeat-confirm memory against an interleaved-failure eraser (−0.46), the
+verdict's tie-to-later rule against a plateau-with-cliff (1.29), the audit clock's ±1 decay
+against strict alternation (0.38), and all three return-retest attacks (a slow-re-earn terrain
+aimed at the judgment path discarding a true claim, +1.16 over the ceiling; a lure phase-locked
+to the settle, +1.78 over; a slow-recovery crest aimed at revoking a fresh park, −0.50 gap).
+Dropped: `s_valefloor` (a genuine compressed micro-valley at the floor — 17.99/17.76/23.61 at
+1/3/5% — but the machine overshoots it and rests at ~37%, `cp_w097`'s face on `flood_j100`'s
+population with the audit layer inert as recorded; the spec is a fast witness if item 1 is
+worked), `b_mainwhisper` (the main-side mask worked mechanically, probes = 0 with main sighted,
+but the peak fled to the edge and the loss is the recorded calibration-park class),
+`b_shieldshift` (all arms within 1pp; `flashpark`'s ramp ×3), `b_floorburn` (peak-at-edge;
+`s_farecho` crashes plus refractory holds), `b_cliffleap` (a hold cell; the audit layer caught
+the predicted leap, 1.67). Two sighted terrains put plain LRU 20+pp above the whole static curve
+(long-distance k=2 bands TinyLFU admission refuses; `rep_r6`'s norank geometry at k=2), recorded
+as structural so the cells are not re-read as climber regret. The main-side masked-signal mirror
+is now 0 for 8 across six rounds, with this round's two failures both dying at the terrain
+rather than the mask. Nothing was fixed; the promotion edits are staged for review.
+
+**2026-08-21 (the discard re-price: §8 items 4 and 9's shared machinery, worked on Ben's go).**
+The census arms (§5's 2026-08-15 entry) re-measured on the machine the 08-16..19 repairs left,
+as permanent harness variants (`arrive`, `pricedshift`; verify 51/51). `auditshield` needs no
+arm: its semantics shipped as the `isParkTest` cover. **C2 is closed**: `arrive` is bit-identical
+on 16 of 17 cells at seed 1 with the rail and the retest never firing across the set,
+bit-identical at seeds 2–8 everywhere but one +0.31 `flood` draw, and a uniform −0.05..−0.12 on
+`cp_w081`; the accidental discard-at-arrival the census measured is unreachable, and item 4's
+residual is now the corner schedule, the cliff crash, and density's slide alone. **`pricedshift`
+stays a trade** with the sides moved: `crashnoise_a12` +2.34, `whisper_mod_a12` +0.76,
+`whisper_mod_p6` +0.66 (each 8 of 8) and the `rep_r6` seed-4 rescue (15.94 → 45.92), against
+`moat_h7800` −2.69 on 8 of 8 (worst −5.52, triple the recorded cost) with `cp_w081` down to
+−0.10; `flood_j100` is a redraw and `parkveil`/`hazefloor` are bit-identical, which answers item
+9's weighing: the priced trigger still fires on every phase flip, so it buys that family nothing.
+Nothing landed. By-catch: the flood row's seeded list predated the ghostclaim repair's recorded
+redraw and hazefloor's predated the crestpast repair's +5.5; both restated in the gate table
+(the means hold at 53.25 and 47.67).
+
+**2026-08-21 (the corner schedule: §5 Q2b's two unbuilt shapes, and the deletion they priced).**
+The per-corner ladder and the corner-to-audit handoff were built as harness arms, measured
+dominated, and the reference arm's re-price flipped the probe's own verdict: the upper-corner
+starvation probe's recorded real-cell earnings (cp_w015 / arc_ConCat −0.2 each) inverted under
+the 08-16..19 rules, leaving `widepin` as the lone defender against a ledger of sign-uniform
+gains (§5's corner entry carries the numbers and the cp_w015 trajectory mechanism). **Deleted**:
+`hasBlindCorner` and `shouldProbeDown` lose their `mainStarved` clauses; dead samples still
+probe; the audit layer's corner behavior is untouched. Re-based rows: `norank_rep_r6` (every
+seed up, mean 54.47 → 56.60), `phases_d050` both sizes, `widepin` (mean 56.40 → 55.49, the
+accepted cost); `slowswap_step` and `zigzag_s7` ride +0.07/+0.12 uniform above their floor bars,
+recorded here rather than restated. Verification: `WindowClimberTest` with the two corner pins
+rewritten as the negative contract (a starved main beside a large window arms nothing and
+steers at main's floor price; the wall-sit walk arms from a dead sample), `WindowClimberGateTest`
+4/4, `WindowClimberFuzzer` clean, and the wired-worktree equivalence checks (`hybrid` = the
+battery's `nocorner` column; `cornerprobe` = old ship). The harness keeps `cornerprobe` as the
+restoration arm and drops the two dead corner shapes; the minimize battery's `nocorner` arm is
+retired with the step it ablated.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor
@@ -3216,278 +3543,99 @@ exists. Re-derive every bar against this anchor table before trusting the gate a
 criterion, and prefer bars stated as a margin over LRU or a gap to the ceiling rather than as bare
 levels.
 
-## 8. Where to go next (2026-08-04, after four concurrent studies closed on one day)
+## 8. Where to go next (opened 2026-08-04; wrapped 2026-08-21 — closed items are stubs pointing at their records, and the numbering is frozen for the cross-references)
 
 Ordered by expected value, with the reason each is where it is. Read §5 and §7 before starting
 any of them; the point of this section is to stop the next session from re-deriving a priority
 that has already been argued.
 
-**1. Marginal steering — RE-PRICED 2026-08-05. The signal stands; the belief that a denominator
-choice can make it gate-safe is dead, and the item is no longer first by a wide margin.**
+**2026-08-20 synthesis boundary.** The numbered material below is a historical hypothesis record,
+not an active controller backlog. The final current-product recheck still found large static regret
+on P3 and FIU, but not one shared settled failure: P3 ended during its first audit, so it measures
+finite-horizon recovery latency, while FIU settled on the near side of its valley. Large oracle
+regret alone does not identify a successor mechanism. Do not start another controller phase unless
+at least two independent real cells exhibit the same material, settled information deficit and the
+proposal has a credible route to both stable request identity and the production cost budget.
 
-The signal is real and is now better characterised than by hit rate alone. On nine real cells at
-N=8 the full form at half gain (`marghalf`) is **+0.83 mean with one loss**, its rest-point
-tracking is **+0.983** against ship's +0.950, and its level error is **11.3pp against 21.3** — the
-average-to-marginal correction seen directly rather than inferred. The earlier headline (+1.22pp
-across 13 cells, zero losses, best +6.34, +2.43 on `cp_w097`) was measured at full gain on the
-larger corpus set and is not contradicted.
+That host route is a first-class requirement. The exact simulator stream has one stable `long` key
+and one outcome per semantic access. The production maintenance stream can drop or reorder hits,
+does not provide every miss, and does not map async and bulk APIs one-to-one onto logical requests;
+strong-key nodes also expose no generic stable primitive identity. An opt-in identity contract or a
+different request population creates a new estimator generation that must be retrained and
+revalidated. It cannot inherit a simulator ranking result by analogy.
 
-What changed is the price of making it shippable. §5's two-sided entry records the measurement:
-four independently-motivated denominators trace **one monotone inverse frontier** between corpus
-prize and `slowswap` robustness at ≈16pp per 1pp, gain does not move that frontier, and the
-family's ceiling is **37.52 mean / 38.67 best-seed against a ≥40 bar**. Extrapolated, an arm that
-just cleared the gate would retain about **+0.24pp** — *below* the density tier's own +0.38pp
-corpus edge. The prototype cost is still paid and the band marker still validates (`margavg`
-bit-identical to ship, 0 of 393,818 oracle disagreements), but "roughly three times the tier's
-whole edge" is no longer the right scale for ranking this.
+**1. Marginal steering — CLOSED 2026-08-21.** The family has a measured ceiling below the gate
+over both of its free parameters (§5's two-sided entry: the frontier at ≈16pp of `slowswap` per
+1pp of corpus, best point 37.52 / 38.67 against the ≥40 bar). The consolidated record — the
+gated arm and its recovery residue, `margrest` and the signal-classification wall, the
+dead-within-the-gate list, the OSDI corroboration, and the rest-point-tracking screen for any
+successor — moved to §5's marginal entries. Parked remainder: a regime-gated fallback priced
+against the ~+0.24pp the frontier leaves at the bar; the recovery residue is item 4's.
 
-**That re-price was superseded the same day. A gated arm escapes the frontier, and it is the live
-candidate.** The frontier bounds arms that use **one law everywhere**; a gate is off it by
-construction. Measured: `marggate` is **+0.690 mean over the nine cells with a single −0.04 loss**
-(`marghalf` +0.833 with a −0.23 loss), and the comparison that needs no extrapolation is that dead
-`margtail` sits at slowswap **36.92 / +0.43** while `marggate` sits at **36.91 / +0.690** — the
-same robustness position for 60% more prize. Its rest-point tracking is the **best of anything
-measured, Spearman +1.000** with 12.2pp level error against ship's 21.3.
+**2. Weaning the audit layer — MEASURED 2026-08-05, and the answer is no.** The layer is worth
++268pp across the helped rows against −13pp across the hurt ones, about 21:1, and its collapses
+are one pin apiece. The record moved to §7's 2026-08-05 dated entry at the 2026-08-21 wrap.
 
-**The detector is two terms `Reading` already computes, so it needs no plumbing.** Probation holds
-what has not earned promotion and is normally the *poorer* region; where `probationDensity`
-exceeds `mainDensity` it has been filled with transients by heavy inflow and cannot price the
-window. Median `d_prob/d_main` is **1.19 / 1.17 on the failing `slowswap` rows against 0.18 / 0.58
-on real cells**. That tests the *signal's* trustworthiness rather than the workload's identity,
-which is the right side of the classify-the-signal line. It has a structural false positive, measured
-2026-08-15 on `flood_j100`: whenever a rotation exceeds protected, every promoted key is demoted
-before its reuse, protected earns nothing, and probation reads richer than main's average with no
-inflow at all (47 of 48 steering samples there), so the gate is on and the arm is the average law.
+**3. The stillness measure, arming side — PARKED 2026-08-21.** Clock and confirm sides are
+measured shut (§7's 2026-08-04 entry: five families, the 1-band/2.7-band structural conflict,
+`lp20+prov` taking zero parks). The remaining shape, a measure loose about oscillation that
+preserves the shipped arming time, has no candidate that survives that conflict, and the prize
+is small. The study's two-cell holdout stays frozen and unspent; reopen on a
+phase-matched-block-means design, not another EMA.
 
-What it fixes and what it does not: `slowswap_r1` goes from 5.6pp **below** LRU to **38.24±0.18,
-+1.45 above** and deterministic; `slowswap_r20` goes from −6.9 to −0.95, still marginally under
-LRU and bimodal. Neither row meets the ≥40 bar.
+**4. The top-corner audit cycle — THE OPEN ITEM.** `shallowmoat`'s reach and retention halves
+landed 2026-08-16 (§7's entry) and the C2 arrival discard is closed on the current machine
+(2026-08-21, §5's re-price), so what remains is the cycle itself and the slide that follows it.
+The pieces, each with its instrument: the corner's periodic down-audit crashing at the cliff
+every 16 → 32 → 64 samples (`hazefloor` whole-run at a ~105-sample period, `shallowmoat`'s gap
+to 42, `crestpast`'s tail, `absolve`'s escape retention at 256 samples, `shallowmoat_x2` and
+`veilmoat_x4`); density's rest point at or below the cliff after a floor walk, so the steering
+law cannot hold what the audit finds (item 1's error seen from a cliff; §7's park-retention
+thread carries the tether direction, and unconditional persistence is measured dead); the
+contaminated-base crash when a shift lands mid-walk, where the retest is a partial escape
+(`ghostclaim_p35..p40`, item 6's leftover, the retry direction after a crashed walk); and the
+basin-B trend misconfirm (class 9, `regimeramp`'s sentinel, the open trend thread). Any repair
+prices against `demoflood` (the verdict repair removed the overshoot the C2 discard corrected
+there), the moat rows, and the corpus.
 
-**The residue is recovery, not detection, and that is why the obvious next iteration is wrong.**
-Per-seed on `r20` the gate fires 11% of steering samples in the good basin and 9% in the bad one,
-and firing rate does not predict the outcome (one seed fires 21% and lands at 28.82, another fires
-22% and lands at 37.20). What separates the basins is where the window ends up: **30.5% against
-20.0%**. The gate prevents further damage but does not climb back out of damage already done, so
-the open problem is recovery from a depressed window, which is the audit layer's territory rather
-than the steering law's. That thread was worked on 2026-08-15 (§7's depressed-window entry): the
-audit layer does find the positions, and loses them through three forgetting rules whose removal
-trades (§5); what remains of it is item 4's park retention.
+**5. The ladder's memory and the calibration level test — BOTH LANDED 2026-08-17 (§7's
+entry).** The escape's retention and the audit's direction after a step confirm fold into item
+4; the verdict's overshoot half became item 7's repair. The family's open cells
+(`absolve_p20`'s 2-of-8 lottery, the period-16 form's off-step doses) are recorded with the
+absolve rows.
 
-Dead within the gate, do not re-derive: requiring a **run to enter** the fallback is monotonically
-worse (streak 2 and 3 both lose to streak 1); an **exit latch** is non-monotone and never lifts
-`r20` above LRU by more than 0.00 (1/2/4/8/16 measured); and the **gate ratio** cannot satisfy both
-rows, which want opposite settings (1.0 gives r1 +1.45 and r20 −0.95; 0.6 gives r1 −0.62 and r20
-+1.01).
+**6. The stale claim's away-anchor case — LANDED 2026-08-17, the retest 2026-08-19 (§7's
+entries).** What remains, the walk crashing on a contaminated base with the retest only a
+partial escape, is item 4's retry direction; the blend-horizon case clears its dose by 3.5pp
+and a smaller prize would not be worth an arm.
 
-**"Marginal steering is only a rest-point correction, so gate it by command size" — analysed and
-dead, and the reason is the most useful thing in this section.** The premise looks right: the
-average law is fast and smooth with a slightly wrong rest point, the marginal law has the right
-rest point but is a far rougher function of the window, so `margrest` applied the marginal law only
-where `|steeringError()| <= REST_BAND`. It **solves `slowswap_r20` outright**: 42.20±0.05 against
-ship's 42.19, deterministic, the row that defeated every previous arm, and it is markedly less
-bimodal everywhere (P9 sd 0.03 against `marghalf`'s 0.18).
+**7. The audit verdict's position on the walk — REPAIRED 2026-08-18 (§7's entry); the residue
+PARKED 2026-08-21.** A rate modulated independently of the window can put the walk's best sample
+on the modulation's peak, and no margin priced off the confirm's own reference refuses a 12%
+amplitude (`whisper_mod_a12`, `crashnoise_a12`'s basins, `cp_w097`'s one-sample spike).
+Corroborating the verdict afterwards is dead in both measurable references (§5's wrap entry:
+the raw form by the symmetric error, the smoothed form failing `whisper_mod_a12` identically
+while re-deriving `demoflood`'s repaired overshoot at −3.6), and the third reference is
+unmeasurable without going there. The class's price is accepted and held by the whisper_mod
+rows' bars.
 
-**And it destroys the prize.** Nine cells: **+0.133** against `marghalf`'s +0.833 and `marggate`'s
-+0.690, with `w098` collapsing from **+4.33 to +0.35**. The mechanism is the point: `w098`'s win
-*is* a rest-point correction, but a **large** one, ship resting at a 59% window against a 10%
-optimum. The valuable corrections are long relocations, and a long relocation is
-**indistinguishable from a transition by command magnitude**. That is why no size-gated rule can
-work, and it is the mechanism underneath
-the frontier itself: the signal cannot separate "a big move because the rest point is wrong" from
-"a big move because the workload changed".
+**8. The probe's entry stride — PRICED 2026-08-21, and it loses (§5's wrap entry).** The
+delayed entry un-repairs `absolve` (−15.7, its pre-repair value) and violently reshuffles
+`norank_rep_r6`'s escape lottery: the entry stride's timing is itself load-bearing on
+lure-paced families, which closes the record's blank in the direction the prior expected.
 
-Two structural facts fell out and are worth keeping. The average-law error is **bimodal** — near
-zero at rest or large in transit, with almost no mass between, which is why bands 0.5, 0.4, 0.3,
-0.25, 0.1 are bit-identical. And on the bad `slowswap_r20` seeds the final third is **park 95 of
-103 samples at a 16.9% window** against the good seeds' 55.6%, with one audit armed in 103 samples:
-the marginal law digs a hole, the anchor parks in it, and `steerCommand` is never called again. Any
-future remedy has to prevent the hole, because nothing that lives in the steering law can climb out
-of one.
-
-**External corroboration (2026-08-05).** OSDI'26 "Learning-Augmented Heuristics" (Xia et al.,
-S4-FIFO) trains a gradient-boosted tree to pick static S3-FIFO parameters from cache-level features
-over 4140 production traces, and reports its feature importance: the three queues' **hit-position
-histograms carry 75%**, with all sixteen hand-crafted composites (utility gap, filtering
-efficiency, ghost pressure, one-hit ratio, scan intensity, thrashing risk) splitting the rest. A
-hit-position histogram over a queue is that region's hit-rate-versus-size curve, so it is a
-marginal-value estimator: given the full feature space, their model spends three quarters of its
-attention on the signal this item proposes to build. That is corpus-scale evidence for the premise
-from outside this project, independent of the Stone–Turek–Wolf derivation.
-
-It also poses one shape question. `d_tail` is a single-bin tail estimator against their 20 bins per
-region. The 2026-08-02 anatomy found the tail fraction robust (0.099/0.090/0.107 mean rest-point
-loss at δ = 0.1/0.2/0.3), but that was static anatomy rather than the shipped controller, so bin
-resolution is what to try if the arm returns ambiguous instead of clean in either direction.
-Nothing else in that paper transfers: it makes one prediction per trace and freezes it, which is a
-static configuration selector rather than a controller, and its adaptivity motivation compares an
-offline per-trace oracle against LeCaR.
-
-Two blockers were measured, and only one is still binding. The stillness coupling — a rougher
-error commands ~2× the motion and the audit clock goes dark — is **entirely repaired by halving
-the gain** (battery −0.40 → +0.33, 13 cells ≥+1pp, every stillness failure gone; gain 0.25 is
-*worse* than 0.5, so it is a threshold on the stable band, not a monotone trade). What remains is
-the signal defect gain does not touch: on `slowswap` the **probation denominator stops being
-main's margin** under heavy inflow, putting the marginal form's own rest point 14.63pp below the
-peak.
-
-**The named answer to that residue, `ln(d_tail/d_main)`, was built and is dead** (2026-08-05; §5
-carries the numbers and the mechanism). It halves the prize and fails both `slowswap` bars, and
-the static rest-point anatomy that motivated it overstated its dynamic recovery. Do not rebuild
-it, and treat the anatomy's rest-point loss as a screen rather than a prediction: it ranked
-`margtail` second of three where the controller ranks it third.
-
-**What the residue actually asks for is probation's margin, not its replacement.** "Probation
-fills with transients, so main looks marginally rich" is a complaint about measuring probation's
-*bulk*; the denominator still has to move with the window, which is exactly what `d_main` does not
-do. The untried arm is `ln(d_windowTail / d_probationTail)` — marginal on **both** sides, the same
-band machinery pointed at the probation deque. Round 1 measured window-avg-vs-probation-avg (wrong
-direction, 1.737) and round 2 measured tail-vs-main-avg (dead); tail-vs-probation-tail is
-unmeasured and is the only remaining first-order form that keeps a moving denominator. It is more
-than one arm (a second band on another deque), so price it against the alternative of closing the
-remedy thread and re-ranking this item on the signal alone.
-
-**Screen any successor on rest-point tracking before spending a battery.** Spearman(meanWindow,
-peakWindow) over the nine D3 cells separates arms that hit rate only ranks: ship +0.917,
-`marghalf` +0.983, `margtail` +0.367. A candidate that does not beat +0.917 is buying stability
-with tracking and will show up as trap wins paid for by corpus losses.
-
-**2. Weaning the audit layer — MEASURED 2026-08-05, and the answer is no. The complexity is
-earned.** The third column was run (`gate.py <traces> hybrid,noaudit,reactive`, 52 rows at the
-table's per-cell N, arms rotated inside each run). The layer is worth **+4.91 mean / +0.75
-median**, helping 31 rows, hurting 16 and inert on 5 — but the mean is not the result. The
-asymmetry is: **+268pp of gain across the helped rows against −13pp of cost across the hurt ones,
-about 21:1**, and its worst row is `balloonflip` at −2.39.
-
-The gains are structural rather than diffuse. `noaudit` collapses to a shared **~55.5** across the
-whole whisper / crashnoise_flat / posjam / h4c1 / whisper_mod family (eleven rows, +8 to +11) and
-to 31–35 on `mixture_d025@32k`, `blindlock_sighted` and `mixture_d050` (+15 to +27). Those are one
-pin apiece and the layer is what escapes them. The costs are small and land on benign terrain,
-which is the R4-F1 shape this doc already flags, now priced.
-
-Two things the run corrected, both from the same cause. **`widepin` and `phases_d050` cannot be
-read from a battery mean at all.** Unseeded they showed −6.40 and +1.62; seeded at N=8 with arms
-rotated they are **−1.41** (layer ahead on 4 of 8 seeds, identical on 2) and **−0.24** (ahead on
-**0 of 8**). Both were basin luck in opposite directions, and the −6.40 would have made `widepin`
-the layer's largest single cost. And on both rows the value belongs to the **tier, not the
-layer**: density is worth +5.9 and +10.2 over the reactive arm there while the audit layer is
-inert to slightly negative. The gate table's "load-bearing evidence for the density tier" rows are
-not the audit layer's rows, and a weaning argument must not borrow one for the other.
-
-That decomposition also exposed a broken bar, since re-derived (2026-08-05). The shipped machine
-reads `widepin` **49.58 at N=8 seeded** against a recorded 52.4–54.9 range and a "mean ≥50" bar,
-with no code change involved. Over 24 unseeded runs the true distribution is **50.63 ± 5.25** with
-the basins split **12/24 exactly**, and N=8 batch means of 52.04 / 49.52 / 50.34. So the recorded
-range was an unrepresentative high sample (52.4 needs 6+ high draws in 8) and **the bar sat at the
-distribution's own mean**, failing a random batch about half the time: any verdict that row
-returned was a coin flip. It is now a seeded row like `slowswap`, barred on per-seed drift. The
-general lesson is the one this doc's own process note already carries, with a second instance: on a
-bimodal family an unseeded mean is not a measurement, and a bar set from one is not a bar.
-
-**3. The stillness measure — arming side only.** Clock side and confirm side are both measured
-shut (§7's 2026-08-04 entry: five measure families, the structural conflict between the shipped
-1 band and the jam's 2.7, and the confirm-side reframing refuted by `lp20+prov` taking zero parks
-and being bit-identical). The only shape left is a measure loose about oscillation that preserves
-the shipped arming time on a settling workload. Note this is **no longer on marginal steering's
-critical path** — the gain halving covers that coupling — so it is now a standalone thread with a
-smaller prize, and it should be sequenced after (1).
-
-**4. Keeping a found position past a cliff (`shallowmoat`, 2026-08-15; both halves landed by
-2026-08-16).** Reach: a confirm the density arm reverses deepens the ladder (§4.5), and the wedge
-seeds cross the cliff at s17. Retention: a reversed confirm at the deepest commitment that the
-goal metric confirms parks as an audit's does, and the park survives its own audits' crash-scale
-moves (§4.5, §7's 2026-08-16 entry); the wedge seeds read 36.4 on the row and 37.1 at repeat 2
-against 42. What remains, and where it lives: the residual is the top corner's periodic
-down-audit crashing at the cliff every 16 → 32 → 64 samples (the moat family's known steady
-state); after a walk from the floor density's rest point on the far side is at or below the
-cliff, which is item 1's average-vs-marginal error seen from a cliff; the undo's arrival read as
-a shift (the depressed-window thread's C2) is priced there and costs `demoflood` unconditionally;
-the ramp variants add item 1's give-back from above (5–7pp); and the basin-B seeds (the
-calibration audit's trend misconfirm at 32%, class 9, `regimeramp`'s sentinel) are the open
-trend thread. Below item 1 in expected value; above item 3.
-
-**5. The ladder's memory across a kept confirm, and the calibration audit's level test on a phase step
-(`absolve`, 2026-08-16). BOTH LANDED 2026-08-17 (§7's entry).** (a) A kept confirm at or short of the
-farthest window the ladder's walks have confirmed is a repeat and deepens the ladder; `absolve_p8` 27.95
-→ 46.3, bit-identical everywhere else. (b) A park's first audit follows the walk that confirmed it while
-the claim stands (the park held, the smoothed rate within a restart threshold of its value at the
-confirm); `absolve` 24.8 → 41.5, `veilmoat` +3.7, `shallowmoat` basin B +2.7, `saw_p40` +0.8 against
-`mixture_d010_long` −0.3 and `demoflood` −0.2. What remains, and where it lives: the escape's retention
-(the top corner's down-audit crashing at the cliff and the undo's arrival discarding the anchor, item
-4's residual, seen again on `shallowmoat_x2` and `veilmoat_x4`); the audit confirm's overshoot of the
-walk's crest (it parks where the streak completes: `demoflood` at 32% having passed 0.737 at 20%, the
-repaired `shallowmoat` audit at the 6570 wall), which is why the calibration audit's park sits short of
-or past where it should and what the C2 discard accidentally corrects on `demoflood`; and the audit's
-direction after a step confirm, which the guard leaves to the alternation as a measured coin flip.
-`absolve_p20` (a 2-of-8 lottery) and the period-16 form's audit crash on the lure's off-step at other
-doses are the family's open cells. Below item 1 in expected value.
-
-**6. The stale claim's away-anchor case (`ghostclaim`, 2026-08-17; the 2026-08-03 fix's carve-out).
-LANDED 2026-08-17 (§7's entry): an audit's walk is measured against the smoothed rate it leaves rather
-than the anchor's claim.** `ghostclaim` 31.2 → 48.5, the 64-sample witness 41.9 → 46.9, `cp_w100` +2.0
-on the corpus, the battery otherwise a redraw on `norank_flood_j100` and +0.2 on two rows. The discard
-shape is dead (§5): stillness does not separate a shift from the terrain's own collapse at the position
-a retreat left the window on, and the moat rows are where the rail's memory pays. What remains, and
-where it lives: a shift landing on the audit's arm sample or during its walk (`ghostclaim_p35..p40`,
-the round's face-(b) cells) crashes the walk on a contaminated base, and the stale claim's veto, its
-hold, the down alternation and the deepest-rung wait then pin the machine, which is the recovery
-layer's thread (item 4's residual, the retry direction after a crashed walk); and an audit arming
-inside the smoothing horizon after a shift measures against a blend of the regimes (`p34` clears it
-by 3.5pp; a smaller prize would not). The recorded controls stay `slowswap_r20`, `regimeramp` and
-`widepin`, all bit-identical. **The pin itself was worked 2026-08-19 (§7's entry): a return
-re-tests the claim that sent it, `p35` 31.7 → 33.9 and `p40` 31.4 → 33.5.** That is a partial
-escape rather than a repair, and the size of what is left is the point: the family reads 20.5pp
-below LRU at these doses (LRU 52.07 / 52.29), and the retest recovers two of them. The audit
-still crashes on a contaminated base and the walk still cannot confirm from it; the retest only
-stops the machine parking on the lie afterwards.
-
-**7. The audit verdict's position on the walk (`crestpast`, 2026-08-17). REPAIRED 2026-08-18
-(§7's entry): a confirm's verdict is the best sample of its confirming run, by the margin that
-streak itself clears, and a park's retreat and its landing are the park's own test.** `crestpast`
-57.6 → 62.1 against a 64.7 ceiling, `hazefloor` +5.5, `demoflood` +2.7, the moat family +1.5 to
-+2.6, against `crashnoise_a12` −0.9, `absolve` −0.5, `cp_w097` −0.5 and the `whisper_mod` doses.
-Two things the round-4 report got wrong, corrected by measurement: the plant-at-40 cell it read as
-"the crest is confirmed" parks on the far-side slope, so **the verdict was the larger half, not
-retention**, roughly 3:1; and the halves are co-requisites in one direction only, since retention
-alone keeps whatever the verdict parked on.
-
-What remains, and where it lives: a rate modulated independently of the window puts the walk's best
-sample on the modulation's peak, and at a 12% amplitude no margin priced off the confirm's own
-reference can refuse it (`whisper_mod_a12`/`p12`, `crashnoise_a12`); that is the same signal
-problem the F1 family has always posed to this layer, now reaching the verdict's position as well
-as its timing. On the corpus the same shape is a one-sample spike one stride from the walk's end
-(`cp_w097`). Three screens for it are dead in §5 — the pull-back's distance and the walk's own
-roughness both refuse `demoflood`'s real crest in order to refuse `cp_w097`'s spike, and a shape
-test is inert wherever the margin has already decided. **A verdict corroborated after the fact was tried 2026-08-18 and is dead as built** (the local
-climber-corrob workspace): a pull-back arms a counter, and if the park's first
-`AUDIT_CONFIRM_STREAK` samples never reach within `VETO_MARGIN_MIN` of the rate the verdict
-claimed, the machine goes to the walk's end instead. It does what it was built to do on two of the
-three rows — `crashnoise_a12` 62.19 → 62.71 with its low basin gone, `whisper_mod_p12` 64.55 →
-65.22, its pre-repair margin restored — and every gain is bit-identical (`crestpast`, `demoflood`,
-`absolve` on four seeds). But `whisper_mod_a12` reads **63.90 → 61.92**, deterministically, so the
-family is a net −0.80. The mechanism is the symmetric error and is the thing to carry forward: a
-modulation deep enough to fool the verdict also fools the corroboration, because the park's first
-samples land in the trough and a *correct* position then fails to reproduce its own claim. The two
-doses differ only in amplitude (0.08 helped, 0.12 hurt) at the same period, which is what says the
-depth rather than the timing is what defeats it. What that leaves untried: corroborating against
-the fallback position's own rate rather than an absolute claim (unmeasurable without going there),
-or against the smoothed rate rather than the raw sample.
-
-**8. The probe's entry stride, never priced (2026-08-19, unmeasured).** Every arm takes its entry
-stride in the same sample that arms it (`armStarvationProbe`), so one sample decides both that an
-experiment is warranted and where it starts. The alternative is to freeze the base at the arm and
-take the first stride on the next qualifying sample, which is what the WaveCounter port does
-(their ADR-0045 §II). Nothing in §5 prices it, which is the only reason it is listed: a blank in
-the record is what §6's process note keeps finding. The prior is that it loses. They rejected a
-two-sample delay themselves for cutting confirms, the walk's own verdict machinery is the designed
-noise filter in both machines, our sample period is thousands of requests where theirs is a
-wall-clock tide that can hold very few, and the entry stride is what produces the first evidence
-there is to judge. Price it as a `/climber-minimize` arm against the rows where the probe machine
-is load-bearing (`moat_h4000`, `demoflood`, `norank_rep_r6`) plus the starvation families, not as
-a battery sweep.
+**9. The stand-down and the shield on phase-alternating terrain — PARKED 2026-08-21 at the
+signal-classification wall.** `parkveil`'s mechanism and numbers are §3's family entry and its
+gate rows; the recorded lever is spent (§5's re-price: `pricedshift` is bit-identical on the
+family, since the phase flip clears even the priced trigger's 15pp ceiling, and its cost moved
+onto `moat_h7800`). A repair must distinguish the workload's own periodic flip from a regime
+change, the wall `margrest` died on; the chase half is class 5, and §5's smoothing and
+confidence-gate graveyard applies. Reopen on a shape that passes `moat_h7800` and `cp_w081` on
+paper.
 
 **Do not reopen** (each has a measured negative with a mechanism): a hysteresis band on the
 reactive reversal (§5); `parkbound` on `shieldtrap`, absent a mechanism for its s7 tail; any
-any **widening** of the audit crash bar — every dead candidate (`devaudit`, `audcap`,
+**widening** of the audit crash bar — every dead candidate (`devaudit`, `audcap`,
 `audcap2`, `audref`, `escbar`, `escbar2`, `crash2`/`crash3`) made it more tolerant so walks
 survive longer, and each was holdout- or mixnoise-fatal; see the carve-out below, which is the
 opposite direction and is *not* covered by that kill; the `posjam_d0` jam as a target in its own

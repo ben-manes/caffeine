@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableSet;
@@ -81,20 +82,44 @@ public final class WindowTinyLfuPolicy implements Policy {
   @SuppressWarnings("Varifier")
   public WindowTinyLfuPolicy(double percentMain,
       Set<Characteristic> characteristics, WindowTinyLfuSettings settings) {
-    this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
-    this.weighted = characteristics.contains(WEIGHTED);
-    this.maximumSize = settings.maximumSize();
+    long maximumMain = (long) (settings.maximumSize() * percentMain);
+    long maximumWindow = settings.maximumSize() - maximumMain;
+    long maximumProtected = (long) (maximumMain * settings.percentMainProtected());
+    this(1.0d - percentMain, maximumWindow, maximumProtected, characteristics, settings);
+  }
 
-    long maxMain = (long) (maximumSize * percentMain);
-    this.maxProtected = (long) (maxMain * settings.percentMainProtected());
-    this.admitter = Admission.TINYLFU.from(weighted
-        ? ConfigFactory.parseMap(ImmutableMap.of("maximum-size", 0)).withFallback(settings.config())
-        : settings.config(), policyStats);
+  @SuppressWarnings("Varifier")
+  private WindowTinyLfuPolicy(double percentWindow, long maximumWindow, long maximumProtected,
+      Set<Characteristic> characteristics, WindowTinyLfuSettings settings) {
+    checkArgument(maximumWindow >= 0, "maximum window must not be negative: %s", maximumWindow);
+    checkArgument(maximumProtected >= 0,
+        "maximum protected must not be negative: %s", maximumProtected);
+    checkArgument(maximumProtected <= settings.maximumSize(),
+        "maximum protected exceeds maximum size: protected=%s, maximum=%s",
+        maximumProtected, settings.maximumSize());
+    checkArgument(maximumWindow <= (settings.maximumSize() - maximumProtected),
+        "segments exceed maximum size: window=%s, protected=%s, maximum=%s",
+        maximumWindow, maximumProtected, settings.maximumSize());
+    this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * percentWindow);
+    this.weighted = characteristics.contains(WEIGHTED);
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maxWindow = maximumSize - maxMain;
+    this.maximumSize = settings.maximumSize();
+    this.maxProtected = maximumProtected;
+    this.maxWindow = maximumWindow;
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.headWindow = new Node();
+    this.admitter = Admission.TINYLFU.from(weighted
+        ? ConfigFactory.parseMap(ImmutableMap.of("maximum-size", 0)).withFallback(settings.config())
+        : settings.config(), policyStats);
+  }
+
+  /** Returns a policy whose window and protected maxima are specified independently. */
+  public static WindowTinyLfuPolicy withSegmentSizes(long maximumWindow, long maximumProtected,
+      Set<Characteristic> characteristics, WindowTinyLfuSettings settings) {
+    double percentWindow = maximumWindow / (double) settings.maximumSize();
+    return new WindowTinyLfuPolicy(
+        percentWindow, maximumWindow, maximumProtected, characteristics, settings);
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */

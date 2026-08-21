@@ -139,15 +139,47 @@ final class WindowTinyLfuPolicyTest {
     assertThat(policy.stats().missCount()).isEqualTo(3);
   }
 
+  @Test
+  void explicitSegmentSizes() {
+    var settings = settings(3, Map.of());
+    var policy = WindowTinyLfuPolicy.withSegmentSizes(1, 0, Set.of(), settings);
+    for (int key = 1; key <= 3; key++) {
+      policy.record(AccessEvent.forKey(key));
+    }
+    for (int key = 1; key <= 3; key++) {
+      policy.record(AccessEvent.forKey(key));
+    }
+    policy.finished();
+
+    assertThat(policy.stats().hitCount()).isEqualTo(3);
+    assertThat(policy.stats().missCount()).isEqualTo(3);
+  }
+
+  @Test
+  void explicitSegmentSizes_rejectsInvalidGeometry() {
+    var settings = settings(3, Map.of());
+
+    assertThrows(IllegalArgumentException.class,
+        () -> WindowTinyLfuPolicy.withSegmentSizes(-1, 0, Set.of(), settings));
+    assertThrows(IllegalArgumentException.class,
+        () -> WindowTinyLfuPolicy.withSegmentSizes(0, -1, Set.of(), settings));
+    assertThrows(IllegalArgumentException.class,
+        () -> WindowTinyLfuPolicy.withSegmentSizes(2, 2, Set.of(), settings));
+  }
+
   private static WindowTinyLfuPolicy policy(Set<Characteristic> characteristics, long maximum) {
     return policy(characteristics, maximum, Map.of());
   }
 
   private static WindowTinyLfuPolicy policy(Set<Characteristic> characteristics,
       long maximum, Map<String, Object> overrides) {
+    return new WindowTinyLfuPolicy(0.99, characteristics, settings(maximum, overrides));
+  }
+
+  private static WindowTinyLfuSettings settings(long maximum, Map<String, Object> overrides) {
     var config = ConfigFactory.parseMap(Map.of("maximum-size", maximum))
         .withFallback(ConfigFactory.parseMap(overrides))
         .withFallback(ConfigFactory.load().getConfig("caffeine.simulator"));
-    return new WindowTinyLfuPolicy(0.99, characteristics, new WindowTinyLfuSettings(config));
+    return new WindowTinyLfuSettings(config);
   }
 }

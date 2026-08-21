@@ -124,7 +124,8 @@ public final class Rewriter implements Runnable {
     return params.toArray(String[]::new);
   }
 
-  public static void main(String[] args) {
+  @SuppressWarnings("SystemExitOutsideMain")
+  static void main(String[] args) {
     int exitCode = new CommandLine(Rewriter.class)
         .setColorScheme(Help.defaultColorScheme(Help.Ansi.ON))
         .setCommandName(Rewriter.class.getSimpleName())
