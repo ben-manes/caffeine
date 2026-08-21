@@ -3298,7 +3298,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @return the computed value
    */
   @SuppressWarnings("GuardedByChecker")
-  <T> T evictionOrder(boolean hottest, Function<@Nullable V, @Nullable V> transformer,
+  <T extends @Nullable Object> T evictionOrder(boolean hottest,
+      Function<@Nullable V, @Nullable V> transformer,
       Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
     Comparator<Node<K, V>> comparator = Comparator.comparingInt(node -> {
       var keyRef = node.getKeyReferenceOrNull();
@@ -3333,7 +3334,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @return the computed value
    */
   @SuppressWarnings("GuardedByChecker")
-  <T> T expireAfterAccessOrder(boolean oldest, Function<@Nullable V, @Nullable V> transformer,
+  <T extends @Nullable Object> T expireAfterAccessOrder(boolean oldest,
+      Function<@Nullable V, @Nullable V> transformer,
       Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
     Iterable<Node<K, V>> iterable;
     if (evicts()) {
@@ -3371,7 +3373,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param mappingFunction the mapping function to compute a value
    * @return the computed value
    */
-  <T> T snapshot(Iterable<Node<K, V>> iterable, Function<@Nullable V, @Nullable V> transformer,
+  <T extends @Nullable Object> T snapshot(Iterable<Node<K, V>> iterable,
+      Function<@Nullable V, @Nullable V> transformer,
       Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
     requireNonNull(mappingFunction);
     requireNonNull(transformer);
@@ -4446,7 +4449,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return cache.evictionOrder(/* hottest= */ false, transformer, limiter);
       }
       @Override
-      public <T> T coldest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+      public <T extends @Nullable Object> T coldest(
+          Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
         requireNonNull(mappingFunction);
         return cache.evictionOrder(/* hottest= */ false, transformer, mappingFunction);
       }
@@ -4462,7 +4466,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return cache.evictionOrder(/* hottest= */ true, transformer, limiter);
       }
       @Override
-      public <T> T hottest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+      public <T extends @Nullable Object> T hottest(
+          Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
         requireNonNull(mappingFunction);
         return cache.evictionOrder(/* hottest= */ true, transformer, mappingFunction);
       }
@@ -4498,13 +4503,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @Override public Map<K, V> oldest(int limit) {
         return oldest(new SizeLimiter<>(Math.min(limit, cache.size()), limit));
       }
-      @Override public <T> T oldest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+      @Override public <T extends @Nullable Object> T oldest(
+          Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
         return cache.expireAfterAccessOrder(/* oldest= */ true, transformer, mappingFunction);
       }
       @Override public Map<K, V> youngest(int limit) {
         return youngest(new SizeLimiter<>(Math.min(limit, cache.size()), limit));
       }
-      @Override public <T> T youngest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+      @Override public <T extends @Nullable Object> T youngest(
+          Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
         return cache.expireAfterAccessOrder(/* oldest= */ false, transformer, mappingFunction);
       }
     }
@@ -4541,14 +4548,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return oldest(new SizeLimiter<>(Math.min(limit, cache.size()), limit));
       }
       @SuppressWarnings("GuardedByChecker")
-      @Override public <T> T oldest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+      @Override public <T extends @Nullable Object> T oldest(
+          Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
         return cache.snapshot(cache.writeOrderDeque(), transformer, mappingFunction);
       }
       @Override public Map<K, V> youngest(int limit) {
         return youngest(new SizeLimiter<>(Math.min(limit, cache.size()), limit));
       }
       @SuppressWarnings("GuardedByChecker")
-      @Override public <T> T youngest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+      @Override public <T extends @Nullable Object> T youngest(
+          Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
         return cache.snapshot(cache.writeOrderDeque()::descendingIterator,
             transformer, mappingFunction);
       }
@@ -4721,13 +4730,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @Override public Map<K, V> oldest(int limit) {
         return oldest(new SizeLimiter<>(Math.min(limit, cache.size()), limit));
       }
-      @Override public <T> T oldest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+      @Override public <T extends @Nullable Object> T oldest(
+          Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
         return cache.snapshot(cache.timerWheel(), transformer, mappingFunction);
       }
       @Override public Map<K, V> youngest(int limit) {
         return youngest(new SizeLimiter<>(Math.min(limit, cache.size()), limit));
       }
-      @Override public <T> T youngest(Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
+      @Override public <T extends @Nullable Object> T youngest(
+          Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
         return cache.snapshot(cache.timerWheel()::descendingIterator, transformer, mappingFunction);
       }
     }
