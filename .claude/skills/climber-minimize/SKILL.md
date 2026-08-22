@@ -57,6 +57,7 @@ the rest were wired 2026-08-18.
 | `noshield` | a fresh park is shielded from crash-scale weather |
 | `noveto` | the guard rail returns the window to the anchor |
 | `noretest` | a veto's return re-tests the claim that sent it, on arrival |
+| `noreturncover` | a veto's return's landing and settle samples wait for that retest instead of standing the anchor down |
 | `nofreeze` | an up-probe is judged against probation frozen at the arm |
 | `noaudit` | the whole equilibrium-audit layer |
 

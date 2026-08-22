@@ -1,0 +1,37 @@
+{
+ "max": 8192,
+ "seed": 7,
+ "repeat": 1,
+ "members": {
+  "core": {
+   "kind": "zipf",
+   "n": 0.15,
+   "alpha": 1.0
+  },
+  "cold": {
+   "kind": "scan"
+  },
+  "band": {
+   "kind": "pairs",
+   "dreq": 7000,
+   "k": 2
+  }
+ },
+ "segments": [
+  {
+   "samples": 112,
+   "shares": {
+    "core": 0.6,
+    "cold": 0.366
+   }
+  },
+  {
+   "samples": 75,
+   "shares": {
+    "core": 0.6,
+    "cold": 0.036,
+    "band": 0.33
+   }
+  }
+ ]
+}

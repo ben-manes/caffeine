@@ -1026,9 +1026,10 @@ final class WindowClimberTest {
   @Test
   void guardRail_vetoPark_isNotCrashShielded() {
     // the fresh-park shield belongs to audit confirms alone: a guard-rail veto's park earned no
-    // validation walk, so the very next crash-scale swing releases it (a starvation confirm
-    // between audits must not leave a stale shield for the veto to inherit. The shield lives
-    // and dies with the park)
+    // validation walk, so it carries no shield (a starvation confirm between audits must not
+    // leave a stale shield for the veto to inherit; the shield lives and dies with the park). A
+    // crash-scale swing on the landing sample is the return's own and waits for the retest,
+    // which then releases the park one sample later
     var climber = seededShortfall();
     climber.auditClock.waitSamples = AUDIT_WAIT_INITIAL;
     for (int i = 0; i < VETO_STREAK; i++) {
@@ -1038,7 +1039,13 @@ final class WindowClimberTest {
     assertThat(climber.anchor.freshLeft).isEqualTo(0);
 
     steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.60);
+    assertThat(climber.anchor.held).isTrue();
+    assertThat(climber.anchor.retestClaim).isWithin(1.0e-6).of(0.70);
+
+    steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.60);
     assertThat(climber.anchor.held).isFalse();
+    assertThat(climber.anchor.isPlanted()).isFalse();
+    assertThat(climber.rates.isUnseeded()).isTrue();
   }
 
   @Test
@@ -2033,6 +2040,33 @@ final class WindowClimberTest {
     assertThat(climber.anchor.isPlanted()).isTrue();
     assertThat(climber.anchor.held).isTrue();
     assertThat(climber.rates.isUnseeded()).isFalse();
+  }
+
+  @Test
+  void guardRail_returnLanding_isJudgedByTheRetest() {
+    // the landing sample's recovery is the return's own, not a workload change: the claim the
+    // return set out for survives to the retest, which keeps a position that earns it
+    var climber = seededShortfall();
+    climber.auditClock.waitSamples = AUDIT_WAIT_INITIAL;
+    for (int i = 0; i < VETO_STREAK; i++) {
+      steadySample(climber, /* windowMax= */ 1500, /* hitRate= */ 0.66);
+    }
+    assertThat(climber.anchor.held).isTrue();
+    assertThat(climber.anchor.returning).isFalse();
+    assertThat(climber.anchor.retestClaim).isWithin(1.0e-6).of(0.70);
+
+    steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.80);
+    assertThat(climber.anchor.isPlanted()).isTrue();
+    assertThat(climber.anchor.held).isTrue();
+    assertThat(climber.anchor.retestClaim).isWithin(1.0e-6).of(0.70);
+    assertThat(climber.rates.isUnseeded()).isFalse();
+
+    for (int i = 0; i < RETEST_SETTLE - 1; i++) {
+      steadySample(climber, /* windowMax= */ 2000, /* hitRate= */ 0.80);
+    }
+    assertThat(climber.anchor.retestClaim).isEqualTo(-1);
+    assertThat(climber.anchor.isPlanted()).isTrue();
+    assertThat(climber.anchor.held).isTrue();
   }
 
   @Test

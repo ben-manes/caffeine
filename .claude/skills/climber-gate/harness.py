@@ -115,14 +115,12 @@ FLAGS = '''
    */
   static final boolean STALECLAIM = VARIANT.equals("staleclaim");
   /**
-   * arrive: an undo's or a veto return's landing and settle samples are the machine's own moves
-   * and are not judged for a workload shift; the 2026-08-19 retest judges a return's claim
-   * deliberately instead. The census C2 arm re-expressed on the current machine.
+   * noreturncover: a veto return's landing and settle samples are judged for a workload shift
+   * ahead of the retest, as before the return cover landed (the census C2 arm's inverse).
    */
-  static final boolean ARRIVE = VARIANT.equals("arrive") || VARIANT.equals("arrivepriced");
+  static final boolean NORETURNCOVER = VARIANT.equals("noreturncover");
   /** pricedshift: the stand-down's trigger priced off the rate's scatter, clamped to [1x, 3x]. */
-  static final boolean PRICEDSHIFT =
-      VARIANT.equals("pricedshift") || VARIANT.equals("arrivepriced");
+  static final boolean PRICEDSHIFT = VARIANT.equals("pricedshift");
   /*
    * MECHANISM ABLATIONS (the /climber-minimize set). The arms above restore an older machine to
    * price a landed change; these remove one algorithmic step from the current one to price the
@@ -390,18 +388,23 @@ EDITS = [
      "      anchor.ageShield();\n      if (PARKBOUND && (anchor.freshLeft <= 0)) {\n"
      "        anchor.release();\n      }\n    }\n"),
 
-    ("arrive-pricedshift", W,
+    ("pricedshift", W,
      "  private boolean isWorkloadShift(Reading reading) {\n"
      "    return (Math.abs(sample.hitRateChange(reading.hitRate)) >= RESTART_THRESHOLD)\n"
-     "        && !isShielded() && !isParkTest();\n  }\n",
+     "        && !isShielded() && !isParkTest() && !isReturnTest();\n  }\n",
      "  private boolean isWorkloadShift(Reading reading) {\n"
      "    double threshold = PRICEDSHIFT\n"
      "        ? Math.min(3 * RESTART_THRESHOLD, Math.max(RESTART_THRESHOLD, rates.noiseBand()))\n"
      "        : RESTART_THRESHOLD;\n"
-     "    boolean arrival = ARRIVE\n"
-     "        && ((retreatLeft > 0) || ((anchor.retestClaim >= 0) && !anchor.returning));\n"
      "    return (Math.abs(sample.hitRateChange(reading.hitRate)) >= threshold)\n"
-     "        && !isShielded() && !isParkTest() && !arrival;\n  }\n"),
+     "        && !isShielded() && !isParkTest() && !isReturnTest();\n  }\n"),
+
+    ("noreturncover", W,
+     "  private boolean isReturnTest() {\n"
+     "    return (retreatLeft > 0) || ((anchor.retestClaim >= 0) && !anchor.returning);\n  }\n",
+     "  private boolean isReturnTest() {\n"
+     "    return !NORETURNCOVER\n"
+     "        && ((retreatLeft > 0) || ((anchor.retestClaim >= 0) && !anchor.returning));\n  }\n"),
 
 
     ("noaudit-holdoraudit", W,

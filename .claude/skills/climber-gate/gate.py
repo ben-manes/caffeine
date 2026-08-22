@@ -138,6 +138,20 @@ CELLS = [
     # a sighted 15% blend equilibrium.
     ("parkveil", "parkveil_8192.lirs", 8192, 8),
     ("parkveil_min", "parkveil_min_8192.lirs", 8192, 2),
+    # /audit-regret round 7 (2026-08-21): a prize arriving after the audit clock has backed off. A
+    # flat prelude spends the schedule (the calibration park, two budget failures, auditWait
+    # 32 -> 128), then a band caught only from 50% arrives; the stand-down that detects it
+    # reschedules nothing (or, inside the undo's retreat, is covered), so nothing but the clock
+    # moves the held floor: the base finds the band at s237 and the 187-sample witness never does
+    # (its hybrid equals noaudit). Deterministic across admission seeds; the phase-1 length is the
+    # family's alignment axis (the gate table has the ladder).
+    ("latebloom", "latebloom_8192.lirs", 8192, 2),
+    ("latebloom_min", "latebloom_min_8192.lirs", 8192, 2),
+    # /audit-regret round 7: the main-side masked signal (main dense, sighted, worthless at the
+    # margin; the window sighted by a trickle), the first interior-peak construction in seven
+    # rounds. noaudit pins the floor; the audit layer recovers it through the calibration park and
+    # the walk's confirm on the peak (56% on six seeds, 69% on two). Adjudicate on the N=8 mean.
+    ("mainsat", "mainsat_8192.lirs", 8192, 8),
 ]
 
 

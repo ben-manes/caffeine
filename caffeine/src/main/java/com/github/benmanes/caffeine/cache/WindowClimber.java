@@ -236,24 +236,28 @@ final class WindowClimber {
   }
 
   /**
-   * Whether this sample's rate move announces a workload change. A park's own re-test does not
-   * stand it down, since the crash-scale moves that test produces are the machine's own; the
-   * audit clock prices the ending.
+   * Whether this sample's rate move announces a workload change. The machine's own re-tests do
+   * not stand the anchor down: an audit's walk out of a park and the retreat that ends it, and a
+   * veto's return until its retest has judged the claim, since the crash-scale moves those
+   * produce are the machine's and the retest or the audit clock prices the ending.
    */
   private boolean isWorkloadShift(Reading reading) {
     return (Math.abs(sample.hitRateChange(reading.hitRate)) >= RESTART_THRESHOLD)
-        && !isShielded() && !isParkTest();
+        && !isShielded() && !isParkTest() && !isReturnTest();
   }
 
   /**
-   * Whether a held park's own re-test produced this sample's move: an audit's walk out of it, the
-   * retreat that ends the walk, or the sample the retreat lands on, where the rate recovers by a
-   * crash-scale step because the walk's damage has been undone. Read at the anchor, that recovery
-   * would otherwise discard the claim the audit had just confirmed.
+   * Whether a retreat's cover is running or a veto's return has landed with its claim still to
+   * be judged: the landing sample and the settle samples the retest spends, whose recovery is
+   * the return's own and is judged by the retest rather than read as a shift.
    */
+  private boolean isReturnTest() {
+    return (retreatLeft > 0) || ((anchor.retestClaim >= 0) && !anchor.returning);
+  }
+
+  /** Whether a held park's own audit is walking out of it this sample. */
   private boolean isParkTest() {
-    boolean walking = (walk != null) && walk.isAudit;
-    return anchor.held && (walking || (retreatLeft > 0));
+    return anchor.held && (walk != null) && walk.isAudit;
   }
 
   /**

@@ -3151,6 +3151,9 @@ window = max(window + step, 0.02·C)</pre>
     the claim is still a past regime's, leaving the window parked on it for the rest of
     the run. The claim frozen at the return's commit is re-tested against the settled
     rate, and one the position cannot earn is stood down as a crash would have. The
+    landing's own swing is not that verdict: the recovery a return produces is the
+    machine's move, so the stand-down waits for the retest rather than reading it as a
+    workload change. The
     frozen claim is the judge because the re-sync above decays the live one into the
     shortfall being tested. A return that spends its budget short of the anchor never
     reached the position its claim describes, so there is nothing to test.</li>
@@ -3849,6 +3852,35 @@ window = max(window + step, 0.02·C)</pre>
     repaired and re-verified), two smaller lifecycle holes (since repaired), and a
     contaminated measurement worktree, after which every number here was re-derived
     from clean builds.</li>
+  <li><b>Horizon.</b> The climber needs many decisions, and a cell holds only as many as
+    its trace has samples: one per 4·C requests (§5.5), so a size sweep on one trace
+    shortens the horizon as C grows. With too few, the result mirrors the static starting
+    configuration because almost nothing changes, which flatters the climber on a workload
+    whose answer is the start and hides it on one whose answer is elsewhere. The design
+    accepts the warmup penalty that adapting costs and weights results with enough
+    decisions for the climber to adapt fully. Repeating a long-working-set trace shows the
+    difference (later passes start warm, which lifts every static number, so each row is
+    read within itself):
+    <table>
+      <caption class="sr-only">One cell at three horizons: the density tier against the reactive law and the static 1% window</caption>
+      <tr>
+        <th scope="col">cell</th>
+        <th scope="col">decisions</th>
+        <th scope="col">density</th>
+        <th scope="col">reactive</th>
+        <th scope="col">static 1%</th>
+        <th scope="col">density − reactive</th>
+      </tr>
+      <tr><td rowspan="3">arc DS1 @1M</td><td>10</td><td>11.99</td><td>14.01</td><td>14.77</td><td>−2.02</td></tr>
+      <tr><td>32</td><td>14.28</td><td>14.77</td><td>17.24</td><td>−0.49</td></tr>
+      <tr><td>109</td><td>15.59</td><td>15.46</td><td>18.74</td><td>+0.13</td></tr>
+      <tr><td rowspan="3">arc S3 @400k</td><td>10</td><td>41.30</td><td>42.59</td><td>43.00</td><td>−1.29</td></tr>
+      <tr><td>30</td><td>44.20</td><td>45.51</td><td>45.95</td><td>−1.31</td></tr>
+      <tr><td>102</td><td>44.83</td><td>46.82</td><td>47.00</td><td>−1.99</td></tr>
+    </table>
+    On DS1 the early loss is warmup and the laws tie once the horizon is long; on S3 what
+    remains is the audit's duty cycle on terrain that falls steeply from the optimum
+    (§11.1).</li>
 </ul>
 
 <h3 id="s10-2"><a class="hl" href="#s10-2">10.2 The corpus</a></h3>
@@ -3871,7 +3903,9 @@ window = max(window + step, 0.02·C)</pre>
   205-cell sweep (45 real traces across size ladders, N≥2): <b>41 significant wins
   (+117.7pp in total) against the reactive climber, 9 losses (−13.8pp), 155 ties</b>.
   The wins are the recency-demand family the density signal was built for; the losses
-  are §5.6's documented bias, each still far above LRU. Ties are the majority because
+  are §5.6's documented bias, each still far above LRU. Part of what a size sweep shows on a
+  long-working-set trace is horizon rather than bias: at a 1M cache a 44M-request trace
+  holds ten decisions, and §10.1's horizon table separates the two. Ties are the majority because
   the incumbent already sits at or near the static ceiling on most real traces, leaving
   nothing to win; the corpus checks that the record holds, and the trap gallery (§10.4)
   covers where it does not.</p>

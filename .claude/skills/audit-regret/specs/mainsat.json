@@ -1,0 +1,15 @@
+{
+  "max": 8192,
+  "seed": 7,
+  "repeat": 1,
+  "members": {
+    "core":  {"kind": "zipf",    "n": 0.45, "alpha": 0.60},
+    "far":   {"kind": "pairs",   "dreq": 5200, "k": 2},
+    "cold":  {"kind": "scan"},
+    "rider": {"kind": "trickle", "gap": 1}
+  },
+  "segments": [
+    {"samples": 72,
+     "shares": {"core": 0.30, "far": 0.18, "cold": 0.517, "rider": 0.003}}
+  ]
+}
