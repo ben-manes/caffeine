@@ -92,7 +92,7 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
     }
     bulkLoad(keysToLoad, result, mappingFunction);
 
-    @SuppressWarnings("NullableProblems")
+    @SuppressWarnings({"NullableProblems", "NullAway"})
     Map<K, V> unmodifiable = Collections.unmodifiableMap(result);
     return unmodifiable;
   }

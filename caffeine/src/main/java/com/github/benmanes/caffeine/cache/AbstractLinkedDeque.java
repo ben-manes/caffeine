@@ -189,7 +189,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   @Override
-  public abstract boolean contains(Object o);
+  public abstract boolean contains(@Nullable Object o);
 
   @Override
   public boolean isFirst(@Nullable E e) {
@@ -320,11 +320,11 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   @Override
-  public abstract boolean remove(Object o);
+  public abstract boolean remove(@Nullable Object o);
 
   @Override
   @SuppressWarnings("DequeRemoveFirstOccurrence")
-  public boolean removeFirstOccurrence(Object o) {
+  public boolean removeFirstOccurrence(@Nullable Object o) {
     return remove(o);
   }
 
@@ -336,7 +336,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
 
   @Override
   @SuppressWarnings("DequeRemoveFirstOccurrence")
-  public boolean removeLastOccurrence(Object o) {
+  public boolean removeLastOccurrence(@Nullable Object o) {
     return remove(o);
   }
 

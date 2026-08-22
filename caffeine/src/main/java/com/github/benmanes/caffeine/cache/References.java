@@ -183,7 +183,7 @@ final class References {
    * the advent that the key is reclaimed so that the entry can be removed from the cache in
    * constant time.
    */
-  static class WeakKeyReference<K> extends WeakReference<@Nullable K>
+  static class WeakKeyReference<K> extends WeakReference<K>
       implements InternalReference<K> {
     private final int hashCode;
 
@@ -255,7 +255,7 @@ final class References {
    * the advent that the value is reclaimed so that the entry can be removed from the cache in
    * constant time.
    */
-  static final class WeakValueReference<V> extends WeakReference<@Nullable V>
+  static final class WeakValueReference<V> extends WeakReference<V>
       implements InternalReference<V> {
     private static final VarHandle KEY_REFERENCE = fieldVarHandle(MethodHandles.lookup(),
         "keyReference", VarHandle.class, WeakValueReference.class, Object.class);
@@ -300,7 +300,7 @@ final class References {
    * the advent that the value is reclaimed so that the entry can be removed from the cache in
    * constant time.
    */
-  static final class SoftValueReference<V> extends SoftReference<@Nullable V>
+  static final class SoftValueReference<V> extends SoftReference<V>
       implements InternalReference<V> {
     private static final VarHandle KEY_REFERENCE = fieldVarHandle(MethodHandles.lookup(),
         "keyReference", VarHandle.class, SoftValueReference.class, Object.class);

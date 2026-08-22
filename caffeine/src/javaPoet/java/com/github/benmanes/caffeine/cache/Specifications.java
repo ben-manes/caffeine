@@ -31,7 +31,7 @@ import com.palantir.javapoet.TypeVariableName;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Specifications {
-  public static final String PACKAGE_NAME = Specifications.class.getPackage().getName();
+  public static final String PACKAGE_NAME = Specifications.class.getPackageName();
   public static final String RETIRED_STRONG_KEY = "RETIRED_STRONG_KEY";
   public static final String RETIRED_WEAK_KEY = "RETIRED_WEAK_KEY";
   public static final String DEAD_STRONG_KEY = "DEAD_STRONG_KEY";

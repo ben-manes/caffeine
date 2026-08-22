@@ -100,7 +100,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   static final int ATTEMPTS = 3;
 
   /** Table of buffers. When non-null, size is a power of 2. */
-  volatile Buffer<E> @Nullable[] table;
+  volatile @Nullable Buffer<E> @Nullable [] table;
 
   /** Spinlock (locked via CAS) used when resizing and/or creating Buffers. */
   volatile int tableBusy;

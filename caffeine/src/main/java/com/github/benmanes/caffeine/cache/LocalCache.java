@@ -108,7 +108,7 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
 
   @Override
   default @Nullable V compute(K key,
-      BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction) {
+      BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction) {
     return compute(key, remappingFunction, expiry(),
         /* recordLoad= */ true, /* recordLoadFailure= */ true);
   }
@@ -118,7 +118,7 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
    * whether to record load statistics based on the success of this operation.
    */
   default @Nullable V compute(K key,
-      BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
+      BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry,
       boolean recordLoad, boolean recordLoadFailure) {
     return compute(key, remappingFunction, expiry, recordLoad, recordLoadFailure,
@@ -134,7 +134,7 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
    * to communicate intent back to the cache.
    */
   @Nullable V compute(K key,
-      BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
+      BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
       boolean recordLoadFailure, @Nullable RemapHints hints);
 
@@ -186,8 +186,9 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
   }
 
   /** Decorates the mapping function to record statistics if enabled, recording a miss if called. */
-  default <T, R> Function<? super T, ? extends @Nullable R> statsAware(
-      Function<? super T, ? extends @Nullable R> mappingFunction, boolean recordLoad) {
+  default <T extends @Nullable Object, R extends @Nullable Object>
+      Function<? super T, ? extends @Nullable R> statsAware(
+          Function<? super T, ? extends @Nullable R> mappingFunction, boolean recordLoad) {
     if (!isRecordingStats()) {
       return mappingFunction;
     }
@@ -214,15 +215,17 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
   }
 
   /** Decorates the remapping function to record statistics if enabled. */
-  default <T, U, R> BiFunction<? super T, ? super U, ? extends @Nullable R> statsAware(
-      BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
+  default <T extends @Nullable Object, U extends @Nullable Object, R extends @Nullable Object>
+      BiFunction<? super T, ? super U, ? extends @Nullable R> statsAware(
+          BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
     return statsAware(remappingFunction, /* recordLoad= */ true, /* recordLoadFailure= */ true);
   }
 
   /** Decorates the remapping function to record statistics if enabled. */
-  default <T, U, R> BiFunction<? super T, ? super U, ? extends @Nullable R> statsAware(
-      BiFunction<? super T, ? super U, ? extends @Nullable R> remappingFunction,
-      boolean recordLoad, boolean recordLoadFailure) {
+  default <T extends @Nullable Object, U extends @Nullable Object, R extends @Nullable Object>
+      BiFunction<? super T, ? super U, ? extends @Nullable R> statsAware(
+          BiFunction<? super T, ? super U, ? extends @Nullable R> remappingFunction,
+          boolean recordLoad, boolean recordLoadFailure) {
     if (!isRecordingStats()) {
       return remappingFunction;
     }

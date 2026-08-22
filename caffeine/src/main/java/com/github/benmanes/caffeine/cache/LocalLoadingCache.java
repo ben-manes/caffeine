@@ -93,7 +93,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
       cache().statsCounter().recordMisses(size - count);
       throw t;
     }
-    @SuppressWarnings("NullableProblems")
+    @SuppressWarnings({"NullableProblems", "NullAway"})
     Map<K, V> unmodifiable = Collections.unmodifiableMap(result);
     return unmodifiable;
   }
@@ -183,12 +183,14 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   @Override
   default CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<K, CompletableFuture<@Nullable V>>(
+    var result = new LinkedHashMap<K, CompletableFuture<V>>(
         calculateHashMapCapacity(keys));
     for (K key : keys) {
       result.computeIfAbsent(key, this::refresh);
     }
-    return composeResult(result);
+    @SuppressWarnings("NullAway")
+    Map<K, CompletableFuture<@Nullable V>> futures = result;
+    return composeResult(futures);
   }
 
   /** Returns a mapping function that adapts to {@link CacheLoader#load}. */

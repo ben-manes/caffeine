@@ -122,7 +122,7 @@ final class WeakInterner<E> implements Interner<E> {
 final class Interned<K, V> extends Node<K, V> implements NodeFactory<K, V> {
   static final NodeFactory<Object, Object> FACTORY = new Interned<>();
 
-  volatile Reference<?> keyReference;
+  volatile Reference<? extends @Nullable Object> keyReference;
 
   Interned() {
     this.keyReference = NodeFactory.DEAD_WEAK_KEY;

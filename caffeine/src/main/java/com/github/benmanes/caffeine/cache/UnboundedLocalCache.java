@@ -169,7 +169,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     statsCounter.recordHits(result.size());
     statsCounter.recordMisses(uniqueKeys - result.size());
 
-    @SuppressWarnings("NullableProblems")
+    @SuppressWarnings({"NullableProblems", "NullAway"})
     Map<K, V> unmodifiable = Collections.unmodifiableMap(result);
     return unmodifiable;
   }
@@ -327,7 +327,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+  public @Nullable V compute(K key,
+      BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
       boolean recordLoadFailure, @Nullable RemapHints hints) {
     requireNonNull(remappingFunction);
@@ -362,7 +363,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
     @Nullable V[] oldValue = (@Nullable V[]) new Object[1];
     boolean[] replaced = new boolean[1];
-    V nv = data.compute(key, (K k, V value) -> {
+    V nv = data.compute(key, (K k, @Nullable V value) -> {
       if ((value == null) && !computeIfAbsent) {
         return null;
       }
@@ -431,17 +432,20 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public boolean containsKey(Object key) {
+  public boolean containsKey(@Nullable Object key) {
+    requireNonNull(key);
     return data.containsKey(key);
   }
 
   @Override
-  public boolean containsValue(Object value) {
+  public boolean containsValue(@Nullable Object value) {
+    requireNonNull(value);
     return data.containsValue(value);
   }
 
   @Override
-  public @Nullable V get(Object key) {
+  public @Nullable V get(@Nullable Object key) {
+    requireNonNull(key);
     return getIfPresent(key, /* recordStats= */ false);
   }
 
@@ -451,7 +455,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
     @Nullable V[] oldValue = (@Nullable V[]) new Object[1];
-    data.compute(key, (K k, V v) -> {
+    data.compute(key, (K k, @Nullable V v) -> {
       discardRefresh(k);
       oldValue[0] = v;
       return value;
@@ -488,7 +492,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public @Nullable V remove(Object key) {
+  public @Nullable V remove(@Nullable Object key) {
+    requireNonNull(key);
+
     @SuppressWarnings("unchecked")
     var castKey = (K) key;
     @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
@@ -507,9 +513,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public boolean remove(Object key, @Nullable Object value) {
+  public boolean remove(@Nullable Object key, @Nullable Object value) {
+    requireNonNull(key);
     if (value == null) {
-      requireNonNull(key);
       return false;
     }
 
@@ -653,7 +659,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     @SuppressWarnings("SuspiciousMethodCalls")
-    public boolean contains(Object o) {
+    public boolean contains(@Nullable Object o) {
       return cache.containsKey(o);
     }
 
@@ -689,7 +695,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public boolean remove(Object o) {
+    public boolean remove(@Nullable Object o) {
       return (cache.remove(o) != null);
     }
 
@@ -738,7 +744,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public <T> T[] toArray(T[] array) {
+    public <T extends @Nullable Object> T[] toArray(T[] array) {
       return cache.data.keySet().toArray(array);
     }
   }
@@ -842,7 +848,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     @SuppressWarnings("SuspiciousMethodCalls")
-    public boolean contains(Object o) {
+    public boolean contains(@Nullable Object o) {
       return cache.containsValue(o);
     }
 
@@ -931,7 +937,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public <T> T[] toArray(T[] array) {
+    public <T extends @Nullable Object> T[] toArray(T[] array) {
       return cache.data.values().toArray(array);
     }
   }
@@ -1035,7 +1041,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     @SuppressWarnings("SuspiciousMethodCalls")
-    public boolean contains(Object o) {
+    public boolean contains(@Nullable Object o) {
       if (!(o instanceof Entry<?, ?>)) {
         return false;
       }
@@ -1069,7 +1075,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     @SuppressWarnings("SuspiciousMethodCalls")
-    public boolean remove(Object o) {
+    public boolean remove(@Nullable Object o) {
       if (!(o instanceof Entry<?, ?>)) {
         return false;
       }

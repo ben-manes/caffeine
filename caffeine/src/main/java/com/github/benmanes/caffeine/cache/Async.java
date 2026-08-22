@@ -46,7 +46,8 @@ final class Async {
   }
 
   /** Returns the current value or null if either not done or failed. */
-  static <V> @Nullable V getIfReady(@Nullable CompletableFuture<V> future) {
+  static <V extends @Nullable Object> @Nullable V getIfReady(
+      @Nullable CompletableFuture<V> future) {
     if ((future == null) || !future.isDone() || future.isCompletedExceptionally()) {
       return null;
     }
@@ -59,7 +60,8 @@ final class Async {
   }
 
   /** Returns the value when completed successfully or null if failed. */
-  static <V> @Nullable V getWhenSuccessful(@Nullable CompletableFuture<V> future) {
+  static <V extends @Nullable Object> @Nullable V getWhenSuccessful(
+      @Nullable CompletableFuture<V> future) {
     try {
       return (future == null) ? null : future.join();
     } catch (CancellationException | CompletionException e) {

@@ -30,7 +30,7 @@ import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
 final class WriteOrderDeque<E extends WriteOrder<E>> extends AbstractLinkedDeque<E> {
 
   @Override
-  public boolean contains(Object o) {
+  public boolean contains(@Nullable Object o) {
     return (o instanceof WriteOrder<?>) && contains((WriteOrder<?>) o);
   }
 
@@ -43,7 +43,7 @@ final class WriteOrderDeque<E extends WriteOrder<E>> extends AbstractLinkedDeque
 
   @Override
   @SuppressWarnings("unchecked")
-  public boolean remove(Object o) {
+  public boolean remove(@Nullable Object o) {
     return (o instanceof WriteOrder<?>) && remove((E) o);
   }
 

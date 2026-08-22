@@ -139,7 +139,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       futures.put(requireNonNull(key), null);
     }
 
-    var proxies = new LinkedHashMap<K, CompletableFuture<@Nullable V>>(initialCapacity);
+    var proxies = new LinkedHashMap<K, CompletableFuture<V>>(initialCapacity);
     for (var entry : futures.entrySet()) {
       K key = entry.getKey();
       @Var CompletableFuture<V> future = cache().getIfPresent(key, /* recordStats= */ false);
@@ -162,7 +162,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return composeResult(results);
     }
 
-    var completer = new AsyncBulkCompleter<>(cache(), proxies);
+    @SuppressWarnings("NullAway")
+    Map<K, CompletableFuture<@Nullable V>> pending = proxies;
+    var completer = new AsyncBulkCompleter<>(cache(), pending);
     try {
       var loader = mappingFunction.apply(
           Collections.unmodifiableSet(proxies.keySet()), cache().executor());
@@ -223,7 +225,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
    * @param computed whether the caller computed the value, which a write does not
    */
   @SuppressWarnings({"FutureReturnValueIgnored", "ResultOfMethodCallIgnored"})
-  default void handleCompletion(K key, CompletableFuture<? extends V> valueFuture,
+  default void handleCompletion(K key, CompletableFuture<? extends @Nullable V> valueFuture,
       long startTime, boolean deferred, boolean computed) {
     boolean recordLoad = computed || deferred;
     valueFuture.whenComplete((value, error) -> {
@@ -274,8 +276,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   }
 
   /** A function executed asynchronously after a bulk load completes. */
-  final class AsyncBulkCompleter<K, V> implements BiFunction<
-      Map<? extends K, ? extends V>, Throwable, Map<? extends K, ? extends V>> {
+  final class AsyncBulkCompleter<K, V> implements BiFunction<@Nullable Map<? extends K, ? extends V>,
+      @Nullable Throwable, @Nullable Map<? extends K, ? extends V>> {
     @SuppressWarnings("ImmutableMemberCollection")
     private final Map<K, CompletableFuture<@Nullable V>> proxies;
     private final LocalCache<K, CompletableFuture<V>> cache;
@@ -422,14 +424,14 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override public void clear() {
       asyncCache.cache().clear();
     }
-    @Override public boolean containsKey(Object key) {
+    @Override public boolean containsKey(@Nullable Object key) {
       return asyncCache.cache().containsKey(key);
     }
     @SuppressWarnings("CollectionUndefinedEquality")
-    @Override public boolean containsValue(Object value) {
+    @Override public boolean containsValue(@Nullable Object value) {
       return asyncCache.cache().containsValue(value);
     }
-    @Override public @Nullable CompletableFuture<V> get(Object key) {
+    @Override public @Nullable CompletableFuture<V> get(@Nullable Object key) {
       return asyncCache.cache().get(key);
     }
     @Override public @Nullable CompletableFuture<V> putIfAbsent(K key, CompletableFuture<V> value) {
@@ -481,10 +483,10 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         computeIfPresent(key, (k, oldValue) -> requireNonNull(function.apply(k, oldValue)));
       }
     }
-    @Override public @Nullable CompletableFuture<V> remove(Object key) {
+    @Override public @Nullable CompletableFuture<V> remove(@Nullable Object key) {
       return asyncCache.cache().remove(key);
     }
-    @Override public boolean remove(Object key, Object value) {
+    @Override public boolean remove(@Nullable Object key, @Nullable Object value) {
       return asyncCache.cache().remove(key, value);
     }
     @Override public @Nullable CompletableFuture<V> computeIfAbsent(K key,
@@ -506,15 +508,17 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
       return future;
     }
-    @Override public @Nullable CompletableFuture<V> computeIfPresent(K key, BiFunction<? super K,
-        ? super CompletableFuture<V>, ? extends CompletableFuture<V>> remappingFunction) {
+    @Override public @Nullable CompletableFuture<V> computeIfPresent(K key,
+        BiFunction<? super K, ? super CompletableFuture<V>,
+            ? extends @Nullable CompletableFuture<V>> remappingFunction) {
       requireNonNull(remappingFunction);
       return compute(key, (k, oldValue) ->
           (oldValue == null) ? null : remappingFunction.apply(k, oldValue));
     }
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    @Override public @Nullable CompletableFuture<V> compute(K key, BiFunction<? super K,
-        ? super CompletableFuture<V>, ? extends CompletableFuture<V>> remappingFunction) {
+    @Override public @Nullable CompletableFuture<V> compute(K key,
+        BiFunction<? super K, ? super @Nullable CompletableFuture<V>,
+            ? extends @Nullable CompletableFuture<V>> remappingFunction) {
       requireNonNull(remappingFunction);
 
       var deferred = new boolean[1];
@@ -576,10 +580,10 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Override public void clear() {
         AsyncAsMapView.this.clear();
       }
-      @Override public boolean contains(Object o) {
+      @Override public boolean contains(@Nullable Object o) {
         return asyncCache.cache().entrySet().contains(o);
       }
-      @Override public boolean remove(Object o) {
+      @Override public boolean remove(@Nullable Object o) {
         return asyncCache.cache().entrySet().remove(o);
       }
       @Override public boolean removeAll(Collection<?> collection) {
@@ -705,7 +709,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       asyncCache().cache().statsCounter().recordHits(result.size());
       asyncCache().cache().statsCounter().recordMisses(uniqueKeys - result.size());
 
-      @SuppressWarnings("NullableProblems")
+      @SuppressWarnings({"NullableProblems", "NullAway"})
       Map<K, V> unmodifiable = Collections.unmodifiableMap(result);
       return unmodifiable;
     }
@@ -833,12 +837,13 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
-    public boolean containsKey(Object key) {
+    public boolean containsKey(@Nullable Object key) {
+      requireNonNull(key);
       return Async.isReady(delegate.getIfPresentQuietly(key));
     }
 
     @Override
-    public boolean containsValue(Object value) {
+    public boolean containsValue(@Nullable Object value) {
       requireNonNull(value);
 
       for (CompletableFuture<V> valueFuture : delegate.values()) {
@@ -850,7 +855,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
-    public @Nullable V get(Object key) {
+    public @Nullable V get(@Nullable Object key) {
       return Async.getIfReady(delegate.get(key));
     }
 
@@ -916,13 +921,13 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
-    public @Nullable V remove(Object key) {
+    public @Nullable V remove(@Nullable Object key) {
       CompletableFuture<V> oldValueFuture = delegate.remove(key);
       return Async.getWhenSuccessful(oldValueFuture);
     }
 
     @Override
-    public boolean remove(Object key, @Nullable Object value) {
+    public boolean remove(@Nullable Object key, @Nullable Object value) {
       requireNonNull(key);
       if (value == null) {
         return false;
@@ -1135,7 +1140,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
               }
 
               V oldValue = Async.getIfReady(oldValueFuture);
-              BiFunction<? super K, ? super V, ? extends @Nullable V> function =
+              BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> function =
                   delegate.statsAware(remappingFunction,
                       /* recordLoad= */ true, /* recordLoadFailure= */ true);
               newValue[0] = function.apply(key, oldValue);
@@ -1285,7 +1290,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
-      public boolean contains(Object o) {
+      public boolean contains(@Nullable Object o) {
         return AsMapView.this.containsKey(o);
       }
 
@@ -1309,7 +1314,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       @Override
       @SuppressWarnings("RedundantCollectionOperation")
-      public boolean remove(Object o) {
+      public boolean remove(@Nullable Object o) {
         return delegate.keySet().remove(o);
       }
 
@@ -1407,7 +1412,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
-      public boolean contains(Object o) {
+      public boolean contains(@Nullable Object o) {
         return AsMapView.this.containsValue(o);
       }
 
@@ -1570,7 +1575,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
-      public boolean contains(Object o) {
+      public boolean contains(@Nullable Object o) {
         if (!(o instanceof Entry<?, ?>)) {
           return false;
         }
@@ -1604,7 +1609,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
-      public boolean remove(Object obj) {
+      public boolean remove(@Nullable Object obj) {
         if (!(obj instanceof Entry<?, ?>)) {
           return false;
         }

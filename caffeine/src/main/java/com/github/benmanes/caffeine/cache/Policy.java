@@ -682,7 +682,7 @@ public interface Policy<K, V> {
      * @since 3.0.6
      */
     default @Nullable V compute(K key,
-        BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction,
+        BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction,
         Duration duration) {
       throw new UnsupportedOperationException();
     }

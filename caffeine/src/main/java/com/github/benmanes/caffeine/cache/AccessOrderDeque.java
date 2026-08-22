@@ -30,7 +30,7 @@ import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
 final class AccessOrderDeque<E extends AccessOrder<E>> extends AbstractLinkedDeque<E> {
 
   @Override
-  public boolean contains(Object o) {
+  public boolean contains(@Nullable Object o) {
     return (o instanceof AccessOrder<?>) && contains((AccessOrder<?>) o);
   }
 
@@ -43,7 +43,7 @@ final class AccessOrderDeque<E extends AccessOrder<E>> extends AbstractLinkedDeq
 
   @Override
   @SuppressWarnings("unchecked")
-  public boolean remove(Object o) {
+  public boolean remove(@Nullable Object o) {
     return (o instanceof AccessOrder<?>) && remove((E) o);
   }
 
