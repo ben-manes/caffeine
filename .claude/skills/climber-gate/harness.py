@@ -122,6 +122,25 @@ FLAGS = '''
   /** pricedshift: the stand-down's trigger priced off the rate's scatter, clamped to [1x, 3x]. */
   static final boolean PRICEDSHIFT = VARIANT.equals("pricedshift");
   /*
+   * The §8 item 4 latency-face candidate: a discarding stand-down restarts the audit schedule.
+   * One site (the detected shift in densityClimb; rearmboth adds the retest's discard), gated
+   * and shaped by the arm.
+   */
+  /** rearm: the clock's wait drops to the calibration wait; stillness and ladder untouched. */
+  static final boolean REARM = VARIANT.startsWith("rearm");
+  /** rearmheld / rearmheld2 / rearmheldcold: only where the discarded anchor was a held park. */
+  static final boolean REARMHELD = VARIANT.equals("rearmheld") || VARIANT.equals("rearmheld2")
+      || VARIANT.equals("rearmheldcold");
+  /** rearmreset / rearmboth / rearmheld: the clock restarts as a resize does (auditClock.reset). */
+  static final boolean REARMRESET = VARIANT.equals("rearmreset") || VARIANT.equals("rearmboth")
+      || VARIANT.equals("rearmheld");
+  /** rearmstill / rearmheld2: the wait drops and the stillness run starts over, nothing else. */
+  static final boolean REARMSTILL = VARIANT.equals("rearmstill") || VARIANT.equals("rearmheld2");
+  /** rearmcold and every reset form: the audit ladder restarts at its first rung as well. */
+  static final boolean REARMCOLD = REARM && !VARIANT.equals("rearm") && !VARIANT.equals("rearmstill");
+  /** rearmboth: the retest's discard restarts the schedule as the detected shift's does. */
+  static final boolean REARMBOTH = VARIANT.equals("rearmboth");
+  /*
    * MECHANISM ABLATIONS (the /climber-minimize set). The arms above restore an older machine to
    * price a landed change; these remove one algorithmic step from the current one to price the
    * step itself. Each is a single disable at the step's own site, so an arm that reads
@@ -405,6 +424,29 @@ EDITS = [
      "  private boolean isReturnTest() {\n"
      "    return !NORETURNCOVER\n"
      "        && ((retreatLeft > 0) || ((anchor.retestClaim >= 0) && !anchor.returning));\n  }\n"),
+
+    # the discarding stand-down's site (the isWorkloadShift one; the retest's discard in
+    # retestReturn is deliberately not wired): the §8 item 4 latency-face candidate
+    ("rearm", W,
+     "      rates.reset();\n    }\n    updateRateReferences(reading);\n",
+     "      rates.reset();\n"
+     "      if (REARM && (!REARMHELD || parkedAtShift)) {\n"
+     "        if (REARMRESET) {\n          auditClock.reset();\n"
+     "        } else {\n          auditClock.waitSamples = AuditClock.AUDIT_WAIT_FIRST;\n"
+     "          if (REARMSTILL) {\n            auditClock.stillSamples = 0;\n          }\n        }\n"
+     "        if (REARMCOLD) {\n          audit.reset();\n        }\n      }\n"
+     "    }\n    updateRateReferences(reading);\n"),
+
+    # the hold is released by the stand-down, so the held-park gate reads it before
+    ("rearm-held", W,
+     "    ageRetreatCover();\n\n    var reading = new Reading(",
+     "    ageRetreatCover();\n    boolean parkedAtShift = anchor.held;\n\n    var reading = new Reading("),
+
+    ("rearm-retest", W,
+     "      rates.reset();\n    }\n  }\n",
+     "      rates.reset();\n"
+     "      if (REARMBOTH) {\n        auditClock.reset();\n        audit.reset();\n      }\n"
+     "    }\n  }\n"),
 
 
     ("noaudit-holdoraudit", W,

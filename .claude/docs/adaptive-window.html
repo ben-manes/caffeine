@@ -2232,8 +2232,9 @@ window = max(window + step, 0.02·C)</pre>
     saturates. At rest the averages are equal, so the marginals differ by
     <var>g<sub>m</sub></var> &minus; <var>g<sub>w</sub></var> and the larger gap marks the
     over-allocated region. The window is an LRU serving tight reuse and saturates fastest, so
-    <b>the window is over-allocated</b>. That is the measured 0.5&ndash;2.5pp given back on
-    frequency-optimal traces, and closing it means steering on marginals. The machine already
+    <b>the window is over-allocated</b>. That is the typical measured 0.5&ndash;2.5pp given back on
+    frequency-optimal traces, with larger witnesses recorded in §11, and closing it means
+    steering on marginals. The machine already
     measures probation's, §6.4's frozen baseline, and uses it in the verdict; steering on
     marginals directly was built and measured, and §11.1 records the frontier that keeps the
     average form at the wheel.</p>
@@ -2968,10 +2969,12 @@ window = max(window + step, 0.02·C)</pre>
   failure to within half a point of LRU. The mixture-with-modulation dose clears LRU
   on every seed (48.0 → 56.6 against 55.3), and the at-scale pins escape as far as
   each trace lets the ladder escalate.</p>
-<p><b>Real corpus.</b> The layer is neutral insurance on average (−0.03pp). The streak
-  verdict and fresh-park shield also recover 2.2 points of cp_w097@16384's −6.3-point
-  gap to the reactive climber: the audit walks to the 7.5% optimum and confirms
-  there; §11 explains the remaining park-retention cost.</p>
+<p><b>Real corpus.</b> The layer is neutral insurance on average (−0.03pp) and
+  load-bearing on particular cells. On cp_w097@16384 the audits are worth 3.3 points
+  (46.9 with them, 43.6 without) of a gap that still leaves the machine 3.2 behind
+  the reactive climber: their confirms land at high windows, around 56% and 26%, not
+  at the broad 5–15% static optimum. §11 separates that recovery from the steering
+  bias it cannot repair.</p>
 <p><b>Layer ablation.</b> Across the 52-row constructed battery, removing the audit
   costs 268 points over the 31 rows it helps and returns 13 over the 16 it hurts—about
   21:1, with a worst single-row cost of 2.4. The gain is concentrated: without the
@@ -3200,9 +3203,11 @@ window = max(window + step, 0.02·C)</pre>
   <li><b>Audit confirms also park.</b> After an audit win, steering is suspended at
     the anchor, beginning with the confirming sample itself, which returns without
     a parting density step off the paid-for position. The audit clock owns
-    re-exploration, releasing on a crash-scale shift, unless the shift is one of its
-    own audits walking out of the park, whose ending returns to it. Density disagrees
-    with the position by construction, so handing it the wheel dismantles the win. A
+    re-exploration, releasing on a crash-scale shift unless the shift is the
+    machine's own re-test: the park's audit walking out of it and the retreat that
+    ends the walk, or a veto's return until its retest has ruled (above). Density
+    disagrees with the position by construction, so handing it the wheel dismantles
+    the win. A
     starvation-probe confirm parks only when it is an audit in all but name: the walk
     took the deepest commitment, the goal metric confirms it, and density would reverse
     it. Every other starvation confirm hands to density, and cheap re-probing
@@ -3216,8 +3221,9 @@ window = max(window + step, 0.02·C)</pre>
       <summary>The shield's two measured edges</summary>
       <p>On workloads whose per-sample scatter reaches the restart threshold, the
         stand-down otherwise freed a just-validated position within ~5 samples and
-        density re-ballooned off it (cp_w097's audit confirmed at the optimum and
-        lost it). And the bound is load-bearing in the other direction:
+        density re-ballooned off it (cp_w097's audits confirm real improvements at
+        high windows and weather then loses the lower park). And the bound is
+        load-bearing in the other direction:
         unconditional persistence was measured and converts the tracking controller
         into hold-and-retest exactly where tracking is the cure (regimeramp −6.4,
         widepin −6.3, phases −4.1), while the bounded shield holds all three at
@@ -3266,14 +3272,14 @@ window = max(window + step, 0.02·C)</pre>
     <text x="204" y="94" text-anchor="middle" fill="#eb6834" font-size="10">fail: undo, retry on ladder</text>
     <text x="222" y="192" text-anchor="middle" fill="#5b6572" font-size="10">sustained shortfall</text>
     <text x="580" y="196" text-anchor="middle" fill="#1baf7a" font-size="10">arrived: park</text>
-    <text x="390" y="0" text-anchor="middle" fill="#5b6572" font-size="10">crash-scale shift releases the hold; near-anchor crash discards the claim</text>
+    <text x="390" y="0" text-anchor="middle" fill="#5b6572" font-size="10">crash-scale shift releases the hold; near-anchor crash discards the claim; own re-tests exempt</text>
     <defs>
       <marker id="m4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
         <path d="M0,0 L6,3 L0,6 z" fill="#5b6572" />
       </marker>
     </defs>
   </svg>
-  <figcaption>Fig. 17 — The goal-metric layer around the §6 machine: stillness accumulates toward audits, confirms plant the anchor (audit confirms also park), and a sustained shortfall vetoes back. A crash-scale swing releases holds, discarding the claim only when it lands nearby.</figcaption>
+  <figcaption>Fig. 17 — The goal-metric layer around the §6 machine: stillness accumulates toward audits, confirms plant the anchor (audit confirms also park), and a sustained shortfall vetoes back. A crash-scale swing releases holds, discarding the claim only when it lands nearby; the machine's own re-tests (a park's audit walk and retreat, a veto's return until its retest) are exempt.</figcaption>
 </figure>
 <figure>
 <svg viewBox="0 0 740 240" role="img" font-family="system-ui,sans-serif" font-size="11.5">
@@ -3570,7 +3576,7 @@ window = max(window + step, 0.02·C)</pre>
   if sampleRequests &lt; period: return        // period = min(4·C, sketchSample)
   if C ≤ 4096: reactive climber             // §3, §9.1
   else:
-    crash stand-down on |ΔHR| ≥ 5pp         // release holds; near-anchor → discard (§8.2)
+    crash stand-down on |ΔHR| ≥ 5pp         // release holds; near-anchor → discard; own re-tests exempt (§8.2)
     bookkeeping: smoothed rate · anchor     // §8.1–§8.2
     walk in flight → its endings            // stride / crash / reverse / adjudicate (§6.4, §7.2)
     undo or veto-return in flight → continue it
@@ -3593,7 +3599,8 @@ window = max(window + step, 0.02·C)</pre>
     verdict = probeDown
       ? error                             // down-probe: average test
       : ln(d_w / (frozenProbation·span))  // up-probe: §6.4
-    if |ΔHR| ≥ 5pp and the park is not fresh:   // crash stand-down (§8.2)
+    if |ΔHR| ≥ 5pp and not (shielded or parkTest or returnTest):   // crash stand-down (§8.2)
+      // parkTest: the park's own audit walk; returnTest: its retreat, or a veto's return until re-tested
       release any park or veto-return; discard the anchor only if
       the crash landed within its band (far crash = the rail's own
       evidence), and a discard re-seeds the smoothed rate + deviation
@@ -3963,23 +3970,28 @@ window = max(window + step, 0.02·C)</pre>
   is where the separation becomes dramatic, with 15–28 point escapes on the pin
   families, but those three properties, not the corpus mean, are what the extra
   machinery buys on real traffic.</p>
-<p>The one row that deserves its paragraph is the last red one. cp_w097 at 16k is the
-  worst loss in the corpus, and it is a density-family structural loss rather than a
-  regression of the safety layers (an ablation without them scores the same there
-  to within noise).</p>
-<p>It is also §8's margins doing their job in the
-  direction that hurts: the trace's own rate deviation is 3–7pp, which inflates every
-  noise-cleared margin until goal-metric adjudication struggles to engage within the
-  smoothing lag; the rail correctly declines to veto on evidence it cannot clear,
-  density's structural answer stands, and here it is wrong. It is also the row the
-  streak verdict moved most.</p>
-<p>The audit walks to the trace's 7.5% optimum and
-  confirms there where the older deviation-priced verdict could not engage, and the
-  release re-verification reads 47.61 ± 0.05 at N=8 against the reactive arm's
-  50.10, the remainder being park retention between audit cycles (§11). Three
-  targeted rescues were measured dead against this cell. The supported claim is the
-  aggregate, with named bounded residuals, and the named worst case is ~2.5 points
-  on a cache still far above LRU.</p>
+<p>The one row that deserves its paragraph is the last red one. cp_w097 at 16k is a
+  density-family structural loss rather than a regression of the safety layers. On the
+  current tree it reads 46.9 against the reactive climber's 50.1 and LRU's 41.7, and
+  43.6 with the audits disabled: the audits recover 3.3 points and keep the cell far
+  above LRU, and they do not cure the steering objective.</p>
+<p>The mechanism is average against marginal value. The density law asks whether the
+  window's <i>average</i> hits per resident entry exceed main's, and on this trace
+  that error stays positive from a 1% window through the reachable 80% cap, while
+  the marginal error measured at the window's tail crosses near 22% and the static
+  curve peaks broadly at 5–15%. The window has a valuable hot head and an exhausted
+  tail, so matching whole-region averages keeps asking for more window after its
+  boundary value is spent. Replaying the trace to two and four times its length
+  leaves the loss where it is while the static ceiling rises as its cold fill
+  amortizes, so this is not §10.1's short-horizon effect; the controller never
+  settles, cycling through seed-dependent high-window walks and parks. The trace's
+  own 3–7pp scatter, which widens the margins and releases parks, is a secondary
+  cost on top of that wrong sign.</p>
+<p>Holding the parks longer, following a productive confirm sooner, and re-arming the
+  clock on a shift were each measured and declined: every bounded form trades seeds
+  without touching the sign (§11). A repair needs richer marginal information, and
+  must first clear the <code>slowswap</code> counterexample that retired marginal
+  steering.</p>
 <p>Behavior, not just endpoints:</p>
 <figure>
 <svg viewBox="0 -34 740 314" role="img" font-family="system-ui,sans-serif" font-size="11.5">
@@ -4384,12 +4396,18 @@ window = max(window + step, 0.02·C)</pre>
     </details></li>
   <li><span class="lim lim-trade">priced trade</span> <b>The density bias.</b>
     Share-matching's chronic give-back on frequency-favoring workloads, typically
-    0.5–2.5pp against pure frequency, 4.3 worst observed, always far above LRU; the
+    0.5–2.5pp against pure frequency, 4.3 worst observed, always far above LRU;
+    cp_w097@16k is its high-window face, 3.2 behind the hit-rate law. The
     marginal-steering refinement was built and measured to a dead frontier. On a
     non-concave curve (Fig. 4b) the same identity misfires the other way and larger,
     holding a <i>too-small</i> window; neither escape reaches that half.
     <details class="fold">
       <summary>The marginal-steering frontier, measured</summary>
+      <p>cp_w097 is the high-window face of the same identity error: the whole-window
+        average error stays positive through 80% while the tail's marginal error
+        crosses near 22%, and every block of the trace peaks within 5–15% with a
+        plateau from about 2% to 25%. The controller does not settle there; it cycles
+        through seed-dependent high-window walks and parks.</p>
       <p>The open half, measured. Six of twenty-one swept cells hold a valley
         deeper than half a point between a 1% window and their optimum; four are real traces.
         On the two deepest the controller rests inside it: <b>P3 @152508</b> at a 1.4% window
@@ -4415,16 +4433,21 @@ window = max(window + step, 0.02·C)</pre>
         open refinement, and any successor is screened on rest-point tracking
         before it earns a battery.</p>
     </details></li>
-  <li><span class="lim lim-open">open</span> <b>The noisy-texture residual.</b>
-    §10.2's red row: traces whose own rate deviation inflates the margins until
-    goal-metric adjudication struggles to engage; a rescue needs a lower-variance
-    goal reference, not a retune.
+  <li><span class="lim lim-trade">priced trade</span> <b>Rate weather on
+    density-biased terrain.</b> §10.2's red row: weather can release a useful audit
+    park, but neither retaining that park nor changing audit cadence repairs the
+    average-versus-marginal steering sign.
     <details class="fold">
-      <summary>What the streak verdict recovers, and what remains</summary>
-      <p>The streak verdict recovers part of it: the audit walks to the trace's
-        optimum and confirms there, and the cell reads 47.6 ± 0.1 at N=8 against
-        the reactive arm's 50.1, with the remainder being park retention between
-        audit cycles. Three retunes were measured dead against this cell.</p>
+      <summary>What the audits recover, and why the bounded rescues were declined</summary>
+      <p>The audits are load-bearing here: the cell reads 46.9 with them and 43.6
+        without. Their confirms land at high windows, around 56% and 26%, and weather
+        later releases the lower park; that release is visible but is not the
+        remainder. Holding the parks longer (up to a near-permanent bound), following
+        a productive confirm sooner, and re-arming the clock on a shift were each
+        measured: each trades seeds, the best of them a fraction of a point with
+        several seeds losing, and none moves the steering sign. These are supervisory
+        trade-offs, not a lower-variance reference waiting for the right retune.
+        Reopen only with new marginal information.</p>
     </details></li>
   <li><span class="lim lim-trade">priced trade</span> <b>The audit walk's interior
     bars, settled in both directions.</b> Two failure modes once shared one fixed
@@ -4432,7 +4455,7 @@ window = max(window + step, 0.02·C)</pre>
     dead.
     <details class="fold">
       <summary>How both directions were settled</summary>
-      <p>The noisy-texture residual once had a complement: an audit's crash abort
+      <p>The rate-weather class once had a complement: an audit's crash abort
         and bold-driver reversal shared one <i>fixed</i> 5pp bar, so once a
         workload's scatter crossed it, audits armed and died mid-walk instead of
         adjudicating: on fourteen real traces 76% of armed audits ended in the
@@ -4575,9 +4598,12 @@ window = max(window + step, 0.02·C)</pre>
     </tr>
     <tr>
       <td>"frequency-heavy workload slightly worse than the old climber"</td>
-      <td>the density bias, expected ≤2.5pp, above LRU</td>
-      <td>static-sweep the trace: optimum ≤2% with the climber at 5–10% is the
-        documented give-back</td>
+      <td>the density bias, typically 0.5–2.5pp and larger on its high-window face;
+        confirm it is still above LRU</td>
+      <td>static-sweep the trace and read the trajectory: the classic give-back is an
+        optimum ≤2% with the climber at 5–10%; the high-window face (cp_w097) peaks
+        at 5–15% while the climber cycles much higher, the average sign still
+        positive where the tail's marginal sign has turned</td>
     </tr>
     <tr>
       <td>"window pinned small; a bigger static window scores much better; no
@@ -4648,7 +4674,14 @@ window = max(window + step, 0.02·C)</pre>
 <h2 id="appendix"><a class="hl" href="#appendix">Appendix · Measurements</a></h2>
 <p class="chapterlede">The archive: the full corpus table behind §10.2, the measured terrain sweeps behind §2.1, hit-rate-across-sizes charts for every workload in the corpus, and the complete corpus inventory with every family's disposition (A.4). Reference material; nothing here is needed to understand the design.</p>
 <h3 id="ap-corpus"><a class="hl" href="#ap-corpus">A.1 The 28-cell re-verification, in full</a></h3>
-<p>The re-run behind §10.2, every cell including the ties: the release re-verification of the shipped build against current master (N=3, extended to N=8 wherever either arm spread more than 0.5pp; means at the final N). The reactive arm is bimodal on umass F1 @32k, arc P11, and arc P5 (spreads up to ±2.6), so its single draws are not quotable. An earlier three-arm run also tied a §5–§6 controller without the goal-metric layer on every cell to within noise, which is how the layer is known to be corpus-neutral; the raw per-rep data lives with the experiment ledger.</p>
+<p>The re-run behind §10.2, every cell including the ties: the release
+  re-verification of the shipped build against current master (N=3, extended to N=8
+  wherever either arm spread more than 0.5pp; means at the final N). The reactive
+  arm is bimodal on umass F1 @32k, arc P11, and arc P5 (spreads up to ±2.6), so its
+  single draws are not quotable. An earlier three-arm run tied a §5–§6 controller
+  without the goal-metric layer to within noise on the corpus mean; cellwise the
+  layer is load-bearing where its audits confirm (cp_w097@16k is 3.3 points better
+  with it, §10.2). The raw per-rep data lives with the experiment ledger.</p>
 <div class="tablewrap">
   <table>
     <caption class="sr-only">Full 28-cell release re-verification</caption>

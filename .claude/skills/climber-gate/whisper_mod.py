@@ -10,10 +10,13 @@ at the 2% floor while a large window-only reuse band goes uncaptured. It is the 
 This variant keeps that structure bit-for-bit and only modulates the *hot vs one-shot-noise*
 mix on a slow sinusoid. Hot keys are 3000 uniform keys resident in main; one-shot noise always
 misses. Trading weight between them moves the sample hit rate without touching the reuse band
-that the escape has to find. The modulation is deliberately sub-crash: at the periods used
-here the largest sample-to-sample change stays under the climber's 5pp RESTART_THRESHOLD, so
-it never announces itself as a workload shift -- it only inflates `rateDeviationEma`, and with
-it the 3x margin that both the guard rail and the audit's confirm are priced against.
+that the escape has to find. At a0.08/p12 the modulation is sub-crash: the largest
+sample-to-sample change stays under the climber's 5pp RESTART_THRESHOLD, so it never announces
+itself as a workload shift and only inflates the rates' deviation estimate, and with it the 3x
+margin that both the guard rail and the audit's confirm are priced against. The other two rows
+are crash-scale (measured 2026-08-22 from the per-sample dumps): p6 swings 6.5-7pp every three
+samples and a0.12/p12 5-6pp, so on those the swing stands the anchor down at every move (the
+park at the first post-shield swing) and the rows price the stand-down as well as the margin.
 
 Usage: whisper_mod.py --amp 0.08 --period 12 --out path.lirs
        (--amp is in units of request share; --period is in climber samples of 4*8192 requests)
