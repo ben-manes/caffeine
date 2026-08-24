@@ -15,9 +15,9 @@ mechanism that has stopped paying for itself can be found rather than waited for
 It exists because the machine grows by repair. Every round adds a rule that fixes a workload,
 and nothing in the process asks the older rules to re-justify themselves. Two things follow, and
 both have been observed: a step's recorded price goes **stale** as later repairs change the
-terrain it acted on (`nocorner` was priced at `balloonflip` +3.76 in 2026-08-15 and reads +0.00
-today), and a step can become **inert** without anyone noticing, because nothing fails when a
-branch stops mattering.
+terrain it acted on (the guard rail's veto was 11:1 in 2026-08-18 and 1.86:1 on that same cell
+set in 2026-08-23), and a step can become **inert** without anyone noticing, because nothing
+fails when a branch stops mattering.
 
 **Its usual output is "priced, kept", not a deletion.** Pricing a mechanism is the point; removing
 one is the rare case. Run it before a release, or after the machine has taken several repairs in
@@ -42,11 +42,11 @@ each seed, so every arm sees the same machine state and the same admission draws
 ## The arms
 
 Each is a single disable at the step's own site. `noaudit` and the tier arms predate this skill;
-the rest were wired 2026-08-18.
+most of the rest were wired 2026-08-18, `noreturncover` and `nowidecover` in 2026-08.
 
 | arm | the step it removes |
 |---|---|
-| `nocorner` | the upper corner arms a starvation probe |
+| `cornerprobe` | *restores* the upper-corner probe deleted 2026-08-21, so its sign reads inverted |
 | `nostarve` | any blind corner arms a starvation probe |
 | `noladder` | a completed experiment deepens its rung |
 | `noscale` | deep rungs walk 2x/4x the flat stride |
@@ -58,6 +58,7 @@ the rest were wired 2026-08-18.
 | `noveto` | the guard rail returns the window to the anchor |
 | `noretest` | a veto's return re-tests the claim that sent it, on arrival |
 | `noreturncover` | a veto's return's landing and settle samples wait for that retest instead of standing the anchor down |
+| `nowidecover` | a retreat's cover runs without a held park (the 2026-08-21 widening) |
 | `nofreeze` | an up-probe is judged against probation frozen at the arm |
 | `noaudit` | the whole equilibrium-audit layer |
 
@@ -78,12 +79,20 @@ the worked example: +268pp across the rows it helps against −13pp across the r
 The verdicts:
 
 - **LOAD-BEARING** — gains nowhere, losses somewhere. Keep, and update the recorded price.
-- **PRICED** — a trade. Report the ratio and the worst row. `nocorner`'s original verdict was
-  this, and it stays: "Priced; it stays" is a complete answer.
+- **PRICED** — a trade. Report the ratio and the worst row. Most steps land here, and "priced;
+  it stays" is a complete answer. A ratio under 1:1 is a candidate, not a verdict: the guard
+  rail's veto reads 0.3:1 on the battery and buys 6.4pp on a planted cell.
 - **NEGATIVE** — removing the step helps everywhere. That is a defect report, not a simplification.
   Hand it to `/audit-adaptivity`.
 - **INERT** — bit-identical on every cell. This is the interesting one, and it is **not** a
   licence to delete.
+
+**Where the battery is blind: the start.** Every cell in it starts the cache where the product
+does, at 1%. A step that defends a window the machine has been driven *away from* therefore has
+almost nothing to act on, and its ratio collapses without the mechanism changing. Before treating
+a sub-1:1 ratio as a candidate, re-run the step's own cells with the window planted
+(`CAF_EXTRA=-Dcaffeine.climber.startwin=0.55`, or `climber-gate/startwin.py` for the sweep). The
+guard rail's veto is the worked case: 0.3:1 on the battery, +6.4pp on `mainsat` planted at 55%.
 
 **Why inert is not dead.** The corpus is a sample of workloads that were interesting enough for
 someone to capture, plus constructions aimed at defects already imagined. A step that changes
@@ -121,63 +130,57 @@ recoverable. A wrong prune costs hit rate on a workload nobody is measuring, whi
 bar for removing a step should be higher than the bar for keeping one, and this skill is built to
 be run often and to delete rarely.
 
-## The 2026-08-18 baseline (`e1f23f4d8`, `standard` preset, seed 1)
+## The 2026-08-23 baseline (`f3fad1bdb`, `full` preset, seeds 1 and 2)
 
-31 cells — the constructed families plus the whole real corpus — against all twelve arms, with
-the firing counts from a ship run of each cell. Kept so the next run can see what has gone stale.
-`buys` is what the step is worth where it acts; `costs` is what it spends elsewhere.
+91 cells, the whole gate battery plus the whole real corpus, at two seeds against all fourteen
+arms, with the firing counts from a ship run of each cell. `buys` is what the step is worth where
+it acts; `spends` is what it costs elsewhere.
 
-| step | fires | buys | costs | ratio |
+| step | fires | buys | spends | ratio |
 |---|---|---|---|---|
-| the frozen probation baseline | 38 | 36.51 | 0.83 | **44:1** |
-| the audit layer | — | 206.12 | 8.15 | **25:1** |
-| the refractory ladder | 119 | 42.61 | 2.03 | **21:1** |
-| the fresh-park shield | 48 | 22.65 | 1.37 | **17:1** |
-| a park's first audit follows its walk | 14 | 21.17 | 1.33 | **16:1** |
-| deep rungs stride wider | 430 | 15.53 | 1.11 | **14:1** |
-| the guard rail's veto | 17 | 7.53 | 0.66 | **11:1** |
-| a blind corner arms a probe | 968 | 101.60 | 18.63 | **5.5:1** |
-| a repeat confirm escalates | 6 | 18.61 | 0.00 | — |
-| a reversed confirm escalates | 16 | 9.09 | 0.00 | — |
-| deep rungs commit the walk | 100 | 0.52 | 0.48 | **1.1:1** |
-| the upper corner arms a probe | 567 | 0.64 | 3.08 | **0.2:1** |
+| the return's retest | 13 | 10.00 | 0.30 | **33:1** |
+| a repeat confirm escalates | 16 | 39.31 | 1.76 | **22:1** |
+| a park's first audit follows its walk | 26 | 60.71 | 3.00 | **20:1** |
+| the frozen probation baseline | 104 | 191.21 | 11.39 | **17:1** |
+| the audit layer | — | 921.93 | 68.37 | **13.5:1** |
+| the return and retreat cover | — | 44.12 | 4.73 | **9.3:1** |
+| a reversed confirm escalates | 43 | 71.69 | 9.41 | **7.6:1** |
+| deep rungs commit the walk | 86 | 12.48 | 2.34 | **5.3:1** |
+| a blind corner arms a probe | 551 | 300.37 | 61.07 | **4.9:1** |
+| the fresh-park shield | 103 | 60.77 | 14.71 | **4.1:1** |
+| the refractory ladder | 192 | 193.82 | 49.35 | **3.9:1** |
+| deep rungs stride wider | 678 | 76.05 | 20.56 | **3.7:1** |
+| the guard rail's veto | 14 | 0.94 | 3.36 | **0.3:1** |
+| the deleted upper corner's probe | 0 | 4.32 | 9.61 | **0.4:1**, restored |
 
-**Nothing is dead** — every step's site fires, so there are no free deletions. Ten of the twelve
-are clearly load-bearing. Two are not:
+**Nothing is dead, and nothing is inert.** `corner` reads 0 because that step no longer exists in
+the tree; every other site fires and every arm moves at least one cell, so there are no free
+deletions to argue about.
 
-- **The upper corner's probe is the one candidate.** It spends 3.08 across six cells and buys 0.64
-  across two, so it costs about five times what it returns. That is the same shape the 2026-08-15
-  study recorded ("the probe earns a little where it runs on real traces and pays 0.5–3.8pp on
-  constructed cliff and phase terrain — priced; it stays"), but the constructed half of its price
-  has moved: `balloonflip` was +3.76 then and is +0.00 now. Its keep rests on `cp_w015` −0.35, one
-  corpus cell.
-- **The walk's commitment depth reads 1.1:1** — 0.52 bought against 0.48 spent, inside the noise
-  of a single seed.
+**Both 2026-08-18 candidates are closed, in opposite directions.** Restoring the upper corner's
+probe now costs 2.2 for every 1 it returns, and 27:1 against on the 2026-08-18 cell set itself,
+so the 2026-08-21 deletion holds on the evidence that flagged it. The walk's commitment depth,
+0.23:1 at N=8 then and the other candidate for deletion, reads 5.3:1 here.
 
-**Seeded at N=8 (2026-08-18, `data/candidates8.csv`, arms rotated inside each seed, over the ten
-cells either arm moves), both get worse, not better:**
+**The guard rail's veto is the one price that inverted, and it is the worked example of why the
+battery is not the whole answer.** Re-priced on the 2026-08-18 cell set at the same seed it fell
+from 11:1 to 1.86:1, and over the full battery it reads 0.3:1. At N=8 across the eight cells
+either rail arm moves it reads 0.33:1, with 10.95 of its 12.87pp cost on `sidecliff` alone
+(−1.34 to −1.42 on all eight seeds); `cp_w015` splits by basin rather than pricing anything,
++0.26 on five seeds against −0.26 to −0.37 on three. But **every battery cell starts where the
+product starts it**, and a rail whose job is to return the window to an anchor has little to
+defend from a 1% start. Planted, it is worth **+6.3 to +6.6pp on four of four seeds** on `mainsat`
+at a 55% window (32.42–32.68 against `noveto`'s 25.90–26.65) and +0.15 to +0.52 at 70%. It stays,
+and the finding is about the instrument: **add a planted cell before running this skill again**,
+or the rail reads deletable on a battery that never asks it to work.
 
-| step | buys | costs | ratio | its value | its cost |
-|---|---|---|---|---|---|
-| the upper corner's probe | 0.25 | 2.81 | **0.09:1** | `cp_w050` 0.12, `cp_w015` 0.08, `arc_ConCat` 0.05 | `norank_rep_r6` 2.13, `phases_d050` 0.42 |
-| the walk's commitment depth | 0.71 | 3.13 | **0.23:1** | `bandtrap2` 0.54, `cp_w050` 0.16 | `phases_d050` 2.76 |
-
-So each costs four to eleven times what it returns, and the corner probe's whole remaining value is
-0.25pp spread over three corpus cells. Note that `phases_d050` dominates both costs and is a row
-§8 item 2 flags as unreadable from an unseeded mean; these are seeded and rotated, which is the
-instrument that entry prescribes, but a repair that changed only `phases_d050` would flip both
-verdicts and should be suspected first.
-
-**Neither is removed on this evidence.** The remaining step is the refutation pass: point
-`/audit-regret`'s search at ship versus the ablated arm rather than at the machine versus its
-ceiling. If a directed search cannot find a workload the step defends, that is far stronger than
-"the battery happened not to contain one"; if it finds one, the result is a new gate row instead of
-a deletion.
-
-Two findings the run produced on its own: `demoflood` no longer demonstrates the frozen probation
-baseline it is named for (`nofreeze` is bit-identical there; the evidence moved to
-`norank_rep_r6` at −15.77), and three arms that read INERT on the `quick` preset buy 20.94, 18.61
-and 2.40 on their home cells, which is cell selection rather than dead branches.
+**A step's price can also be split.** `noreturncover` removes the whole of `isReturnTest`, which
+is two things: the held-park retreat cover that predates 2026-08-21 and the widening that let it
+run without a held park. `nowidecover` scopes the cover back to a held park with the return half
+kept, and it is bit-identical on 66 of 68 rows, costing 0.07 and 0.08 on `cp_w081`. So the 44.12pp
+is the older cover and the return half, which is why the moat and `hazefloor` rows move under
+`noreturncover` while the commit that landed the return half read them bit-identical. When an arm
+removes more than one thing, split it before quoting its ratio as one step's price.
 
 ## Reporting
 

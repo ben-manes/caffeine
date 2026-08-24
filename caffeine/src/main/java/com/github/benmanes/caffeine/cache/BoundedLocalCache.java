@@ -892,10 +892,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Var int remaining = EXPIRATION_THRESHOLD;
-    remaining = expireAfterAccessEntries(now, accessOrderWindowDeque(), remaining);
+    remaining = expireAfterAccessEntries(now, accessOrderWindowDeque(), WINDOW, remaining);
     if (evicts()) {
-      remaining = expireAfterAccessEntries(now, accessOrderProbationDeque(), remaining);
-      remaining = expireAfterAccessEntries(now, accessOrderProtectedDeque(), remaining);
+      remaining = expireAfterAccessEntries(
+          now, accessOrderProbationDeque(), PROBATION, remaining);
+      remaining = expireAfterAccessEntries(
+          now, accessOrderProtectedDeque(), PROTECTED, remaining);
     }
     if (remaining == 0) {
       setDrainStatusOpaque(PROCESSING_TO_REQUIRED);
@@ -907,8 +909,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * unused budget. When exhausted the caller re-arms maintenance to process the backlog.
    */
   @GuardedBy("evictionLock")
-  int expireAfterAccessEntries(long now,
-      AccessOrderDeque<Node<K, V>> accessOrderDeque, @Var int remaining) {
+  int expireAfterAccessEntries(long now, AccessOrderDeque<Node<K, V>> accessOrderDeque,
+      int queueType, @Var int remaining) {
     var head = accessOrderDeque.peekFirst();
     if (head == null) {
       return remaining;
@@ -920,7 +922,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if ((now - node.getAccessTime()) < duration) {
         boolean stalePosition = ((last.getAccessTime() - node.getAccessTime()) < 0);
         if (stalePosition || isComputingAsync(node.getValue())) {
-          accessOrderDeque.moveToBack(node);
+          reorder(accessOrderDeque, node, queueType);
           node = next;
           continue;
         }
@@ -952,7 +954,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if ((now - node.getWriteTime()) < duration) {
         boolean stalePosition = ((last.getWriteTime() - node.getWriteTime()) < 0);
         if (stalePosition || isComputingAsync(node.getValue())) {
-          writeOrderDeque().moveToBack(node);
+          reorder(writeOrderDeque(), node);
           node = next;
           continue;
         }
@@ -1906,11 +1908,22 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     transfer(node, node.getPolicyWeight(), PROBATION, PROTECTED);
   }
 
-  /** Updates the node's location in the policy's deque. */
+  /** Updates the node's location in the policy's deque, unless it moved to a different one. */
+  static <K, V> void reorder(LinkedDeque<Node<K, V>> deque, Node<K, V> node, int queueType) {
+    // The access-order deques share the entry's link fields, so containment cannot distinguish
+    // which one holds it. A reentrant cycle that transferred the entry cannot be detected, so the
+    // scan confirms ownership rather than splicing the deque that now holds it.
+    if (node.getQueueType() == queueType) {
+      reorder(deque, node);
+    }
+  }
+
+  /** Updates the node's location in the policy's deque, unless it is no longer linked. */
   static <K, V> void reorder(LinkedDeque<Node<K, V>> deque, Node<K, V> node) {
     // An entry may be scheduled for reordering despite having been removed. This can occur when the
-    // entry was concurrently read while a writer was removing it. If the entry is no longer linked
-    // then it does not need to be processed.
+    // entry was concurrently read while a writer was removing it, or when a reentrant maintenance
+    // cycle unlinked it while an expiration scan held it. If the entry is no longer linked then it
+    // does not need to be processed.
     if (deque.contains(node)) {
       deque.moveToBack(node);
     }
@@ -4002,7 +4015,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
       } else {
         for (var item : collection) {
-          modified |= (item != null) && remove(item);
+          modified |= remove(item);
         }
       }
       return modified;

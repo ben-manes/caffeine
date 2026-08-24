@@ -71,7 +71,9 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
 
   @Override
   public float getCacheHitPercentage() {
-    long requestCount = getCacheGets();
+    long hits = getCacheHits();
+    long misses = getCacheMisses();
+    long requestCount = saturatedAdd(hits, misses);
     return (requestCount == 0) ? 0f : 100 * ((float) getCacheHits() / requestCount);
   }
 
@@ -93,8 +95,10 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
 
   @Override
   public float getCacheMissPercentage() {
-    long requestCount = getCacheGets();
-    return (requestCount == 0) ? 0f : 100 * ((float) getCacheMisses() / requestCount);
+    long hits = getCacheHits();
+    long misses = getCacheMisses();
+    long requestCount = saturatedAdd(hits, misses);
+    return (requestCount == 0) ? 0f : 100 * ((float) misses / requestCount);
   }
 
   /**
@@ -111,7 +115,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
 
   @Override
   public long getCacheGets() {
-    return getCacheHits() + getCacheMisses();
+    return saturatedAdd(getCacheHits(), getCacheMisses());
   }
 
   @Override
@@ -217,5 +221,13 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
     }
     long opsTimeMicro = TimeUnit.NANOSECONDS.toMicros(opsTimeNanos);
     return (float) opsTimeMicro / requestCount;
+  }
+
+  @SuppressWarnings("ShortCircuitBoolean")
+  private static long saturatedAdd(long a, long b) {
+    long naiveSum = a + b;
+    return ((a ^ b) < 0) | ((a ^ naiveSum) >= 0)
+        ? naiveSum
+        : Long.MAX_VALUE + ((naiveSum >>> (Long.SIZE - 1)) ^ 1);
   }
 }

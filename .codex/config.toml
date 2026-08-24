@@ -23,4 +23,6 @@ Claude frontmatter.
 
 Do not copy `.claude/rules/` into `.codex/rules/`; Codex reserves that directory for command
 permission rules written as `.rules` files.
+
+Whenever Opus or Fable models are requested, Codex should use Sol instead.
 """

@@ -119,6 +119,12 @@ FLAGS = '''
    * ahead of the retest, as before the return cover landed (the census C2 arm's inverse).
    */
   static final boolean NORETURNCOVER = VARIANT.equals("noreturncover");
+  /**
+   * nowidecover: the retreat's cover is scoped to a held park, as it was inside `isParkTest`
+   * before the return cover landed, so `noreturncover`'s price splits into the return half and
+   * the widening's.
+   */
+  static final boolean NOWIDECOVER = VARIANT.equals("nowidecover");
   /** pricedshift: the stand-down's trigger priced off the rate's scatter, clamped to [1x, 3x]. */
   static final boolean PRICEDSHIFT = VARIANT.equals("pricedshift");
   /*
@@ -423,7 +429,8 @@ EDITS = [
      "    return (retreatLeft > 0) || ((anchor.retestClaim >= 0) && !anchor.returning);\n  }\n",
      "  private boolean isReturnTest() {\n"
      "    return !NORETURNCOVER\n"
-     "        && ((retreatLeft > 0) || ((anchor.retestClaim >= 0) && !anchor.returning));\n  }\n"),
+     "        && (((retreatLeft > 0) && (!NOWIDECOVER || anchor.held))\n"
+     "            || ((anchor.retestClaim >= 0) && !anchor.returning));\n  }\n"),
 
     # the discarding stand-down's site (the isWorkloadShift one; the retest's discard in
     # retestReturn is deliberately not wired): the §8 item 4 latency-face candidate

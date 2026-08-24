@@ -266,14 +266,18 @@ worth not flagging:
   commanded direction, or out of `[0, maximum]`. That is not a defect and must not be clamped:
   the partition sum still holds, the region *weighted sizes* stay exact (they debit the same
   snapshot they credited), a negative `windowMaximum` / `mainProtectedMaximum` only makes
-  `evictFromWindow` / `demoteFromMainProtected` drain that region — a policy-quality wobble the
-  next climb walks back — and an out-of-range maximum re-clamps on the next call
-  (`min(adjustment, donor)`, the `<= 1` and `max(0, …)` guards). The invariant that matters is
+  `evictFromWindow` / `demoteFromMainProtected` drain that region, a policy-quality wobble. An
+  out-of-range cap walks back only by the weight each later transfer moves: the
+  `min(adjustment, donor)`, `<= 1` and `max(0, …)` guards stop a call from pushing it further
+  out, they do not pull it back. A swing larger than a cycle's transfer (one key's weight
+  swinging by more than the window holds) therefore suspends the split for many cycles, the
+  window cap above `maximum` idling `evictFromWindow` while `evictFromMain` still bounds the
+  total; the verdict does not turn on the duration. The invariant that matters is
   that `policyWeight` *converges*, so a region's size keeps reflecting the entries inside it;
   how a mid-flight snapshot lands on the quota does not. Clamping the quota also would not
   restore a reservation — it just relocates the inaccuracy from the maxima to the transfer
-  volume. Re-derived four times (arithmetic F4 → adversarial-input F1 → adaptivity L1/F1);
-  adjudicated NOT-A-BUG by Ben 2026-07-27.
+  volume. Re-derived five times (arithmetic F4 → adversarial-input F1 → adaptivity L1/F1 →
+  adaptivity M1, which priced the drain's duration); adjudicated NOT-A-BUG by Ben 2026-07-27.
 
 The hardening companion to this: `ReactiveClimber.samplePeriod` guards the small-cache
 `ratio` against a `0/0` NaN (when both the maximum and step size are zero). The NaN would
@@ -500,6 +504,28 @@ cycle can briefly leave expired entries counting toward `weightedSize`, so a sam
 `evictEntries` could pick a live victim over an expired one; negligible — frequency-based
 selection favors the cold expired entries and it self-corrects next cycle. Don't flag the
 cap as under-expiring, and don't remove the `PROCESSING_TO_REQUIRED` re-arm.
+
+**The expiration scans reposition through `reorder`, not `moveToBack`, because a reentrant cycle
+can move the entry they are holding.** Each scan reads its successor into a local, then calls
+`evictEntry`, which delivers the removal notification; under `executor(Runnable::run)` or the
+rejection fallback the listener runs inline, and a `RemovalListener` is permitted to modify the
+cache. A nested `maintenance()` can therefore unlink that successor or transfer it to another
+deque before the scan resumes on it. Reentrancy is not a supported style and cannot be detected
+or refused, so the requirement is only that it not corrupt: the scans confirm the entry is still
+theirs rather than repositioning it blindly. Two guards are needed, because the window,
+probation, and protected deques **share one pair of link fields on the node**, so
+`AccessOrderDeque.contains` answers "linked somewhere", not "linked here":
+- `contains` alone covers an *unlinked* entry. Without it, `unlink` sees both links null, runs
+  `first = next; last = prev`, and discards the whole deque, leaving every entry in it live in
+  `data` and in no eviction queue.
+- `getQueueType()` covers a *transferred* entry, whose links belong to another deque. Without it,
+  `unlink` splices that deque and assigns one of its nodes as this deque's `first`/`last`.
+Skipping is the correct action, not a fallback: `transfer` appends with `offerLast`, so a moved
+entry is already at its target's MRU end with nothing stale to repair. `expireAfterWriteEntries`
+needs only the `contains` half, since the write-order links are exclusive to the one write-order
+deque. Pinned by `BoundedLocalCacheTest.maintenance_recursive_accessOrder` / `_writeOrder` and
+`expireAfterAccess_transferredDuringScan`. Don't reduce either scan back to a bare `moveToBack`,
+and don't drop the queue-type argument as redundant with `contains`.
 
 The wheel budget counts **only evictions**, never the cascade (rescheduling a non-expired
 node to a finer level) — mirroring the deque caps, which count `evictEntry` but not the

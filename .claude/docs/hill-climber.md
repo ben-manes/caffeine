@@ -517,6 +517,85 @@ owns it; a confirmed family lands here and in the gate table, and its open direc
   class 6 on the plants: the C2 arrival-discard shape on the rail's return, which the 2026-08-21
   re-price found unreachable because the rail never fired across the battery. Rowed as the
   main-side mask's sentinel; the plant numbers are §8 item 4's.
+- **sidecliff** (`/audit-regret` round 8, 2026-08-22; spec `audit-regret/specs/sidecliff.json`, 96
+  samples): a zipf core (0.15·max, α 1.0) at half of traffic, a near band 300 requests apart at 8%
+  that the 2% floor already catches in full, and a far band 7,000 apart at 30% caught only from a
+  55% window. Static, dense-swept: 36.4 at 1%, a 42% shelf from 5% to 40%, 44.4 at 50%, 63.4 at
+  55–65%, 62.3 at the cap; LRU 61.6. The near band's fixed hits spread over a growing window pin
+  the average law's rest point at ~14%, sighted and worthless at the margin, so `noaudit` and
+  `reactive` sit there (41.85 / 41.80) and the audit layer is the only explorer. The calibration
+  audit arms at s7 with `AuditClock.down` still at its initial value and a stride of room below the
+  rest, walks down, loses half the near band at the floor, reverses and fails through its own base
+  (`arung` 32, `auditWait` 32), and the machine then holds the shelf for 33 samples until the
+  rung-32 up-audit crosses the step at s47 and parks at the cap at s50: 52.51 ± 0.03 on the parent
+  cell at seeds 1–8 (identical event sequences), a gap of 10.9 that is latency alone (5.32 at 192
+  samples with the prefix identical; trace seeds 11 / 13 read 8.57 / 9.02). Two sibling
+  constructions from the other lanes price the shape below the rest: `s_faderail` (a trickle-pinned
+  rest at 13%, the down walk wall-sits the floor for fourteen samples and fails at budget, 46.12 ±
+  0.06 against 55.02) and `s_sidebet` (a starvation probe finds a mid band at 28% and plants a claim
+  without a park, so the follow rule has nothing to follow and the calibration audit still opens
+  down, crashing at the mid band's cliff with a wait of 16; 45.31 ± 0.15 against 53.30). Planted at
+  the peak the product holds the cap (61.35), so the whole loss is the approach. The opening side
+  from an interior rest point is the residual §8 item 4 names on the latency face and `absolve`'s
+  entry names as a knife edge; this is its stationary witness at the opening rung, with no prelude
+  and the prize present from the first sample, filed under class 4 with that residual (the
+  signature reads class 2, walk-paced). The symmetric cells, a prize below an interior rest where
+  down-first is right (`crestpast`'s drift, `cp_w097`), are the other side of the same coin. The
+  guard rail also loses here rather than helping: `noveto` reads 60.62 against 59.28 on all eight
+  seeds, and the retest is what bounds the loss, since `noretest` takes seed 2 to 51.63
+  (2026-08-23 `/climber-minimize`, §5).
+- **jumpslide** (`/audit-regret` round 8, 2026-08-22; spec `audit-regret/specs/jumpslide.json`, 130
+  samples): a hot set of 0.5·max keys replaced wholesale every 13 samples at 52% of traffic, a band
+  5,600 requests apart at 30%, a scan at 18%. Static, dense-swept: 35.5 flat from 1% to 40%, 50.3 at
+  45%, 53.4 at 55%, 54.8 at 65%; LRU 49.5. Between jumps the hot set is main-resident and the miss
+  fraction ~0.4, so the band is caught from ~43%, a residency knife edge (catching it lengthens
+  residency, losing it shortens it) that collapses in one sample. Seeded 1–8 the machine reads
+  38.70 ± 2.79, `noaudit` 44.23 ± 4.07 and `reactive` 41.21 ± 3.64, every arm 5–11 under LRU. The
+  route: the calibration park's 32-sample expiry lands two samples after a jump, the recovery
+  stands it down and the s42 audit goes down to the floor, so the starvation ladder takes over; a
+  first-round probe confirms at 43.2% on the stride where the band is first caught, since 4× the
+  bar is first earned exactly there, at the catch region's near edge, and a seven-stride confirm is
+  under `PROBE_COMMITMENT_DEEP`, so no park rule applies and the edge position is handed to density
+  with a claim planted and nothing held. Density's rest point is below the edge (0.7–1.0% a sample
+  down); each jump lands the fresh set in the window and kicks it up 7–8%, and the drift returns it
+  to the edge as the next jump lands: seeds 4 and 8 hold that sawtooth at hr 60–62 between jumps,
+  while a landing under ~48% lets the drift cross the edge first, the band collapses, density sends
+  the window to the floor, and the blind corner re-climbs seven strides of `wh` 0 or a jump crashes
+  the climb. The rail never fires, since a one-sample collapse inflates the deviation its margin is
+  priced from, `shallowmoat`'s sentence, with or without jumps. Period 17 reads 5.72 (the calibration
+  audit goes up instead and parks audit-grade), 26 8.2, 6 / 11 18–20, 40 15.0; trace seed 11 16.7;
+  260 samples 14.8; a static uniform hot set in place of the jumps 52.27 against 61.63 (the slide
+  released there by a stand-down on the sample after a capped retreat's landing, which the retreat
+  cover does not span); planted at 60% the product holds. What the record did not have: a
+  first-round starvation confirm's verdict position is the near edge of what it found, by
+  construction, and nothing parks it; class 9's second clause feeding class 1 (§8 item 4's retention
+  sentence, the parent) and the class-5 sawtooth, with class 4 on the re-climbs. A sentinel row.
+- **lowbar** (`/audit-regret` round 8, 2026-08-22; spec `audit-regret/specs/lowbar.json`, 96
+  samples): a uniform bulk over 2·max at 42%, a band 6,000 requests apart at 34% that only a ~68%
+  window catches, a scan at 24%, and a gap-1 trickle at 0.4% that keeps the window sighted so no
+  probe arms and every seed takes the audit path. Static: 13.0 at 1% declining to 7.8 at 65%, 32.5
+  from 70% to the cap; LRU 30.6; a 9% rate. The audit's crash bar is `AUDIT_BAR_FRACTION` of the
+  rate frozen at the arm where that is under the 5pp cap, 1.37pp here, and the calibration walk's
+  cumulative drawdown along the bulk's decline crosses it at the tenth stride, one short of the
+  catch point; the tolerant retry's three sub-bar samples run out at 44%, the rung-32 walk's at
+  63% with its next stride on the plateau. Seeded 1–8: 13.40 ± 7.48, seven seeds pinned at
+  11.3–12.1 under the 13.0 start (three crashed walks' duty) and one at 26.3 whose tenth stride
+  cleared the threshold by 0.07pp where seed 1's missed it by 0.20 (trace seed 11: 26.30 / 11.61);
+  `noaudit` 12.72 and `reactive` 12.49 are the terrain's floor at every window short of the catch
+  point, the same loss as the 17pp under LRU. With the crash fraction at 0.25, or the absolute 5pp
+  bar, three of four seeds arrive at the first walk (26.3) and the fourth takes the reversal exit.
+  The moat family's mechanism (the abort at the −bar contour one stride short of the far bank, the
+  persistence a stride short on the retry) at a fraction-bar dose: the bar set by the rate rather
+  than the terrain, and a sub-bar region wider than the persistence. `s_nearbasin` is the same
+  exit at a 16% rate behind a calibration park (about 7 of its 23; the crossing seeds clear the
+  level test by 0.02–0.03pp, and `nocal` recovers only +0.35 because its own first walk crashes on
+  the same bar). The first measured cell on which the fraction's level is not a tie (the record
+  holds it inert at 0.10 and 0.25 on the sub-third holdout and on `arc_S3`'s plateau); its cost
+  side is unmeasured where it binds (the `lowmix` rows, `arc_S3` and the thin-signal floors,
+  `cp_w050`, a fresh sub-third holdout), and the carve-out the cell resembles is closed (the
+  2026-08-05 split), its deviation floor dead. Narrow by construction: 5,500 apart catches at the
+  tenth stride, 6,600 passes the cap; at 16384 the band fits at 40% and the cell reads 4.8. Class
+  4 (reach), the walk's exit pricing; a sentinel row beside the moat rows.
 
 ## 4. The shipped design (the probe machine, >4096)
 
@@ -776,7 +855,7 @@ H4-C1/F2 repairs restored; keep new writes inside their owner:
 |---|---|---|
 | Observation | `sample` (a `Sample`: `hits`, `misses`, `windowHits`, `probationHits`, `previousHitRate`) | the counters are zeroed at sample close; `previousHitRate` deliberately keeps a different lifetime, since it is the memory ACROSS samples that the reactive climber's direction and the walk's bold driver compare against — `close(hitRate)` carries it forward while zeroing the rest, and only `reset()` (a resize) discards it. `WindowClimber` keeps thin `recordHit`/`recordMiss`/`resetSample` delegates because `BoundedLocalCache` calls them on the read and write paths |
 | The active walk | `walk` (a `Walk`, null while none is in flight: `ladder`, `isAudit`, `down`, `baseWindow`, `baseHitRate`, `baseSmoothedRate`, `baseProbationDensity`, `samples`, `belowBarStreak`, `aboveStreak`, `beatBase`), `undoRemaining` | one walk at a time. Since 2026-08-02 it is an object rather than eleven flat fields, so "dead state while not probing" is the absent object rather than a comment, and a reader must hold a walk to ask it anything — `armProbe` is the complete constructor, `endWalk` clears the field, and the router keeps the ended walk in a local because the undo that prices it still reads the bases. The bases are `final`: frozen-at-arm is the property the verdict studies keep re-deriving (§4's "why frozen"), so the compiler now holds it. `walk.ladder` is the arming layer's ledger, which makes "an ending may only deepen the machine that produced it" a reference rather than a lookup; `refractoryLeft` is the starvation refractory alone and belongs to the row below |
-| Starvation retry | `starvation` (a `Ladder`: `rung`, `crashStreak`), `refractoryLeft` | moved by starvation endings only (an audit undo re-imposes `refractoryLeft` and an audit confirm cheapens `starvation.rung` — the two journaled bridge writes, spelled out at their sites rather than hidden behind `Ladder`'s methods) |
+| Starvation retry | `starvation` (a `Ladder`: `rung`, `crashStreak`), `refractoryLeft` | moved by starvation endings only (an audit confirm cheapens `starvation.rung` and zeroes `refractoryLeft`, the one journaled bridge write, spelled out at its site rather than hidden behind `Ladder`'s methods; an audit's undo has left the refractory alone since 2026-08-16) |
 | Audit retry + schedule | `audit` (a `Ladder`), `auditClock` (an `AuditClock`: `down`, `waitSamples`, `stillSamples`, `lastWindow`) | moved by audit endings and the position-stillness clock only. The clock owns `tick`/`isDue`/`restart`/`reset`, so the stillness rule (a moving sample **decays** the run, it does not zero it) lives with the counter it governs rather than in a climber method. `reset` deliberately leaves `down` standing — it alternates across audits for coverage and a resize has no opinion about which side to explore next, which is why a resize did not clear it before either. `rescheduleAudit` stays on the climber: it reads the ladder's rung and writes the clock, so it belongs to neither alone |
 | Goal guard | `anchor` (an `Anchor`: `window`, `rate`, `held`, `freshLeft`, `returning`, `returnLeft`, `shortfallStreak`), `rates` (a `Rates`: `smoothed`, `deviation`) | anchor/park/veto authority and the rate references. `Anchor` is the memory *and* its defense in one object because the layer's three invariants run between those parts, and it now holds them by construction rather than by assertion: a shield lives and dies with its park (`park`/`hold`/`release` are the only writers — an audit's confirm arms a shield, a rail veto holds without arming or spending one, since the shield's clock belongs to the confirm that armed it), a park defends only a planted anchor (`discard` takes the hold with it), and a return implies the park that follows it (`beginReturn` arms both). `isAt`/`isAwayFrom` give the band test one definition instead of three inline copies, and they are deliberately not each other's negation — an unplanted anchor is neither at nor away, and there is no claim to veto against. `Rates` owns the EMA pair and the two bars priced off it — `noiseBand()` is the three-deviation width, `vetoMargin()` is that floored at `VETO_MARGIN_MIN` — so the rail's margin and the starvation probe's walk-interior bar read one definition instead of recomputing `VETO_MARGIN_SCALE * deviation` apiece. The deviation is read LIVE, and the audit's confirming streak is deliberately not priced off it; both notes live on `noiseBand()` itself. A stand-down that discards the claim re-seeds the pair (2026-08-03, below): the event that invalidates a claim invalidates the reference the claim would be re-planted from, and the two are one layer's state |
 | Motion out | `step` (a `Step`: `size`), `reactive` and `density` (a `ReactiveClimber`/`DensityClimber`, each holding that same `Step`), `adjustment` | the single per-sample command. `step.size` and `adjustment` are NOT one object despite both being written once per completed sample: `adjustment` is drained by `BoundedLocalCache` across maintenance cycles as the transfer carry-over, so it changes at the cycle rate while the step changes at the sample rate. Both tiers write `step.size` — they are alternatives selected by the maximum, never concurrent, and `resized` re-seeds it — which is why each law holds a reference to the shared `Step` rather than a copy of its own |
@@ -933,6 +1012,40 @@ by construction — victims are always sketch-hotter — and the equilibrium-gat
 and four honest-window-hits verdict forms (absolute / vs-main-average / vs-own-baseline /
 vs-baseline-with-bar-floor), each trading a distinct family — the verdict-design tradeoff surface
 in the study report §6.1. The one survivor SHIPPED: the rung-scaled walk stride (§4.3).
+
+### Priced by the 2026-08-23 `/climber-minimize` full battery (measured; the local climber-minimize-2026-08-23 workspace)
+
+Every step against the whole battery, 91 cells at seeds 1 and 2, beside the firing counts from a
+ship run of each cell. Nothing is dead: `corner` reads 0 because that step was deleted, and every
+other site fires. What each step buys where it acts, against what it spends elsewhere: the
+retest 33:1, a repeat confirm's escalation 22:1, a park's first audit following its walk 20:1,
+the frozen probation baseline 17:1, the audit layer 13.5:1, the return and retreat cover 9.3:1, a
+reversed confirm's escalation 7.6:1, the walk's commitment depth 5.3:1, a blind corner's probe
+4.9:1, the fresh-park shield 4.1:1, the refractory ladder 3.9:1, the rung-scaled stride 3.7:1.
+
+Both 2026-08-18 candidates are closed. Restoring the deleted upper-corner probe (`cornerprobe`)
+costs 9.61 across 18 rows against 4.32 across 5, and 27:1 against on the 2026-08-18 cell set
+itself, so the deletion holds on the evidence that flagged it. The walk's commitment depth read
+0.23:1 at N=8 then and 5.3:1 now.
+
+**The guard rail's veto is the one price that inverted, and the battery cannot decide it.** On the
+2026-08-18 cell set at the same seed it fell from 11:1 to 1.86:1; over the whole battery it reads
+0.28:1, and at N=8 across the eight cells either rail arm moves it reads 0.33:1 with 10.95 of its
+12.87pp cost on `sidecliff` alone (−1.34 to −1.42 on all eight seeds, while `cp_w015` splits by
+basin, +0.26 on five seeds against −0.26 to −0.37 on three). Every battery cell starts where the
+product starts it, and a rail that returns the window to an anchor has little to defend from a 1%
+start. Planted, it is worth **+6.3 to +6.6pp on four of four seeds** on `mainsat` at a 55% window
+(32.42–32.68 against `noveto`'s 25.90–26.65) and +0.15 to +0.52 at 70%. The step stays and the
+`mainsat` plants are what holds it; without a planted cell the battery reads it deletable. On
+`sidecliff` the rail is a net cost on every seed and the retest is what bounds it, since
+`noretest` there takes seed 2 from 59.25 to 51.63.
+
+**The retreat cover's widening is real and small.** The 2026-08-21 commit moved the retreat's
+cover out of `isParkTest`, so it now runs without a held park. `nowidecover` (the cover scoped
+back to a held park, the return half kept) is bit-identical on 66 of 68 rows and costs 0.07 and
+0.08 on `cp_w081`'s two seeds. So `noreturncover`'s 44.12pp belongs to the held-park retreat cover
+and the return half rather than to the widening, which is why the moat and `hazefloor` rows move
+under that arm while the commit landing the return half read them bit-identical.
 
 ### Killed by the 2026-08-22 stand-down re-arm round (measured; the local climber-rearm workspace, §7's entry has the tree and the files)
 
@@ -1208,8 +1321,10 @@ rather than a rule for this shape.
   collapse). The fixed trigger's churn on noisy cells is inert on the corpus and protective on
   cp_w081, where a persisting anchor lets the rail veto on slow weather. A trade; do not re-derive
   the level, and do not read the C3 churn as a defect without this cell.
-- **`nocorner`** is a diagnostic, not an arm: it prices the upper corner's probe (+2.3 rep_r6,
-  +3.8 balloonflip against −0.2 on cp_w015 and arc_ConCat) and the probe stays.
+- **`nocorner`** was the diagnostic that priced the upper corner's probe here (+2.3 rep_r6, +3.8
+  balloonflip against −0.2 on cp_w015 and arc_ConCat, read then as "the probe stays"). The probe
+  was deleted 2026-08-21 and the arm with it; `cornerprobe` restores it, and the 2026-08-23
+  battery reads the restoration 2.2:1 against.
 - **`deferreward`** (the wedge pricing's next-sample half): a redistribution of `rep_r6`'s seeds
   (+3.0 mean, one seed −20.9) and inert or slightly negative elsewhere (`phases_d050` −0.49); the
   ladder's doubling is coarse against a 91-sample trace, so any faster escalation wins the seeds
@@ -1964,7 +2079,8 @@ probe rate). One fix ships for all three, four measured pieces: **cadence** (a C
 ending — lone or streak-escalated — never takes the audit clock's failure doubling),
 **ledger** (each layer counts crashes and escalates on its own; audit endings leave the
 starvation rung alone), **bridge** (the two neutral cross-writes stay: an audit confirm still
-resets the starvation ladder, an audit undo re-imposes the un-inflated refractory), and
+resets the starvation ladder, an audit undo re-imposes the un-inflated refractory; the undo
+half was retired on 2026-08-16, see §4), and
 **escalated persistence** (`AUDIT_CRASH_PERSISTENCE` = 3: a first audit crash aborts on its
 first below-bar sample — every-walk tolerance failed the mixture/mixmod bars — while the
 RETRY of a crashing equilibrium tolerates two below-bar samples, holding its committed
@@ -3851,6 +3967,48 @@ row's best recorded value and is bought with `slowswap_step` −9.2, `absolve_p8
 lure repairs exist to hold. The latency face's residual is named: the alternation's side choice
 from an interior rest point, and at the base's alignment the retreat cover.
 
+**2026-08-22 (`/audit-regret` round 8, the skill's eighth run; report in the fable-5 audit tree).**
+Two proposal lanes on Opus (seven blind, eight sighted with the three directed slots), a third
+lane on the session model (three specs), 18 screen rows, 13 candidates, three findings evaluated
+on the session model, each standing with corrections. **`sidecliff`** (§3, a sentinel row): the
+calibration audit's opening side from an interior rest point, `AuditClock.down` at its initial
+value with a stride of room below, so the first audit walks down, fails or crashes, and the prize
+above waits out the rung-32 wait (or a crash's 16): 52.51 ± 0.03 against 63.4 (`noaudit` 41.85),
+deterministic, with two sibling constructions (`s_faderail`'s fourteen-sample wall-sit at the
+floor; `s_sidebet`'s crash at a mid band's cliff after a probe confirm that planted a claim without
+a park, so the follow rule had nothing to follow). The evaluator placed it: the residual §8 item 4
+names and `absolve`'s knife edge, with no rowed cell where it was the opening move and the whole
+loss; the stationary witness and price rather than a new family, filed under class 4 with the
+residual (the signature reads class 2). **`jumpslide`** (§3, a sentinel row): a first-round
+starvation confirm's verdict position is the near edge of the band's catch region by
+construction, nothing parks a seven-stride confirm, and density's rest point below the edge slides
+it off inside a jump period: 38.70 ± 2.79 against 54.8 (dense), every arm under LRU 49.5. The
+evaluator refuted the round's "the jumps disarm the rail" (the rail is blind to a one-sample
+collapse with or without jumps, `shallowmoat`'s sentence, and the slide itself carries no
+shortfall) and added the kick: each jump strides the window up 7–8% and the drift returns it to
+the edge, a sawtooth two seeds hold at hr 60–62 between jumps; the period-13 magnitude is the
+worst alignment of the calibration park's expiry with the jump phase (period 17 reads 5.7, the
+calibration audit parking the peak audit-grade). Class 9's second clause feeding item 4's
+retention sentence and the class-5 sawtooth. **`lowbar`** (§3, a sentinel row): the moat family at
+a fraction-bar dose, the audit's crash bar 0.15 of a 9% rate cutting a ten-stride approach one
+stride short of a +23pp step on seven seeds of eight (the eighth clears the threshold by 0.07pp):
+13.40 ± 7.48 against 32.5, 17 under LRU, `noaudit` 12.72; with the fraction at 0.25, or the
+absolute bar, three of four seeds arrive. The evaluator withdrew the round's framing (the §8
+carve-out is closed and its floor dead; the graveyard's widening kills never touched the
+fraction's level, which the record holds inert on the sub-third holdout) and named what the cell
+is: the first on which 0.15 and 0.25 separate, with the level's cost side unmeasured where it
+binds. `s_nearbasin` books about 7 of its 23 here behind `regimeramp`'s calibration park. Dose
+notes: `b_hotcore` (parkveil's discard cycle on mainsat's mask, 45.4 against 56.3, `noaudit`
+34.5), `b_hairline` (crestpast at a sharper dose; the 2% floor covers its ridge at 16384),
+`b_razor` (the calibration park a stride under a ridge), `b_chase` (H4-C1's pulse width just over
+the persistence), `s_undoscar` (crestpast's drift with every down audit crashing), `f_slowfade`
+(`f_lowmoat`'s duty). The class-8 pair met its premise at the deciding field for the first time in
+six rounds (`s_pair_a`/`s_pair_b`: identical `win`, `hr`, `wh`, `mh` and `ema` at the arm, the
+divergence during the walk) and showed no class-8 failure: the decision is the same and right in
+both cells, and the trap half is decided by the fraction bar. Class 7: three constructions, no
+deficit outside its scatter, still unwitnessed. Nothing was fixed; the promotion edits are staged
+for review.
+
 ## 7.1 Release readiness (measured 2026-08-05; the whole battery anchored)
 
 Every gate row now has an LRU and a static-ceiling anchor
@@ -4028,6 +4186,21 @@ breaks the plants' cycle (70% 30.06 → 35.30, 55% 26.13 → 35.08 at 160 sample
 mechanism is closed, but release is **HOLD**: the later repeated-real-trace check is neutral at
 1× and loses 0.60 / 0.43pp at 2× / 4×, with two w097 seeds down about 1.8–2.0pp.
 
+*Round 8 (2026-08-22) added a witness to each half.* The latency face's residual, the alternation's
+side choice from an interior rest point, now has a stationary witness at the opening rung:
+`sidecliff` (§3), where `AuditClock.down` is still at its initial value when the calibration audit
+arms from a rest with a stride of room below, the down walk fails or crashes, and the prize above
+waits out the rung-32 wait (or a crash's 16), 25–45 samples on every seed, deterministic, with the
+prize present from the first sample; a starvation probe's confirm does not change the side, since
+it plants a claim without a park and the follow rule needs a held park. The retention half's
+sentence ("density's rest point at or below the cliff after a floor walk") has a witness from the
+starvation side, `jumpslide` (§3): a first-round probe's confirm is at the near edge of what it
+found by construction, nothing parks a seven-stride confirm, and density slides it off within a
+jump period; the rail is blind to the one-sample collapse with or without the jumps. Any repair to
+the opening side is priced against the symmetric cells where down-first is right (`crestpast`'s
+drift, `cp_w097`) and against `absolve`'s knife edge; any park for a first-round confirm is priced
+against the thin-signal floors, where the first-round exits are cheap by design (§4 item 5).
+
 **5. The ladder's memory and the calibration level test — BOTH LANDED 2026-08-17 (§7's
 entry).** The escape's retention and the audit's direction after a step confirm fold into item
 4; the verdict's overshoot half became item 7's repair. The family's open cells
@@ -4097,6 +4270,15 @@ that is actually earning — nothing measured has all three, though that none ex
 established. Pick it up when such a cell appears, and measure it against the rows that killed the
 widening family (`mixnoise_a10`, `crashnoise_a12`, `whisper_mod_a12`) plus a fresh holdout: a floor
 and a cap share one function, so a mistake there reads as the family that is already dead.
+
+*Round 8 (2026-08-22): the cell appeared, and it does not land here.* `lowbar` (§3) has all three
+(a 9% rate, a 1.4pp cumulative drawdown over ten strides that recovers +23pp at the eleventh, the
+audit layer the only explorer), but the deviation at its arm is 0.17pp against a 1.37pp bar, so
+the floor above would not move it; the knob it prices is the crash fraction's level, 0.15 against
+0.25 (+14 on three of four seeds, the first cell on which the two separate), whose cost side is
+unmeasured where it binds (the `lowmix` rows, `arc_S3` and the thin-signal floors, `cp_w050`'s
+low-traffic-sample crash, a fresh sub-third holdout; the three rows named above are inert at
+their 60% rates). A level move is a new candidate in the exit-bar family, priced there first.
 
 **One process note.** Three of the four defects the 2026-08-04 anchor round found were failures
 of *measurement*, not of code: a bar referenced to LRU with 27pp of slack (`balloonflip`), an

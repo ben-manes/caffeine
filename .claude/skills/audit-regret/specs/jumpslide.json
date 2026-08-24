@@ -1,0 +1,13 @@
+{
+  "max": 8192,
+  "seed": 7,
+  "repeat": 1,
+  "members": {
+    "roll": {"kind": "rotation", "n": 0.50, "step": 0.50, "period": 13},
+    "band": {"kind": "pairs",    "dreq": 5600, "k": 2},
+    "cold": {"kind": "scan"}
+  },
+  "segments": [
+    {"samples": 130, "shares": {"roll": 0.52, "band": 0.30, "cold": 0.18}}
+  ]
+}

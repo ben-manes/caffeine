@@ -28,7 +28,15 @@ import real as REAL
 # deleted 2026-08-21, so its summary sign reads inverted (the arm "helping" means the deletion
 # was wrong on that cell).
 ARMS = ["cornerprobe", "nostarve", "noladder", "noscale", "nocommit", "norepeat",
-        "nowedge", "nofollow", "noshield", "noveto", "noretest", "nofreeze", "noaudit"]
+        "nowedge", "nofollow", "noshield", "noveto", "noretest", "noreturncover", "nofreeze",
+        "noaudit"]
+
+# The firing counter each arm's step reports under ship. An arm absent here has no counter, so
+# its verdict rests on the deltas alone: `cornerprobe` restores a deleted step, whose site cannot
+# fire in the tree being measured, and `noreturncover` and `noaudit` remove more than one site.
+STEP_OF = {"nostarve": "starve", "noladder": "ladder", "noscale": "scale", "nocommit": "commit",
+           "norepeat": "repeat", "nowedge": "wedge", "nofollow": "follow", "noshield": "shield",
+           "noveto": "veto", "noretest": "retest", "nofreeze": "freeze"}
 
 # Cell presets. `quick` is a smoke pass over the families most mechanisms touch; `standard`
 # adds the rest of the constructed families and the whole real corpus, which is what a
@@ -103,8 +111,8 @@ def summarize(rows, arms, fired=None, complete=False):
         worst = min(down, key=lambda x: x[1]) if down else ("", 0.0)
         # the ratio is the mechanism's, not the ablation's: what the step buys per unit it
         # spends, the way the audit layer's own 21:1 is quoted
-        step = a[2:]  # the arms are named `no<step>`
-        hits = None if (fired is None) else fired.get(step)
+        step = STEP_OF.get(a)
+        hits = None if (fired is None or step is None) else fired.get(step)
         if same == len(deltas):
             if (hits == 0) and complete:
                 verdict = "DEAD — its site never fired on any cell; prove it unreachable, then delete"

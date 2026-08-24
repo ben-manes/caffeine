@@ -312,7 +312,6 @@ testing.suites {
     }
     targets.configureEach {
       testTask.configure {
-        javaLauncher.unset()
         incompatibleWithConfigurationCache()
         maxParallelForks = Runtime.getRuntime().availableProcessors()
         val isCompatibleJdk = java.toolchain.languageVersion.map { it.asInt() <= 25 }

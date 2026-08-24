@@ -473,6 +473,11 @@
     <Method name="onRemoval"/>
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
   </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean"/>
+    <Method name="saturatedAdd"/>
+    <Bug pattern="NS_NON_SHORT_CIRCUIT"/>
+  </Match>
 
   <!-- Simulator -->
   <Match>

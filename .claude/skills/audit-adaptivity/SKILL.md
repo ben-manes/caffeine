@@ -102,13 +102,14 @@ The 38 constants live with the mechanism each tunes, so a knob names its owner:
    or a sequence capped by `QUEUE_TRANSFER_THRESHOLD`, drift the sum?
 2. **Non-negative maxima**: can `windowMaximum` or `mainProtectedMaximum` go negative
    — a quota larger than the donor region, or repeated `decreaseWindow` at the floor?
-   EXCEPTION (adjudicated 2026-07, F1): a transiently negative `policyWeight` — the
-   sanctioned telescoping race, an out-of-order UpdateTask drain — can over-shift the
-   caps beyond the commanded adjustment, even past these bounds. Tolerated by design:
-   the caps are policy targets (eviction is driven by the telescoping
-   `weightedSize`/`maximum`), the next completed sample overwrites the carry-over, and
-   the below-floor lift is not step-capped, so the split coerces back. Report cap drift
-   only with a mechanism that fails to coerce.
+   EXCEPTION (adjudicated 2026-07, F1; duration priced 2026-08-22, M1): a transiently
+   negative `policyWeight` — the sanctioned telescoping race, an out-of-order UpdateTask
+   drain — can over-shift the caps beyond the commanded adjustment, even past these
+   bounds. Tolerated by design: the caps are policy targets (eviction is driven by the
+   telescoping `weightedSize`/`maximum`), and they walk back only by the weight each later
+   transfer moves, so a swing larger than a cycle's transfer suspends the split for many
+   cycles with the total still bounded. Report cap drift only with a mechanism that never
+   walks back.
 3. **Quota accounting**: in `increaseWindow`/`decreaseWindow` the `quota` is decremented
    per transferred node by `policyWeight`. With weighted entries, can `quota` underflow,
    skip/over-run the loop, or transfer the wrong count? Does the
@@ -146,9 +147,11 @@ The 38 constants live with the mechanism each tunes, so a knob names its owner:
    (H4-C1), and later a non-crash ending (budget expiry, reversal-through-base) still cleared
    the **other** layer's streak, which disarmed that layer's escalation and its
    `AUDIT_CRASH_PERSISTENCE` tolerance — so an interleaved blind corner reached around the first
-   fix. Only two cross-writes are sanctioned, both journaled: an audit confirm resets the
-   starvation ladder (and clears its streak with it), and an audit undo re-imposes the starvation
-   machine's own refractory. Anything else is a finding. Checkable products the oracles already
+   fix. One cross-write is sanctioned, journaled: an audit confirm rewards the starvation
+   ladder (`starvation.reward()`) and zeroes its refractory. An audit's undo leaves the
+   refractory alone (since 2026-08-16, pinned by
+   `undoProbe_auditRetreat_leavesTheStarvationRefractoryAlone`). Anything else is a finding.
+   Checkable products the oracles already
    assert, and which a new invariant should join: `anchor.freshLeft > 0 ⇒ anchor.held`,
    `anchor.held ⇒ anchor.isPlanted()`, `walk != null ⇒ undoRemaining == 0`, and
    `auditClock.waitSamples > PROBE_BACKOFF_MAX ⇒ audit.rung == PROBE_BACKOFF_MAX` (the ratchet as

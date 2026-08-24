@@ -28,6 +28,8 @@ import org.openjdk.jcstress.annotations.JCStressTest;
 import org.openjdk.jcstress.annotations.Outcome;
 import org.openjdk.jcstress.annotations.State;
 import org.openjdk.jcstress.infra.results.II_Result;
+import org.openjdk.jcstress.infra.results.IL_Result;
+import org.openjdk.jcstress.infra.results.LI_Result;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -75,8 +77,8 @@ public final class ExpiredReadTear {
     }
 
     @Actor
-    public void reader(II_Result r) {
-      r.r1 = (int) TIME.getOpaque(this);
+    public void reader(LI_Result r) {
+      r.r1 = (long) TIME.getOpaque(this);
       VarHandle.loadLoadFence();
       r.r2 = (int) VALUE.getAcquire(this);
     }
@@ -105,9 +107,9 @@ public final class ExpiredReadTear {
     }
 
     @Actor
-    public void reader(II_Result r) {
+    public void reader(IL_Result r) {
       r.r1 = (int) VALUE.getAcquire(this);
-      r.r2 = (int) TIME.getOpaque(this);
+      r.r2 = (long) TIME.getOpaque(this);
     }
   }
 

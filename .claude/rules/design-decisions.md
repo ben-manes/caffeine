@@ -206,8 +206,9 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   stores the unfulfilled remainder back, and the sub-sample early-return preserves it so the
   transfer drains across cycles. Don't flag "adjustment re-applied without a fresh sample." The
   `quota` is a soft knob for a probabilistic guess, not an accounting invariant — a transient
-  negative `policyWeight` can push a region cap out of `[0, maximum]` for a cycle, which re-clamps
-  on the next call. Don't clamp it (adjudicated after four re-derivations). Read the doc.
+  negative `policyWeight` can push a region cap out of `[0, maximum]`, and it walks back only by
+  the weight later transfers move, so a large swing suspends the split for many cycles. Don't
+  clamp it, and don't re-price the duration (adjudicated after five re-derivations). Read the doc.
 - **Async load completions are quiet updates** — `replace(..., quietly= true)` finalizes
   weight/expiry but skips the sketch increment and the climber's hit counters, because a completion
   is bookkeeping rather than a usage (loud completions measurably skewed admission and the density

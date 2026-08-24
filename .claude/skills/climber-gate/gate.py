@@ -152,6 +152,19 @@ CELLS = [
     # rounds. noaudit pins the floor; the audit layer recovers it through the calibration park and
     # the walk's confirm on the peak (56% on six seeds, 69% on two). Adjudicate on the N=8 mean.
     ("mainsat", "mainsat_8192.lirs", 8192, 8),
+    # /audit-regret round 8: the calibration audit's opening side from an interior rest point
+    # (AuditClock.down is true before any confirm and the rest has a stride of room below), the
+    # stationary witness for section 8 item 4's latency residual; deterministic at 8 seeds.
+    ("sidecliff", "sidecliff_8192.lirs", 8192, 2),
+    # /audit-regret round 8: a first-round starvation confirm lands on the near edge of a band's
+    # catch region by construction, plants no park, and density's rest point below the edge slides
+    # it off; a working-set jump every 13 samples kicks and crashes the cycle. Adjudicate on the
+    # N=8 mean (seeds 4 and 8 hold a sawtooth, the rest collapse).
+    ("jumpslide", "jumpslide_8192.lirs", 8192, 8),
+    # /audit-regret round 8: the moat family at a fraction-bar dose (the audit's crash bar 0.15 of
+    # a 9% rate cuts a ten-stride approach one stride short of a +23pp step); bimodal on the tenth
+    # stride's sample against the bar, adjudicate on the N=8 mean.
+    ("lowbar", "lowbar_8192.lirs", 8192, 8),
 ]
 
 

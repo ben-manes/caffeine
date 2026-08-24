@@ -44,6 +44,8 @@ import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_ACCE
 import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_WRITE;
 import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
+import static com.github.benmanes.caffeine.cache.Node.PROBATION;
+import static com.github.benmanes.caffeine.cache.Node.PROTECTED;
 import static com.github.benmanes.caffeine.cache.Node.WINDOW;
 import static com.github.benmanes.caffeine.cache.RemovalCause.COLLECTED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
@@ -74,6 +76,7 @@ import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Locale.US;
@@ -131,6 +134,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -405,6 +409,134 @@ final class BoundedLocalCacheTest {
 
     assertThat(removed).containsExactly(1, 2, 3, 4, 5, 6);
     assertThat(cache.estimatedSize()).isEqualTo(0);
+  }
+
+  @Test
+  void maintenance_recursive_accessOrder() {
+    var cache = scanWithReentrantRemoval(builder ->
+        builder.expireAfterAccess(Duration.ofMinutes(1)));
+    assertNoOrphans(cache, cache.accessOrderWindowDeque());
+  }
+
+  @Test
+  void maintenance_recursive_writeOrder() {
+    var cache = scanWithReentrantRemoval(builder ->
+        builder.expireAfterWrite(Duration.ofMinutes(1)));
+    assertNoOrphans(cache, cache.writeOrderDeque());
+  }
+
+  /**
+   * Runs a maintenance cycle over an expiring async cache whose removal listener re-enters to
+   * invalidate the entry that the expiration scan is holding in a local. The nested cycle unlinks
+   * that node, so the scan resumes on an entry that is no longer in the queue it is walking.
+   */
+  private static BoundedLocalCache<Integer, CompletableFuture<Integer>> scanWithReentrantRemoval(
+      UnaryOperator<Caffeine<Object, Object>> expiry) {
+    var ticker = new FakeTicker();
+    var reentrant = new AtomicBoolean();
+    var self = new AtomicReference<AsyncCache<Integer, Integer>>();
+
+    AsyncCache<Integer, Integer> cache = expiry
+        .apply(Caffeine.newBuilder().executor(Runnable::run).ticker(ticker::read))
+        .removalListener((key, value, cause) -> {
+          if (reentrant.compareAndSet(false, true)) {
+            var victim = requireNonNull(self.get()).synchronous();
+            victim.invalidate(2);
+            victim.cleanUp();
+          }
+        }).buildAsync();
+    self.set(cache);
+
+    // An in-flight future is stamped with the async sentinel, so it never expires and the scan
+    // reaches it through the reorder branch instead of evicting it.
+    cache.put(1, CompletableFuture.completedFuture(1));
+    for (int i = 2; i <= 6; i++) {
+      cache.put(i, new CompletableFuture<>());
+    }
+
+    ticker.advance(Duration.ofMinutes(2));
+    cache.synchronous().cleanUp();
+    return asBoundedLocalCache(cache);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
+      expireAfterAccess = Expire.ONE_MINUTE, removalListener = Listener.MOCKITO)
+  void expireAfterAccess_transferredDuringScan(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.setWindowMaximum(context.maximumSize());
+    for (int i = 0; i < 6; i++) {
+      var value = cache.put(Int.valueOf(i), Int.valueOf(i));
+      assertThat(value).isNull();
+    }
+    cache.cleanUp();
+
+    // Stage a non-empty probation space so that a node transferred into it during the scan has
+    // live links, which is what makes contains() report it as still being in the window queue.
+    var window = cache.accessOrderWindowDeque();
+    var probation = cache.accessOrderProbationDeque();
+    for (int i = 0; i < 2; i++) {
+      var node = requireNonNull(window.peekLast());
+      assertThat(window.remove(node)).isTrue();
+      assertThat(probation.offerLast(node)).isTrue();
+      cache.setWindowWeightedSize(cache.windowWeightedSize() - node.getPolicyWeight());
+      node.makeMainProbation();
+    }
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    long now = cache.expirationTicker().read();
+    for (var node : probation) {
+      node.setAccessTime(now);
+    }
+    // A read whose buffer record was dropped leaves a fresh timestamp at a stale position, which
+    // is the condition the scan's reorder branch exists to repair.
+    var head = requireNonNull(window.peekFirst());
+    requireNonNull(head.getNextInAccessOrder()).setAccessTime(now);
+
+    // Evicting the head delivers the notification inline, and the re-entrant maintenance transfers
+    // the successor that the scan is holding out of the window queue and into probation.
+    doAnswer(invocation -> {
+      cache.setWindowMaximum(0);
+      cache.cleanUp();
+      return null;
+    }).when(context.removalListener()).onRemoval(any(), any(), any());
+
+    cache.cleanUp();
+    assertQueuesConsistent(cache);
+  }
+
+  /** Asserts that each access-order queue's endpoints bound its own chain of matching entries. */
+  private static <K, V> void assertQueuesConsistent(BoundedLocalCache<K, V> cache) {
+    assertQueueConsistent("window", cache.accessOrderWindowDeque(), WINDOW);
+    assertQueueConsistent("probation", cache.accessOrderProbationDeque(), PROBATION);
+    assertQueueConsistent("protected", cache.accessOrderProtectedDeque(), PROTECTED);
+  }
+
+  private static <K, V> void assertQueueConsistent(
+      String name, LinkedDeque<Node<K, V>> deque, int queueType) {
+    @Var Node<K, V> tail = null;
+    for (var node = deque.peekFirst(); node != null; node = node.getNextInAccessOrder()) {
+      assertWithMessage("%s holds an entry belonging to another queue", name)
+          .that(node.getQueueType()).isEqualTo(queueType);
+      tail = node;
+    }
+    assertWithMessage("%s: peekLast() is not the end of the chain from peekFirst()", name)
+        .that(tail).isSameInstanceAs(deque.peekLast());
+  }
+
+  /** Asserts that every live entry is still linked into the queue that the expiration scan walks. */
+  private static <K, V> void assertNoOrphans(
+      BoundedLocalCache<K, V> cache, LinkedDeque<Node<K, V>> deque) {
+    @Var long linked = 0;
+    for (var node : deque) {
+      if (node.isAlive()) {
+        linked++;
+      }
+    }
+    long alive = cache.data.values().stream().filter(Node::isAlive).count();
+    assertWithMessage("live entries orphaned from the expiration queue")
+        .that(linked).isEqualTo(alive);
   }
 
   @Test

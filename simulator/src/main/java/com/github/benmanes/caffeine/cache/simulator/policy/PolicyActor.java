@@ -32,6 +32,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
  */
 public final class PolicyActor {
   private final CompletableFuture<@Nullable Void> completed;
+  private final PolicyStats policyStats;
   private final Semaphore semaphore;
   private final Policy policy;
   private final Thread parent;
@@ -48,9 +49,11 @@ public final class PolicyActor {
   public PolicyActor(Thread parent, Policy policy, BasicSettings settings) {
     this.semaphore = new Semaphore(settings.actor().mailboxSize());
     this.future = CompletableFuture.completedFuture(null);
+    this.policyStats = requireNonNull(policy.stats());
     this.completed = new CompletableFuture<>();
     this.policy = requireNonNull(policy);
     this.parent = requireNonNull(parent);
+
   }
 
   /** Sends the access events for async processing and blocks until accepted into the mailbox. */
@@ -82,7 +85,7 @@ public final class PolicyActor {
 
   /** Returns the cache efficiency statistics. */
   public PolicyStats stats() {
-    return policy.stats();
+    return policyStats;
   }
 
   /** A command to process the access events. */
@@ -93,19 +96,19 @@ public final class PolicyActor {
       this.events = requireNonNull(events);
     }
     @Override void execute() {
-      policy.stats().stopwatch().start();
+      policyStats.stopwatch().start();
       for (AccessEvent event : events) {
-        long priorMisses = policy.stats().missCount();
-        long priorHits = policy.stats().hitCount();
+        long priorMisses = policyStats.missCount();
+        long priorHits = policyStats.hitCount();
         policy.record(event);
 
-        if (policy.stats().hitCount() > priorHits) {
-          policy.stats().recordHitPenalty(event.hitPenalty());
-        } else if (policy.stats().missCount() > priorMisses) {
-          policy.stats().recordMissPenalty(event.missPenalty());
+        if (policyStats.hitCount() > priorHits) {
+          policyStats.recordHitPenalty(event.hitPenalty());
+        } else if (policyStats.missCount() > priorMisses) {
+          policyStats.recordMissPenalty(event.missPenalty());
         }
       }
-      policy.stats().stopwatch().stop();
+      policyStats.stopwatch().stop();
     }
   }
 
