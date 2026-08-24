@@ -506,6 +506,45 @@ final class BoundedLocalCacheTest {
     assertQueuesConsistent(cache);
   }
 
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.VALUE,
+      executor = CacheExecutor.DISCARDING, removalListener = Listener.CONSUMING)
+  void addTask_declinedEviction_leavesEntryLinked(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.setMaximumSize(10);
+
+    // The insert's weight exceeds the maximum, so AddTask evicts instead of linking the entry.
+    var key = Int.valueOf(1);
+    assertThat(cache.put(key, Int.valueOf(100))).isNull();
+
+    // Before the write buffer drains, the entry is rewritten to a zero weight, which evictEntry
+    // treats as ineligible for size eviction and resurrects.
+    assertThat(cache.put(key, Int.valueOf(0))).isEqualTo(Int.valueOf(100));
+
+    cache.cleanUp();
+
+    var node = cache.data.get(cache.nodeFactory.newLookupKey(key));
+    assertThat(node).isNotNull();
+    assertThat(node.isAlive()).isTrue();
+    assertWithMessage("a resurrected entry is linked into no eviction queue")
+        .that(cache.accessOrderWindowDeque().contains(node)).isTrue();
+
+    // An orphan accrues: once a real weight returns, weightedSize counts capacity that no queue
+    // holds, so eviction can never reclaim it.
+    assertThat(cache.put(key, Int.valueOf(5))).isEqualTo(Int.valueOf(0));
+    cache.cleanUp();
+    @Var long linkedWeight = 0;
+    for (var deque : List.of(cache.accessOrderWindowDeque(),
+        cache.accessOrderProbationDeque(), cache.accessOrderProtectedDeque())) {
+      for (var n : deque) {
+        linkedWeight += n.getPolicyWeight();
+      }
+    }
+    assertWithMessage("weightedSize counts weight that no queue holds")
+        .that(cache.weightedSize()).isEqualTo(linkedWeight);
+  }
+
   /** Asserts that each access-order queue's endpoints bound its own chain of matching entries. */
   private static <K, V> void assertQueuesConsistent(BoundedLocalCache<K, V> cache) {
     assertQueueConsistent("window", cache.accessOrderWindowDeque(), WINDOW);

@@ -2038,12 +2038,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           if ((keyRef != null) && node.isAlive()) {
             frequencySketch().increment(keyRef);
           }
-          if (weight > maximum()) {
-            evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
-          } else if (weight > windowMaximum()) {
+          if (weight > windowMaximum()) {
             accessOrderWindowDeque().offerFirst(node);
           } else {
             accessOrderWindowDeque().offerLast(node);
+          }
+          if (weight > maximum()) {
+            evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
           }
         } else if (expiresAfterAccess()) {
           accessOrderWindowDeque().offerLast(node);
