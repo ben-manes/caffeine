@@ -110,6 +110,7 @@ import java.time.Duration;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -545,6 +546,34 @@ final class BoundedLocalCacheTest {
         .that(cache.weightedSize()).isEqualTo(linkedWeight);
   }
 
+  @Test
+  void evictEntry_expiredBacklog_isNotReportedAsSize() {
+    // The expiration pass is capped, so a larger backlog is handed to evictEntries in the same
+    // cycle. Those entries are evicted for capacity but expired long before, and every other
+    // removal path derives the cause from hasExpired.
+    int population = (2 * EXPIRATION_THRESHOLD) + 500;
+    var causes = new EnumMap<RemovalCause, Integer>(RemovalCause.class);
+    var ticker = new FakeTicker();
+    Cache<Integer, Integer> cache = Caffeine.newBuilder()
+        .removalListener((key, value, cause) -> causes.merge(cause, 1, Integer::sum))
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .maximumSize(population)
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .build();
+    for (int i = 0; i < population; i++) {
+      cache.put(i, i);
+    }
+    causes.clear();
+
+    ticker.advance(Duration.ofMinutes(2));
+    cache.policy().eviction().orElseThrow().setMaximum(500);
+    cache.cleanUp();
+
+    assertThat(cache).isEmpty();
+    assertThat(causes).containsExactly(RemovalCause.EXPIRED, population);
+  }
+
   /** Asserts that each access-order queue's endpoints bound its own chain of matching entries. */
   private static <K, V> void assertQueuesConsistent(BoundedLocalCache<K, V> cache) {
     assertQueueConsistent("window", cache.accessOrderWindowDeque(), WINDOW);
@@ -821,7 +850,7 @@ final class BoundedLocalCacheTest {
 
       // and the capacity eviction still restores the bound, drawing further candidates from the
       // window when admission rejects the transferred ones
-      cache.evictFromMain(candidate);
+      cache.evictFromMain(candidate, 0L);
       assertThat(cache.weightedSize()).isEqualTo(1_200);
     } finally {
       cache.evictionLock.unlock();
@@ -1829,7 +1858,7 @@ final class BoundedLocalCacheTest {
         .map(Node::getKey).collect(toImmutableList());
     cache.setMaximum(context.maximumSize() / 2);
     cache.setWindowMaximum(0);
-    cache.evictEntries();
+    cache.evictEntries(0L);
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
     var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
@@ -1853,7 +1882,7 @@ final class BoundedLocalCacheTest {
     var expected = cache.accessOrderWindowDeque().stream()
         .map(Node::getKey).collect(toImmutableList());
     cache.setMaximum(context.maximumSize() / 2);
-    cache.evictEntries();
+    cache.evictEntries(0L);
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
     var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
@@ -1889,7 +1918,7 @@ final class BoundedLocalCacheTest {
     cache.setMainProtectedMaximum(0L);
     cache.setWindowMaximum(0L);
     cache.setMaximumSize(0L);
-    cache.evictEntries();
+    cache.evictEntries(0L);
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
     var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
@@ -1914,7 +1943,7 @@ final class BoundedLocalCacheTest {
         .map(Node::getKey)
         .collect(toImmutableList());
     cache.setMaximumSize(0);
-    cache.evictEntries();
+    cache.evictEntries(0L);
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
     var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
@@ -1937,7 +1966,7 @@ final class BoundedLocalCacheTest {
 
       cache.setWindowMaximum(cache.windowMaximum() - 1);
       cache.setMaximum(context.maximumSize() - 1);
-      cache.evictEntries();
+      cache.evictEntries(0L);
 
       assertThat(expected.isDead()).isTrue();
       await().untilAsserted(() -> assertThat(cache).hasSize(cache.maximum()));
@@ -1962,7 +1991,7 @@ final class BoundedLocalCacheTest {
 
       cache.setWindowMaximum(cache.windowMaximum() - 1);
       cache.setMaximum(context.maximumSize() - 1);
-      cache.evictEntries();
+      cache.evictEntries(0L);
 
       assertThat(expected.isDead()).isTrue();
       await().untilAsserted(() -> assertThat(cache).hasSize(cache.maximum()));
@@ -2038,7 +2067,7 @@ final class BoundedLocalCacheTest {
     candidate.setWeight(0);
 
     cache.setMaximumSize(0);
-    cache.evictEntries();
+    cache.evictEntries(0L);
 
     assertThat(cache).containsExactly(candidate.getKey(), candidate.getValue());
     assertThat(cache.weightedSize()).isEqualTo(0);
@@ -2062,8 +2091,8 @@ final class BoundedLocalCacheTest {
     victim.setPolicyWeight(0);
     victim.setWeight(0);
 
-    cache.setMaximumSize(0);
-    cache.evictEntries();
+    cache.setMaximumSize(0L);
+    cache.evictEntries(0L);
 
     assertThat(cache.weightedSize()).isEqualTo(0);
     assertThat(cache).containsExactly(victim.getKey(), victim.getValue());

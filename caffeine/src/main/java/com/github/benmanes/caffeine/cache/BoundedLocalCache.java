@@ -678,12 +678,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /** Evicts entries if the cache exceeds the maximum. */
   @GuardedBy("evictionLock")
-  void evictEntries() {
+  void evictEntries(long now) {
     if (!evicts()) {
       return;
     }
     var candidate = evictFromWindow();
-    evictFromMain(candidate);
+    evictFromMain(candidate, now);
   }
 
   /**
@@ -740,9 +740,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * tie.
    *
    * @param candidate the first candidate promoted into the probation space
+   * @param now the current time, in nanoseconds
    */
   @GuardedBy("evictionLock")
-  void evictFromMain(@Var @Nullable Node<K, V> candidate) {
+  void evictFromMain(@Var @Nullable Node<K, V> candidate, long now) {
     @Var int victimQueue = PROBATION;
     @Var int candidateQueue = PROBATION;
     @Var Node<K, V> victim = accessOrderProbationDeque().peekFirst();
@@ -781,16 +782,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       // Evict immediately if only one of the entries is present
       if (victim == null) {
         requireNonNull(candidate);
-        candidate = evictAndAdvance(candidate, RemovalCause.SIZE);
+        candidate = evictAndAdvance(candidate, now, RemovalCause.SIZE);
         continue;
       } else if (candidate == null) {
-        victim = evictAndAdvance(victim, RemovalCause.SIZE);
+        victim = evictAndAdvance(victim, now, RemovalCause.SIZE);
         continue;
       }
 
       // Evict immediately if both selected the same entry
       if (candidate == victim) {
-        victim = evictAndAdvance(victim, RemovalCause.SIZE);
+        victim = evictAndAdvance(victim, now, RemovalCause.SIZE);
         candidate = null;
         continue;
       }
@@ -799,43 +800,43 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       var victimKeyRef = victim.getKeyReferenceOrNull();
       var candidateKeyRef = candidate.getKeyReferenceOrNull();
       if (victimKeyRef == null) {
-        victim = evictAndAdvance(victim, RemovalCause.COLLECTED);
+        victim = evictAndAdvance(victim, now, RemovalCause.COLLECTED);
         continue;
       } else if (candidateKeyRef == null) {
-        candidate = evictAndAdvance(candidate, RemovalCause.COLLECTED);
+        candidate = evictAndAdvance(candidate, now, RemovalCause.COLLECTED);
         continue;
       }
 
       // Evict immediately if an entry was removed
       if (!victim.isAlive()) {
-        victim = evictAndAdvance(victim, RemovalCause.SIZE);
+        victim = evictAndAdvance(victim, now, RemovalCause.SIZE);
         continue;
       } else if (!candidate.isAlive()) {
-        candidate = evictAndAdvance(candidate, RemovalCause.SIZE);
+        candidate = evictAndAdvance(candidate, now, RemovalCause.SIZE);
         continue;
       }
 
       // Evict immediately if the candidate's weight exceeds the maximum
       if (candidate.getPolicyWeight() > maximum()) {
-        candidate = evictAndAdvance(candidate, RemovalCause.SIZE);
+        candidate = evictAndAdvance(candidate, now, RemovalCause.SIZE);
         continue;
       }
 
       // Evict the entry with the lowest frequency
       if (admit(candidateKeyRef, victimKeyRef)) {
-        victim = evictAndAdvance(victim, RemovalCause.SIZE);
+        victim = evictAndAdvance(victim, now, RemovalCause.SIZE);
         candidate = candidate.getNextInAccessOrder();
       } else {
-        candidate = evictAndAdvance(candidate, RemovalCause.SIZE);
+        candidate = evictAndAdvance(candidate, now, RemovalCause.SIZE);
       }
     }
   }
 
   /** Evicts the entry and returns its successor, or {@code null} if it was the last. */
   @GuardedBy("evictionLock")
-  @Nullable Node<K, V> evictAndAdvance(Node<K, V> node, RemovalCause cause) {
+  @Nullable Node<K, V> evictAndAdvance(Node<K, V> node, long now, RemovalCause cause) {
     Node<K, V> next = node.getNextInAccessOrder();
-    evictEntry(node, cause, 0L);
+    evictEntry(node, cause, now);
     return next;
   }
 
@@ -867,8 +868,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /** Expires entries that have expired by access, write, or variable. */
   @GuardedBy("evictionLock")
-  void expireEntries() {
-    long now = expirationTicker().read();
+  void expireEntries(long now) {
     expireAfterAccessEntries(now);
     expireAfterWriteEntries(now);
     expireVariableEntries(now);
@@ -1049,21 +1049,24 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
       synchronized (node) {
         ctx.value = node.getValue();
-
+        boolean expired = hasExpired(node, now);
+        boolean computing = isComputingAsync(ctx.value);
         if ((key == null) || (ctx.value == null)) {
           ctx.cause = RemovalCause.COLLECTED;
         } else if (cause == RemovalCause.COLLECTED) {
           ctx.resurrect = true;
           return node;
+        } else if (expired && !computing) {
+          ctx.cause = RemovalCause.EXPIRED;
         } else {
           ctx.cause = cause;
         }
 
         if (ctx.cause == RemovalCause.EXPIRED) {
-          if (!hasExpired(node, now)) {
+          if (!expired) {
             ctx.resurrect = true;
             return node;
-          } else if (isComputingAsync(ctx.value)) {
+          } else if (computing) {
             long sentinel = (now + ASYNC_EXPIRY);
             setVariableTime(node, sentinel);
             setAccessTime(node, sentinel);
@@ -1792,8 +1795,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       drainKeyReferences();
       drainValueReferences();
 
-      expireEntries();
-      evictEntries();
+      long now = expirationTicker().read();
+      expireEntries(now);
+      evictEntries(now);
 
       climb();
     } finally {
@@ -2010,7 +2014,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         long maximum = maximum();
         if (weightedSize() >= (maximum >>> 1)) {
           if (weightedSize() > MAXIMUM_CAPACITY) {
-            evictEntries();
+            evictEntries(expirationTicker().read());
           } else {
             // Lazily initialize when close to the maximum
             long capacity = isWeighted() ? data.mappingCount() : maximum;
@@ -2123,7 +2127,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
         setWeightedSize(weightedSize() + weightDifference);
         if (weightedSize() > MAXIMUM_CAPACITY) {
-          evictEntries();
+          evictEntries(expirationTicker().read());
         }
       } else if (expiresAfterAccess()) {
         onAccess(node, quietly);
