@@ -15,14 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.WindowClimber.RETREAT_COVER;
+import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.RETEST_SETTLE;
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_FIRST;
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_INITIAL;
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_MAX;
-import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.RETEST_SETTLE;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_INITIAL;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_MAX;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_CRASH_ESCALATION;
-import static com.github.benmanes.caffeine.cache.WindowClimber.RETREAT_COVER;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Reading.MAX_STEP_FRACTION;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Step.MIN_INITIAL_STEP;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Walk.AUDIT_CRASH_PERSISTENCE;
@@ -169,7 +169,7 @@ final class ClimberInvariants {
     // of headroom. The bound is stricter than the adjudicated reality: a negative policyWeight
     // inflates the transfer loop's quota and carries the excess back, a sanctioned transient that
     // no subject-validated test drives.
-    long bound = Math.max((long) MIN_INITIAL_STEP, (long) (MAX_STEP_FRACTION * maximum)) + 1;
+    long bound = (long) Math.max(MIN_INITIAL_STEP, (MAX_STEP_FRACTION * maximum)) + 1;
     assertWithMessage("the adjustment honors the maximum step")
         .that(Math.abs(climber.adjustment())).isAtMost(bound);
     assertWithMessage("the step size honors the maximum step")

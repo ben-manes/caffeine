@@ -284,7 +284,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         ? new BoundedBuffer<>()
         : Buffer.disabled();
     accessPolicy = (evicts() || expiresAfterAccess())
-        ? node -> onAccess(node, /* quietly= */ false)
+        ? node -> onAccess(node, Access.HIT)
         : node -> {};
 
     if (evicts()) {
@@ -1857,7 +1857,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   /**
-   * Updates the node's location in the page replacement policy.
+   * Updates the node's location in the page replacement policy and credits the access.
    * <p>
    * A quiet access reorders but does not record the usage with the admission filter or the adaptive
    * climber's sample, as an asynchronous cache's load completion finalizes the entry's weight
@@ -1865,13 +1865,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * misattributes window hits.
    */
   @GuardedBy("evictionLock")
-  void onAccess(Node<K, V> node, boolean quietly) {
+  void onAccess(Node<K, V> node, Access access) {
     if (evicts()) {
       var keyRef = node.getKeyReferenceOrNull();
       if ((keyRef == null) || !node.isAlive()) {
         return;
       }
-      if (!quietly) {
+      if (access.recordsUsage()) {
         frequencySketch().increment(keyRef);
       }
       boolean inWindow = node.inWindow();
@@ -1883,7 +1883,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       } else {
         reorder(accessOrderProtectedDeque(), node);
       }
-      if (!quietly && (node.getPolicyWeight() != 0)) {
+      if (access.recordsHit() && (node.getPolicyWeight() != 0)) {
         // a zero-weight entry (an in-flight async load, a pinned entry) earns hits with no
         // capacity, so it must not steer the sizing; the sketch still observes the key
         climber().recordHit(inWindow, inProbation);
@@ -2077,16 +2077,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   /** Updates the weighted size. */
   final class UpdateTask implements Runnable {
     final int weightDifference;
-    final boolean quietly;
     final Node<K, V> node;
+    final Access access;
 
     public UpdateTask(Node<K, V> node, int weightDifference) {
-      this(node, weightDifference, /* quietly= */ false);
+      this(node, weightDifference, Access.HIT);
     }
 
-    public UpdateTask(Node<K, V> node, int weightDifference, boolean quietly) {
+    public UpdateTask(Node<K, V> node, int weightDifference, Access access) {
       this.weightDifference = weightDifference;
-      this.quietly = quietly;
+      this.access = access;
       this.node = node;
     }
 
@@ -2099,6 +2099,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         timerWheel().reschedule(node);
       }
       if (evicts()) {
+        if (access.recordsMiss()) {
+          climber().recordMiss();
+        }
         int oldWeightedSize = node.getPolicyWeight();
         node.setPolicyWeight(oldWeightedSize + weightDifference);
         if (node.inWindow()) {
@@ -2106,20 +2109,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           if (node.getPolicyWeight() > maximum()) {
             evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
           } else if (node.getPolicyWeight() <= windowMaximum()) {
-            onAccess(node, quietly);
+            onAccess(node, access);
           } else if (accessOrderWindowDeque().contains(node)) {
             accessOrderWindowDeque().moveToFront(node);
           }
         } else if (node.inMainProbation()) {
             if (node.getPolicyWeight() <= maximum()) {
-              onAccess(node, quietly);
+              onAccess(node, access);
             } else {
               evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
             }
         } else {
           setMainProtectedWeightedSize(mainProtectedWeightedSize() + weightDifference);
           if (node.getPolicyWeight() <= maximum()) {
-            onAccess(node, quietly);
+            onAccess(node, access);
           } else {
             evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
           }
@@ -2130,8 +2133,40 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           evictEntries(expirationTicker().read());
         }
       } else if (expiresAfterAccess()) {
-        onAccess(node, quietly);
+        onAccess(node, access);
       }
+    }
+  }
+
+  /** What an access records beyond the reorder. */
+  enum Access {
+    HIT(/* usage= */ true, /* hit= */ true, /* miss= */ false),
+    RELOAD(/* usage= */ true, /* hit= */ false, /* miss= */ true),
+    QUIET(/* usage= */ false, /* hit= */ false, /* miss= */ false);
+
+    private final boolean hit;
+    private final boolean miss;
+    private final boolean usage;
+
+    Access(boolean usage, boolean hit, boolean miss) {
+      this.usage = usage;
+      this.hit = hit;
+      this.miss = miss;
+    }
+
+    /** Returns whether the admission filter observes the key. */
+    boolean recordsUsage() {
+      return usage;
+    }
+
+    /** Returns whether the climber's sample earns a hit. */
+    boolean recordsHit() {
+      return hit;
+    }
+
+    /** Returns whether the climber's sample takes the miss an insertion would have recorded. */
+    boolean recordsMiss() {
+      return miss;
     }
   }
 
@@ -2578,7 +2613,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
       int weightedDifference = mayUpdate ? (newWeight - oldWeight) : 0;
       if ((oldValue == null) || (weightedDifference != 0) || expired) {
-        afterWrite(new UpdateTask(prior, weightedDifference));
+        var access = (expired || (oldValue == null)) ? Access.RELOAD : Access.HIT;
+        afterWrite(new UpdateTask(prior, weightedDifference, access));
       } else if (!onlyIfAbsent && exceedsTolerance) {
         afterWrite(new UpdateTask(prior, weightedDifference));
       } else {
@@ -2787,7 +2823,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     int weightedDifference = (weight - ctx.oldWeight);
     if (ctx.exceedsTolerance || (weightedDifference != 0)) {
-      afterWrite(new UpdateTask(node, weightedDifference, quietly));
+      afterWrite(new UpdateTask(node, weightedDifference, quietly ? Access.QUIET : Access.HIT));
     } else if (!quietly) {
       afterRead(node, ctx.now, /* recordHit= */ false);
     }
@@ -2939,7 +2975,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       afterWrite(new AddTask(node, ctx.newWeight));
     } else {
       int weightedDifference = (ctx.newWeight - ctx.oldWeight);
-      afterWrite(new UpdateTask(node, weightedDifference));
+      afterWrite(new UpdateTask(node, weightedDifference, Access.RELOAD));
     }
 
     return ctx.newValue;
@@ -3168,10 +3204,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     } else if ((ctx.oldValue == null) && (ctx.cause == null)) {
       afterWrite(new AddTask(node, ctx.newWeight));
     } else {
-      boolean quietly = (ctx.hints != null) && ctx.hints.quietly;
       int weightedDifference = ctx.newWeight - ctx.oldWeight;
+      boolean quietly = (ctx.hints != null) && ctx.hints.quietly;
       if (ctx.exceedsTolerance || (weightedDifference != 0)) {
-        afterWrite(new UpdateTask(node, weightedDifference, quietly));
+        var access = quietly
+            ? Access.QUIET
+            : (ctx.cause != null) && ctx.cause.wasEvicted() ? Access.RELOAD : Access.HIT;
+        afterWrite(new UpdateTask(node, weightedDifference, access));
       } else {
         if (!quietly) {
           afterRead(node, ctx.now, /* recordHit= */ false);
@@ -4654,7 +4693,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             }
             node.setVariableTime(now + Math.min(durationNanos, MAXIMUM_EXPIRY));
           }
-          cache.afterWrite(cache.new UpdateTask(node, 0, /* quietly= */ true));
+          cache.afterWrite(cache.new UpdateTask(node, 0, Access.QUIET));
         }
       }
       @Override public @Nullable V put(K key, V value, long duration, TimeUnit unit) {

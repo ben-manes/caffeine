@@ -151,6 +151,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 
+import com.github.benmanes.caffeine.cache.BoundedLocalCache.Access;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedPolicy.FixedExpireAfterWrite;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.ComputeContext;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.PerformCleanupTask;
@@ -2012,12 +2013,12 @@ final class BoundedLocalCacheTest {
       var node = cache.accessOrderProbationDeque().getFirst();
       cache.climber().resetSample();
 
-      cache.onAccess(node, /* quietly= */ false);
+      cache.onAccess(node, Access.HIT);
       assertThat(node.inMainProtected()).isTrue();
       assertThat(cache.climber().sample.probationHits).isEqualTo(1);
       assertThat(cache.climber().sample.hits).isEqualTo(1);
 
-      cache.onAccess(node, /* quietly= */ false);
+      cache.onAccess(node, Access.HIT);
       assertThat(cache.climber().sample.probationHits).isEqualTo(1);
       assertThat(cache.climber().sample.hits).isEqualTo(2);
     } finally {
@@ -4247,6 +4248,94 @@ final class BoundedLocalCacheTest {
     cache.synchronous().cleanUp();
     assertThat(completed).isSameInstanceAs(future);
     assertThat(localCache.climber().sample.hits).isEqualTo(hits + 1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.SYNC,
+      population = Population.SINGLETON, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.DISABLED, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG, expireAfterWrite = Expire.ONE_MINUTE)
+  void expiredReload_recordsClimberMiss(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.frequencySketch().ensureCapacity(context.maximumSize());
+    int frequency = cache.frequencySketch().frequency(context.firstKey());
+    long misses = cache.climber().sample.misses;
+    long hits = cache.climber().sample.hits;
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    var value = cache.computeIfAbsent(context.firstKey(), key -> context.absentValue());
+    cache.cleanUp();
+
+    assertThat(value).isEqualTo(context.absentValue());
+    assertThat(context).stats().hits(0).misses(1);
+    assertThat(cache.climber().sample.hits).isEqualTo(hits);
+    assertThat(cache.climber().sample.windowHits).isEqualTo(0);
+    assertThat(cache.climber().sample.misses).isEqualTo(misses + 1);
+    assertThat(cache.frequencySketch().frequency(context.firstKey())).isEqualTo(frequency + 1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.SYNC,
+      population = Population.SINGLETON, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.DISABLED, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG, expireAfterWrite = Expire.ONE_MINUTE)
+  void expiredRemap_recordsClimberMiss(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.frequencySketch().ensureCapacity(context.maximumSize());
+    int frequency = cache.frequencySketch().frequency(context.firstKey());
+    long misses = cache.climber().sample.misses;
+    long hits = cache.climber().sample.hits;
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    var value = cache.compute(context.firstKey(), (key, oldValue) -> context.absentValue());
+    cache.cleanUp();
+
+    assertThat(value).isEqualTo(context.absentValue());
+    assertThat(cache.climber().sample.hits).isEqualTo(hits);
+    assertThat(cache.climber().sample.windowHits).isEqualTo(0);
+    assertThat(cache.climber().sample.misses).isEqualTo(misses + 1);
+    assertThat(cache.frequencySketch().frequency(context.firstKey())).isEqualTo(frequency + 1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.SYNC,
+      population = Population.SINGLETON, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.DISABLED, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG, expireAfterWrite = Expire.ONE_MINUTE)
+  void expiredPut_recordsClimberMiss(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.frequencySketch().ensureCapacity(context.maximumSize());
+    int frequency = cache.frequencySketch().frequency(context.firstKey());
+    long misses = cache.climber().sample.misses;
+    long hits = cache.climber().sample.hits;
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    var previous = cache.put(context.firstKey(), context.absentValue());
+    cache.cleanUp();
+
+    assertThat(previous).isNull();
+    assertThat(cache.climber().sample.hits).isEqualTo(hits);
+    assertThat(cache.climber().sample.windowHits).isEqualTo(0);
+    assertThat(cache.climber().sample.misses).isEqualTo(misses + 1);
+    assertThat(cache.frequencySketch().frequency(context.firstKey())).isEqualTo(frequency + 1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.SYNC,
+      population = Population.FULL, maximumSize = Maximum.UNREACHABLE,
+      weigher = CacheWeigher.VALUE, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG, expireAfterWrite = Expire.ONE_MINUTE)
+  void put_recordsClimberHit(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.frequencySketch().ensureCapacity(context.initialSize());
+    int frequency = cache.frequencySketch().frequency(context.firstKey());
+    long misses = cache.climber().sample.misses;
+    long hits = cache.climber().sample.hits;
+
+    // the weight change routes the live update through the same task the expired put takes
+    var previous = cache.put(context.firstKey(), context.absentValue());
+    cache.cleanUp();
+
+    assertThat(previous).isEqualTo(context.original().get(context.firstKey()));
+    assertThat(cache.climber().sample.hits).isEqualTo(hits + 1);
+    assertThat(cache.climber().sample.misses).isEqualTo(misses);
+    assertThat(cache.frequencySketch().frequency(context.firstKey())).isEqualTo(frequency + 1);
   }
 
   @ParameterizedTest

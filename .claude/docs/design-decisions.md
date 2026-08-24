@@ -339,6 +339,41 @@ is the same contract `replace` implements for the async completions, whose calle
 the `compute(..., hints)` seam by `BoundedLocalCacheTest.remap_quietly_doesNotRecordAccess` and its
 loud twin.
 
+**A reload that reuses a dead entry's node pays the insertion's miss.** When a `computeIfAbsent`
+or a `compute` finds the entry expired or its value collected, it loads into the node that is
+already linked, so the policy receives an `UpdateTask` where a reaped entry would have produced an
+`AddTask`. Crediting that as an ordinary access recorded a climber hit for an operation the
+application experienced as a miss, and left the sampled rate turning on whether maintenance
+reaped the entry before the reload arrived. The reload is credited `Access.RELOAD` instead: the admission
+filter observes the key exactly as an insertion would, and the task records the miss the
+reinsertion owed. `Access.QUIET` still wins over it, so a refresh completion that lands on an
+expired entry stays bookkeeping.
+
+The level error was not the reason to fix it. A contamination that is steady cancels in every
+difference the machine takes, the reactive law's `hitRateChange` and the walk, veto, and anchor
+comparisons alike, because all of them subtract one rate from another. What has nothing to
+subtract it against is the density tier's within-sample ratio: `error()` and `steeringError()`
+divide each region's hits by that region's capacity, so a hit credited to a region moves the log
+ratio outright. On a seeded synthetic reuse stream at a maximum of 512, with the reuse gap set to
+the expiration duration, the mislabel moved the converged window from 402 entries to 5 on every
+seed and at both maintenance lags. Nearly every phantom lands in main, since an entry that
+survives to expire is one the main space is holding, so the density law reads main as earning and
+steers capacity out of the window. The reload rate is itself a function of the window, so the
+error feeds itself: the collapsed window took 13.6% of requests as reloads against the corrected
+window's 4.2%. No workload measured here turns that into an end-user hit-rate loss, and finding
+one belongs to `/audit-regret` rather than to the repair.
+
+A cache with neither expiration nor reference values cannot reach the branch, so the simulator's
+policies, whose `product.Caffeine` configures a maximum size and nothing else, are bit-identical
+under it and the gate battery cannot price it. `put` and `putIfAbsent` take the same in-place path
+when the entry they land on has expired or lost its value, and are credited the same way: no
+user-visible statistic contradicts a hit there, but the reap race that decides between `AddTask`
+and `UpdateTask` does not care which API arrived. `replace` needs no credit, since it refuses a
+dead entry outright. Pinned by `BoundedLocalCacheTest.expiredReload_recordsClimberMiss`,
+`expiredRemap_recordsClimberMiss`, and the `expiredPut_recordsClimberMiss` / `put_recordsClimberHit`
+pair, which bracket the write path's condition from both sides. Each asserts the sketch increment
+as well, since suppressing the access with `quietly` would drop the increment `AddTask` performs.
+
 **~1% random admission of rejected candidates.** The TinyLFU admission filter
 randomly admits ~1% of candidates that would otherwise be rejected. This provides
 HashDoS protection by making frequency estimation attacks non-deterministic.
@@ -806,6 +841,18 @@ insert divergence.
 **Eviction is async, not immediate.** After `put`, the cache may temporarily exceed
 `maximumSize` until the executor runs maintenance. Use `executor(Runnable::run)` for
 inline eviction in tests, or call `cleanUp()` before assertions.
+
+That determinism has a cost worth knowing before reaching for it under load. The expiration and
+window scans bound *evictions*, not traversal: `remaining--` runs only on an eviction or a
+transfer, so a node the scan relinks and skips (an in-flight async load, a zero-weight entry) is
+free and the walk continues past it. The default executor hides that, since maintenance coalesces
+through the drain status and many writes share one cycle. `Runnable::run` removes the coalescing,
+so a burst of pending async loads pays a walk over the pending set on every write in the burst,
+which is quadratic across it. Fine for a test with a handful of entries; not a knob to reach for
+in a benchmark or a reproduction that holds thousands of loads in flight. The scan is
+self-correcting once any load completes (pending entries migrate to the MRU end and the walk stops
+at the first completed, unexpired node), so the cost needs a deque with no completed entry at all,
+not merely N loads outstanding.
 
 **Expiration and cleanup are amortized, not instant.** Caffeine performs maintenance
 during write operations and occasionally during reads. For idle caches, use

@@ -135,6 +135,17 @@ adjudicate seed by seed), the **alignment offset** (a phase grid commensurate wi
 grid; shift the trace start), and a **bar inside the spread** (a bar is a margin over a
 re-derivable anchor, never a bare level).
 
+**Out of reach of this instrument, not absent from the machine.** `product.Caffeine` builds with a
+maximum size or weight and nothing else: no `expireAfter*`, no `Expiry`, strong references. So no
+cell here can produce an expired or collected entry, and any regret that only arises when the cache
+reuses a dead entry's node is unsearchable in a round, not a negative result. That quarter is real:
+the expired-reload miscredit (2026-08-24) is a class 3 shape reached through a TTL, and it collapsed
+the converged window from 402 entries to 5 at a maximum of 512. It was found and priced in an
+in-JVM harness whose recipe is in `design-decisions.md` under the reload credit. Do not read a
+round's silence as evidence about anything gated on expiry or reference collection. Reaching it
+here would mean giving the simulator's policy a TTL, which trades the corpus's trace fidelity for
+the coverage; that is a call to put to Ben, not to make inside a round.
+
 ## Which layer is responsible
 
 The decision procedure `regret.py` encodes as hints, to be applied by hand on the trajectory:
