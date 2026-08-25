@@ -1069,6 +1069,23 @@ registration-side re-check: closing it there would fix only `refreshIfNeeded` an
 leave the manual `LocalLoadingCache` and `LocalAsyncLoadingCache` registrations,
 which carry no write-time marker to test, while implying all three were closed.
 
+**All three refresh registrations key `refreshes` by `referenceKey(key)`, never by the node's own
+key reference.** Under weak keys a node's `retire()`/`die()` calls `clear()` on the very
+`WeakKeyReference` the node holds, and `InternalReference.equals` compares referents by identity,
+so a cleared reference is equal to no reference built later for the same live key. A token
+registered under the node's reference and preserved past `retire()` (the `preserveRefresh` exits
+do exactly that) is then unreachable: the successor's own `discardRefresh` builds a fresh
+reference and cannot match it, and `Policy.refreshes()` skips it because its referent is null, so
+the registration and its future are retained for the cache's lifetime and the growth is invisible
+through the public view. `LookupKeyReference` holds the key strongly and is never cleared, which
+is why the two manual paths always used it; `refreshIfNeeded` now does too. This costs no extra
+retention: the loader call and the completion closure both capture the key strongly for the
+future's lifetime. The `containsKey` prescreen still reads `node.getKeyReference()`, which is
+free and equal to the lookup key while the key is live, so the allocation lands once per
+registration rather than on every refresh-eligible read. Don't key `refreshes` by anything the
+node owns. Pinned by
+`BoundedLocalCacheTest.refreshIfNeeded_weakKeys_preservedTokenIsDiscardable`.
+
 **A rejected reload is notified even though it was never in the cache.** When the
 completion's `compute` declines to install the reloaded value it sets a cause and calls
 `notifyRemoval(key, value, cause)` — `EXPLICIT` on the absent exit, `REPLACED` on the reject

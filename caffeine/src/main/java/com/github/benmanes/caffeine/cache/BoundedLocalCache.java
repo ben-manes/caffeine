@@ -1306,16 +1306,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     K key;
     V oldValue;
-    Object keyReference;
     long writeTime = node.getWriteTime();
     long refreshWriteTime = markRefreshing(writeTime);
     ConcurrentMap<Object, CompletableFuture<?>> refreshes;
     if (((now - writeTime) > refreshAfterWriteNanos())
         && ((key = node.getKey()) != null) && ((oldValue = node.getValue()) != null)
         && !isComputingAsync(oldValue) && !isRefreshing(writeTime)
-        && !(refreshes = refreshes()).containsKey(keyReference = node.getKeyReference())
+        && !(refreshes = refreshes()).containsKey(node.getKeyReference())
         && node.isAlive() && node.casWriteTime(writeTime, refreshWriteTime)) {
       long[] startTime = new long[1];
+      var keyReference = referenceKey(key);
       @SuppressWarnings({"rawtypes", "unchecked"})
       @Nullable CompletableFuture<? extends @Nullable V>[] refreshFuture = new CompletableFuture[1];
       try {

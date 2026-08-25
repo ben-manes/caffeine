@@ -6825,6 +6825,60 @@ final class BoundedLocalCacheTest {
         .contains(context.firstKey(), context.firstKey());
   }
 
+  @Test
+  @SuppressWarnings({"resource", "SequencedCollectionGetFirst"})
+  void refreshIfNeeded_weakKeys_preservedTokenIsDiscardable() {
+    // A weak key's retire() clears the node's own key reference, and a cleared reference is equal
+    // to no later lookup. A token registered under it would be stranded once the entry dies: the
+    // successor's own discard cannot find it, and it retains its future for the cache's lifetime.
+    var ticker = new FakeTicker();
+    var pending = new ArrayList<CompletableFuture<Object>>();
+    var loader = new CacheLoader<Object, Object>() {
+      @Override public Object load(Object key) {
+        throw new AssertionError("unexpected load");
+      }
+      @Override public CompletableFuture<Object> asyncReload(
+          Object key, Object oldValue, Executor executor) {
+        var reload = new CompletableFuture<>();
+        pending.add(reload);
+        return reload;
+      }
+    };
+    LoadingCache<Object, Object> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .expireAfterWrite(Duration.ofMinutes(5))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .weakKeys()
+        .build(loader);
+    var local = asBoundedLocalCache(cache);
+
+    var key = new Object();
+    cache.put(key, new Object());
+
+    // The first refresh registers and a write then discards it
+    ticker.advance(Duration.ofMinutes(2));
+    assertThat(cache.getIfPresent(key)).isNotNull();
+    var first = pending.get(0);
+    cache.put(key, new Object());
+    assertThat(local.refreshes()).isEmpty();
+
+    // The successor registers against the same node
+    ticker.advance(Duration.ofMinutes(2));
+    assertThat(cache.getIfPresent(key)).isNotNull();
+    var successor = pending.get(1);
+    assertThat(local.refreshes()).hasSize(1);
+
+    // The entry expires, so the stale completion reaps it and retires the node, leaving the
+    // successor's registration for the successor to clear
+    ticker.advance(Duration.ofMinutes(6));
+    first.complete(new Object());
+    assertThat(local.refreshes()).hasSize(1);
+
+    successor.complete(new Object());
+    assertThat(local.refreshes()).isEmpty();
+  }
+
   @ParameterizedTest
   @SuppressWarnings("resource")
   @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE,

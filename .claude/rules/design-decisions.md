@@ -104,7 +104,10 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   unconditionally alongside it: on a same-instance return that is the exit which honors
   `preserveRefresh`, and a rejection that restarts the write clock fails the successor's own ABA
   guard, so its reload is dropped anyway. Don't make it conditional again, and don't reintroduce
-  an unconditional by-key discard on a completion exit. "Every exit" includes `remap`'s
+  an unconditional by-key discard on a completion exit. All three registrations key `refreshes`
+  by `referenceKey(key)`, never by the node's own key reference: a weak key's `retire()` clears
+  that reference, and a cleared one is equal to no later lookup, so a preserved token would be
+  stranded with its future for the cache's lifetime. "Every exit" includes `remap`'s
   **exception** exit, which honors the hint too
   (a throwing weigher/`Expiry`/`Ticker` lands there after the remapping set it); the exits that
   precede the remapping cannot, since the hint is what the remapping computes, and none of them is
