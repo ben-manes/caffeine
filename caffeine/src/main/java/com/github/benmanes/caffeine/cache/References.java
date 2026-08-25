@@ -24,7 +24,6 @@ import java.lang.invoke.VarHandle;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
-import java.util.Objects;
 
 import org.jspecify.annotations.Nullable;
 
@@ -71,8 +70,9 @@ final class References {
       if (object == this) {
         return true;
       } else if (object instanceof InternalReference<?>) {
+        var element = get();
         var referent = (InternalReference<?>) object;
-        return (get() == referent.get());
+        return (element != null) && (element == referent.get());
       }
       return false;
     }
@@ -90,7 +90,8 @@ final class References {
         return true;
       } else if (object instanceof InternalReference<?>) {
         var referent = (InternalReference<?>) object;
-        return Objects.equals(get(), referent.get());
+        var element = get();
+        return (element != null) && element.equals(referent.get());
       }
       return false;
     }

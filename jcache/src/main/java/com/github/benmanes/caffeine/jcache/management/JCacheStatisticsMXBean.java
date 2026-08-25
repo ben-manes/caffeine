@@ -71,10 +71,10 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
 
   @Override
   public float getCacheHitPercentage() {
-    long hits = getCacheHits();
-    long misses = getCacheMisses();
-    long requestCount = saturatedAdd(hits, misses);
-    return (requestCount == 0) ? 0f : 100 * ((float) getCacheHits() / requestCount);
+    long hitCount = getCacheHits();
+    long missCount = getCacheMisses();
+    long requestCount = saturatedAdd(hitCount, missCount);
+    return (requestCount == 0) ? 0f : 100 * ((float) hitCount / requestCount);
   }
 
   /**
@@ -95,10 +95,10 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
 
   @Override
   public float getCacheMissPercentage() {
-    long hits = getCacheHits();
-    long misses = getCacheMisses();
-    long requestCount = saturatedAdd(hits, misses);
-    return (requestCount == 0) ? 0f : 100 * ((float) misses / requestCount);
+    long hitCount = getCacheHits();
+    long missCount = getCacheMisses();
+    long requestCount = saturatedAdd(hitCount, missCount);
+    return (requestCount == 0) ? 0f : 100 * ((float) missCount / requestCount);
   }
 
   /**

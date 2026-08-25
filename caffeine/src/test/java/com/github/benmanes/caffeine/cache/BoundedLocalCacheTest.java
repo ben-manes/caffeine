@@ -512,8 +512,7 @@ final class BoundedLocalCacheTest {
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.VALUE,
       executor = CacheExecutor.DISCARDING, removalListener = Listener.CONSUMING)
-  void addTask_declinedEviction_leavesEntryLinked(
-      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+  void addTask_declinedEviction_leavesEntryLinked(BoundedLocalCache<Int, Int> cache) {
     cache.setMaximumSize(10);
 
     // The insert's weight exceeds the maximum, so AddTask evicts instead of linking the entry.
@@ -7218,7 +7217,7 @@ final class BoundedLocalCacheTest {
 
   @Test
   @CheckMaxLogLevel(WARN)
-  @SuppressWarnings("resource")
+  @SuppressWarnings({"resource", "SequencedCollectionGetFirst"})
   void refreshIfNeeded_completionThrows_releasesToken() {
     // A throw before remap reaches a discard leaves the registration behind, and the containsKey
     // guard then suppresses this key's automatic refresh for good. The completion releases its
@@ -7257,7 +7256,7 @@ final class BoundedLocalCacheTest {
 
   @Test
   @CheckMaxLogLevel(WARN)
-  @SuppressWarnings("resource")
+  @SuppressWarnings({"resource", "SequencedCollectionGetFirst"})
   void refresh_completionThrows_releasesToken() {
     // The same release in LocalLoadingCache.refresh's completion, which shares the guard
     var ticker = new FakeTicker();
@@ -7289,7 +7288,7 @@ final class BoundedLocalCacheTest {
 
   @Test
   @CheckMaxLogLevel(WARN)
-  @SuppressWarnings("resource")
+  @SuppressWarnings({"resource", "SequencedCollectionGetFirst"})
   void refreshAsync_completionThrows_releasesToken() {
     // The same release in LocalAsyncLoadingCache.tryComputeRefresh's completion
     var ticker = new FakeTicker();
@@ -7431,7 +7430,7 @@ final class BoundedLocalCacheTest {
   }
 
   @Test
-  @SuppressWarnings("resource")
+  @SuppressWarnings({"resource", "SequencedCollectionGetFirst"})
   void refreshIfNeeded_reinsertedNode_rejectsStaleReload() {
     // The completion's write-time guard reads the node captured when the reload started, and a
     // dead node's write time is frozen, so a remove and reinsert of the same value instance is
@@ -7447,7 +7446,7 @@ final class BoundedLocalCacheTest {
         .maximumSize(10)
         .build(loader);
     var local = asBoundedLocalCache(cache);
-    var value = Integer.valueOf(12_345);
+    int value = 12_345;
     cache.put(1, value);
 
     ticker.advance(Duration.ofMinutes(2));

@@ -1093,6 +1093,24 @@ registration-side re-check: closing it there would fix only `refreshIfNeeded` an
 leave the manual `LocalLoadingCache` and `LocalAsyncLoadingCache` registrations,
 which carry no write-time marker to test, while implying all three were closed.
 
+**A cleared reference is equal only to itself.** `InternalReference`'s `equals` compares referents,
+so two distinct references that have both been cleared used to compare equal (`null == null`) and
+aliased whenever their cached `System.identityHashCode` values collided. Nothing in production
+depends on that: every lookup that can involve a cleared reference (`drainKeyReferences`,
+`drainValueReferences`, `evictEntry`) passes the *same* object, which the identity short-circuit
+already answers. `referenceEquals` and `objectEquals` therefore require a live referent. The one
+property this drops is cross-type null equality between a `WeakValueReference` and a
+`SoftValueReference`, which cannot arise since a cache is one or the other; `ReferenceTest
+.reference_equality` now asserts each cleared reference forms its own equality group.
+
+**Automatic refresh uses `>` where expiration uses `>=`, and that stays.** `refreshIfNeeded` tests
+`(now - writeTime) > refreshAfterWriteNanos()` while `hasExpired` tests `>=` on all three of its
+predicates, so with equal durations an entry is expired one nanosecond before it is
+refresh-eligible. The `>` matches Guava and is unobservable on a real ticker (only a `FakeTicker`
+advanced by exactly the duration can see it). Ruled 2026-08-24: the javadoc's "once a fixed
+duration has elapsed" is not wrong enough to reword, and other Guava-compatibility choices rank
+ahead of this one. Don't re-raise the boundary or the asymmetry.
+
 **All three refresh registrations key `refreshes` by `referenceKey(key)`, never by the node's own
 key reference.** Under weak keys a node's `retire()`/`die()` calls `clear()` on the very
 `WeakKeyReference` the node holds, and `InternalReference.equals` compares referents by identity,

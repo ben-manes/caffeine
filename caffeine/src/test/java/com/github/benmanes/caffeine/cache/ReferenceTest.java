@@ -1685,8 +1685,8 @@ final class ReferenceTest {
             new SoftValueReference<>(first, first, null))
         .addEqualityGroup(new WeakValueReference<>(second, second, null),
             new SoftValueReference<>(second, second, null))
-        .addEqualityGroup(new WeakValueReference<>(first, null, null),
-            new SoftValueReference<>(first, null, null))
+        .addEqualityGroup(new WeakValueReference<>(first, null, null))
+        .addEqualityGroup(new SoftValueReference<>(first, null, null))
         .testEquals();
   }
 
