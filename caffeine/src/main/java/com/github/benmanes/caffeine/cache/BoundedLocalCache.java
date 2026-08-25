@@ -1395,20 +1395,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
               // metadata even when the reloaded value is the same instance
               return value;
             }
-            // Otherwise the refresh is discarded. If a concurrent write changed the value or
-            // writeTime, preserve those timestamps so the refresh rejection does not stomp on the
-            // user's write. An external discard with no concurrent write falls through to the
-            // normal update, which debounces the next refresh attempt. A same-instance reload is
-            // not a value change, so it is not notified. When a successor refresh owns the
-            // registration, leave it intact so this by-key discard cannot steal its token.
+            // Otherwise the refresh is discarded. The rejection installs nothing, so the entry's
+            // timestamps are preserved rather than restarted at the completion time. A
+            // same-instance reload is not a value change, so it is not notified. When a successor
+            // refresh owns the registration, leave it intact so this by-key discard cannot steal
+            // its token.
             boolean sameInstance = (currentValue == value)
                 || (isAsync && (newValue == Async.getIfReady((CompletableFuture<?>) currentValue)));
             if ((value != null) && !sameInstance) {
               cause[0] = RemovalCause.REPLACED;
             }
-            if ((currentValue != oldValue) || (writeTimeOf(node) != writeTime)) {
-              hints.preserveTimestamps = true;
-            }
+            hints.preserveTimestamps = true;
             hints.preserveRefresh = !owned;
             return currentValue;
           }, expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true, hints);

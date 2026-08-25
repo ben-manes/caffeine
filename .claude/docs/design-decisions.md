@@ -323,14 +323,14 @@ flag the immaterial-completion skip as a missing reorder/refresh.
 The `refreshIfNeeded` completion's remap is quiet the same way (`RemapHints.quietly`, honored at
 `remap`'s update dispatch): the triggering read already recorded its access, so a loud reload
 completion double-counted every refresh-eligible read into the sketch and the climber's hit
-sample (1000 reads → 2000 of each once past the refresh interval). A reload finalization —
-including the value-preserving debounce write on an externally discarded refresh — is
+sample (1000 reads → 2000 of each once past the refresh interval). A reload finalization is
 bookkeeping, not a usage. Manual `LoadingCache.refresh` / async `tryComputeRefresh` completions
 are unchanged (explicit per-call API action, no read-stream amplification); revisit only with a
 measured skew. Pinned by `BoundedLocalCacheTest.refreshCompletion_doesNotRecordAccess`.
 
-A refresh completion always takes the material branch, so `remap`'s immaterial one is
-quiet-capable but unreached in production. `refreshIfNeeded` requires `refreshAfterWrite`, which
+A committed refresh completion always takes the material branch, so `remap`'s immaterial one is
+quiet-capable but unreached in production (a rejected one returns at the `preserveTimestamps`
+exit, before the dispatch). `refreshIfNeeded` requires `refreshAfterWrite`, which
 makes `exceedsWriteTimeTolerance`'s refresh disjunct true at every completion: either the
 configured duration is within the 1s tolerance, or the refresh fired because the entry aged past a
 duration longer than the tolerance. The `quietly` guard on that branch is not defense-in-depth, it
@@ -1102,9 +1102,28 @@ refresh-eligible read). So each completion path (`LocalLoadingCache.refresh`,
 exits — reject *and* absent — mirroring the error path, which was already owner-scoped
 (`refreshes.remove(kr, ownFuture)`). Honoring the hint therefore extends beyond the
 same-instance no-op block: both `remap` absent exits (`n == null` and the evicted-retire) and
-the unbounded absent exit skip the discard when `preserveRefresh` is set. The **absent-branch**
-steal is reachable in **sync mode only**: a successor `refresh(k)` on an absent key registers
-an `asyncLoad` without inserting the entry, so the stale completion observes the entry absent;
+the unbounded absent exit skip the discard when `preserveRefresh` is set.
+
+On a **reject** exit the hint cannot stand alone. `remap` honors `preserveRefresh` for a
+same-instance return only at its `preserveTimestamps` no-op exit, so all three completion paths
+set `preserveTimestamps` unconditionally there. `refreshIfNeeded` used to set it only when the
+value or write time had changed, which left the one sub-case owner-scoping exists for
+(registration superseded, entry untouched) falling through to the material tail. Both halves of
+the fix then failed together: the tail's by-key discard stole the successor's token, and its
+`setWriteTime` moved the write time the successor's own ABA guard tests, so the successor's fresh
+value was dropped too and `expireAfterWrite` was extended by the stale reload's in-flight
+duration. Gating the tail's discard on `preserveRefresh` fixes only the first half, which is why
+the bounded cache does not carry that gate; `UnboundedLocalCache.remap` does, because it has no
+no-op exit to route to. There is no debounce lost: a write that discards a token moves the write
+time anyway, and a superseded token blocks re-arming through `refreshes.containsKey`. Pinned by
+`RefreshAfterWriteTest.refreshIfNeeded_staleAfterReinsert_preservesEntry`, which reaches the case
+through a remove and reinsert of the same value instance, since a dead node's write time is
+frozen and the completion's ABA guard therefore sees no change. A rejected completion now leaves
+the entry refresh-eligible, so the next read arms a fresh reload instead of waiting out another
+interval; `BoundedLocalCacheTest.refreshIfNeeded_skip_discarded` reads quietly for that reason.
+
+The **absent-branch** steal is reachable in **sync mode only**: a successor `refresh(k)` on an
+absent key registers an `asyncLoad` without inserting the entry, so the stale completion observes the entry absent;
 in async mode the successor's `get` inserts an in-flight future, making the entry present so the
 completion takes the reject branch instead. Don't reintroduce an unconditional by-key discard on
 any refresh-completion exit.

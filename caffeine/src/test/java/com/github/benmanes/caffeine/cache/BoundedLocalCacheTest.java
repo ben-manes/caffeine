@@ -6816,8 +6816,11 @@ final class BoundedLocalCacheTest {
     assertThat(future).succeedsWith(context.firstKey());
     await().untilAsserted(() -> assertThat(context.executor().completed())
         .isEqualTo(context.executor().submitted()));
-    await().untilAsserted(() -> assertThat(context.cache())
-        .containsEntry(context.firstKey(), context.original().get(context.firstKey())));
+
+    // The rejection installs nothing, so it leaves the entry's write time alone and the entry
+    // stays refresh-eligible. Read it quietly or the check arms a second reload of its own.
+    assertThat(cache.getIfPresentQuietly(context.firstKey()))
+        .isEqualTo(context.original().get(context.firstKey()));
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(context.firstKey(), context.firstKey());
   }

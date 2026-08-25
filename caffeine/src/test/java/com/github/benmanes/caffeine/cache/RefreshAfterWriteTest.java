@@ -544,6 +544,50 @@ final class RefreshAfterWriteTest {
   @CheckNoEvictions
   @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, expireAfterWrite = Expire.FOREVER,
+      loader = Loader.ASYNC_INCOMPLETE)
+  void refreshIfNeeded_staleAfterReinsert_preservesEntry(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // A dead node's write time is frozen, so a completion whose entry was removed and reinserted
+    // with the same value instance detects no ABA and takes the reject exit. That rejection
+    // installs nothing, so it must neither steal the successor's registration nor restart the
+    // write clock, which would fail the successor's own ABA check and drop its reload too.
+    Int key = context.absentKey();
+    Int original = context.absentValue();
+    Int reloaded = intern(original.add(2));
+    cache.put(key, original);
+
+    // R1 auto-refresh registers against the entry's first node
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.get(key)).isEqualTo(original);
+    var r1 = requireNonNull(cache.policy().refreshes().get(key));
+
+    // That node dies and is replaced by one holding the same value instance
+    cache.invalidate(key);
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+    cache.put(key, original);
+
+    // R2 auto-refresh registers against the new node
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.get(key)).isEqualTo(original);
+    var r2 = requireNonNull(cache.policy().refreshes().get(key));
+    assertThat(r2).isNotSameInstanceAs(r1);
+    var expireAfterWrite = cache.policy().expireAfterWrite().orElseThrow();
+
+    // Stale R1 completes: R2's registration and the entry's write time must be left intact
+    r1.complete(intern(reloaded.negate()));
+    assertThat(cache.policy().refreshes()).containsKey(key);
+    assertThat(expireAfterWrite.ageOf(key, TimeUnit.NANOSECONDS))
+        .hasValue(Duration.ofMinutes(2).toNanos());
+
+    // R2's fresh reload must be committed
+    r2.complete(reloaded);
+    assertThat(cache).containsEntry(key, reloaded);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE)
   void refresh_staleAbsentCompletion_doesNotDiscardSuccessor(
       LoadingCache<Int, Int> cache, CacheContext context) {

@@ -100,8 +100,12 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   narrow the discard. The one sanctioned narrowing is `RemapHints.preserveRefresh` for query-style
   no-ops, which **both** bounded and unbounded caches must honor, and which also owner-scopes the
   completion itself (`preserveRefresh = !owned` on every reject/absent exit — else a stale
-  completion steals a newer refresh's token). Don't reintroduce an unconditional by-key discard on
-  a completion exit. "Every exit" includes `remap`'s **exception** exit, which honors the hint too
+  completion steals a newer refresh's token). A reject exit sets `preserveTimestamps`
+  unconditionally alongside it: on a same-instance return that is the exit which honors
+  `preserveRefresh`, and a rejection that restarts the write clock fails the successor's own ABA
+  guard, so its reload is dropped anyway. Don't make it conditional again, and don't reintroduce
+  an unconditional by-key discard on a completion exit. "Every exit" includes `remap`'s
+  **exception** exit, which honors the hint too
   (a throwing weigher/`Expiry`/`Ticker` lands there after the remapping set it); the exits that
   precede the remapping cannot, since the hint is what the remapping computes, and none of them is
   reachable from a completion. The jcache adapter deliberately does not get this narrowing. Read
