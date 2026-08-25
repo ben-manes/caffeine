@@ -7216,6 +7216,104 @@ final class BoundedLocalCacheTest {
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
 
+  @Test
+  @CheckMaxLogLevel(WARN)
+  @SuppressWarnings("resource")
+  void refreshIfNeeded_completionThrows_releasesToken() {
+    // A throw before remap reaches a discard leaves the registration behind, and the containsKey
+    // guard then suppresses this key's automatic refresh for good. The completion releases its
+    // own token by identity, the same way its error branch does.
+    var ticker = new FakeTicker();
+    var broken = new AtomicBoolean();
+    var loader = new RecordingReload();
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .ticker(brokenTicker(ticker, broken))
+        .executor(Runnable::run)
+        .maximumSize(10)
+        .build(loader);
+    var local = asBoundedLocalCache(cache);
+    cache.put(1, 1);
+
+    ticker.advance(Duration.ofMinutes(2));
+    assertThat(cache.getIfPresent(1)).isEqualTo(1);
+    assertThat(local.refreshes()).hasSize(1);
+
+    broken.set(true);
+    loader.pending.get(0).complete(2);
+    broken.set(false);
+    assertThat(local.refreshes()).isEmpty();
+
+    // The key must still be refreshable
+    ticker.advance(Duration.ofMinutes(2));
+    assertThat(cache.getIfPresent(1)).isEqualTo(1);
+    assertThat(local.refreshes()).hasSize(1);
+    assertThat(logEvents()
+        .withMessage("Exception thrown during refresh")
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @Test
+  @CheckMaxLogLevel(WARN)
+  @SuppressWarnings("resource")
+  void refresh_completionThrows_releasesToken() {
+    // The same release in LocalLoadingCache.refresh's completion, which shares the guard
+    var ticker = new FakeTicker();
+    var broken = new AtomicBoolean();
+    var loader = new RecordingReload();
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .ticker(brokenTicker(ticker, broken))
+        .executor(Runnable::run)
+        .maximumSize(10)
+        .build(loader);
+    var local = asBoundedLocalCache(cache);
+    cache.put(1, 1);
+
+    var refresh = cache.refresh(1);
+    assertThat(local.refreshes()).hasSize(1);
+
+    broken.set(true);
+    loader.pending.get(0).complete(2);
+    broken.set(false);
+    assertThat(refresh).isDone();
+    assertThat(local.refreshes()).isEmpty();
+    assertThat(logEvents()
+        .withMessage("Exception thrown during refresh")
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @Test
+  @CheckMaxLogLevel(WARN)
+  @SuppressWarnings("resource")
+  void refreshAsync_completionThrows_releasesToken() {
+    // The same release in LocalAsyncLoadingCache.tryComputeRefresh's completion
+    var ticker = new FakeTicker();
+    var broken = new AtomicBoolean();
+    var loader = new RecordingReload();
+    AsyncLoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .ticker(brokenTicker(ticker, broken))
+        .executor(Runnable::run)
+        .maximumSize(10)
+        .buildAsync(loader);
+    var local = asBoundedLocalCache(cache);
+    cache.put(1, CompletableFuture.completedFuture(1));
+
+    var refresh = cache.synchronous().refresh(1);
+    assertThat(local.refreshes()).hasSize(1);
+
+    broken.set(true);
+    loader.pending.get(0).complete(2);
+    broken.set(false);
+    assertThat(refresh).isDone();
+    assertThat(local.refreshes()).isEmpty();
+  }
+
   @Nested @Isolated
   final class IsolatedRefreshTest {
 
@@ -7330,6 +7428,31 @@ final class BoundedLocalCacheTest {
       await().untilAsserted(() ->
           assertThat(asyncCache.get(context.absentKey())).succeedsWith(refresh.get()));
     }
+  }
+
+  /** A loader that records each reload it hands out so the test can settle them by hand. */
+  private static final class RecordingReload implements CacheLoader<Integer, Integer> {
+    final List<CompletableFuture<Integer>> pending = new ArrayList<>();
+
+    @Override public Integer load(Integer key) {
+      throw new AssertionError("Should never be called");
+    }
+    @Override public CompletableFuture<Integer> asyncReload(
+        Integer key, Integer oldValue, Executor executor) {
+      var reload = new CompletableFuture<Integer>();
+      pending.add(reload);
+      return reload;
+    }
+  }
+
+  /** Returns a ticker that throws while {@code broken} is set, to fail a refresh completion. */
+  private static Ticker brokenTicker(FakeTicker ticker, AtomicBoolean broken) {
+    return () -> {
+      if (broken.get()) {
+        throw new IllegalStateException("ticker");
+      }
+      return ticker.read();
+    };
   }
 
   /* --------------- Broken Equality --------------- */

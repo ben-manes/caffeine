@@ -171,6 +171,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
           }
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
+          cache().refreshes().remove(keyReference, reloading[0]);
           cache().statsCounter().recordLoadFailure(loadTime);
         }
       });

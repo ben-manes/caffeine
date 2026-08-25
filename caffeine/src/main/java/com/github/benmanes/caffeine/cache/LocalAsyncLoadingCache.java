@@ -309,6 +309,7 @@ abstract class LocalAsyncLoadingCache<K, V>
             }
           } catch (Throwable t) {
             logger.log(Level.WARNING, "Exception thrown during refresh", t);
+            asyncCache.cache().refreshes().remove(keyReference, castedFuture);
             asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
             asyncCache.cache().remove(key, castedFuture);
           }

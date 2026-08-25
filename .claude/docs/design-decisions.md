@@ -1101,6 +1101,20 @@ registration rather than on every refresh-eligible read. Don't key `refreshes` b
 node owns. Pinned by
 `BoundedLocalCacheTest.refreshIfNeeded_weakKeys_preservedTokenIsDiscardable`.
 
+**A refresh completion releases its own token in its `catch`, not only through `remap`.** The
+completion's commit normally clears the registration inside `remap`, so the outer `catch` looks
+redundant. It is not: `remap` has throw sites that precede every `discardRefresh` — the ticker
+read that builds the `ComputeContext`, `requireIsAlive`'s broken-`equals` check, and the ticker
+read behind `hasExpired`. A throw there leaves the registration behind, and because
+`refreshIfNeeded` gates on `refreshes.containsKey`, that key's **automatic refresh is suppressed
+for the rest of the cache's life** from one transient user-component failure. All three
+completions therefore mirror their own error branch with the identity-conditional
+`refreshes.remove(keyReference, ownFuture)`, which cannot take a successor's token. Note the
+throw sites *after* the discard are already safe, since the material tail discards before
+returning from the map computation. Pinned by
+`BoundedLocalCacheTest.refreshIfNeeded_completionThrows_releasesToken` and its `refresh` /
+`refreshAsync` twins, which fail a refresh completion through a throwing `Ticker`.
+
 **A rejected reload is notified even though it was never in the cache.** When the
 completion's `compute` declines to install the reloaded value it sets a cause and calls
 `notifyRemoval(key, value, cause)` — `EXPLICIT` on the absent exit, `REPLACED` on the reject

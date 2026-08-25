@@ -1411,6 +1411,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           }, expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true, hints);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
+          refreshes.remove(keyReference, refreshFuture[0]);
           statsCounter().recordLoadFailure(loadTime);
           return null;
         }

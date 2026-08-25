@@ -100,6 +100,12 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   `AddTask`/`UpdateTask`. Testing `preserveTimestamps` there instead is a weaker restatement of
   the exit's four-part guard, and the two disagreeing skips the policy work after a committed
   write (permanent `weightedSize` skew, an unlinked node, and a negative credit when it dies).
+- **A refresh completion's `catch` releases its own token.** `remap` throws before any
+  `discardRefresh` at the `ComputeContext` ticker read, `requireIsAlive`, and `hasExpired`, and a
+  token left behind there suppresses that key's automatic refresh permanently via the
+  `containsKey` guard. All three completions use the identity-conditional
+  `refreshes.remove(keyReference, ownFuture)`, matching their error branch. Don't delete it as
+  redundant with `remap`'s discard.
 - **`refreshIfNeeded` is lock-free and `discardRefresh` is over-aggressive** — both intentional;
   a refresh racing a real mutation must die for linearizability. Don't add `synchronized(node)` or
   narrow the discard. The one sanctioned narrowing is `RemapHints.preserveRefresh` for query-style
