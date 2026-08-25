@@ -7430,6 +7430,41 @@ final class BoundedLocalCacheTest {
     }
   }
 
+  @Test
+  @SuppressWarnings("resource")
+  void refreshIfNeeded_reinsertedNode_rejectsStaleReload() {
+    // The completion's write-time guard reads the node captured when the reload started, and a
+    // dead node's write time is frozen, so a remove and reinsert of the same value instance is
+    // invisible to it. The state built below is what the discardRefresh prescreen race leaves:
+    // node A dead with its token still registered, and node B holding that same value. Without
+    // the liveness term the guard passes and commits a reload launched from the dead generation.
+    var ticker = new FakeTicker();
+    var loader = new RecordingReload();
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .maximumSize(10)
+        .build(loader);
+    var local = asBoundedLocalCache(cache);
+    var value = Integer.valueOf(12_345);
+    cache.put(1, value);
+
+    ticker.advance(Duration.ofMinutes(2));
+    assertThat(cache.getIfPresent(1)).isEqualTo(value);
+    var keyReference = local.referenceKey(1);
+    var stale = loader.pending.get(0);
+    assertThat(local.refreshes()).containsEntry(keyReference, stale);
+
+    cache.invalidate(1);
+    cache.put(1, value);
+    local.refreshes().put(keyReference, stale);
+
+    stale.complete(999);
+    assertThat(cache.getIfPresent(1)).isEqualTo(value);
+    assertThat(local.refreshes()).isEmpty();
+  }
+
   /** A loader that records each reload it hands out so the test can settle them by hand. */
   private static final class RecordingReload implements CacheLoader<Integer, Integer> {
     final List<CompletableFuture<Integer>> pending = new ArrayList<>();

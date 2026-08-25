@@ -1075,7 +1075,16 @@ removes unconditionally. What the prescreen cannot see is an in-progress
 that window leaves a token launched from the generation it superseded. Nothing is
 committed wrongly: the completion's ABA guards reject the value, and the
 registration re-validates `node.getWriteTime()` inside the reservation, which
-rejects any write that lands earlier. The residue is bounded by one load, and it
+rejects any write that lands earlier. That first clause is load-bearing and was
+only true by accident until 2026-08-24. The completion's write-time term reads
+the node captured when the reload started, and `retire()`/`die()` leave
+`writeTime` frozen, so a remove and reinsert of the **same value instance**
+presented an unchanged value and an unchanged write time and the guard committed
+a reload launched from the dead generation. The commit branch now also requires
+`node.isAlive()`, which is exactly the generation test the other two terms cannot
+make; both remain necessary, since the write time still catches an in-place
+update of a node that never died. Pinned by
+`BoundedLocalCacheTest.refreshIfNeeded_reinsertedNode_rejectsStaleReload`. The residue is bounded by one load, and it
 is a delay rather than a loss — automatic refresh is suppressed for that key while
 the orphan is in flight (`refreshIfNeeded` gates on the same `containsKey`), and a
 `refresh(k)` issued after the write coalesces onto the superseded token and is

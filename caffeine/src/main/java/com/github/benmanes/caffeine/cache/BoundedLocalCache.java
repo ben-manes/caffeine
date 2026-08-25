@@ -1390,7 +1390,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
               hints.preserveRefresh = !owned;
               return null;
             }
-            if ((currentValue == oldValue) && (writeTimeOf(node) == writeTime) && owned) {
+            if ((currentValue == oldValue) && node.isAlive()
+                && (writeTimeOf(node) == writeTime) && owned) {
               // If the entry was not modified while in-flight (no ABA) then replace, refreshing the
               // metadata even when the reloaded value is the same instance
               return value;

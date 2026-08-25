@@ -100,6 +100,10 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   `AddTask`/`UpdateTask`. Testing `preserveTimestamps` there instead is a weaker restatement of
   the exit's four-part guard, and the two disagreeing skips the policy work after a committed
   write (permanent `weightedSize` skew, an unlinked node, and a negative credit when it dies).
+- **A refresh completion's commit branch tests `node.isAlive()`, not just the write time.** The
+  captured node's `writeTime` is frozen once it dies, so a remove and reinsert of the same value
+  instance is invisible to the write-time term and a stale reload commits into the new
+  generation. The prescreen race in the doc is adjudicated benign on the strength of this guard.
 - **A refresh completion's `catch` releases its own token.** `remap` throws before any
   `discardRefresh` at the `ComputeContext` ticker read, `requireIsAlive`, and `hasExpired`, and a
   token left behind there suppresses that key's automatic refresh permanently via the
