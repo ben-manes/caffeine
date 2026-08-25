@@ -641,6 +641,21 @@ BEFORE the try block because `ctx.cause` can change from null to REPLACED
 inside the try. The catch block uses `!wasEvicted` to distinguish eviction-path
 exceptions (commit+defer) from non-eviction exceptions (immediate rethrow).
 
+**`remap`'s no-op exit records itself in `ComputeContext.unmodified`; the post-write dispatch
+must not re-derive it.** The in-lambda short-circuit takes the exit on four conditions
+(`preserveTimestamps`, a same-instance return, and no removal cause); the dispatch used to test
+only the hint, so a hinted call that *did* mutate committed the mutation and then skipped its
+`AddTask`/`UpdateTask`. A hinted update left `weightedSize` short by the delta forever, and a
+hinted create on an absent key (the absent branch has no short-circuit at all) installed a node
+linked into no deque and counted in no weight, which `makeDead` later *subtracted* from
+`weightedSize` anyway, relaxing the bound by that much per cycle. Not reachable from the public
+API: every caller that sets `preserveTimestamps` returns the instance it was handed, and each
+insert branch returns before the hint is set. It is latent because `RemapHints` is
+package-private, so nothing warns a future caller. Pinned by
+`BoundedLocalCacheTest.remap_preserveTimestamps_newValueDiffers_publishesTheUpdate` and
+`remap_preserveTimestamps_absentCreate_publishesTheAddition`. Don't restore a second copy of the
+predicate; the exit that skips the work is the one that says so.
+
 **`remap` same-instance return is a setter no-op, NOT a metadata no-op**. When a
 user `compute`/`merge` remapping function returns the same value instance as the
 current value, `setValue` is skipped, but `weight`, `accessTime`, `variableTime`,
@@ -1118,8 +1133,22 @@ refresh-eligible read). So each completion path (`LocalLoadingCache.refresh`,
 `owned = refreshes.get(kr) == ownFuture` and sets `preserveRefresh = !owned` on its non-commit
 exits — reject *and* absent — mirroring the error path, which was already owner-scoped
 (`refreshes.remove(kr, ownFuture)`). Honoring the hint therefore extends beyond the
-same-instance no-op block: both `remap` absent exits (`n == null` and the evicted-retire) and
-the unbounded absent exit skip the discard when `preserveRefresh` is set.
+same-instance no-op block: `remap`'s two absent **null-return** exits (`n == null` and the
+evicted-retire) and the unbounded absent exit skip the discard when `preserveRefresh` is set.
+The absent-**create** exit does not, and must not: installing a value is a mutation, so the
+over-aggressive-discard doctrine applies to it like any other write, and a completion that
+installs on an absent key is by construction the owner (both manual paths create only in their
+owned branch), so its `finally` is clearing its own token. Every one of the twelve callers that
+sets `preserveRefresh` either returns null or returns the existing value of a present entry, so
+the exit is not reachable with the hint set. Read twice as a hint violation from the sentence
+above; pinned now by `BoundedLocalCacheTest.remap_absentCreate_discardsPendingRefresh`.
+
+The `!computeIfAbsent` evicted-retire exit is outside the rule for a second reason: it runs
+*before* the remapping function, and the remapping function is the only thing that ever assigns
+`preserveRefresh`, so no hint exists yet whatever the caller passed (`computeIfPresent` and
+`replaceAll`, the only non-creating callers, pass none). Reaping a dead entry for a caller that
+may not recreate it is a purge, so it discards, the same reading as `invalidate`/`clear` below.
+Pinned by `BoundedLocalCacheTest.remap_evictedRetire_nonCreating_discardsPendingRefresh`.
 
 On a **reject** exit the hint cannot stand alone. `remap` honors `preserveRefresh` for a
 same-instance return only at its `preserveTimestamps` no-op exit, so all three completion paths

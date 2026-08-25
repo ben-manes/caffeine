@@ -95,6 +95,11 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   older key, judging a retired node alive while handing out the sentinel. Opaque reads are coherent,
   which forbids it, and cost nothing at runtime. Don't demote them to plain, and don't promote the
   field to volatile.
+- **`remap`'s post-write dispatch reads `ComputeContext.unmodified`, not the hint.** The no-op
+  exit sets it; anything that reaches the dispatch without it mutated the entry and owes an
+  `AddTask`/`UpdateTask`. Testing `preserveTimestamps` there instead is a weaker restatement of
+  the exit's four-part guard, and the two disagreeing skips the policy work after a committed
+  write (permanent `weightedSize` skew, an unlinked node, and a negative credit when it dies).
 - **`refreshIfNeeded` is lock-free and `discardRefresh` is over-aggressive** — both intentional;
   a refresh racing a real mutation must die for linearizability. Don't add `synchronized(node)` or
   narrow the discard. The one sanctioned narrowing is `RemapHints.preserveRefresh` for query-style
@@ -111,7 +116,10 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   **exception** exit, which honors the hint too
   (a throwing weigher/`Expiry`/`Ticker` lands there after the remapping set it); the exits that
   precede the remapping cannot, since the hint is what the remapping computes, and none of them is
-  reachable from a completion. The jcache adapter deliberately does not get this narrowing. Read
+  reachable from a completion, which is what puts the `!computeIfAbsent` evicted-retire exit
+  outside it. The absent-**create** exit's `finally` sits outside the rule on
+  purpose: a create is a mutation, so it discards whatever is registered, and a completion that
+  creates owns its own token. Don't "fix" it to honor the hint. The jcache adapter deliberately does not get this narrowing. Read
   the doc. The bounded cache's `containsKey` prescreen in `discardRefresh` **stays**: a
   `ConcurrentHashMap.remove` takes the bin lock whether or not there is anything to remove, so the
   prescreen is what keeps a write off that lock. It was added to the bounded cache only, and the

@@ -3135,6 +3135,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             if (!ctx.hints.preserveRefresh) {
               discardRefresh(kr);
             }
+            ctx.unmodified = true;
             return n;
           }
 
@@ -3196,8 +3197,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       afterWrite(new RemovalTask(ctx.removed));
     } else if (node == null) {
       // absent and not computable
-    } else if ((ctx.hints != null) && ctx.hints.preserveTimestamps) {
-      // The remapping was a signaled no-op; the node was not modified
+    } else if (ctx.unmodified) {
+      // caller flagged a same-instance return as a no-op
     } else if ((ctx.oldValue == null) && (ctx.cause == null)) {
       afterWrite(new AddTask(node, ctx.newWeight));
     } else {
@@ -3556,6 +3557,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     long now;
     int oldWeight;
     int newWeight;
+    boolean unmodified;
     boolean exceedsTolerance;
 
     ComputeContext(long now) {

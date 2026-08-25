@@ -6859,7 +6859,7 @@ final class BoundedLocalCacheTest {
     // The first refresh registers and a write then discards it
     ticker.advance(Duration.ofMinutes(2));
     assertThat(cache.getIfPresent(key)).isNotNull();
-    var first = pending.get(0);
+    var first = Iterables.get(pending, 0);
     cache.put(key, new Object());
     assertThat(local.refreshes()).isEmpty();
 
@@ -7067,6 +7067,51 @@ final class BoundedLocalCacheTest {
         .isEqualTo(originalValue);
   }
 
+  @Test
+  @SuppressWarnings("resource")
+  void remap_preserveTimestamps_newValueDiffers_publishesTheUpdate() {
+    // The hint signals a no-op only when the lambda returns the same instance, so a hinted call
+    // that does mutate must still publish an UpdateTask. Otherwise the entry's new weight never
+    // reaches the policy and weightedSize is permanently short by the delta.
+    var cache = asBoundedLocalCache(Caffeine.newBuilder()
+        .weigher((Integer key, Integer value) -> value)
+        .executor(Runnable::run)
+        .maximumWeight(1000)
+        .build());
+    var previous = cache.put(1, 1);
+    assertThat(previous).isNull();
+    assertThat(cache.weightedSize()).isEqualTo(1);
+
+    var hints = new LocalCache.RemapHints();
+    hints.preserveTimestamps = true;
+    assertThat(cache.compute(1, (key, oldValue) -> 5, cache.expiry(),
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints)).isEqualTo(5);
+    assertThat(cache.weightedSize()).isEqualTo(5);
+  }
+
+  @Test
+  @SuppressWarnings("resource")
+  void remap_preserveTimestamps_absentCreate_publishesTheAddition() {
+    // The absent branch has no no-op short-circuit at all, so a hinted create must still publish
+    // an AddTask. An unlinked node is unevictable, and removing it later subtracts a weight that
+    // was never added, which relaxes the bound by that much for the cache's lifetime.
+    var cache = asBoundedLocalCache(Caffeine.newBuilder()
+        .weigher((Integer key, Integer value) -> value)
+        .executor(Runnable::run)
+        .maximumWeight(1000)
+        .build());
+
+    var hints = new LocalCache.RemapHints();
+    hints.preserveTimestamps = true;
+    assertThat(cache.compute(1, (key, oldValue) -> 300, cache.expiry(),
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints)).isEqualTo(300);
+    assertThat(cache.weightedSize()).isEqualTo(300);
+
+    var removed = cache.remove(1);
+    assertThat(removed).isEqualTo(300);
+    assertThat(cache.weightedSize()).isEqualTo(0);
+  }
+
   @CheckNoEvictions
   @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
@@ -7120,6 +7165,54 @@ final class BoundedLocalCacheTest {
     hints.preserveTimestamps = true;
     assertThat(cache.compute(key, (k, old) -> oldValue, cache.expiry(),
         /* recordLoad= */ false, /* recordLoadFailure= */ false, hints)).isNotNull();
+    assertThat(cache.refreshes()).doesNotContainKey(keyRef);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, refreshAfterWrite = Expire.ONE_MINUTE,
+      compute = Compute.SYNC)
+  void remap_absentCreate_discardsPendingRefresh(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A creation is a mutation rather than a query-style no-op, so the absent-create exit discards
+    // whatever is registered even when the caller set preserveRefresh. A completion that installs
+    // a value on an absent key owns the registration, so its finally clears its own token.
+    var key = context.absentKey();
+    var keyRef = cache.referenceKey(key);
+    var pendingRefresh = new CompletableFuture<Int>();
+    cache.refreshes().put(keyRef, pendingRefresh);
+
+    var hints = new LocalCache.RemapHints();
+    hints.preserveRefresh = true;
+    assertThat(cache.compute(key, (k, old) -> context.absentValue(), cache.expiry(),
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints)).isNotNull();
+    assertThat(cache.refreshes()).doesNotContainKey(keyRef);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
+      keys = ReferenceType.STRONG, refreshAfterWrite = Expire.ONE_MINUTE,
+      expireAfterWrite = Expire.ONE_MINUTE, compute = Compute.SYNC)
+  void remap_evictedRetire_nonCreating_discardsPendingRefresh(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Reaping a dead entry is a purge rather than a query, so a non-creating caller discards the
+    // registration on its way out. The exit runs before the remapping function, which is the only
+    // thing that assigns preserveRefresh, so the hint can never be set by the time it is reached.
+    var key = context.firstKey();
+    var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));
+    var keyRef = node.getKeyReference();
+    var pendingRefresh = new CompletableFuture<Int>();
+    cache.refreshes().put(keyRef, pendingRefresh);
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    var ctx = new BoundedLocalCache.ComputeContext<Int, Int>(context.ticker().read());
+    var result = cache.remap(key, cache.nodeFactory.newLookupKey(key),
+        (k, oldValue) -> { throw new AssertionError("Should never be called"); },
+        cache.expiry(), ctx, /* computeIfAbsent= */ false);
+
+    assertThat(result).isNull();
+    assertThat(ctx.cause).isEqualTo(RemovalCause.EXPIRED);
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
 
