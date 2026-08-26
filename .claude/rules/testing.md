@@ -16,6 +16,17 @@
 - `examples/` hold the same quality bar as the library: their tests must cover
   unhappy paths (duplicate keys, a failing write/load, empty batches) —
   happy-path-only tests are where example bugs have hidden
+- **Pin a user-visible contract at the API level, in the test class that owns it.** A
+  `Policy`/`Cache`/`asMap` behaviour belongs in `ExpireAfterVarTest`, `CacheTest`, `EvictionTest`
+  and so on, written as the user would hit it. A white-box pin in the data structure's own test
+  (`TimerWheelTest`, `BoundedBufferTest`) asserts the mechanism but shows nobody what the change
+  buys, and it is the wrong artifact to hand to a reviewer. Add the internal pin only for a case
+  the API cannot reach, and say which case that is.
+- **Match the conventions of the file you are editing.** Reuse its `@MethodSource` shape, its
+  fixtures, and its naming rather than importing a different style (a static direction table, a
+  `named(...)` `Consumer` source) that the file does not already use. A reviewer who has to
+  reverse-engineer a test, or ablate production code to find out what it pins, has been handed
+  work rather than evidence.
 - For full test infrastructure details, see `.claude/docs/testing.md`
 
 ## Test Discovery Guide
@@ -124,6 +135,12 @@ e.g., `ReferenceTest` needs `values=weak/soft`.
   }
   ```
 - Alternatively, keep one `@FuzzTest` per file (the current convention)
+- **Take a fuzzer's `--tests` pattern from `.github/workflows/build.yml`, don't guess it.** Each
+  fuzzer is listed there with the form it needs: `PacerFuzzer*` and `CaffeineSpecFuzzer*` carry a
+  trailing wildcard because their `@FuzzTest`s sit in nested holder classes, while
+  `TimerWheelFuzzer` and the rest match bare. Guessing the bare name for a nested one selects
+  **zero tests and still reports BUILD SUCCESSFUL**, so confirm the result XML's `tests=` count
+  either way
 - Fuzz tests require `JAZZER_FUZZ=1` environment variable (set by the Gradle task)
 
 ## PIT Mutation Testing

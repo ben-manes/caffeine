@@ -23,6 +23,24 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   not a concurrent operation's *wait*: the re-arm re-submits immediately and the lock is not fair,
   so the backlog still monopolizes it. Don't read that residual as the cap failing, and don't
   raise the budget to "make the drain finish" — the slicing is the point.
+- **Without a `Scheduler`, maintenance is amortized onto callers and a quiesced cache stays
+  over `maximumSize`.** The immediate re-arm is `commonPool`-only because any other executor may
+  run the submission on the calling thread; the deferred pacer arm is the custom-executor fallback
+  and needs a `Scheduler`, which is the published way to ask for prompt eviction. The excess is
+  capped by the write buffer (`estimatedSize() <= maximum + WRITE_BUFFER_MAX`), since a full buffer
+  forces `afterWrite`'s inline assist. Same model as a garbage collector. Don't add a third arm and
+  don't move the resubmission into `PerformCleanupTask`. Read the doc.
+- **`Pacer.schedule`'s reschedule arm must call `cancel()`, not `future.cancel(...)`.** The
+  immediate-scheduler recursion guard is `future == null && nextFireTime != 0L`, and only
+  `cancel()` puts the pacer into that state; cancelling the future alone leaves the old one
+  published and an inline scheduler then recurses without bound. Don't "simplify" it back.
+- **`MpscGrowableArrayQueue` is a shaded JCTools port and is not wrap-safe; that is accepted.**
+  At `pIndex == cIndex == 2^63 - 256` the "is there room" sum overflows and a resize is selected on
+  an empty maximum chunk, stranding the odd producer-index marker so every producer spins at 100%
+  CPU. It needs 2^62 offers on one never-reset queue (millennia at a measured 10-20M put/sec), and
+  upstream master is identical. Don't harden it: `(pIndex - cIndex) < bufferCapacity` does not
+  suffice (`producerLimit` stores the same wrapping sum), and rolling the index back after
+  `producerBuffer = newBuffer` strands the consumer, which is worse than the spin.
 - **Neither write-buffer consumer waits for a producer's publication.** `drainWriteBuffer` and
   `clear` both use `relaxedPoll()`, so a producer descheduled between its index CAS and its
   element store no longer spins the lock holder. The task is not stranded: `scheduleAfterWrite`

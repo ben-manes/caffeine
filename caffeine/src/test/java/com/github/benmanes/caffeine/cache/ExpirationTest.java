@@ -50,6 +50,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -289,6 +290,25 @@ final class ExpirationTest {
 
     cache.put(context.absentKey(), context.absentValue());
     verify(context.scheduler()).schedule(any(), any(), anyLong(), any());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  void schedule_immediate_completed(Cache<Int, Int> cache, CacheContext context) {
+    var invocations = new AtomicInteger();
+    when(context.scheduler().schedule(any(), any(), anyLong(), any())).then(invocation -> {
+      if (invocations.incrementAndGet() <= 10) {
+        invocation.<Runnable>getArgument(1).run();
+      }
+      return CompletableFuture.completedFuture(null);
+    });
+
+    cache.put(context.absentKey(), context.absentValue());
+    assertThat(invocations.get()).isEqualTo(2);
   }
 
   @ParameterizedTest

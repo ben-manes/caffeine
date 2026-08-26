@@ -62,7 +62,7 @@ final class Pacer {
       if (((nextFireTime - now) > 0L) && !future.isDone() && maySkip(scheduleAt)) {
         return;
       }
-      future.cancel(/* mayInterruptIfRunning= */ false);
+      cancel();
     }
     long actualDelay = calculateSchedule(now, delay, scheduleAt);
     var f = scheduler.schedule(executor, command, actualDelay, TimeUnit.NANOSECONDS);

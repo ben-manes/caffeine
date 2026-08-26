@@ -27,6 +27,28 @@ auditor agent and all `/audit-*` and `/review-change` skills.
 | liveness | Progress/termination failure without corruption: stranded drain status, lost wakeup, unbounded stall |
 | external-contract | Misuse of a third-party or JDK API contract (dispose-on-error, merge-less collectors, live-view iteration) |
 
+## Severity must be priced on a realistic configuration
+
+A severity is a claim about what a **user** can reach, so the reproduction has to run the
+configuration a user runs. The test harness is built out of instruments that exist to make
+behaviour deterministic, and each of them can manufacture an impact nobody can reach in
+production:
+
+- **A frozen `FakeTicker`.** Several mechanisms self-heal simply because the clock moves.
+  `TimerWheel.advance` sets `nanos = currentTimeNanos` unconditionally, so with
+  `Ticker.systemTicker()` any operation reaching maintenance invalidates a live wheel iterator.
+  Freeze the ticker and that detector stops working, which turned a truncated `Policy` snapshot
+  into a reproducible non-terminating traversal holding `evictionLock`. With a real ticker the
+  same scenario throws. The wedge was an artifact of the instrument.
+- **`executor(Runnable::run)` or `CacheExecutor.DIRECT`.** Inline maintenance removes the
+  coalescing that hides per-operation cost and turns an asynchronous drain into a re-entrant one.
+  It is the right tool for determinism and the wrong one for pricing.
+
+Before assigning `high` or `critical`, re-run the witness with the defaults a user gets: the
+system ticker and the common pool. If the impact only appears under a test instrument, say so in
+the finding and drop the severity accordingly. A mechanism that is real and an impact that is
+reachable are two separate claims, and the second is the one severity encodes.
+
 ## Confidence
 
 | Level | Meaning |

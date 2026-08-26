@@ -966,7 +966,20 @@ and its safety leans on `GuardedScheduler`.** `schedule()` commits `nextFireTime
 the returned `future`. Between those two steps the pacer is momentarily in that
 state, which the immediate-scheduler short-circuit relies on: an immediate scheduler
 runs `command` synchronously inside `schedule()`, re-entering `schedule()` before the
-`future` is published, and the `nextFireTime != 0L` check breaks the recursion. If
+`future` is published, and the `nextFireTime != 0L` check breaks the recursion.
+**Reaching that state on the replacement path is what makes the short-circuit
+complete, and it is why the reschedule arm calls `cancel()` rather than
+`future.cancel(...)`.** `cancel()` clears `nextFireTime` and the field together, so a
+re-entrant call meets a fully unscheduled pacer and takes the guard; cancelling the
+future alone leaves the old one published, and then `!future.isDone()` is permanently
+false for an immediate scheduler, so every re-entry cancels and reschedules without
+bound. That was a live defect: a `Scheduler` running its command synchronously and
+returning a *completed* future hung `put` on every executor including `commonPool`,
+silently, because `GuardedScheduler` and `PerformCleanupTask.exec` swallow the
+`StackOverflowError` and the stack immediately re-descends. Pinned by
+`ExpirationTest.schedule_immediate_completed`; its neighbour `schedule_immediate`
+returns an *incomplete* future, which is the shape a real inline scheduler never
+produces and is what masked this. If
 `scheduler.schedule()` could *throw* on the first call, that same state would never
 clear — every later `schedule()` early-returns and `cancel()` no-ops (`future` stays
 null), permanently disabling prompt expiration. It can't: `GuardedScheduler` catches
@@ -1025,6 +1038,24 @@ policy-visible entries) or the next cache operation. Reads stay correct througho
 `hasExpired` gates every read. Best-effort amortized maintenance; don't drop the gate to
 force a ~1s reschedule (it churns the distant fire's cancel+reschedule for a narrow,
 self-healing transient).
+
+**Without a `Scheduler`, maintenance is amortized onto callers, by design.** The immediate
+re-arm in `rescheduleCleanUpIfIncomplete` is restricted to `commonPool` because any other
+executor may run the submission on the calling thread, where the work is no longer
+amortized and the caller pays a whole cycle. The deferred pacer arm above is the fallback
+for a custom executor, and it needs a `Scheduler`; configuring one is the published way to
+ask for prompt eviction. With neither, a `REQUIRED` backlog waits for the next cache
+operation, so a quiesced cache stays over `maximumSize` until then. The excess is capped,
+not unbounded: the backlog is write-buffer tasks, `MpscGrowableArrayQueue` is bounded at
+`WRITE_BUFFER_MAX`, and a full buffer forces `afterWrite`'s inline assist, so
+`estimatedSize()` cannot exceed `maximum + WRITE_BUFFER_MAX`. Measured with
+`maximumSize(10)`, a single-thread executor and no scheduler, 200,000 writes then idle: 4
+of 10 runs stayed over maximum, and the largest residue over 20 runs was 1,987 against a
+2,058 bound. The model is a garbage collector's: the excess is capped and reclaimed on the
+next operation rather than on a timer. Don't add a third arm. A caller cannot know whether
+the executor would run the submission inline, and moving it into `PerformCleanupTask`,
+where a held eviction lock does identify a caller-runs execution after the fact, fails on
+the same ground: prompt eviction without a `Scheduler` is not a contract the cache offers.
 
 ## Refresh
 

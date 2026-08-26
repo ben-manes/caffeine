@@ -83,6 +83,34 @@ final class PacerTest {
   }
 
   @Test
+  void schedule_reschedule_recurse() {
+    Scheduler scheduler = Mockito.mock();
+    Executor executor = Mockito.mock();
+    Runnable command = Mockito.mock();
+    Future<?> future = Mockito.mock();
+    var pacer = new Pacer(scheduler);
+
+    when(scheduler.schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS))
+        .then(invocation -> DisabledFuture.instance())
+        .then(invocation -> {
+          assertThat(pacer.future).isNull();
+          assertThat(pacer.nextFireTime).isNotEqualTo(0);
+          pacer.schedule(executor, command, NOW, /* delay= */ 0L);
+          return future;
+        });
+
+    pacer.schedule(executor, command, NOW, /* delay= */ 0L);
+    assertThat(pacer.isScheduled()).isFalse();
+
+    pacer.schedule(executor, command, NOW, /* delay= */ 0L);
+
+    verify(scheduler, times(2)).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
+    assertThat(pacer.future).isSameInstanceAs(future);
+    assertThat(pacer.nextFireTime).isEqualTo(NOW + Pacer.TOLERANCE);
+    assertThat(pacer.isScheduled()).isTrue();
+  }
+
+  @Test
   void schedule_cancel_schedule() {
     Scheduler scheduler = Mockito.mock();
     Executor executor = Mockito.mock();
