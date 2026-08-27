@@ -4289,11 +4289,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     @Override
     protected boolean exec() {
-      try {
-        run();
-      } catch (Throwable t) {
-        logger.log(Level.ERROR, "Exception thrown when performing the maintenance task", t);
-      }
+      run();
 
       // Indicates that the task has not completed to allow subsequent submissions to execute
       return false;
@@ -4303,7 +4299,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     public void run() {
       BoundedLocalCache<?, ?> cache = reference.get();
       if (cache != null) {
-        cache.performCleanUp(/* ignored */ null);
+        try {
+          cache.performCleanUp(/* ignored */ null);
+        } catch (Throwable t) {
+          logger.log(Level.ERROR, "Exception thrown when performing the maintenance task", t);
+        }
       }
     }
 

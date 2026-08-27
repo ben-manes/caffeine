@@ -73,15 +73,21 @@ paths:
   while the dispatcher's mark is set. Callbacks that run inside the computation (filter,
   `EntryProcessor`, `CacheLoader`, `CacheWriter`, `ExpiryPolicy`, `Copier`) would otherwise take a
   second per-key lock while holding the caller's; a caller-runs listener would await the future
-  executing it. Reads are refused along with writes because lazy expiry makes `get` and
-  `containsKey` enter a computation, so narrowing to mutations would make the failure depend on
-  whether the key had expired, which is why the check belongs at the start of the operation and not
-  in `beginComputation()`. `removeAll()` delegates to the guarded `removeAll(Set)` and `invokeAll`
-  to the guarded `invoke`; neither wraps its own loop in a computation, so their per-key siblings
-  do the refusing. The spec permits detection rather than requiring it, so two inherent JCache
-  hazards are deliberately left alone: a cross-cache listener cycle, and a synchronous listener
-  dispatched asynchronously that operates on the key it was notified about (it chains behind the
-  dispatch running it and awaits it — pre-existing, reproduced with the gate both on and off).
+  executing it. The filter is guarded only on that path: an eviction publish reaches it from
+  `JCacheEvictionListener` on the maintenance thread, which never sets the mark, so a filter that
+  reads the cache there is allowed. That follows from sharing one executor with Caffeine, since a
+  caller-runs executor makes maintenance inline and the mark is already set, while an asynchronous
+  one keeps the dispatch off the lock; arming it would abort the publish loop mid-way, costing the
+  remaining listeners their event. Reads are refused along with writes because lazy expiry makes
+  `get` and `containsKey` enter a computation, so narrowing to mutations would make the failure
+  depend on whether the key had expired, which is why the check belongs at the start of the
+  operation and not in `beginComputation()`. `removeAll()` delegates to the guarded
+  `removeAll(Set)` and `invokeAll` to the guarded `invoke`; neither wraps its own loop in a
+  computation, so their per-key siblings do the refusing. The spec permits detection rather than
+  requiring it, so two inherent JCache hazards are deliberately left alone: a cross-cache listener
+  cycle, and a synchronous listener dispatched asynchronously that operates on the key it was
+  notified about (it chains behind the dispatch running it and awaits it — pre-existing,
+  reproduced with the gate both on and off).
   Don't extend the mark to dispatch threads to chase those.
 - **EntryProcessor state machine**: `EntryProcessorEntry.Action` tracks the dominant
   operation (NONE → READ/CREATED/UPDATED/LOADED/DELETED). `getValue()` is stateful —

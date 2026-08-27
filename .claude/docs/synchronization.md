@@ -63,11 +63,17 @@ lambda — which holds only the bin lock, no node monitor — e.g.
 Note: the expiry read protocol pairs these modes. A rewrite stores the value and then the
 timestamps, with `setValue`'s trailing `storeStoreFence` holding that order; a lock-free
 reader calls `hasExpired` (timestamps, ending in a `loadLoadFence`) and then loads the value.
-A reader that observes a fresh timestamp is therefore guaranteed the rewritten value, so an
-already-announced EXPIRED value is never returned. Readers must not load the value before
-`hasExpired`, and writers must not store a timestamp before `setValue`; a caller acting on an
-expired verdict exempts an in-flight async load via `isComputingAsync` on a value loaded
-after the check.
+A reader that observes a timestamp written by the rewriting thread is therefore guaranteed that
+thread's value, which closes the tear. It does not follow that an already-announced EXPIRED value
+is never returned. A reader that judged the entry live at its own clock reading can park in
+`Expiry.expireAfterRead` and land `tryExpireAfterRead`'s CAS after a writer has announced the
+entry's EXPIRED eviction but before it stores the replacement, leaving the announced value looking
+fresh to a later reader. That is the read-extension resurrection in
+`design-decisions.md`, and it is a benign race: any lock-free read can be invalidated an
+instruction after it returns, so closing it would require synchronized reads. Readers must not
+load the value before `hasExpired`, and writers must not store a timestamp before `setValue`; a
+caller acting on an expired verdict exempts an in-flight async load via `isComputingAsync` on a
+value loaded after the check.
 
 ## Drain Status State Machine
 
@@ -91,6 +97,17 @@ IDLE(0) ──CAS──► REQUIRED(1) ──schedule──► PROCESSING_TO_IDL
 - PROCESSING_TO_REQUIRED → set REQUIRED: by `maintenance()` exit (under evictionLock)
 
 Access modes: opaque and acquire reads, release and opaque writes, CAS for transitions.
+
+**Both processing states are terminal under an executor that accepts a task and drops it.**
+`scheduleDrainBuffers` sets `PROCESSING_TO_IDLE` *before* `executor.execute(drainBuffersTask)`, so
+a silently-discarding executor leaves the machine parked there with no maintainer. Every exit is
+then closed: `shouldDrainBuffers` returns false for both processing states, `scheduleDrainBuffers`
+returns early on `>= PROCESSING_TO_IDLE`, and both of `scheduleAfterWrite`'s processing arms
+return. The only way out is `afterWrite`'s inline assist, which needs the write buffer to fill, so
+a cache that goes quiescent *or* read-only stays parked. This is by design and is what
+`Caffeine.executor`'s javadoc means by an executor "that discards tasks or never runs them may
+experience non-deterministic behavior"; `BoundedLocalCacheTest.scheduleDrainBuffers_discarded_quiescent`
+pins the parked state deliberately. Don't add a recovery path for a broken executor.
 
 ## User Callback Invocation Points
 

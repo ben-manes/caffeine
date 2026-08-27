@@ -97,7 +97,6 @@ import org.mockito.Mockito;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
-import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
 import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
@@ -2093,9 +2092,9 @@ final class AsMapTest {
   }
 
   @ParameterizedTest
-  @CheckMaxLogLevel(WARN)
+  @CheckMaxLogLevel(ERROR)
+  @CacheSpec(implementation = Implementation.Caffeine)
   @SuppressWarnings({"CheckReturnValue", "CollectionAddedToSelf", "ResultOfMethodCallIgnored"})
-  @CacheSpec(implementation = Implementation.Caffeine, executorFailure = ExecutorFailure.IGNORED)
   void toString_self_key(Map<Object, Object> map, CacheContext context) {
     map.put(map, context.absentValue());
     assertThat(map.toString()).contains("(this Map)=" + context.absentValue());

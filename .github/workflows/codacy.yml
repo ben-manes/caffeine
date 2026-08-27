@@ -44,6 +44,7 @@ jobs:
       - name: Run Codacy Analysis
         uses: codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08 # v4.4.7
         continue-on-error: true
+        timeout-minutes: 10
         with:
           format: sarif
           output: /tmp/results.sarif
@@ -66,7 +67,7 @@ jobs:
           name: SARIF file
           path: codacy.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         if: steps.check_files.outputs.files_exists == 'true'
         continue-on-error: true
         with:

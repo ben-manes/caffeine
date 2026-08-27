@@ -713,6 +713,19 @@ reasoning is pinned here rather than re-argued:
   throw path is the same benign deferral. Don't "fix" the exception path to force `REQUIRED`.
   (The one leg here that *was* a real defect — the inline fallback skipping the write's own task —
   is already fixed by the `try { drains } finally { task.run(); }` in `maintenance`; keep it.)
+- **`scheduleDrainBuffers`'s rejection fallback has no paired re-arm, deliberately.** It is the
+  only one of the five `maintenance` call sites without a following
+  `rescheduleCleanUpIfIncomplete()`, and unlike the throw path above its `maintenance` completes
+  **normally**, so it can end `REQUIRED` from any exhausted budget. Adding the epilogue there buys
+  nothing, because the catch only runs when `executor.execute` **rejected**: the common-pool arm
+  cannot apply (a rejecting executor is not the common pool), the pacer arm would schedule onto
+  that same rejecting executor whose fire-time rejection is swallowed in the JDK Delayer, and with
+  no scheduler there is no arm at all. The inline `maintenance(null)` in the catch is the
+  resilience, and recovery relies on later cache activity. The distinction that decides any
+  "missing drain epilogue" finding: **reject means futile, so skip; a lock bounce means the
+  executor is healthy, so reschedule** (that sibling case, the drain bouncing off `clear()`'s held
+  eviction lock, was a real defect and is fixed). A rejecting executor is a broken configuration,
+  and `executor(Executor)`'s javadoc already warns about one that discards or never runs tasks.
 
 ## References
 
@@ -842,6 +855,37 @@ mapping function (cache loader) is slow, all other operations on keys in the sam
 bin are blocked. This is the #1 recurring user issue (~20 reports). The answer is
 always: use `AsyncCache` for slow loaders, increase `initialCapacity` to reduce
 collisions, or make loaders faster.
+
+**The same doctrine covers a two-map deadlock, not just blocking, including when it wedges an
+innocent thread.** A loader that touches the cache can take the `refreshes` bin monitor and then a
+`data` bin monitor, while any write takes `data` and then `refreshes` through `discardRefresh`.
+Opposite orders, and `findDeadlockedThreads()` reports it on both implementations. It is declined
+on the same basis: the only path that acquires a `data` bin lock while holding a `refreshes` one is
+the user's `reload`/`asyncReload`, and `CacheLoader.reload`'s javadoc bolds the prohibition
+("loading **must not** attempt to update any mappings of this cache directly or block waiting for
+other cache operations to complete"). Everything else inside `refreshes.computeIfAbsent` is either
+a lock-free `data` read (`getIfPresentQuietly`) or the `asyncReload` call itself, and the
+completion `handle` that does the `data` work is attached **outside** the lambda, deliberately, so
+the refreshes monitor is not held while it runs. Keep it outside.
+
+Two objections are answered rather than ignored. That the victim is an ordinary `put` which did
+nothing wrong is true, and is a property of every lock-order inversion in a shared structure; the
+counterparty of misuse is always innocent. And a silent deadlock is a worse diagnostic than
+`Cache.get`'s documented `IllegalStateException` for recursive updates, which is a fair criticism
+of the *diagnosis* rather than evidence the ordering is wrong. Don't reorder the internal maps to
+make a forbidden loader safe.
+
+**`Expiry` must not call into the cache, and carries no javadoc saying so.** The callback is
+invoked under `synchronized(prior)` in `put` and under the bin lock on the compute paths. A
+calculator that calls `cleanUp()` or a `Policy` ordering method waits on `evictionLock` while
+holding the node monitor, deadlocking against the maintenance thread's `evictEntry`, which takes
+those locks in the documented order. One that calls `invalidate` re-enters the monitor on its own
+thread, retires the node, and lets the outer `put` commit into the dead entry. Neither is guarded.
+The omitted warning is deliberate: computing a duration has no reason to re-enter the cache, so
+the note that fits `CacheLoader.reload` and `evictionListener` would be noise on `Expiry` and
+`Weigher`. Hoisting the callback out of the monitor the way `Weigher` was hoisted is not available
+either, since `expireAfterUpdate` and `expireAfterRead` read the node's variable time under it and
+the compute-path invocations need the atomic context.
 
 **`clear()`/`invalidateAll()` do not wait for an in-flight `computeIfAbsent` insert.** The insert
 is invisible to `clear()`'s `data.values()` snapshot (the CHM Traverser skips the in-flight

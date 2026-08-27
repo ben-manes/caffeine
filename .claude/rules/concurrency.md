@@ -9,7 +9,7 @@ paths:
 
 # Concurrency Conventions
 
-- Most node field access uses VarHandle access modes (key, value, accessTime, writeTime) — check acquire/release/opaque carefully. weight, policyWeight, and queueType use plain volatile field access.
+- Most node field access uses VarHandle access modes (key, value, accessTime, writeTime) — check acquire/release/opaque carefully. weight, policyWeight, and queueType are plain non-volatile fields, read and written directly.
 - synchronized(node) is used for node-level mutations; evictionLock for policy state
 - Lock ordering must be: evictionLock → CHM bin lock → synchronized(node)
 - Read buffer drops are benign (affects eviction quality, not correctness)

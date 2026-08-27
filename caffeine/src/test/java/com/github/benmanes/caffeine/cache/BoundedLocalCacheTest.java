@@ -625,6 +625,22 @@ final class BoundedLocalCacheTest {
 
   @Test
   @CheckMaxLogLevel(ERROR)
+  void cleanupTask_run_exception() {
+    var expected = new RuntimeException();
+    BoundedLocalCache<?, ?> cache = Mockito.mock();
+    doThrow(expected).when(cache).performCleanUp(any());
+    var task = new PerformCleanupTask(cache);
+    task.run();
+    assertThat(logEvents()
+        .withMessage("Exception thrown when performing the maintenance task")
+        .withThrowable(expected)
+        .withLevel(ERROR)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @Test
+  @CheckMaxLogLevel(ERROR)
   void cleanup_exception() {
     var expected = new RuntimeException();
     BoundedLocalCache<?, ?> cache = Mockito.mock();

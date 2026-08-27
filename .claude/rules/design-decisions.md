@@ -41,6 +41,18 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   upstream master is identical. Don't harden it: `(pIndex - cIndex) < bufferCapacity` does not
   suffice (`producerLimit` stores the same wrapping sum), and rolling the index back after
   `producerBuffer = newBuffer` strands the consumer, which is worse than the spin.
+- **`StripedBuffer.offer` treats `FULL` as success and only expands on `FAILED`.** A failed CAS is
+  evidence of real contention between threads, which striping fixes; a full buffer only means the
+  drain is behind, which it does not. Routing `FULL` into `expandOrRetry` would let one thread's
+  routinely-full buffer grow the table and allocate stripes nobody contends for. So a `FULL` home
+  stripe returns `FULL` without probing a sibling, which is what makes a stalled stripe skip that
+  thread's reads until it drains. Both are intended: the `FULL` return is the signal that tells
+  `afterRead` to drain. Don't make `FULL` probe for another slot.
+- **A thread's starting stripe never moves.** The probe is re-derived from the thread id on every
+  `offer`, so the incremental hashing in `expandOrRetry` varies the slot only within one call. This
+  is forced, not chosen: `ThreadLocalRandom.getProbe`/`advanceProbe`, which `Striped64` uses to
+  permanently move a colliding thread, are package-private to `java.util.concurrent`. Don't
+  "restore" the convergence search; the only alternative is a `ThreadLocal` on the read hot path.
 - **Neither write-buffer consumer waits for a producer's publication.** `drainWriteBuffer` and
   `clear` both use `relaxedPoll()`, so a producer descheduled between its index CAS and its
   element store no longer spins the lock holder. The task is not stranded: `scheduleAfterWrite`
