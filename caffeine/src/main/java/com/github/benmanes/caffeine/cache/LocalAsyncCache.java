@@ -361,10 +361,13 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         if (value == null) {
           cache.remove(key, future);
         } else {
+          @SuppressWarnings("NullAway")
+          CompletableFuture<V> castedFuture = future;
+
           try {
             // update the weight and expiration timestamps; a same-instance finalization is not a
             // mutation, so an in-flight refresh is preserved (mirrors handleCompletion)
-            cache.replace(key, future, future,
+            cache.replace(key, castedFuture, castedFuture,
                 /* shouldDiscardRefresh= */ false, /* quietly= */ true);
           } catch (Throwable t) {
             logger.log(Level.WARNING, "Exception thrown during asynchronous load", t);
