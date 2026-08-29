@@ -156,6 +156,14 @@ with hierarchical extensions for large time ranges.
 - Cascading: entries demoted to finer-grained wheels as time approaches
 - Used for variable expiration (`expireAfter(Expiry)`)
 
+**Bucket width is the resolution, and that is the structure, not a Caffeine choice.** A wheel
+advances in whole ticks, so an entry due sooner than the next tick waits for it. That is what buys
+the O(1) insert and delete the paper is about, and it applies to every hashed wheel, not to this
+implementation. The level-0 tick here is `ceilingPowerOfTwo(1s)`, `2^30` ns or 1.074s, so variable
+expiration is announced within about a second of its deadline rather than at it. See
+`design-decisions.md` §TimerWheel for the measurements and for why the cache context accepts it;
+the short version is that a cache promises a maximum lifetime, not a scheduling resolution.
+
 ## Security
 
 ### Denial of Service via Algorithmic Complexity Attacks

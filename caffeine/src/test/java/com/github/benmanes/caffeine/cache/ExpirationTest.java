@@ -29,6 +29,7 @@ import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.Map.entry;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -1073,6 +1074,23 @@ final class ExpirationTest {
     assertThat(map).isExhaustivelyEmpty();
     assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.FULL,
+      implementation = Implementation.Caffeine, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void replaceConditionally_expired_maintenance(Map<Int, Int> map, CacheContext context) {
+    Int key = context.firstKey();
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(map.replace(key, context.original().get(key), context.absentValue())).isFalse();
+
+    assertWithMessage("an expired entry did not schedule the maintenance cycle")
+        .that(map).isEmpty();
   }
 
   @ParameterizedTest

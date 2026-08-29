@@ -965,7 +965,7 @@ the view equals/hashCode, and don't add a `size()`-over-counts warning to the `a
 (redundant — `asMap()` is a view of a cache whose `estimatedSize()` already says "approximate," and
 even `WeakHashMap` doesn't warn at the interface level).
 
-## Read-path maintenance nudges
+## Maintenance nudges
 
 **Read paths nudge `scheduleDrainBuffers()` when they observe an expired/collected
 entry** (`getIfPresent`, `containsKey`, `containsValue`, `getAllPresent`, the iterator,
@@ -980,6 +980,25 @@ yields. Production readers tolerate a dead node (they check `isAlive`/`getValue`
 the validator was made robust to it: it iterates `data.entrySet()` and validates a node
 only if it is still mapped under its key, so a node reaped mid-scan is skipped while a
 node genuinely stuck in the map (a leak) stays mapped and is still caught.
+
+**A failed `replace` nudges only when the entry is garbage.** Both overloads signal "did not
+update" by clearing `ReplaceContext.oldValue`, which alone cannot tell a dead or expired entry
+from a caller's expected value that did not match. `ReplaceContext.garbage` separates the two so
+that only the first schedules maintenance. "fix minor edge cases in put and remap" added the nudge
+for the expired case but hung it on the shared signal, so `replace(k, expected, new)` also
+submitted a task on every healthy CAS failure. Over 10⁶ failing replaces against a one-entry
+cache, removing it took an unexpiring cache from 34 ms to 15 ms and an `expireAfterWrite` cache
+from 33 ms to 28 ms. Both directions are pinned:
+`AsMapTest.replaceConditionally_wrongOldValue_noMaintenance` and
+`ExpirationTest.replaceConditionally_expired_maintenance`.
+
+The conditional overload tests `hasExpired` before `containsValue`, matching `remove(k, v)`'s
+branch order, so an expired entry is reclaimed whether or not the caller's expectation held.
+Testing `containsValue` first would let a healthy mismatch skip the ticker read and reach 16 ms
+on the expiring cache, and it was rejected: the two conditional operations should read alike, and
+the saving is one `System.nanoTime()` (9 ms per 10⁶ calls on the same machine). `containsValue`
+cannot be tested before the null checks at all, since a cleared value reference fails it and the
+entry would be misfiled as a mismatch.
 
 ## Known JDK Interactions
 
@@ -1531,11 +1550,60 @@ than `2^SHIFT[i]` nanoseconds within one tick (e.g., `0 → 1`) shifts to the sa
 unsigned tick index, so no buckets are processed. This is correct: no tick
 boundary was crossed. (The former `-1 → 0` example is stale since "Fix the timer
 wheel wrap bias at Long.MIN_VALUE" — that crossing now lands on a rebased tick
-boundary and yields `delta = 1`, also correct.) Entries whose `variableTime`
-maps to the "last" bucket of a wheel are
-visited on the next full wheel cycle (~68s for `wheel[0]`), which is within
-expiration's documented best-effort amortization. Read-path `hasExpired` also
-evicts on access.
+boundary and yields `delta = 1`, also correct.)
+
+**Bucket width is the wheel's resolution. That is the data structure, not a
+decision this implementation made,** and it should not be re-raised as though it
+were a Caffeine quirk (it has been, repeatedly). A hashed wheel advances in whole
+ticks, which is what buys the O(1) insert and delete; an entry due sooner than the
+next tick waits for it. Varghese and Lauck, and every wheel built from them, work
+this way. See `research-foundations.md` §Hashed and Hierarchical Timing Wheels.
+
+Here the level-0 tick is `SPANS[0] = ceilingPowerOfTwo(1s) = 2^30 ns`, or 1.074s.
+An entry due sooner is filtered by every query the moment it expires, but stays
+physically resident and unannounced until the clock crosses the next tick.
+Measured 2026-08-28 on a fake ticker: a variable expiry of 1ns, 1ms or 500ms
+leaves the entry resident with no `EXPIRED` event after `cleanUp()`, while one of
+`2^30` ns is reaped promptly, and a deadline set into the past by
+`Policy.VarExpiration.setExpiresAfter(k, 0, NANOSECONDS)` is reaped at exactly
+`2^30`, not at `2^30 - 1`.
+
+**A cache promises a maximum lifetime, not a scheduling resolution,** which is why
+the second is accepted here (Ben, 2026-08-28). The same delay in a system where
+milliseconds or microseconds carry meaning, network packet timers being the usual
+example, would deserve an argument; nothing in the cache context supplies one.
+Supporting facts rather than the reason: `EXPIRE_TOLERANCE` is already 1s, and
+`Pacer.TOLERANCE` is the same `ceilingPowerOfTwo(1s)` constant, so the wheel's
+granularity and the scheduler's minimum delay match by construction. Nothing
+accumulates without bound either, since on a real ticker the backlog is one tick's
+worth of expirations and a bounded cache reclaims them by size regardless.
+
+**The one mitigation, considered and not taken.** Sweeping the current level-0
+bucket eagerly rather than waiting for the tick would close it, at O(k) in that
+bucket's occupancy, and the machinery already exists because cascading sweeps it.
+Ben is not opposed to it; no argument has justified trying it. What would have to
+be measured first: `expire` detaches the whole bucket onto `pending` and calls
+`deschedule` then `schedule` on every node it does not evict, so an eager sweep
+pays an unlink and re-link for each not-yet-due entry on **every** maintenance
+cycle instead of once per tick, and maintenance runs far more often than the
+tick. Realtime systems that need this usually change the structure instead,
+making the nearest bucket a heap. Don't remove the `delta <= 0` break without
+that measurement.
+
+Two things the earlier wording got wrong, both re-derived incorrectly during the
+2026-08-28 sweep before being measured. The bound is one tick, **not** a full
+wheel cycle (~68s); the buckets swept are `[start, start + delta]` inclusive of
+the current one, since `expire` takes `steps = 1 + delta` and filters per node on
+`variableTime - nanos > 0`. And the read path does **not** reap: `getIfPresent`
+and `containsKey` leave the entry resident with no notification, filtering it
+without removing it. Only the compute path (`get(k, fn)` through `remap`) reaps
+an expired entry on access.
+
+The fixed and variable policies therefore differ in eagerness, which is a
+property of the data structures rather than a decision.
+`Policy.FixedExpiration.setExpiresAfter(Duration.ZERO)` on `expireAfterWrite`
+reaps immediately because the pass walks the write-order deque while `hasExpired`
+holds, with no tick to wait for.
 
 **`expire` detaches a bucket onto the `pending` sentinel, not into the stack frame.** The bucket
 being expired is moved off the wheel so that a recursive call cannot find those entries — that

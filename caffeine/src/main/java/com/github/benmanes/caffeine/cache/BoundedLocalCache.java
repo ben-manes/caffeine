@@ -2735,6 +2735,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             || (hasExpired(n, ctx.now = expirationTicker().read())
                 && !isComputingAsync(ctx.oldValue))) {
           ctx.oldValue = null;
+          ctx.garbage = true;
           return n;
         }
 
@@ -2755,7 +2756,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     });
 
     if ((node == null) || (ctx.nodeKey == null) || (ctx.oldValue == null)) {
-      if (node != null) {
+      if (ctx.garbage) {
         scheduleDrainBuffers();
       }
       return null;
@@ -2787,9 +2788,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         ctx.nodeKey = n.getKey();
         ctx.oldValue = n.getValue();
         ctx.oldWeight = n.getWeight();
-        if ((ctx.nodeKey == null) || (ctx.oldValue == null) || !n.containsValue(oldValue)
+        if ((ctx.nodeKey == null) || (ctx.oldValue == null)
             || (hasExpired(n, ctx.now = expirationTicker().read())
                 && !isComputingAsync(ctx.oldValue))) {
+          ctx.oldValue = null;
+          ctx.garbage = true;
+          return n;
+        } else if (!n.containsValue(oldValue)) {
           ctx.oldValue = null;
           return n;
         }
@@ -2814,7 +2819,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     });
 
     if ((node == null) || (ctx.nodeKey == null) || (ctx.oldValue == null)) {
-      if (node != null) {
+      if (ctx.garbage) {
         scheduleDrainBuffers();
       }
       return false;
@@ -3543,6 +3548,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     long now;
     int oldWeight;
+    boolean garbage;
     boolean exceedsTolerance;
   }
 

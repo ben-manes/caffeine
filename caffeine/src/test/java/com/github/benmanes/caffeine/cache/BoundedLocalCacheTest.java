@@ -546,6 +546,72 @@ final class BoundedLocalCacheTest {
         .that(cache.weightedSize()).isEqualTo(linkedWeight);
   }
 
+  /**
+   * The size eviction walk captures the successor before {@code evictEntry} delivers the
+   * notification, so an inline listener can unlink the node that the walk is still holding. The
+   * containment argument for {@code evictAndAdvance} was reasoned from the source when
+   * {@code AddTask} was fixed; this pins it.
+   */
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
+      removalListener = Listener.MOCKITO)
+  void evictAndAdvance_reentrantRemovalOfSuccessor(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.setWindowMaximum(context.maximumSize());
+    for (int i = 0; i < 10; i++) {
+      var value = cache.put(Int.valueOf(i), Int.valueOf(i));
+      assertThat(value).isNull();
+    }
+    cache.cleanUp();
+
+    // Stage the probation space so that evictFromMain performs a multi-victim walk.
+    var window = cache.accessOrderWindowDeque();
+    var probation = cache.accessOrderProbationDeque();
+    for (int i = 0; i < 9; i++) {
+      var node = requireNonNull(window.peekLast());
+      assertThat(window.remove(node)).isTrue();
+      assertThat(probation.offerLast(node)).isTrue();
+      cache.setWindowWeightedSize(cache.windowWeightedSize() - node.getPolicyWeight());
+      node.makeMainProbation();
+    }
+
+    // The order the walk follows, so the listener can remove the successor it is holding.
+    var order = new ArrayList<Int>();
+    for (var node = probation.peekFirst(); node != null; node = node.getNextInAccessOrder()) {
+      order.add(requireNonNull(node.getKey()));
+    }
+    var reentrant = new AtomicBoolean();
+    doAnswer(invocation -> {
+      Int key = invocation.getArgument(0);
+      int index = order.indexOf(key);
+      if ((index >= 0) && ((index + 1) < order.size()) && reentrant.compareAndSet(false, true)) {
+        var evicted = cache.remove(order.get(index + 1));
+        assertThat(evicted).isNotNull();
+      }
+      return null;
+    }).when(context.removalListener()).onRemoval(any(), any(), any());
+
+    cache.setMaximumSize(2);
+    cache.cleanUp();
+
+    assertThat(reentrant.get()).isTrue();
+    assertQueuesConsistent(cache);
+
+    @Var long linked = 0;
+    for (var deque : List.of(cache.accessOrderWindowDeque(),
+        cache.accessOrderProbationDeque(), cache.accessOrderProtectedDeque())) {
+      for (var node : deque) {
+        if (node.isAlive()) {
+          linked++;
+        }
+      }
+    }
+    long alive = cache.data.values().stream().filter(Node::isAlive).count();
+    assertWithMessage("a re-entrant removal orphaned an entry from the eviction queues")
+        .that(linked).isEqualTo(alive);
+  }
+
   @Test
   void evictEntry_expiredBacklog_isNotReportedAsSize() {
     // The expiration pass is capped, so a larger backlog is handed to evictEntries in the same
@@ -974,6 +1040,39 @@ final class BoundedLocalCacheTest {
     assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_IDLE);
     assertThat(cache.writeBuffer.isEmpty()).isFalse();
     assertThat(context.executor().completed()).isEqualTo(0);
+  }
+
+  /**
+   * A read-only workload has no writer-assist fallback, so a discarded maintenance task leaves the
+   * read buffer to fill and the drain status parked. The sibling above covers the quiescent case
+   * after a single write; this covers the reads that follow it.
+   */
+  @ParameterizedTest
+  @SuppressWarnings("resource")
+  @SuppressFBWarnings("MDM_LOCK_ISLOCKED")
+  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.DISCARDING,
+      maximumSize = Maximum.FULL)
+  void scheduleDrainBuffers_discarded_readOnly(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var oldValue = cache.put(context.absentKey(), context.absentValue());
+    assertThat(oldValue).isNull();
+    assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_IDLE);
+
+    // Reads alone: the buffer fills and nothing drains it, because only a write assists.
+    for (int i = 0; i < (4 * BoundedBuffer.BUFFER_SIZE); i++) {
+      var value = cache.getIfPresent(context.absentKey(), /* recordStats= */ true);
+      assertThat(value).isEqualTo(context.absentValue());
+    }
+
+    assertThat(cache.drainStatus).isEqualTo(PROCESSING_TO_IDLE);
+    assertThat(cache.evictionLock.isLocked()).isFalse();
+    assertThat(context.executor().completed()).isEqualTo(0);
+    assertWithMessage("a read-only workload never drains the write buffer")
+        .that(cache.writeBuffer.isEmpty()).isFalse();
+
+    // A write is the assist that a read cannot perform.
+    var previous = cache.put(context.absentKey(), context.absentValue());
+    assertThat(previous).isEqualTo(context.absentValue());
   }
 
   @Test

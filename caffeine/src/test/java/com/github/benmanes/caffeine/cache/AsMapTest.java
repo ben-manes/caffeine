@@ -40,6 +40,7 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.RUNNABLE;
 import static java.lang.Thread.State.WAITING;
@@ -215,6 +216,15 @@ final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void containsValue_absent(Map<Int, Int> map, CacheContext context) {
     assertThat(map.containsValue(context.absentValue())).isFalse();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT})
+  void containsValue_byIdentity(Map<Int, Int> map, CacheContext context) {
+    Int value = requireNonNull(context.original().get(context.firstKey()));
+    assertThat(map.containsValue(new Int(value))).isFalse();
+    assertThat(map.containsValue(value)).isTrue();
   }
 
   @ParameterizedTest
@@ -980,6 +990,21 @@ final class AsMapTest {
     }
     assertThat(map).hasSize(context.initialSize());
     assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      maximumSize = Maximum.FULL,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  void replaceConditionally_wrongOldValue_noMaintenance(
+      Map<Int, Int> map, CacheContext context) {
+    int submitted = context.executor().submitted();
+    for (Int key : context.firstMiddleLastKeys()) {
+      assertThat(map.replace(key, context.absentValue(), context.absentValue())).isFalse();
+    }
+    assertWithMessage("a healthy entry scheduled a maintenance cycle")
+        .that(context.executor().submitted()).isEqualTo(submitted);
   }
 
   @ParameterizedTest
@@ -2789,6 +2814,16 @@ final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void values_contains_absent(Map<Int, Int> map, CacheContext context) {
     assertThat(map.values().contains(context.absentValue())).isFalse();
+  }
+
+  @CheckNoStats
+  @ParameterizedTest
+  @SuppressWarnings("RedundantCollectionOperation")
+  @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT})
+  void values_contains_byIdentity(Map<Int, Int> map, CacheContext context) {
+    Int value = requireNonNull(context.original().get(context.firstKey()));
+    assertThat(map.values().contains(new Int(value))).isFalse();
+    assertThat(map.values().contains(value)).isTrue();
   }
 
   @CheckNoStats

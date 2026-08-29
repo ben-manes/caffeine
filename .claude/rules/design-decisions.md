@@ -179,7 +179,29 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   rather than recompute. All by design — don't "fix" the asymmetry, don't add a double-collect
   re-check, and don't route `get(k, func)` through `computeIfAbsent`. Read the doc.
 - **`EntrySet.removeIf` hands the predicate an immutable snapshot** (`Map.entry(k,v)`), so `setValue` throws — matching ConcurrentHashMap and Guava (JDK-8078726: their inherited default `removeIf` removed *wrong* entries under concurrent updates, so they overrode it with a snapshot + conditional `replaceNode(k,null,v)`). The write-through entry is intentionally **only** for `iterator`/`spliterator`/`toArray`; the iterator-vs-`removeIf` asymmetry is deliberate, not a bug. All four views follow this (bounded, unbounded, async sync-view `AsMapView`, async raw view `AsyncEntrySet`), removing conditionally via `remove(k,v)`; the two async views delegate to the inner cache's `removeIf` (mirroring their `values().removeIf`), the raw view having previously inherited the *positional* `iterator.remove` default. Don't "restore" a write-through entry here or flag the asymmetry.
-- **`TimerWheel.advance` delta=0 on sub-tick advances** is correct (e.g., `nanos = 0 → 1`; since "Fix the timer wheel wrap bias at Long.MIN_VALUE", the `-1 → 0` crossing lands on a rebased tick boundary and yields delta=1, also correct). Entries in the "last bucket" are visited on the next full wheel cycle; read-path `hasExpired` evicts on access sooner.
+- **A timing wheel's bucket width is its resolution; that is the data structure, not a Caffeine
+  choice.** A hashed wheel advances in whole ticks, which is what buys the O(1) insert and delete
+  (Varghese and Lauck; see `research-foundations.md`), so an entry due sooner than the next tick
+  waits for it. The level-0 tick here is `ceilingPowerOfTwo(1s)`, `2^30` ns or 1.074s, so
+  `delta = 0` on a sub-tick advance is correct arithmetic and the entry is announced within about
+  a second of its deadline. **A cache promises a maximum lifetime, not a scheduling resolution**,
+  which is why the second is accepted (Ben, 2026-08-28); a packet timer or anything where millis
+  or micros carry meaning would deserve an argument, and the cache context supplies none. This
+  keeps being re-raised as though it were novel. It is not, and neither is the mitigation:
+  sweeping the current bucket eagerly is O(k) and the cascade already does it, but `expire`
+  detaches the bucket and re-links every not-yet-due node, so an eager sweep pays that on every
+  maintenance cycle instead of once per tick. Not opposed, never justified, never measured. Don't
+  remove the `delta <= 0` break without that measurement. Two claims this entry used to make are
+  false and were re-derived wrongly twice before anyone measured them: the bound is one tick,
+  **not** a full wheel cycle (`expire` sweeps `steps = 1 + delta` buckets from the current one and
+  filters per node), and the read path does **not** reap, since `getIfPresent`/`containsKey`
+  filter without removing and only `get(k, fn)` through `remap` evicts on access. Measured
+  2026-08-28: a variable expiry of 1ns, 1ms or 500ms leaves the entry resident with no `EXPIRED`
+  event after `cleanUp()`; `setExpiresAfter(k, 0)` is reaped at exactly `2^30`, not `2^30 - 1`.
+  The fixed policy is eager where the variable one is not, which is the deque-versus-wheel
+  difference and not a decision. (The `-1 → 0` example is stale since "Fix the timer wheel wrap
+  bias at Long.MIN_VALUE"; that crossing lands on a rebased tick boundary and yields delta=1, also
+  correct.) Read the doc.
 - **`TimerWheel.expire` detaches a bucket onto the `pending` sentinel.** Keep all three
   properties or a nested `deschedule` strands the remainder: the head lives in a **field**
   (`pending.next`) re-read each iteration, both lists stay **circular** (the invariant is
@@ -244,6 +266,19 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   `peekAhead` probes the higher wheel's current bucket too. Getting this wrong fired entries up to
   a span late. Pinned by `getExpirationDelay_occupiedCurrentBucket` + `_fuzzy`. Read the doc.
 - **`Pacer.calculateSchedule` bumps a would-be 0L result to 1L** — `nextFireTime = 0L` is the unscheduled sentinel. Don't remove the guard.
+- **A throwing `Scheduler` cannot wedge the pacer, because `GuardedScheduler` stands between
+  them.** In isolation the wedge is real: `schedule` cancels the outgoing future, commits
+  `nextFireTime` in `calculateSchedule`, and then calls the scheduler, so a throw leaves
+  `future == null` with a non-zero `nextFireTime` and every later call takes the
+  recursion-guard short-circuit forever (measured 2026-08-28: the scheduler was never called
+  again across four healthy retries, for a `RuntimeException` as well as an `Error`). It is
+  unreachable from the cache. `Caffeine.scheduler(Scheduler)` always wraps in
+  `GuardedScheduler`, which catches `Throwable`, logs, and returns `DisabledFuture.instance()`,
+  never null, so the pacer always gets a future back. End to end with an injected
+  `RejectedExecutionException` the behaviour is identical to the healthy run. Out of scope
+  (Ben, 2026-08-28) and re-raised often, so close it on the wrapper rather than on the
+  trigger's rarity. `Pacer.schedule` is still not exception-safe on its own; if the wrapper is
+  ever changed to rethrow or to return null, restore `nextFireTime` on the throw.
 - **`LoadingCache.getAll` is not atomic; a null value is handled differently per path** — the Javadoc's "the mapping is left unestablished" is singular, so valid entries are partial-committed rather than rolled back. A *per-key* loader returning null drops just that key and keeps the rest. A *bulk* loader's returned map must not contain a null *value*: it is rejected (the whole load fails, matching Guava and the sync bulk path), not silently dropped. Omit a key to signal "no value" — an omitted requested key is dropped; only an explicit null value is rejected. (The async bulk path once dropped null values; that was reverted so all bulk paths reject.)
 - **`Caffeine`'s builder mirrors Guava's `CacheBuilder` validation shape, asymmetries included.**
   `refreshAfterWrite(long, TimeUnit)` alone calls `requireNonNull(unit)` before its state checks and
