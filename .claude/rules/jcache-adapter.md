@@ -220,6 +220,32 @@ paths:
   names (the resources are already-instantiated objects), so the TCCL is irrelevant to
   Caffeine's own close logic; a user `close()` that relies on the ambient TCCL is the user's
   concern (Ehcache3 swaps the TCCL nowhere). The classloader is held via WeakReference.
+- **The iterator stamps access expiry in `hasNext()`, when it stages the entry, and that is
+  deliberate.** The TCK requires iteration to call `getExpiryForAccess`
+  (`CacheExpiryTest.iteratorNextShouldCallGetExpiryForAccessedEntry`), and `Cache.iterator()`'s own
+  javadoc concedes that `next()` "may therefore return null" because entries expire mid-iteration.
+  Stamping at acquisition is what avoids widening that hole; deferring to `next()` would either
+  return null more often or make `hasNext()` lie. A caller that calls `hasNext()` and never `next()`
+  does extend one entry's deadline, and that is the accepted price (row 10b.7, declined 2026-08-29).
+- **`CacheProxy.copyOf`'s pass-through list is the spec's declared exception types, not an
+  oversight.** It rethrows `NullPointerException`, `IllegalStateException`, `ClassCastException`
+  and `CacheException` unchanged and wraps every other `RuntimeException` in `CacheException`,
+  which is exactly what `Cache.put`/`Cache.get` declare. So a user value whose `readObject` throws
+  `IllegalStateException` surfaces raw *by design*; it is not an unhandled escape, and the copier
+  is not missing the boundary handling that the loader and writer have. Don't "fix" it by wrapping
+  the four (rows 10f.4/10f.5, declined 2026-08-29).
+- **The provider's `WeakHashMap<ClassLoader, …>` registry is best-effort, not a guarantee, and
+  the residual pin cannot be fixed.** The manager holds its loader weakly, so an otherwise-empty
+  manager is collectible; that case is pinned by
+  `CacheManagerTest.classLoader_readThrough_notRetained`. Anything user-supplied that reaches the
+  map's value side pins the key, though: cached values, and the `Factory`, `ExpiryPolicy`,
+  `CacheLoader`, `CacheWriter` and listener instances the configuration holds, are application
+  classes whose `getClassLoader()` *is* that key. In a real deployment the loader is therefore
+  pinned for the life of the provider, even by a cache holding no entries. The existing test only
+  passes because its loader factory is `Mockito::mock`, a lambda from the test's own loader rather
+  than the custom one. Weakening the values is not the fix, since that would collect a live
+  manager; JSR-107 supplies `CachingProvider.close(ClassLoader)` for exactly this and it is
+  implemented. Don't re-raise this as a leak.
 - Tests include JSR-107 TCK (auto-unpacked) and isolated tests (per-JVM forking)
 - **Run `:jcache:tckTest` for spec-conformance changes** — not just `:jcache:test`. The
   TCK encodes interpretations (and some pre-1.1.1 strictness) that unit tests don't

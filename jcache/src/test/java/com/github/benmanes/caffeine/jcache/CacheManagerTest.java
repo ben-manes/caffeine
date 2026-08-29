@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache;
 
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.await;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Locale.US;
@@ -35,6 +36,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
@@ -311,7 +313,6 @@ final class CacheManagerTest {
   @SuppressWarnings("PMD.CloseResource")
   void close_throwingCacheClose_continuesAndMarksClosed() {
     try (var fixture = JCacheFixture.builder().build()) {
-      @SuppressWarnings("PMD.CloseResource")
       var manager = (CacheManagerImpl) fixture.cachingProvider().getCacheManager(
           URI.create(getClass().getName() + "-throwing-close"),
           fixture.cachingProvider().getDefaultClassLoader());
@@ -469,6 +470,50 @@ final class CacheManagerTest {
              new CaffeineConfiguration<>().setExecutorFactory(() -> executor))) {
       cache.close();
       assertThat(executor.closed.get()).isTrue();
+    }
+  }
+
+  @Test
+  void destroyCache_racingCreate_keepsTheReplacementsMBean() throws Exception {
+    // destroyCache does not hold the manager lock that createCache does, so a create for the same
+    // name can complete between the registry removal and the close() that unregisters the MBeans.
+    // The object name is only the manager URI and the cache name, carrying no instance identity,
+    // so the stale proxy's close unregisters the replacement's beans.
+    var config = new MutableConfiguration<Integer, Integer>()
+        .setManagementEnabled(true).setStatisticsEnabled(true).setStoreByValue(false);
+    try (var fixture = JCacheFixture.builder().build();
+         var cacheManager = fixture.cacheManager();
+         var cache = cacheManager.createCache("racy", config)) {
+      // populated by reference so that the clear() between the removal and the close is wide
+      // enough for the creator to get in, which is the window the manager lock closes
+      for (int i = 0; i < 50_000; i++) {
+        cache.put(i, i);
+      }
+      var objectName = new ObjectName(String.format(US,
+          "javax.cache:Cache=racy,CacheManager=%s,type=CacheConfiguration",
+          cacheManager.getCachingProvider().getClass().getName()));
+      var server = ManagementFactory.getPlatformMBeanServer();
+      assertThat(server.isRegistered(objectName)).isTrue();
+
+      var replacement = new AtomicReference<@Nullable Cache<Integer, Integer>>();
+      var creator = new Thread(() -> {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        while (cacheManager.getCacheNames().contains("racy")) {
+          if (System.nanoTime() > deadline) {
+            return;
+          }
+          Thread.onSpinWait();
+        }
+        replacement.set(cacheManager.createCache("racy", config));
+      });
+      creator.setDaemon(true);
+      creator.start();
+      cacheManager.destroyCache("racy");
+      creator.join();
+      assertThat(replacement.get()).isNotNull();
+
+      assertWithMessage("destroyCache unregistered the replacement's management bean")
+          .that(server.isRegistered(objectName)).isTrue();
     }
   }
 

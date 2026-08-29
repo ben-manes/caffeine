@@ -240,12 +240,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected Map<K, Expirable<V>> getAndFilterExpiredEntries(Set<? extends K> keys) {
     int[] expired = { 0 };
     long[] millis = { 0L };
+    int requested = keys.size();
     var result = new HashMap<K, @NonNull Expirable<V>>(cache.getAllPresent(keys));
     result.entrySet().removeIf(entry -> {
       if (!entry.getValue().isEternal() && (millis[0] == 0L)) {
         millis[0] = currentTimeMillis();
       }
-      if (entry.getValue().hasExpired(millis[0])) {
+      if (!entry.getValue().isEternal() && entry.getValue().hasExpired(millis[0])) {
         dispatcher.beginComputation();
         try {
           cache.asMap().computeIfPresent(entry.getKey(), (k, expirable) -> {
@@ -268,7 +269,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     });
 
     statistics.recordHits(result.size());
-    statistics.recordMisses(keys.size() - result.size());
+    statistics.recordMisses(requested - result.size());
     statistics.recordEvictions(expired[0]);
     return result;
   }
@@ -1200,7 +1201,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     if (executor instanceof ExecutorService) {
       @SuppressWarnings("PMD.CloseResource")
       var es = (ExecutorService) executor;
-      es.shutdown();
+      thrown = tryClose((AutoCloseable) es::shutdown, thrown);
     }
 
     try {

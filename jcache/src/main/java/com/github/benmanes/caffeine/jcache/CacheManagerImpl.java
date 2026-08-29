@@ -196,11 +196,13 @@ public final class CacheManagerImpl implements CacheManager {
 
   @Override
   public void destroyCache(String cacheName) {
-    requireNotClosed();
+    synchronized (lock) {
+      requireNotClosed();
 
-    try (var cache = caches.remove(cacheName)) {
-      if (cache != null) {
-        cache.clear();
+      try (var cache = caches.remove(cacheName)) {
+        if (cache != null) {
+          cache.clear();
+        }
       }
     }
   }

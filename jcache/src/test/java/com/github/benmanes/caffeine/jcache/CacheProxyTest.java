@@ -27,7 +27,9 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.await;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.TERMINATED;
 import static java.lang.Thread.State.TIMED_WAITING;
@@ -68,7 +70,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -671,6 +675,35 @@ final class CacheProxyTest {
           () -> cache.registerCacheEntryListener(listenerConfig));
 
       verify(listener).close();
+    }
+  }
+
+  @Test
+  void getAll_negativeClock_keepsEternalEntries() {
+    // getAndFilterExpiredEntries caches the clock in a slot shared by the whole batch, so once a
+    // non-eternal entry fills it an eternal entry is judged against that value rather than 0. The
+    // subtraction in hasExpired underflows against Long.MAX_VALUE once the clock is at most -2.
+    int eternalKey = 5;
+    try (var fixture = JCacheFixture.builder()
+             .configure(config -> config.setTickerFactory(
+                 () -> () -> -TimeUnit.SECONDS.toNanos(1)))
+             .build();
+         var cache = fixture.jcache()) {
+      for (int i = 1; i <= 10; i++) {
+        cache.put(i, i);
+      }
+      // every entry but one is given a finite deadline, so the shared slot is filled
+      for (int i = 1; i <= 10; i++) {
+        if (i != eternalKey) {
+          requireNonNull(JCacheFixture.getExpirable(cache, i))
+              .setExpireTimeMillis(fixture.currentTime().toMillis() + 60_000);
+        }
+      }
+      assertThat(requireNonNull(JCacheFixture.getExpirable(cache, eternalKey)).isEternal()).isTrue();
+
+      var keys = IntStream.rangeClosed(1, 10).boxed().collect(toImmutableSet());
+      assertWithMessage("an eternal entry was expired by a negative clock")
+          .that(cache.getAll(keys)).containsKey(eternalKey);
     }
   }
 
@@ -1883,6 +1916,52 @@ final class CacheProxyTest {
         cache.close();
         assertThat(cache.isClosed).isEqualTo(2);
         assertThat(cache.isReallyClosed()).isFalse();
+      }
+    }
+  }
+
+  @Test
+  void close_executorShutdownThrows_stillClosesResources() throws IOException {
+    // shutdown() is the one close step outside the tryClose chain, so a throwing executor left
+    // closed=true with the expiry, writer, loader and listeners never closed, and a retry returned
+    // at isClosed(). The sibling steps in this method are wrapped the same way.
+    class ThrowingShutdown extends AbstractExecutorService {
+      @Override public void shutdown() {
+        throw new IllegalStateException("shutdown");
+      }
+      @Override public List<Runnable> shutdownNow() {
+        return List.of();
+      }
+      @Override public boolean isShutdown() {
+        return false;
+      }
+      @Override public boolean isTerminated() {
+        return false;
+      }
+      @Override public boolean awaitTermination(long timeout, TimeUnit unit) {
+        return true;
+      }
+      @Override public void execute(Runnable command) {
+        command.run();
+      }
+    }
+    try (CloseableCacheLoader loader = Mockito.mock();
+        CloseableCacheWriter writer = Mockito.mock();
+        CloseableExpiryPolicy expiry = Mockito.mock()) {
+      var executor = new ThrowingShutdown();
+      when(expiry.getExpiryForCreation()).thenReturn(ETERNAL);
+      try (var fixture = JCacheFixture.builder()
+          .configure(config -> {
+            config.setExecutorFactory(() -> executor);
+            config.setExpiryPolicyFactory(() -> expiry);
+            config.setCacheLoaderFactory(() -> loader);
+            config.setCacheWriterFactory(() -> writer);
+          }).build()) {
+        fixture.jcache().close();
+
+        verify(expiry, atLeastOnce()).close();
+        verify(loader, atLeastOnce()).close();
+        verify(writer, atLeastOnce()).close();
       }
     }
   }

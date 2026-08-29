@@ -36,6 +36,28 @@ buffer task orderings.
 time. The weight is not recalculated afterward — relative weights don't influence
 eviction ordering, only total capacity accounting.
 
+**`FrequencySketch.reset()`'s pause is accepted, and chunking it is the wrong trade.** The reset
+halves every counter under `evictionLock`: 0.29 ms at a 100k maximum, 2.0 ms at 1M, 32 ms at 10M,
+238 ms at 100M. It is rare in proportion to the cache, since `sampleSize` is `10 × maximum` and the
+reset fires when that many increments have been recorded, so a 100M cache resets once per billion
+recorded reads, about 0.24 ns/read amortised. Amortising the pause means chunking it, which lowers
+eviction quality by querying a half-reset sketch. The default async eviction hides the pause
+entirely, and on a caller-runs executor the worst case is still cheaper than the misses the sketch
+prevents. The `count += Long.bitCount(table[i] & ONE_MASK)` odd-counter correction is a
+cross-iteration reduction and is what stops the loop auto-vectorizing; dropping it is much faster
+but loses the correction, and no argument has justified that. SIMD is the answer once it is
+available. It has produced no user reports and does not show in `GetPutBenchmark`. Rejected on
+2026-08-29 (row 21.4).
+
+**A weak-key lookup allocates, and that is accepted.** The weak-key node factories build a
+`LookupKeyReference` per lookup (20.0 ns/op and 24 B/op against 2.6 ns/op and 0 B/op for strong
+keys); it is handed to `ConcurrentHashMap.get`, so escape analysis cannot remove it. Avoiding the
+allocation means caching one wrapper in a thread-local and mutating it to set and unset the
+referent around each lookup, which pins that instance to the thread. That idea was raised and
+rejected in issue #294 over virtual threads, where an instance per virtual thread is unbounded,
+and over classloader pinning. A young-generation allocation is the better trade. Rejected again on
+2026-08-29 (row 21.3).
+
 **Two notions of "weighted", and the internal one gates on both.** The `isWeighted` field is
 whether the caller configured a weigher, and it is what `Policy.Eviction.isWeighted()` reports.
 `BoundedLocalCache.isWeighted()` answers a different question, whether entries may be assigned

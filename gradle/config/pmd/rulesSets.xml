@@ -82,6 +82,7 @@
     <exclude name="CouplingBetweenObjects"/>
     <exclude name="AvoidDeeplyNestedIfStmts"/>
     <exclude name="AvoidRethrowingException"/>
+    <exclude name="ProtectedMemberInFinalClass"/>
     <exclude name="PublicMemberInNonPublicType"/>
     <exclude name="AbstractClassWithoutAnyMethod"/>
   </rule>
@@ -95,6 +96,7 @@
 
   <rule ref="category/java/errorprone.xml">
     <exclude name="NullAssignment"/>
+    <exclude name="UnusedReturnValue"/>
     <exclude name="AssignmentInOperand"/>
     <exclude name="UseProperClassLoader"/>
     <exclude name="AvoidCatchingThrowable"/>

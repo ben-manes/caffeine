@@ -190,6 +190,32 @@ is observable but TCK-invisible:
   (→ `cacheWriter.write`) unconditionally *before* evaluating `getExpiryForCreation`, then
   drops the immediately-expired entry — and the defensible reading (write-through persists the
   caller's write intent; suppressing it would make a write-through `put` silently not persist).
+  The per-vendor matrix for the **create** path, taken from source 2026-08-29 (rows 10d.7 / 07
+  A9, declined):
+
+  | Impl | writer before the expiry guard | `putIfAbsent` returns | put counted | `EXPIRED` fired |
+  |---|---|---|---|---|
+  | **RI** | yes | `false` | no | yes |
+  | **Coherence** | yes | `false` | no | no |
+  | **Caffeine** | yes | `false` | no | yes |
+  | Ehcache 2 | no (suppressed) | `true` | — | — |
+  | Hazelcast | no (suppressed) | — | no | no |
+  | Infinispan | writer is below the adapter, inconclusive | — | no | — |
+  | cache2k | delegates to core, inconclusive from the adapter | — | — | — |
+
+  Caffeine matches the RI on every axis and Coherence on all but the `EXPIRED` event, which is a
+  separately recorded intentional divergence. **Both the RI and Coherence carry a comment that
+  contradicts their own code**: Coherence's "it should not be added to the cache or listeners
+  called or writers called" sits directly below its `writeCacheEntry` call, and the RI's "no
+  expiry event for created entry that expires before put in cache" sits below a
+  `processExpiries` that dispatches one. So the *stated* intent in both reference implementations
+  is to suppress the writer while neither does. An audit that reads those comments concludes
+  Caffeine is wrong; two adversarial runs did exactly that. Judge this corner by the behaviour.
+  The TCK binds the statistic but not the return value:
+  `CacheMBStatisticsBeanTest.testExpiryOnCreation` asserts `CachePuts == 0` after `put` and
+  `putAll` under an expire-on-creation policy, while `CacheExpiryTest.expire_whenCreated` calls
+  `putIfAbsent` and discards its result.
+
 - **`getExpiryForUpdate()` → `Duration.ZERO`**: *"a Cache.Entry is **considered
   immediately expired**."* → the entry **is** updated, then expires. The
   "Invocation of Listeners" table fires `UPDATE` for `put`/`replace`/`invoke` on

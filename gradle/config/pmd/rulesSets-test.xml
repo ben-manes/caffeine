@@ -116,6 +116,7 @@
   <rule ref="category/java/errorprone.xml">
     <exclude name="EqualsNull"/>
     <exclude name="NullAssignment"/>
+    <exclude name="UnusedReturnValue"/>
     <exclude name="AssignmentInOperand"/>
     <exclude name="WrongTestAnnotation"/>
     <exclude name="UseProperClassLoader"/>
