@@ -1626,6 +1626,31 @@ final class BoundedLocalCacheTest {
     requireNonNull(context.build(key -> key));
   }
 
+  /**
+   * An async cache always wraps its weigher, so identity against the singleton cannot answer
+   * whether weights vary. The answer sizes the frequency sketch, which the public API does not
+   * expose, so it is asserted against the sketch.
+   */
+  @Test
+  void isWeighted_onlyWhenWeightsVary() {
+    int maximum = 10_000;
+    var asyncCache = Caffeine.newBuilder()
+        .maximumSize(maximum).executor(Runnable::run).buildAsync();
+    var cache = asBoundedLocalCache(asyncCache);
+    assertThat(cache.isWeighted()).isFalse();
+    assertThat(asBoundedLocalCache(Caffeine.newBuilder().maximumWeight(maximum)
+        .weigher(Weigher.<Int, Int>singletonWeigher()).build()).isWeighted()).isFalse();
+    assertThat(asBoundedLocalCache(Caffeine.newBuilder().maximumWeight(maximum)
+        .weigher((Int key, Int value) -> key.intValue()).build()).isWeighted()).isTrue();
+
+    // The sketch initializes at half the maximum, sized by the maximum rather than the count.
+    for (int i = 0; i <= (maximum / 2); i++) {
+      asyncCache.put(Int.valueOf(i), CompletableFuture.completedFuture(Int.valueOf(i)));
+    }
+    assertWithMessage("the sketch was sized by the entry count, not the maximum")
+        .that(cache.frequencySketch().table).hasLength(Caffeine.ceilingPowerOfTwo(maximum));
+  }
+
   @ParameterizedTest
   @CacheSpec(population = Population.FULL)
   void nodeToCacheEntry_notAlive(BoundedLocalCache<Int, Int> cache, CacheContext context) {

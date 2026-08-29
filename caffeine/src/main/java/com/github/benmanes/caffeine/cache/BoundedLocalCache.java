@@ -558,7 +558,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /** Returns if entries may be assigned different weights. */
   protected boolean isWeighted() {
-    return (weigher != Weigher.singletonWeigher());
+    return isWeighted && (weigher != Weigher.singletonWeigher());
   }
 
   protected FrequencySketch frequencySketch() {

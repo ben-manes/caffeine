@@ -36,6 +36,22 @@ buffer task orderings.
 time. The weight is not recalculated afterward — relative weights don't influence
 eviction ordering, only total capacity accounting.
 
+**Two notions of "weighted", and the internal one gates on both.** The `isWeighted` field is
+whether the caller configured a weigher, and it is what `Policy.Eviction.isWeighted()` reports.
+`BoundedLocalCache.isWeighted()` answers a different question, whether entries may be assigned
+*different* weights, and that is what decides whether the frequency sketch can be sized from the
+maximum or has to be sized from the live entry count. Neither test alone answers it: an async
+cache always wraps its weigher in `AsyncWeigher`, so identity against the singleton weigher says
+"varies" even for an unweighted one, while a caller who passes `Weigher.singletonWeigher()`
+explicitly sets the field even though every entry weighs the same. The method conjoins them.
+Sizing the sketch from the entry count is not free: `ensureCapacity` forgets all counts when it
+grows, so filling a `maximumSize(10_000)` async cache allocated the sketch twice (8192 then
+16384) and discarded the frequencies gathered over the first half, where the sync equivalent
+allocates 16384 once. It also called `data.mappingCount()` on every insertion past half the
+maximum. The one case still answered wrongly is an async cache given an explicit
+`Weigher.singletonWeigher()`, which needs unwrapping `AsyncWeigher` to reach and costs only that
+same extra warmup allocation. Pinned by `BoundedLocalCacheTest.isWeighted_onlyWhenWeightsVary`.
+
 **Slow-adapt tuning of the hit-rate climber (at/below `SLOW_ADAPT_THRESHOLD`, 512
 entries).** At that size the window is only a few integer entries — the default 1%-of-max window is so
 tiny that the climber's initial shrink is a no-op, locking it into a direction that never flips — and the
@@ -934,6 +950,18 @@ refreshed value. This is the entire point — hiding reload latency from callers
 **Refresh only triggers on access.** An idle cache with no reads will never refresh.
 For proactive refresh, use `ScheduledExecutorService` with `cache.refresh(key)`.
 
+**"Logged and swallowed" is a promise about the future's result, not about producing it.**
+`refresh` documents that a failed reload is logged and swallowed, and that covers the
+`CompletableFuture` completing exceptionally: the load ran and failed, the mapping is unchanged,
+and the caller who ignores the returned future sees nothing. It does not cover `asyncReload`
+throwing *synchronously*, which happens before there is a future at all. Those are distinct
+failures. Guava and early Caffeine did not hand the future back to the caller, which is the
+wording's origin; a loader that throws while merely constructing its future has a bug in the most
+basic step, and surfacing it is right. Do not "fix" `refresh`/`refreshAll` to swallow a
+synchronous throw from `asyncReload`/`asyncLoad`, and do not cite the declared `throws Exception`
+on those methods as evidence that it should be swallowed. Audits raise this repeatedly; it was
+rejected on 2026-08-29 (rows 9.1 and 7.6).
+
 **`expireAfterAccess` + `expireAfterWrite` together is discouraged.** Inherited from
 Guava for compatibility. The two timestamps are independent; whichever has the
 shortest remaining duration wins. Prefer `expireAfter(Expiry)` for custom logic.
@@ -943,6 +971,17 @@ shortest remaining duration wins. Prefer `expireAfter(Expiry)` for custom logic.
 **`asMap()` iteration is not a cache read.** Iterators do not update access times or
 frequency counters. This prevents iteration from polluting the eviction policy.
 Expired entries are skipped during iteration.
+
+**Under `weakKeys()` the key and entry spliterators still claim `DISTINCT`, and must.** The
+`weakKeys()` javadoc names `IdentityHashMap` as the model for its semantics, and the JDK's own
+identity-keyed map advertises `DISTINCT` on exactly those two spliterators while omitting it on
+`values()`, which is the shape Caffeine matches. It produces the same triple audits report as an
+anomaly: two keys that are `equals` but not `==` give `size() == 2`,
+`keySet().stream().distinct().count() == 2`, and `new HashSet<>(keySet()).size() == 1` (verified
+on JDK 25). Removing the flag would not be a no-op, it would be wrong: `distinct()` would then run
+with `equals`, merging two genuinely distinct live entries so the stream reports fewer elements
+than the cache holds. Under identity semantics the keys *are* distinct, so the flag is the correct
+claim. Rejected on 2026-08-29 (row 6.9).
 
 **The `keySet()`/`entrySet()` views inherit `AbstractSet.equals`/`hashCode`, so a formal
 contract breach in the dead-entry window is unavoidable and accepted.** `size()` is physical
