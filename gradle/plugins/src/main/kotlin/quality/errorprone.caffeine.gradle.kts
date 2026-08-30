@@ -80,9 +80,9 @@ tasks.withType<JavaCompile>().configureEach {
         suggestSuppressions = true
         checkContracts = true
         jspecifyMode = true
+        jspecifyExperimental = true
         error()
       }
-      errorproneArgs.add("-XepOpt:NullAway:JSpecifyExperimental=true")
     }
   }
 }
