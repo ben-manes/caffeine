@@ -84,10 +84,16 @@ public final class JCacheLoaderAdapter<K, V>
   @SuppressWarnings("ConstantValue")
   public @Nullable Expirable<V> load(K key) {
     try {
-      boolean statsEnabled = statistics.isEnabled();
-      long start = statsEnabled ? ticker.read() : 0L;
-
-      V value = delegate.load(key);
+      boolean recordLoadTime = statistics.isRecordingLoadTime();
+      long start = recordLoadTime ? ticker.read() : 0L;
+      V value;
+      try {
+        value = delegate.load(key);
+      } finally {
+        if (recordLoadTime) {
+          statistics.recordLoadTime(ticker.read() - start);
+        }
+      }
       @Var Expirable<V> expirable = null;
       if (value != null) {
         requireNonNull(cache);
@@ -100,10 +106,6 @@ public final class JCacheLoaderAdapter<K, V>
           dispatcher.publishCreated(cache, key, copy);
         }
       }
-
-      if (statsEnabled) {
-        statistics.recordGetTime(start - ticker.read());
-      }
       return expirable;
     } catch (CacheLoaderException e) {
       throw e;
@@ -115,12 +117,19 @@ public final class JCacheLoaderAdapter<K, V>
   @Override
   public Map<K, Expirable<V>> loadAll(Set<? extends K> keys) {
     try {
-      boolean statsEnabled = statistics.isEnabled();
-      long start = statsEnabled ? ticker.read() : 0L;
       requireNonNull(cache);
 
+      boolean recordLoadTime = statistics.isRecordingLoadTime();
+      long start = recordLoadTime ? ticker.read() : 0L;
       @SuppressWarnings("ConstantValue")
-      Map<K, V> loaded = delegate.loadAll(keys);
+      Map<K, V> loaded;
+      try {
+        loaded = delegate.loadAll(keys);
+      } finally {
+        if (recordLoadTime) {
+          statistics.recordLoadTime(ticker.read() - start);
+        }
+      }
       var result = new HashMap<K, Expirable<V>>(loaded.size());
       for (var entry : loaded.entrySet()) {
         K key = entry.getKey();
@@ -138,10 +147,6 @@ public final class JCacheLoaderAdapter<K, V>
       }
       for (var entry : result.entrySet()) {
         dispatcher.publishCreated(cache, entry.getKey(), entry.getValue().get());
-      }
-
-      if (statsEnabled) {
-        statistics.recordGetTime(start - ticker.read());
       }
       return result;
     } catch (CacheLoaderException e) {

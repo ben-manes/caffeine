@@ -67,9 +67,13 @@ confidence suspicions to match expectation. Fight this explicitly.
 
 **You MUST NOT**:
 - Read any files under `memory/`, `memories/`, `~/.claude/projects/*/memory/`,
-  `.claude/agent-memory-local/` or `.local/audits/`. Prior audit conclusions,
+  `.claude/agent-memory-local/` or `.local/`. Prior audit conclusions,
   "no defects found" histories, and cross-model result summaries are off-limits
-  for this run.
+  for this run. The one exception is a workspace **this run created**: a skill
+  that works out of `.local/experiments/<topic>-<date>/` (`/audit-regret` builds
+  traces, result CSVs and a `LEDGER.md` there) reads back its own outputs
+  normally. Never open a workspace an earlier run left behind, and never open
+  `.local/audits/` at all.
 - Cite prior audit results as justification to dismiss a finding. Every dismissal
   must be reconstructed from source code *in this audit*. "Prior audits found no
   defects here" is not evidence.
@@ -162,8 +166,21 @@ test by name and explain the gap.
 
 ### Phase 1.5: Design Context Adjudication
 
-Now read `.claude/docs/design-decisions.md`, `.claude/rules/design-decisions.md`, and
-`.claude/docs/ruled-out.md` (its *Standing principles* plus your module's section).
+Now read, in this order:
+
+1. **Your module's own row in the table above**, both columns: its `.claude/rules/` file and
+   its module-specific adjudication doc. This is the step most likely to be skipped and the
+   one that has actually caught a re-derivation. A jcache finding is adjudicated by
+   `.claude/rules/jcache-adapter.md` and `docs/jsr107-conformance.md` before anything else;
+   a core finding by `.claude/rules/concurrency.md`.
+2. `.claude/docs/design-decisions.md` and `.claude/rules/design-decisions.md`.
+3. `.claude/docs/ruled-out.md`, its *Standing principles* plus your module's section.
+
+`ruled-out.md` is not the index of everything already decided. A module's rule file can carry
+a full adjudication that `ruled-out.md` never mentions, and its §section can name a different
+vector of the same family. Finding that §section silent, or pointed at another trigger, is not
+evidence that a finding is novel until step 1 has been done.
+
 For each Phase 1 finding, check if it matches:
 
 - If it matches: label it "matches design decision: [item]" or "ruled out: [entry]" but
@@ -185,6 +202,13 @@ only when you match both.** Say explicitly which you have:
   about the eviction listener and the finding used the removal listener, one because a
   decline reason covered `evictFromMain` but not `evictFromWindow`.
 - Different mechanism that merely resembles the entry: not ruled out. Do not cite it.
+
+**Before arguing past an entry, confirm you are arguing past the right file.** The
+"same mechanism, different consequence" move is legitimate, and it is also how a re-derivation
+gets rationalised: a jcache retention finding was once carried to the user as novel because
+its §jcache entry named a rejecting executor rather than the finding's throwing `Weigher`,
+while the module rule file carried the mechanism, the consequence, and an explicit refusal of
+the proposed fix. The §section was not the adjudication. Step 1 above is what catches this.
 
 Do not use a ruling to lower a severity you have measured, and do not skip Phase 3.5 for a
 finding you have labelled — a ruled-out label is not a substitute for pricing it.
@@ -209,8 +233,14 @@ After completing your analysis, before writing the final report:
 Spawn a **separate sub-agent** to challenge your analysis. This agent must NOT
 have access to the source code — it works only from your report.
 
+**Pass `model: "opus"` explicitly.** Without it the subagent inherits whatever the default
+resolution picks, which is sometimes the run's own model. One measured `/audit-adaptivity` run
+spent 38k output tokens, 29% of the whole audit, running its evaluator on the discovery model.
+Discovery is where the expensive model earns its keep. Challenging a written report does not
+need it.
+
 ```
-Agent(subagent_type=general-purpose):
+Agent(subagent_type=general-purpose, model="opus"):
   "You are a hostile evaluator reviewing an audit report of a concurrent Java
    cache. Your job is to find what the auditor MISSED — not to re-do the audit.
 
@@ -248,12 +278,21 @@ refutation and every confirmation that has survived scrutiny came from a repro o
 not from tracing the code. A mechanism you can see in the source and an impact a user can
 reach are two separate claims, and severity encodes the second one.
 
-For each finding you intend to rate `high` or `critical`, do this before writing the report:
+**Delegate the witness to a sub-agent, with `model: "opus"`.** Building and running a repro is
+mechanical work that does not need the discovery model, and it is a real share of a run. One
+audit built nine `jshell` probes inline. Dispatch one sub-agent per finding you intend to rate
+`high` or `critical`, give it the claim, the `file:line`, the configuration to run, and the
+numbers you expect, and have it report what it actually measured. Cost is not the only reason.
+The author of a finding is the worst-placed party to price it, and a fresh agent that never
+formed the hypothesis has no result to protect.
+
+For each such finding, before writing the report:
 
 1. **Build the witness.** A JUnit method, a `jshell` snippet, or a `main` compiled against
    `caffeine/build/libs/caffeine-*.jar` (use the jar, not `build/classes` — the jar carries
    the generated node classes). Run it. A witness that does not reproduce is the finding's
-   answer.
+   answer. Take the sub-agent's measured numbers as the result; do not restate your prediction
+   as though it were the measurement.
 2. **Run it on the configuration a user gets**: `Ticker.systemTicker()` and the common
    pool. If it only reproduces under a `FakeTicker`, `executor(Runnable::run)`, or
    `CacheExecutor.DIRECT`, the impact is an instrument artifact. Say so in the finding and
@@ -323,7 +362,10 @@ race). Do not consider an escalation addressed merely because a report holds a s
 
 ### Phase 4: Final Report
 
-Write the full report to the path your orchestrator assigned you. Absent one, use
+Write the full report to the path your orchestrator assigned you. A shell orchestrator
+assigns it in the environment: run `printenv AUDIT_REPORT_PATH` and write there when it is
+non-empty. That path is authoritative, because the directory it names is the orchestrator's
+label for the run and need not match what you call yourself. Absent both, use
 `.local/audits/<model>/<skill-name>.md` (create the directory if absent) where
 `<model>` is your own short model id (`opus-5`, `fable-5`, `gpt-5.6-sol`) and `<skill-name>`
 matches the invoking skill — see `.claude/docs/audit-output.md`. **This write is

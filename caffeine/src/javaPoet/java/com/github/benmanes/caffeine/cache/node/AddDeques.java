@@ -20,7 +20,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.NODE;
 import com.github.benmanes.caffeine.cache.Feature;
 import com.github.benmanes.caffeine.cache.Rule;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
-import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
+import com.github.benmanes.caffeine.cache.node.NodeContext.FieldAccess;
 
 /**
  * Adds the access and write deques, if needed, to the node.
@@ -51,7 +51,7 @@ public final class AddDeques implements Rule<NodeContext> {
   /** Adds a simple field, accessor, and mutator for the variable. */
   private static void addFieldAndGetter(NodeContext context, String varName) {
     context.classSpec.addField(NODE, varName)
-        .addMethod(context.newGetter(Strength.STRONG, NODE, varName, Visibility.VOLATILE))
-        .addMethod(context.newSetter(NODE, varName, Visibility.VOLATILE));
+        .addMethod(context.newGetter(Strength.STRONG, NODE, varName, FieldAccess.DIRECT))
+        .addMethod(context.newSetter(NODE, varName, FieldAccess.DIRECT));
   }
 }

@@ -132,8 +132,6 @@ metacharacter
 mfu
 minisim
 misattributes
-misconfirm
-mispricing
 mockito
 msb
 multimap
@@ -152,7 +150,6 @@ phasey
 pinact
 pmd
 prescreened
-pricings
 proactively
 qls
 qlty
@@ -206,7 +203,6 @@ tragen
 trc
 trivy
 trufflehog
-tsv
 typedef
 Typesafe
 UBN

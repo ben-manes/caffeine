@@ -527,6 +527,50 @@ not read prior reports. Strike a line when it is done or dead.
   1/3/5%, hybrid ≡ noaudit) if marginal steering (§5) is ever worked; the FIU mechanism itself (settling in
   the near basin) still has no synthetic reproduction — the machine overshoots instead.
 
+- Round 9's leftovers (2026-08-31, opus-5). `moatweather` was not run against the real corpus:
+  whether any real cell carries a level step of this size *and* a traverse long enough for it to
+  land on a walk is the anti-correlation §3 already records, so the honest expectation is a
+  constructed-only row, and the check (a `real.py` pass plus a scatter-versus-terrain scan) belongs
+  before any repair. Its coincidence axis was measured at one period pair (24 at two phases) and
+  its traverse axis on one terrain; whether the same `dreq` slope appears on `shallowmoat` or
+  `lowbar` with weather added is the generalization. `b_moatnoise`'s divergent attribution (there
+  the calibration audit earns +1.7 and the later audits cost) was not chased to a responder. The
+  class-8 pair failed a seventh time in a new place: `s_twinloop_a/b` met the premise at the trace
+  (identical member sequences, byte-identical non-twin streams, both verified) and failed at the
+  terrain, because a `loop` member is not resident when the window's capacity equals its cycle
+  length, so both curves were monotone declines and both cells hold cells; a pair built on a
+  residency threshold must measure the threshold on the generated trace rather than compute it.
+  Class 7 is witness-less for the third round running (`s_emberloss`'s capacity-refill construction
+  did reach the top of the curve, but `undo_deficit` +1.06 sat inside an hr scatter of 3.54). Three
+  blind cells were dropped peak-at-edge without a dense re-sweep, so one may still have an interior
+  peak. Two process facts: a Fable proposal lane and a Fable evaluator both failed without writing
+  anything, so an evaluator needs a completion check and a re-dispatch on another model rather than
+  an open-ended wait; and the harness did not build at HEAD (the jspecify migration made
+  `System.getProperty(k, default)` `@Nullable` at five injection sites), while `harness.py strip`
+  cannot strip a tree applied by an older harness, so reset a worktree with `git checkout -- .`
+  before re-applying an edited one.
+
+- Round 8's leftovers (2026-08-30, fable). The class-8 pair failed its premise a sixth
+  time, with the failure one layer down: the shared 2.2pp/stride drawdown never tripped the
+  absolute 5pp abort, so both walks ran long enough for A's flipped band to be caught — a
+  distance-flip pair that diverges during the walk diverges by being caught, which is
+  visibility, so round 7's "divergence opening during the walk" requirement is
+  self-defeating in that form. The next pair must first prove its shared abort fires on the
+  common terrain (the drawdown dose is what failed), with the flipped band reachable only
+  past the abort stride. The interior-peak `bad_veto` construction is 0-for-2
+  (`b_slowfade` round 7, `s_creepveto` round 8: the rail never fired; the trend feeds the
+  confirm and the walk exit bars first). Class 7 is still witness-less (`s_scorch` repeated
+  `s_recoil`'s inside-scatter fate at gap 1.95). The `s_probcap` structural note (Belady
+  20.6pp over a flat curve) needs a geometry witness at cap-residency < D < LRU-residency
+  (~10–11.7k at that terrain's rates) before the fixed-probation tax can be attributed past
+  the sketch's ranking; LRU missed the band at both constructed doses. `pricedshift`
+  (+0.63 at n=129, +1.80 with the capture tail zeroed at repeat×2 on `pinnacle`) has an
+  unmeasured cost side on the families that need the discard to fire (`ghostclaim`,
+  `regimeramp`, the moat rows). The arrival-transient verdict bound was witnessed twice in
+  one round (`settleflip`'s cold-start inversion; `pinnacle`'s one-stride overshoot); if
+  either family is promoted, the bound belongs in `hill-climber.md` as a recorded residual
+  rather than a round-4 note.
+
 ## Rules of evidence
 
 - A gap under 2.5pp needs eight seeded, paired runs; a bimodal cell is read seed by seed and never

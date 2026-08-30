@@ -266,6 +266,39 @@ session memory for the full rationale.
   `getValue()` "will behave as if Cache.get(Object) was called", the statistics
   table treats a read-through load as a miss-not-put, and the RI's LOAD case does
   not count a put. Pinned by `CacheProxyTest.invoke_readThroughLoad_recordsMissNotPut`.
+- **Read-through get timing subtracts only the nested loader call and commits one net duration**
+  (fixed 2026-08-30). The old `JCacheLoaderAdapter` recorded a negative duration after the whole
+  adapter path, while `LoadingCacheProxy` added the positive operation duration only after copying
+  the result for return. A successful load followed by an output-copy failure therefore left one
+  miss with a negative `AverageGetTime`; a native load through `unwrap(LoadingCache.class)` could
+  leave the same negative pre-credit with no enclosing JCache read to balance it. Timing is now
+  scoped to `LoadingCacheProxy.get`/`getAll`: the adapter reports only `delegate.load`/`loadAll`
+  time to the scope, and the outer operation records total time minus loader time from a `finally`.
+  RI, Hazelcast, Infinispan, and cache2k cannot produce a negative mean, although several include
+  loader time rather than honoring the exclusion exactly. Pinned for single and bulk reads by
+  `CacheLoaderTest.load_outputCopyFailure_keepsGetTimeNonNegative`,
+  `load_failure_excludesLoaderTime`, `load_copierTime_includedInGetTime`, and
+  `nativeLoad_doesNotChangeJCacheGetTime`.
+- **Successful `getAll` timing includes copying the returned entries** (fixed 2026-09-04).
+  `CacheProxy.getAll` recorded its duration before `copyMap`, excluding store-by-value return
+  copying while `get` and both loading read paths included it. The timer now ends after copying,
+  matching the `CacheStatisticsMXBean` definition of the mean time to execute gets. With one
+  present entry and a copier spending 1 ms on its returned value, plain `getAll` reported 0 μs
+  while the three sibling reads reported 1000 μs. The RI and Coherence include return conversion;
+  Hazelcast's bulk path converts after its per-key timer, while cache2k exposes a core load-time
+  metric without an equivalent adapter copy timer. The spec and internal parity support inclusion
+  despite that ecosystem split. Pinned across `get`/`getAll` and plain/loading caches by
+  `CacheProxyTest.readOp_outputCopyTime_includedInGetTime`. Failed-read hit accounting remains
+  separate: the RI, like plain `get`, counts a hit only after a successful output conversion.
+- **`putAll` timing includes its store-by-value input copies** (fixed 2026-09-04).
+  Preparing the batch's `CopiedEntry` values preceded its start timestamp, so a successful
+  singleton `putAll` omitted copying that `put` included. The start now precedes that preparation;
+  all copies still complete before `writeAll`, and puts are still counted only for successful
+  stores. The RI starts before conversion, and Coherence delegates bulk writes to its copy-inclusive
+  put path. Hazelcast times below caller serialization, while cache2k reports no put mean. The
+  `CacheStatisticsMXBean` mean-execution definition and internal put/putAll parity support inclusion.
+  Pinned across put/putAll, creation/update, and statistics enabled/disabled by
+  `CacheProxyTest.writeOp_inputCopyTime_includedInPutTime`.
 - **`CacheProxy.close()` shuts down a configured `ExecutorService`.** Spec-silent;
   defensible default (cache owns the executor). Documented, not a bug.
 - **Operations racing `close()` are conformant — accepted (audit-lifecycle M2/M3,
@@ -347,9 +380,12 @@ session memory for the full rationale.
   JCache statistics. Do not "fix" toward the ecosystem; it would break dashboards.
 - **An expired entry hit by `remove`/`removeAll`/`getAndRemove` counts as an
   eviction (+`EXPIRED` event), never a removal (+`REMOVED`)**. The RI's
-  `removeAll` counts expired entries as removals, contradicting its own
-  `remove(K)`; the spec's "one removal per entry that is removed" plus "expired
-  entries are not returned from a cache" back Caffeine's gating. TCK-blind.
+  `removeAll(Set)` counts expired entries as removals, contradicting its own
+  `remove(K)` and no-argument `removeAll()`; the spec's "one removal per entry that is removed"
+  plus "expired entries are not returned from a cache" back Caffeine's gating. The TCK's
+  `CacheExpiryTest.testCacheStatisticsRemoveAll` pins zero removals for the expired no-argument
+  case, and `testCacheStatisticsRemoveAllNoneExpired` pins its live-entry count. The set overload's
+  expired-entry event/statistic pairing remains TCK-blind.
 - **A `CacheEntryEventFilter` exception must not abort the in-flight operation**
   (fixed 2026-06-10). Filters are evaluated inside the `compute` that mutates the
   entry; previously a throwing filter aborted the store *after* `CacheWriter.write`
@@ -503,6 +539,14 @@ session memory for the full rationale.
   entry"); the stats table's looser "Yes, if remove() was called" is internally
   inconsistent with its removeAll/remove(K) rows. Caffeine's gating matches the
   listener table and its own `remove(K)`. TCK only tests remove-on-present.
+- **`invoke` and `invokeAll` forward an explicitly null varargs array unchanged** (fixed
+  2026-08-30). Their 1.1.1 javadocs require `NullPointerException` only for null key or keys and a
+  null `EntryProcessor`; `arguments` is the array passed to `EntryProcessor.process`. The RI,
+  Ehcache 3, cache2k, Hazelcast, and Infinispan forward null, while Coherence rejects it indirectly
+  when its processor wrapper reads `arguments.length`. Caffeine used to reject it explicitly in
+  both siblings. Pinned by `CacheProxyTest.invoke_nullArgumentsArray_forwarded` and
+  `invokeAll_nullArgumentsArray_forwarded`; a normal no-arguments call remains a nonnull empty
+  array.
 - **`putIfAbsent` under zero creation expiry returns false, records a MISS, fires
   `EXPIRED` with the new value, no put** (reversed 2026-07-16 by "Record a
   putIfAbsent miss for an absent zero-creation-expiry key"; earlier revisions of
@@ -895,10 +939,12 @@ session memory for the full rationale.
   released. The ecosystem agrees — Ehcache 3, Infinispan, Coherence and Hazelcast all
   `caches.remove(...)` then close/destroy; only the RI does `caches.get(...)` then `close()`. Pinned
   by `CacheProxyTest.destroyCache_clearsBeforeClosing`.
-- **Spec-truer-than-RI EntryProcessor corners, pinned against a "fix" toward the RI.** An
+- **Spec-truer-than-RI EntryProcessor corners.** An
   `{ entry.remove(); entry.getValue(); }` returns `null` without triggering a read-through load
   (the RI resurrects the removed entry via LOAD); a read-through `load` returning `null` is
-  consumed as absent (the RI reloads). Both match the spec's EP semantics.
+  consumed as absent (the RI reloads). Both match the spec's EP semantics. The current remove/read
+  unit tests use no loader, and there is no dedicated API pin for repeated reads after a null
+  load; these loader-enabled cases remain regression-coverage gaps.
 - **Duplicate `EXPIRED` delivery is possible under a rejecting executor** — an already-submitted
   listener task delivers, the reap `compute` aborts on the `RejectedExecutionException`, and the
   next reap re-publishes (same family as the racing-close/rejecting-executor entry above). The

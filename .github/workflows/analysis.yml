@@ -33,7 +33,7 @@ jobs:
       JAVA_VERSION: 26
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -43,7 +43,7 @@ jobs:
         with:
           persist-credentials: false
       - name: ECJ
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           arguments: ecj
           java: ${{ env.JAVA_VERSION }}
@@ -58,7 +58,7 @@ jobs:
       JAVA_VERSION: 26
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -68,7 +68,7 @@ jobs:
         with:
           persist-credentials: false
       - name: ErrorProne
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           lint: 'true'
           java: ${{ env.JAVA_VERSION }}
@@ -84,7 +84,7 @@ jobs:
       JAVA_VERSION: 26
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -94,7 +94,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Forbidden Apis
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           arguments: forbiddenApis -PforbiddenApis
@@ -111,7 +111,7 @@ jobs:
       JAVA_VERSION: 26
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -123,7 +123,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Pmd
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
@@ -167,7 +167,7 @@ jobs:
       JAVA_VERSION: 26
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -177,7 +177,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Roseau
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           arguments: roseau
           java: ${{ env.JAVA_VERSION }}
@@ -194,7 +194,7 @@ jobs:
       JAVA_VERSION: 26
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -206,7 +206,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Spotbugs
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}

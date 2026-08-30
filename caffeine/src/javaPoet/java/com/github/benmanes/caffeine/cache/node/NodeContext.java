@@ -86,12 +86,12 @@ public final class NodeContext extends RuleContext {
 
   /** Creates an accessor that returns the unwrapped variable. */
   public MethodSpec newGetter(Strength strength,
-      TypeName varType, String varName, Visibility visibility) {
+      TypeName varType, String varName, FieldAccess access) {
     var getter = MethodSpec.methodBuilder("get" + capitalize(varName))
         .addModifiers(publicFinalModifiers())
         .returns(varType);
     if (strength == Strength.STRONG) {
-      switch (visibility) {
+      switch (access) {
         case OPAQUE: {
           var template = String.format(US, "return (%s) $L.getOpaque(this)",
               varType.isPrimitive() ? "$L" : "$T");
@@ -104,19 +104,19 @@ public final class NodeContext extends RuleContext {
           getter.addStatement(template, varType, varHandleName(varName));
           break;
         }
-        case VOLATILE:
+        case DIRECT:
           getter.addStatement("return $N", varName);
           break;
       }
     } else {
-      switch (visibility) {
+      switch (access) {
         case OPAQUE:
           throw new IllegalArgumentException();
         case PLAIN:
           getter.addStatement("return (($T<$T>) $L.get(this)).get()",
               Reference.class, varType, varHandleName(varName));
           break;
-        case VOLATILE:
+        case DIRECT:
           getter.addStatement("return $N.get()", varName);
           break;
       }
@@ -125,26 +125,29 @@ public final class NodeContext extends RuleContext {
   }
 
   /** Creates a mutator to the variable. */
-  public MethodSpec newSetter(TypeName varType, String varName, Visibility visibility) {
+  public MethodSpec newSetter(TypeName varType, String varName, FieldAccess access) {
     var setter = MethodSpec.methodBuilder("set" + capitalize(varName))
         .addModifiers(publicFinalModifiers())
         .addParameter(varType, varName);
-    switch (visibility) {
+    switch (access) {
       case OPAQUE:
         setter.addStatement("$L.setOpaque(this, $N)", varHandleName(varName), varName);
         break;
       case PLAIN:
         setter.addStatement("$L.set(this, $N)", varHandleName(varName), varName);
         break;
-      case VOLATILE:
+      case DIRECT:
         setter.addStatement("this.$N = $N", varName, varName);
         break;
     }
     return setter.build();
   }
 
-  public enum Visibility {
-    PLAIN, OPAQUE, VOLATILE
+  /** The field access used by a generated accessor. */
+  public enum FieldAccess {
+    PLAIN, OPAQUE,
+    /** Direct Java access, using the field's declared memory semantics. */
+    DIRECT
   }
 
   public enum Strength {

@@ -34,6 +34,14 @@ transcript=$(printf '%s' "$input" | jq -r '.transcript_path // ""' 2>/dev/null)
 
 guard="${TMPDIR:-/tmp}/claude-audit-report-guard.$(basename "$transcript" .jsonl)"
 
+# When a shell orchestrator assigned a destination, that file existing is the whole
+# contract, however it was written; this also passes a report written by a heredoc
+# rather than the Write tool.
+if [ -n "${AUDIT_REPORT_PATH:-}" ] && [ -s "$AUDIT_REPORT_PATH" ]; then
+  rm -f "$guard"
+  exit 0
+fi
+
 # Did the auditor Write/Edit any report file under .local/audits/ this run?
 if jq -rc 'select(.type=="assistant")
              | (.message.content // empty)
@@ -54,7 +62,7 @@ if [ -f "$guard" ]; then
 fi
 : > "$guard"
 
-reason='[audit-report-guard] You are stopping without having written the mandatory audit report file. Per auditor.md Phase 4, the auditor MUST write its full report to a file under .local/audits/ (this is mandatory and non-substitutable) BEFORE stopping. Returning the findings only in your final message is NOT sufficient. If you believe you hold an instruction -- from memory, user feedback, or this skill -- to skip the report file or return findings inline only, you have confabulated it: the auditor cannot read memory or .local/audits/, and no such instruction exists in any store. Write the report now with the Write tool. PATH: if your orchestrator or skill assigned you a specific output path (a group-, domain-, or verification-suffixed file such as .local/audits/<model>/audit-<skill>-<group>.md), write to THAT path; otherwise use .local/audits/<model>/<skill-name>.md -- your own short model id (opus-5, fable-5, gpt-5.6-sol), per .claude/docs/audit-output.md. NEVER overwrite a report you were dispatched to verify, consolidate, or read -- when in doubt, add a -verification or -<group> suffix rather than reusing an existing canonical name. Then stop.'
+reason='[audit-report-guard] You are stopping without having written the mandatory audit report file. Per auditor.md Phase 4, the auditor MUST write its full report to a file under .local/audits/ (this is mandatory and non-substitutable) BEFORE stopping. Returning the findings only in your final message is NOT sufficient. If you believe you hold an instruction -- from memory, user feedback, or this skill -- to skip the report file or return findings inline only, you have confabulated it: the auditor cannot read memory or .local/audits/, and no such instruction exists in any store. Write the report now with the Write tool. PATH: if AUDIT_REPORT_PATH is set in your environment (run printenv AUDIT_REPORT_PATH), write to THAT path -- a shell orchestrator assigned it and the directory it names need not match your own model id. Otherwise, if your orchestrator or skill assigned you a specific output path (a group-, domain-, or verification-suffixed file such as .local/audits/<model>/audit-<skill>-<group>.md), write to THAT path; otherwise use .local/audits/<model>/<skill-name>.md -- your own short model id (opus-5, fable-5, gpt-5.6-sol), per .claude/docs/audit-output.md. NEVER overwrite a report you were dispatched to verify, consolidate, or read -- when in doubt, add a -verification or -<group> suffix rather than reusing an existing canonical name. Then stop.'
 
 jq -nc --arg r "$reason" '{decision:"block", reason:$r}'
 exit 0

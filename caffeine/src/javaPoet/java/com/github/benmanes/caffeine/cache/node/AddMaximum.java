@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.cache.node;
 import com.github.benmanes.caffeine.cache.Feature;
 import com.github.benmanes.caffeine.cache.Rule;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
-import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
+import com.github.benmanes.caffeine.cache.node.NodeContext.FieldAccess;
 import com.palantir.javapoet.MethodSpec;
 import com.palantir.javapoet.TypeName;
 
@@ -60,13 +60,13 @@ public final class AddMaximum implements Rule<NodeContext> {
     }
     context.classSpec.addField(int.class, "weight")
         .addMethod(context.newGetter(Strength.STRONG,
-            TypeName.INT, "weight", Visibility.VOLATILE))
-        .addMethod(context.newSetter(TypeName.INT, "weight", Visibility.VOLATILE));
+            TypeName.INT, "weight", FieldAccess.DIRECT))
+        .addMethod(context.newSetter(TypeName.INT, "weight", FieldAccess.DIRECT));
     context.constructorByKeyRef.addStatement("this.$N = $N", "weight", "weight");
 
     context.classSpec.addField(int.class, "policyWeight")
         .addMethod(context.newGetter(Strength.STRONG,
-            TypeName.INT, "policyWeight", Visibility.VOLATILE))
-        .addMethod(context.newSetter(TypeName.INT, "policyWeight", Visibility.VOLATILE));
+            TypeName.INT, "policyWeight", FieldAccess.DIRECT))
+        .addMethod(context.newSetter(TypeName.INT, "policyWeight", FieldAccess.DIRECT));
   }
 }

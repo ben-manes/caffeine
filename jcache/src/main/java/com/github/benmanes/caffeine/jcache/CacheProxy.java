@@ -221,10 +221,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     Map<K, V> result;
     try {
       Map<K, Expirable<V>> entries = getAndFilterExpiredEntries(keys);
+      result = copyMap(entries);
       if (statsEnabled) {
         statistics.recordGetTime(ticker.read() - now);
       }
-      result = copyMap(entries);
     } catch (Throwable t) {
       awaitAndSuppressFailure(t);
       throw t;
@@ -294,47 +294,54 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       inFlight.add(future);
     }
     try {
-      CompletableFuture.<CompletableFuture<@Nullable Void>>supplyAsync(() -> {
-        @Var boolean success = false;
-        try {
-          if (replaceExistingValues) {
-            loadAllAndReplaceExisting(keys);
-          } else {
-            loadAllAndKeepExisting(keys);
-          }
-          success = true;
-        } catch (CacheLoaderException e) {
-          listener.onException(e);
-        } catch (RuntimeException e) {
-          listener.onException(new CacheLoaderException(e));
-        } finally {
-          if (!success) {
-            dispatcher.ignoreSynchronous();
-          }
-        }
-        if (!success) {
-          return CompletableFuture.completedFuture(null);
-        }
-        // the tracked future spans the notification so that close() awaits the listener's callback
-        return dispatcher.chainSynchronous().<@Nullable Void>handle((failure, error) -> {
-          if (error != null) {
-            listener.onException(new CacheLoaderException(error));
-          } else if (failure != null) {
-            listener.onException(failure);
-          } else {
-            listener.onCompletion();
-          }
-          return null;
-        });
-      }, executor).thenCompose(chain -> chain).whenComplete((r, e) -> {
-        inFlight.remove(future);
-        future.complete(null);
-      });
+      // The tracked future spans the notification so that close() awaits the listener's callback
+      CompletableFuture
+          .supplyAsync(() -> loadAllAndNotify(keys, replaceExistingValues, listener), executor)
+          .thenCompose(chain -> chain)
+          .whenComplete((r, e) -> {
+            inFlight.remove(future);
+            future.complete(null);
+          });
     } catch (RuntimeException e) {
       inFlight.remove(future);
       future.complete(null);
       listener.onException(new CacheLoaderException(e));
     }
+  }
+
+  /** Performs the bulk load and returns a future that includes its completion notification. */
+  private CompletableFuture<@Nullable Void> loadAllAndNotify(Set<? extends K> keys,
+      boolean replaceExistingValues, CompletionListener listener) {
+    @Var boolean success = false;
+    try {
+      if (replaceExistingValues) {
+        loadAllAndReplaceExisting(keys);
+      } else {
+        loadAllAndKeepExisting(keys);
+      }
+      success = true;
+    } catch (CacheLoaderException e) {
+      listener.onException(e);
+    } catch (RuntimeException e) {
+      listener.onException(new CacheLoaderException(e));
+    } finally {
+      if (!success) {
+        dispatcher.ignoreSynchronous();
+      }
+    }
+    if (!success) {
+      return CompletableFuture.completedFuture(null);
+    }
+    return dispatcher.chainSynchronous().<@Nullable Void>handle((failure, error) -> {
+      if (error != null) {
+        listener.onException(new CacheLoaderException(error));
+      } else if (failure != null) {
+        listener.onException(failure);
+      } else {
+        listener.onCompletion();
+      }
+      return null;
+    });
   }
 
   /** Performs the bulk load where the existing entries are replaced. */
@@ -473,6 +480,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public void putAll(Map<? extends K, ? extends V> map) {
     requireOperable();
 
+    boolean statsEnabled = statistics.isEnabled();
+    long start = statsEnabled ? ticker.read() : 0L;
     var copies = new ArrayList<CopiedEntry<K, V>>(map.size());
     for (var entry : map.entrySet()) {
       K key = requireNonNull(entry.getKey());
@@ -482,8 +491,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     @Var CacheWriterException error = null;
     @Var Set<? extends K> failedKeys = Set.of();
-    boolean statsEnabled = statistics.isEnabled();
-    long start = statsEnabled ? ticker.read() : 0L;
     if (configuration.isWriteThrough() && !copies.isEmpty()) {
       var entries = new ArrayList<Cache.Entry<? extends K, ? extends V>>(copies.size());
       for (var copy : copies) {
@@ -956,9 +963,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public <T extends @Nullable Object> T invoke(K key,
-      EntryProcessor<K, V, T> entryProcessor, Object... arguments) {
+      EntryProcessor<K, V, T> entryProcessor, Object @Nullable ... arguments) {
     requireNonNull(entryProcessor);
-    requireNonNull(arguments);
     requireOperable();
 
     var result = new Object[1];
@@ -1123,10 +1129,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public <T> Map<K, EntryProcessorResult<T>> invokeAll(Set<? extends K> keys,
-      EntryProcessor<K, V, T> entryProcessor, Object... arguments) {
+      EntryProcessor<K, V, T> entryProcessor, Object @Nullable ... arguments) {
     requireOperable();
     requireNonNull(keys);
-    requireNonNull(arguments);
     requireNonNull(entryProcessor);
     keys.forEach(Objects::requireNonNull);
 

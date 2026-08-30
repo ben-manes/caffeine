@@ -322,6 +322,11 @@
       AT_STALE_THREAD_WRITE_OF_PRIMITIVE"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.WindowClimber"/>
+    <Method name="determineAdjustment"/>
+    <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+  </Match>
+  <Match>
     <Or>
       <Field name="maximum"/>
       <Field name="weightedSize"/>

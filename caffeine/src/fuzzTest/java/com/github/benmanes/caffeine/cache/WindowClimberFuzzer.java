@@ -23,6 +23,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
+import com.github.benmanes.caffeine.cache.WindowClimber.DensityClimber;
 import com.google.errorprone.annotations.Var;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -81,18 +82,21 @@ final class WindowClimberFuzzer {
       record(climber, hits, windowHits, probationHits, requests - hits);
       long pending = climber.sample.hits + climber.sample.misses;
 
-      var probing = climber.walk;
-      long anchorWindow = climber.anchor.window;
-      int starvationRung = climber.starvation.rung;
-      int auditRung = climber.audit.rung;
-      int auditWait = climber.auditClock.waitSamples;
+      var density = (climber.tier instanceof DensityClimber) ? (DensityClimber) climber.tier : null;
+      var probing = (density == null) ? null : density.walk;
+      long anchorWindow = (density == null) ? -1 : density.anchor.window;
+      int starvationRung = (density == null) ? 0 : density.starvation.rung;
+      int auditRung = (density == null) ? 0 : density.audit.rung;
+      int auditWait = (density == null) ? 0 : density.auditClock.waitSamples;
 
       long mainProtected = data.consumeLong(0, Math.max(0, maximum - windowMax));
       int sketchSample = data.consumeInt(4, 1_000_000);
       climber.determineAdjustment(maximum, windowMax, mainProtected, sketchSample);
       assertInvariants(climber, maximum);
-      checkDeferralOwnership(climber, probing, starvationRung, auditRung, auditWait);
-      checkRetestOwnership(climber, anchorWindow);
+      if (density != null) {
+        checkDeferralOwnership(density, probing, starvationRung, auditRung, auditWait);
+        checkRetestOwnership(density, anchorWindow);
+      }
 
       // a sample completes when the accumulated counts crossed the period and were consumed,
       // detected from the counters, since a zero-fed call can complete an accumulated sample
@@ -125,11 +129,11 @@ final class WindowClimberFuzzer {
    * be. The check is cross-sample because the stale state is well-formed at rest.
    */
   @SuppressFBWarnings("FE_FLOATING_POINT_EQUALITY")
-  private static void checkRetestOwnership(WindowClimber climber, long anchorWindow) {
-    boolean moved = (climber.anchor.window != anchorWindow);
+  private static void checkRetestOwnership(DensityClimber density, long anchorWindow) {
+    boolean moved = (density.anchor.window != anchorWindow);
     assertWithMessage("a retest that survives the anchor moving was armed by the move")
-        .that(!moved || (climber.anchor.retestClaim < 0)
-            || (climber.anchor.retestClaim == climber.anchor.rate)).isTrue();
+        .that(!moved || (density.anchor.retestClaim < 0)
+            || (density.anchor.retestClaim == density.anchor.rate)).isTrue();
   }
 
   /**
@@ -138,22 +142,22 @@ final class WindowClimberFuzzer {
    * that layer's own walk, and the audit clock may pass its ladder only on a walk that reached a
    * verdict rather than crashing out.
    */
-  private static void checkDeferralOwnership(WindowClimber climber,
+  private static void checkDeferralOwnership(DensityClimber density,
       WindowClimber.@Nullable Walk probing, int starvationRung, int auditRung, int auditWait) {
-    boolean endedAudit = (probing != null) && (climber.walk != probing) && probing.isAudit;
-    boolean endedStarvation = (probing != null) && (climber.walk != probing) && !probing.isAudit;
+    boolean endedAudit = (probing != null) && (density.walk != probing) && probing.isAudit;
+    boolean endedStarvation = (probing != null) && (density.walk != probing) && !probing.isAudit;
 
     assertWithMessage("the starvation rung deepens only on a starvation ending")
-        .that((climber.starvation.rung <= starvationRung) || endedStarvation).isTrue();
+        .that((density.starvation.rung <= starvationRung) || endedStarvation).isTrue();
     assertWithMessage("the audit rung deepens only on an audit ending")
-        .that((climber.audit.rung <= auditRung) || endedAudit).isTrue();
+        .that((density.audit.rung <= auditRung) || endedAudit).isTrue();
     assertWithMessage("the audit clock defers only on an audit ending")
-        .that((climber.auditClock.waitSamples <= auditWait) || endedAudit).isTrue();
+        .that((density.auditClock.waitSamples <= auditWait) || endedAudit).isTrue();
     assertWithMessage("the audit clock passes its ladder only on a verdict, never a crash")
-        .that((climber.auditClock.waitSamples <= auditWait)
-            || (climber.auditClock.waitSamples
-                <= Math.max(AUDIT_WAIT_INITIAL, climber.audit.rung))
-            || (climber.audit.crashStreak == 0)).isTrue();
+        .that((density.auditClock.waitSamples <= auditWait)
+            || (density.auditClock.waitSamples
+                <= Math.max(AUDIT_WAIT_INITIAL, density.audit.rung))
+            || (density.audit.crashStreak == 0)).isTrue();
   }
 
   /** Returns a maximum size, weighted toward the tier boundaries and including the extremes. */

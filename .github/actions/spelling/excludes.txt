@@ -79,7 +79,9 @@
 \.xpm$
 \.xz$
 \.zip$
+^\wiki/
 ^\.claude/
+^\.github/scripts/
 ^\.github/actions/spelling/
 ^\Q.github/CODEOWNERS\E$
 ^\Q.github/SECURITY.md\E$

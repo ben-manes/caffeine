@@ -67,7 +67,7 @@ jobs:
       JAVA_VERSION: ${{ matrix.java }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -77,7 +77,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Compile
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           attempt-limit: 2
           attempt-delay: 30
@@ -139,7 +139,7 @@ jobs:
         suite: ${{ fromJson(needs.setup.outputs.suites) }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -149,7 +149,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Run tests
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           attempt-limit: 2
           attempt-delay: 30
@@ -199,7 +199,7 @@ jobs:
         suite: ${{ fromJson(needs.setup.outputs.suites) }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -209,7 +209,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Run tests
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           attempt-limit: 2
           attempt-delay: 30
@@ -226,7 +226,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -256,14 +256,14 @@ jobs:
       - name: Decompress
         run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
       - name: Prepare Jacoco Reports
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           arguments: assemble
           local-cache-read-only: true
           java: ${{ env.MINIMUM_JDK }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Combine Jacoco Reports
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           arguments: jacocoFullReport
           local-cache-read-only: true
@@ -282,7 +282,7 @@ jobs:
           name: jacoco-report
           path: ./build/reports/jacoco/jacocoFullReport
       - name: Publish to Coveralls
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         if: >
           (github.event_name == 'push')
           && (github.event.repository.fork == false)
@@ -313,7 +313,7 @@ jobs:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         continue-on-error: true
       - name: Publish to SonarQube
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         if: >
           github.event_name == 'push'
           && github.event.repository.fork == false
@@ -338,7 +338,7 @@ jobs:
       checks: write # Needed to annotate commit
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -406,7 +406,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -416,7 +416,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Gradle
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           local-cache-read-only: true
           java: ${{ env.MINIMUM_JDK }}
@@ -440,7 +440,7 @@ jobs:
       id-token: write # Needed for signing
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -456,7 +456,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Publish Snapshot
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         env:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
           ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}

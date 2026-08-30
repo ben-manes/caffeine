@@ -64,18 +64,18 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.IntStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import javax.cache.Cache;
@@ -89,6 +89,7 @@ import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryListener;
 import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryRemovedListener;
+import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
@@ -1712,6 +1713,32 @@ final class CacheProxyTest {
   }
 
   @Test
+  @SuppressFBWarnings("UVA_REMOVE_NULL_ARG")
+  void invoke_nullArgumentsArray_forwarded() {
+    try (var fixture = JCacheFixture.builder().build()) {
+      boolean result = fixture.jcache().invoke(KEY_1,
+          (entry, arguments) -> (arguments == null), (Object[]) null);
+      int argumentCount = fixture.jcache().invoke(KEY_1,
+          (entry, arguments) -> requireNonNull(arguments).length);
+
+      assertThat(result).isTrue();
+      assertThat(argumentCount).isEqualTo(0);
+    }
+  }
+
+  @Test
+  @SuppressFBWarnings("UVA_REMOVE_NULL_ARG")
+  void invokeAll_nullArgumentsArray_forwarded() {
+    try (var fixture = JCacheFixture.builder().build()) {
+      var results = fixture.jcache().invokeAll(Set.of(KEY_1, KEY_2),
+          (entry, arguments) -> (arguments == null), (Object[]) null);
+
+      assertThat(requireNonNull(results.get(KEY_1)).get()).isTrue();
+      assertThat(requireNonNull(results.get(KEY_2)).get()).isTrue();
+    }
+  }
+
+  @Test
   void invokeAll_perKeyFailure_isolatedNotAborted() {
     var config =  new MutableConfiguration<Object, Integer>();
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
@@ -1727,6 +1754,121 @@ final class CacheProxyTest {
       assertThrows(EntryProcessorException.class, () -> requireNonNull(results.get(badKey)).get());
     }
   }
+
+  @ParameterizedTest @MethodSource("readOperations")
+  void readOp_outputCopyTime_includedInGetTime(boolean readThrough, boolean bulk) {
+    var onCopy = new AtomicReference<Runnable>(() -> {});
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        if (object.equals(VALUE_1)) {
+          onCopy.get().run();
+        }
+        return object;
+      }
+    };
+    CacheOperationListener listener = Mockito.mock();
+    var jcacheFixture = JCacheFixture.builder().configure(config -> {
+      config.setStoreByValue(true);
+      config.setStatisticsEnabled(true);
+      config.setCopierFactory(() -> copier);
+      config.setExpiryPolicyFactory(EternalExpiryPolicy.factoryOf());
+    });
+    try (var fixture = jcacheFixture.build();
+         var cache = readThrough ? fixture.jcacheLoading() : fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      cache.registerCacheEntryListener(new MutableCacheEntryListenerConfiguration<>(
+          () -> listener, null, /* isOldValueRequired= */ true, /* isSynchronous= */ true));
+      var statistics = getStatistics(cache);
+      statistics.clear();
+      onCopy.set(() -> fixture.ticker().advance(java.time.Duration.ofMillis(1)));
+
+      if (bulk) {
+        assertThat(cache.getAll(Set.of(KEY_1))).containsExactly(KEY_1, VALUE_1);
+      } else {
+        assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+      }
+
+      assertThat(cache.containsKey(KEY_1)).isTrue();
+      assertThat(statistics.getCacheHits()).isEqualTo(1);
+      assertThat(statistics.getCacheGets()).isEqualTo(1);
+      assertThat(statistics.getCacheMisses()).isEqualTo(0);
+      assertThat(statistics.getCachePuts()).isEqualTo(0);
+      assertThat(statistics.getCacheRemovals()).isEqualTo(0);
+      assertThat(statistics.getCacheEvictions()).isEqualTo(0);
+      verifyNoInteractions(listener);
+      assertThat(statistics.getAverageGetTime()).isEqualTo(1_000f);
+    }
+  }
+
+  static Stream<Arguments> readOperations() {
+    return Stream.of(arguments(false, false), arguments(false, true),
+        arguments(true, false), arguments(true, true));
+  }
+
+  @ParameterizedTest @MethodSource("writeOperations")
+  void writeOp_inputCopyTime_includedInPutTime(boolean bulk, boolean update, boolean statsEnabled) {
+    var onCopy = new AtomicReference<Runnable>(() -> {});
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        if (object.equals(VALUE_1)) {
+          onCopy.get().run();
+        }
+        return object;
+      }
+    };
+    CacheOperationListener listener = Mockito.mock();
+    var jcacheFixture = JCacheFixture.builder().configure(config -> {
+      config.setStoreByValue(true);
+      config.setCopierFactory(() -> copier);
+      config.setStatisticsEnabled(statsEnabled);
+      config.setExpiryPolicyFactory(EternalExpiryPolicy.factoryOf());
+    });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcache()) {
+      if (update) {
+        cache.put(KEY_1, VALUE_2);
+      }
+      cache.registerCacheEntryListener(new MutableCacheEntryListenerConfiguration<>(
+          () -> listener, null, /* isOldValueRequired= */ true, /* isSynchronous= */ true));
+      var statistics = getStatistics(cache);
+      statistics.clear();
+      onCopy.set(() -> fixture.ticker().advance(java.time.Duration.ofMillis(1)));
+
+      if (bulk) {
+        cache.putAll(Map.of(KEY_1, VALUE_1));
+      } else {
+        cache.put(KEY_1, VALUE_1);
+      }
+
+      if (update) {
+        verify(listener).onUpdated(anyIterable());
+      } else {
+        verify(listener).onCreated(anyIterable());
+      }
+      Mockito.verifyNoMoreInteractions(listener);
+      assertThat(statistics.getCachePuts()).isEqualTo(statsEnabled ? 1 : 0);
+      assertThat(statistics.getCacheHits()).isEqualTo(0);
+      assertThat(statistics.getCacheGets()).isEqualTo(0);
+      assertThat(statistics.getCacheMisses()).isEqualTo(0);
+      assertThat(statistics.getCacheRemovals()).isEqualTo(0);
+      assertThat(statistics.getCacheEvictions()).isEqualTo(0);
+      float averagePutTime = statistics.getAveragePutTime();
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+      assertThat(averagePutTime).isEqualTo(statsEnabled ? 1_000f : 0f);
+    }
+  }
+
+  static Stream<Arguments> writeOperations() {
+    return Stream.of(
+        arguments(false, false, false), arguments(false, false, true),
+        arguments(false, true, false), arguments(false, true, true),
+        arguments(true, false, false), arguments(true, false, true),
+        arguments(true, true, false), arguments(true, true, true));
+  }
+
+  interface CacheOperationListener extends CacheEntryCreatedListener<Integer, Integer>,
+      CacheEntryUpdatedListener<Integer, Integer>, CacheEntryRemovedListener<Integer, Integer>,
+      CacheEntryExpiredListener<Integer, Integer> {}
 
   @Test
   void copierFailure_wrappedInCacheException() {

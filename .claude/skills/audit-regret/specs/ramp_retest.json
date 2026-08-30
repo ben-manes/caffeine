@@ -1,0 +1,32 @@
+{
+  "max": 8192,
+  "seed": 1045,
+  "repeat": 1,
+  "members": {
+    "persistent_core": {
+      "kind": "zipf",
+      "n": 0.58,
+      "alpha": 1.08
+    },
+    "rising_band": {
+      "kind": "pairs",
+      "d": 0.31,
+      "k": 2
+    }
+  },
+  "segments": [
+    {
+      "samples": 72,
+      "shares": {
+        "persistent_core": 0.4,
+        "rising_band": {
+          "share": 0.38,
+          "mod": {
+            "kind": "ramp",
+            "amp": 0.92
+          }
+        }
+      }
+    }
+  ]
+}

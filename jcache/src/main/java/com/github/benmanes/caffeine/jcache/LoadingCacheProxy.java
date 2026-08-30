@@ -105,23 +105,31 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
     if (expirable == null) {
       statistics.recordMisses(1L);
-      dispatcher.beginComputation();
-      try {
-        expirable = cache.get(copyOf(key));
-      } finally {
-        dispatcher.endComputation();
+      if (statsEnabled) {
+        statistics.beginLoadTime();
       }
-    } else {
-      var duration = getAccessExpireTime();
-      setVariableExpiration(key, duration);
-      setAccessExpireTime(expirable, duration, millis);
-      statistics.recordHits(1L);
+      try {
+        dispatcher.beginComputation();
+        try {
+          expirable = cache.get(copyOf(key));
+        } finally {
+          dispatcher.endComputation();
+        }
+
+        return (expirable == null) ? null : copyOf(expirable.get());
+      } finally {
+        if (statsEnabled) {
+          long loadTime = statistics.endLoadTime();
+          statistics.recordGetTime((ticker.read() - start) - loadTime);
+        }
+      }
     }
 
-    @Var V value = null;
-    if (expirable != null) {
-      value = copyOf(expirable.get());
-    }
+    var duration = getAccessExpireTime();
+    setVariableExpiration(key, duration);
+    setAccessExpireTime(expirable, duration, millis);
+    statistics.recordHits(1L);
+    V value = copyOf(expirable.get());
     if (statsEnabled) {
       statistics.recordGetTime(ticker.read() - start);
     }
@@ -136,22 +144,32 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     Map<K, V> result;
     try {
       Map<K, Expirable<V>> entries = getAndFilterExpiredEntries(keys);
+      boolean hasMissingKeys = (entries.size() != keys.size());
+      if (statsEnabled && hasMissingKeys) {
+        statistics.beginLoadTime();
+      }
+      try {
+        if (hasMissingKeys) {
+          List<K> keysToLoad = keys.stream()
+              .filter(key -> !entries.containsKey(key))
+              .map(this::copyOf)
+              .collect(toUnmodifiableList());
+          dispatcher.beginComputation();
+          try {
+            entries.putAll(cache.getAll(keysToLoad));
+          } finally {
+            dispatcher.endComputation();
+          }
+        }
 
-      if (entries.size() != keys.size()) {
-        List<K> keysToLoad = keys.stream()
-            .filter(key -> !entries.containsKey(key))
-            .map(this::copyOf)
-            .collect(toUnmodifiableList());
-        dispatcher.beginComputation();
-        try {
-          entries.putAll(cache.getAll(keysToLoad));
-        } finally {
-          dispatcher.endComputation();
+        result = copyMap(entries);
+      } finally {
+        if (statsEnabled && hasMissingKeys) {
+          long loadTime = statistics.endLoadTime();
+          statistics.recordGetTime((ticker.read() - start) - loadTime);
         }
       }
-
-      result = copyMap(entries);
-      if (statsEnabled) {
+      if (statsEnabled && !hasMissingKeys) {
         statistics.recordGetTime(ticker.read() - start);
       }
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {

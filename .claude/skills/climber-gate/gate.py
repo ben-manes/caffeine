@@ -165,6 +165,11 @@ CELLS = [
     # a 9% rate cuts a ten-stride approach one stride short of a +23pp step); bimodal on the tenth
     # stride's sample against the bar, adjudicate on the N=8 mean.
     ("lowbar", "lowbar_8192.lirs", 8192, 8),
+    # /audit-regret 2026-09-04: a stale return's arrival increases the live deviation enough
+    # that the completed retest accepts its obsolete claim. Finite-horizon latency sentinels;
+    # adjudicate at admission seeds 1-8 (the gate table records the conditional neighborhood).
+    ("ramp_retest", "ramp_retest_8192.lirs", 8192, 8),
+    ("ramp_retest_16k", "ramp_retest_16384.lirs", 16384, 8),
 ]
 
 

@@ -96,7 +96,10 @@ value — scaffolding that never expanded).
 
 - **The combined report's rows are the union of its inputs.** `CombinedCsvReport` took its policy
   list from whichever input sorted first, so a policy reported at one size and not another was
-  dropped from the chart without a warning. Missing cells are written empty.
+  dropped from the chart without a warning. Missing cells are written empty. `tabulate` collects
+  policy order, metric cells, and per-input duplicate names in one pass. It checks the metric before
+  reporting duplicates, and completes validation before the output is opened so a rejected input
+  leaves any existing report intact.
 
 ## Clairvoyant Look-Ahead (opt.Clairvoyant + admission.Clairvoyant)
 

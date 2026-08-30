@@ -33,7 +33,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Gradle
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}

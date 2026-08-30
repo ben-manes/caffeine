@@ -25,7 +25,7 @@ import javax.lang.model.element.Modifier;
 import com.github.benmanes.caffeine.cache.Feature;
 import com.github.benmanes.caffeine.cache.Rule;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
-import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
+import com.github.benmanes.caffeine.cache.node.NodeContext.FieldAccess;
 import com.palantir.javapoet.MethodSpec;
 import com.palantir.javapoet.TypeName;
 
@@ -117,8 +117,8 @@ public final class AddExpiration implements Rule<NodeContext> {
     context.classSpec
         .addField(long.class, "accessTime", Modifier.VOLATILE)
         .addMethod(context.newGetter(Strength.STRONG,
-            TypeName.LONG, "accessTime", Visibility.OPAQUE))
-        .addMethod(context.newSetter(TypeName.LONG, "accessTime", Visibility.OPAQUE));
+            TypeName.LONG, "accessTime", FieldAccess.OPAQUE))
+        .addMethod(context.newSetter(TypeName.LONG, "accessTime", FieldAccess.OPAQUE));
     context.addVarHandle(NODE_FACTORY.rawType(), "accessTime", TypeName.get(long.class));
     addTimeConstructorAssignment(context.constructorByKeyRef, "accessTime", "now");
   }
@@ -132,8 +132,8 @@ public final class AddExpiration implements Rule<NodeContext> {
     context.classSpec
         .addField(long.class, "writeTime", Modifier.VOLATILE)
         .addMethod(context.newGetter(Strength.STRONG,
-            TypeName.LONG, "writeTime", Visibility.OPAQUE))
-        .addMethod(context.newSetter(TypeName.LONG, "writeTime", Visibility.OPAQUE));
+            TypeName.LONG, "writeTime", FieldAccess.OPAQUE))
+        .addMethod(context.newSetter(TypeName.LONG, "writeTime", FieldAccess.OPAQUE));
     context.addVarHandle(NODE_FACTORY.rawType(), "writeTime", TypeName.get(long.class));
     addTimeConstructorAssignment(context.constructorByKeyRef,
         "writeTime", "BoundedLocalCache.toWriteTime(now)");

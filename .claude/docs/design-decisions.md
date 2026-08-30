@@ -1183,6 +1183,11 @@ the same ground: prompt eviction without a `Scheduler` is not a contract the cac
 
 ## Refresh Internals
 
+**A manual synchronous-cache refresh uses one `LocalLoadingCache.RefreshOperation` per call.**
+It carries the registration and completion state, while the loader's original future remains
+the token and return value. Registration runs inside `refreshes.compute`; completion is attached
+after it returns, and coalescing onto an existing refresh attaches no additional handler.
+
 **`refreshIfNeeded` is intentionally lock-free.** Reads of `writeTime`, `getKey`,
 `getValue`, `getKeyReference`, `isAlive`, and the CAS of `writeTime` happen
 without `synchronized(node)`. A stale observation could let `asyncReload` fire

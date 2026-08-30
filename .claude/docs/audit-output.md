@@ -11,7 +11,8 @@ records **who produced it**:
 - **`<model>`** — the short id of the model that produced the report, lowercased, no vendor
   prefix and no context-window suffix: `opus-5`, `fable-5`, `sonnet-5`, `haiku-4.5`,
   `gpt-5.6-sol`. When a run spans models (an auditor on one, an evaluator on another), use the
-  model that **orchestrated** it.
+  model that **orchestrated** it. An assigned `AUDIT_REPORT_PATH` overrides this derivation
+  entirely; see Rules for agents.
 - **`shared`** occupies the `<model>` slot for artifacts that are not one model's output: the
   consolidated backlog, a bug spec worked across sessions, anything aggregating several runs.
 - **`<name>`** — the invoking skill's name (`audit-adversarial.md`). A multi-agent run suffixes
@@ -41,7 +42,14 @@ and the basis for cross-model comparison.
 ## Rules for agents
 
 - An orchestrator that dispatches auditors **computes the directory once and passes the full
-  path** to each agent, so a fan-out cannot scatter files across models.
+  path** to each agent, so a fan-out cannot scatter files across models. A shell orchestrator
+  passes it in the environment as **`AUDIT_REPORT_PATH`**, which wins over the `<model>`
+  derivation above. The directory it names is the orchestrator's label for the run
+  (`gpt-6-astra`), not what the model calls itself (`gpt-6`). An agent that re-derives `<model>`
+  instead banks a finished report where the orchestrator never looks, and the run is recorded as
+  a failure that produced nothing. Group and verification siblings go beside the assigned file.
+  `.github/scripts/run-audits.sh` exports it; `.claude/agents/auditor.md` Phase 4 and
+  `.claude/hooks/audit-report-guard.sh` honor it.
 - The auditor agent must not **read** anything under `.local/audits/` (prior conclusions bias a
   fresh run) while still being required to **write** its own report there. See
   `.claude/agents/auditor.md` Evidence Boundaries.

@@ -31,81 +31,51 @@ import com.google.errorprone.annotations.Var;
 final class WindowClimber {
 
   /*
-   * This class determines how to adapt the size of W-TinyLfu's admission window, which balances the
-   * cache between recency (the window, admitting every new arrival) and frequency (the main space,
-   * guarded by the TinyLfu filter). The best split is workload dependent, so it is climbed online
-   * using the cache's own behavior as feedback.
+   * W-TinyLFU divides capacity between an admission window, which favors recency, and a main
+   * region, where TinyLFU filters new arrivals by frequency. The best split depends on the
+   * workload, so the climber adjusts it using the cache's hit statistics.
    *
-   * Small caches climb reactively on the hit rate by keeping the direction while a sample's hit
-   * rate matches or beats the previous one's, reverse otherwise, and decay the step size towards
-   * convergence.
+   * Small caches compare hit rates across samples to choose a direction. Larger caches have enough
+   * hits to compare the regions' hit densities (hits per unit of capacity) within a single sample,
+   * reducing sensitivity to workload changes between samples.
    *
-   * Larger caches take advantage of their stronger signals to compare the hit density (hits per
-   * unit of capacity) of the two regions within a single sample and step proportionally, shifting
-   * capacity towards the region earning more per unit. That signal is immune to workload phases but
-   * blind when a region is too starved to measure, so at those corners the climber probes. The
-   * probe temporarily walks the window by the hit rate and keeps the new position only on a clear
-   * density verdict for the probed direction (an up-probe is priced against main's marginal
-   * density frozen at the probe's start), retreating and backing off otherwise. A goal-metric
-   * layer polices what density cannot judge: the last well-performing position is remembered as
-   * an anchor, defended by the guard rail's veto and re-tested by scheduled audits.
+   * Density alone cannot identify a good split: it measures only resident entries, and a region
+   * with few hits provides little information. The density tier uses probes to explore these
+   * starved regions and periodic audits to test whether a different split improves the hit rate. An
+   * anchor records a well-performing position to return to if later adjustments reduce the hit
+   * rate.
    *
    * [1] The Adaptive Window, From the Ground Up
    * https://htmlpreview.github.io/?https://github.com/ben-manes/caffeine/blob/master/wiki/adaptive-window.html
    */
 
-  /** The difference in hit rates that reads as a workload change; the climber restarts at it. */
+  /** The change in hit rate large enough to trigger adaptation to a new workload. */
   static final double RESTART_THRESHOLD = 0.05d;
-  /** The samples a retreat's cover spans: the stride commanded now, and the sample it lands on. */
-  static final int RETREAT_COVER = 2;
 
-  final ReactiveClimber reactive;
-  final DensityClimber density;
-  final AuditClock auditClock;
-  final Ladder starvation;
-  final Anchor anchor;
   final Sample sample;
-  final Ladder audit;
-  final Rates rates;
   final Step step;
 
-  @Nullable Walk walk;
-
-  long undoRemaining;
-  int refractoryLeft;
-  int retreatLeft;
   long adjustment;
+  Climber tier;
 
+  /** Creates a climber whose tier is initialized by {@link #resized}. */
+  @SuppressWarnings("NullAway.Init")
   public WindowClimber() {
-    step = new Step();
-    rates = new Rates();
-    audit = new Ladder();
-    anchor = new Anchor();
     sample = new Sample();
-    starvation = new Ladder();
-    auditClock = new AuditClock();
-    density = new DensityClimber(step);
-    reactive = new ReactiveClimber(step);
+    step = new Step();
   }
 
-  /** Resets the state and seeds the step size when the cache's maximum size is changed. */
+  /** Selects the tier and resets adaptation state for the new maximum size. */
   public void resized(long maximum) {
-    refractoryLeft = 0;
-    undoRemaining = 0;
-    retreatLeft = 0;
-    adjustment = 0;
-    walk = null;
-
-    audit.reset();
-    rates.reset();
-    sample.reset();
-    anchor.reset();
-    auditClock.reset();
-    starvation.reset();
+    tier = DensityClimber.appliesTo(maximum)
+        ? new DensityClimber(step)
+        : new ReactiveClimber(step);
     step.reset(maximum);
+    sample.reset();
+    adjustment = 0;
   }
 
-  /** Discards the partial sample, as a resize does. */
+  /** Discards the current sample and the previous hit rate. */
   public void resetSample() {
     sample.reset();
   }
@@ -130,436 +100,515 @@ final class WindowClimber {
     adjustment = remaining;
   }
 
-  /** Calculates the amount to adapt the window by. */
+  /** Updates the adjustment when a full sample is available, retaining any carry-over otherwise. */
   public void determineAdjustment(long maximum, long windowMaximum,
       long mainProtectedMaximum, int sketchSampleSize) {
-    long requestCount = sample.requestCount();
-    if (requestCount < samplePeriod(maximum, sketchSampleSize)) {
-      return;
+    if (sample.requestCount() >= tier.samplePeriod(maximum, sketchSampleSize)) {
+      adjustment = tier.climb(sample, maximum, windowMaximum, mainProtectedMaximum);
+      sample.close();
     }
-    double hitRate = sample.hitRate();
-    boolean dense = DensityClimber.appliesTo(maximum);
-    double amount = dense
-        ? densityClimb(hitRate, requestCount, maximum, windowMaximum, mainProtectedMaximum)
-        : reactive.climb(sample.hitRateChange(hitRate), maximum);
-    adjustment = (long) amount;
-    if (dense) {
-      auditClock.tick(windowMaximum, Reading.stableBand(maximum));
-    }
-    sample.close(hitRate);
   }
 
-  /** Returns the number of requests in an adaptation sample. */
-  private long samplePeriod(long maximum, int sketchSampleSize) {
-    return DensityClimber.appliesTo(maximum)
-        ? density.samplePeriod(maximum, sketchSampleSize)
-        : reactive.samplePeriod(maximum, sketchSampleSize);
-  }
+  /** A strategy for adjusting the admission window from sampled cache statistics. */
+  interface Climber {
 
-  /* --------------- Density Climb --------------- */
+    /** Returns the number of requests in an adaptation sample. */
+    long samplePeriod(long maximum, int sketchSampleSize);
+
+    /** Returns the amount to adapt the window by. */
+    long climb(Sample sample, long maximum, long windowMax, long mainProtectedMax);
+  }
 
   /**
-   * Returns the new step size, from the density law or from the mitigations for exception states
-   * that its signal cannot judge for itself.
+   * A hill climber that adjusts the window according to changes in hit rate. It reverses direction
+   * when the hit rate falls and reduces the step size as it converges. Large changes in hit rate
+   * restore the initial step size so it can adapt to a new workload.
+   * <p>
+   * Small caches use this strategy because their per-region hit counts are too low for reliable
+   * density estimates. The smallest caches use longer samples and slower step decay to reduce
+   * sensitivity to noise.
    */
-  private double densityClimb(double hitRate, long requestCount,
-      long maximum, long windowMax, long mainProtectedMax) {
-    ageParkShield();
-    ageRetreatCover();
+  static final class ReactiveClimber implements Climber {
+    /** The maximum size at which adaptation uses longer samples and slower step decay. */
+    static final long SLOW_ADAPT_THRESHOLD = 512L;
+    /** Maximum factor by which the sample period may grow in the slow-adapt regime. */
+    static final double SLOW_ADAPT_RATIO_CAP = 4.0d;
+    /** The slower decay rate used to preserve useful steps in very small caches. */
+    static final double SLOW_ADAPT_DECAY_RATE = 0.995d;
 
-    var reading = new Reading(hitRate, requestCount, maximum, windowMax, mainProtectedMax,
-        sample.windowHits, sample.hits - sample.windowHits, sample.probationHits);
-    if (isWorkloadShift(reading) && anchor.standDown(reading)) {
-      // The regime that earned the discarded claim also produced the reference it was measured
-      // against, so the goal metric re-learns from here rather than smoothing across the shift
-      rates.reset();
+    final Step step;
+
+    ReactiveClimber(Step step) {
+      this.step = step;
     }
-    updateRateReferences(reading);
 
-    var walk = this.walk;
-    if (walk != null) {
-      var ending = probeEnding(walk, reading);
-      if (ending == ProbeEnding.WALKING) {
-        return walkStep(walk, /* entry= */ false, reading);
-      } else if (ending != ProbeEnding.CONFIRMED) {
-        return undoProbe(walk, ending, reading);
-      } else if (keepConfirmedPosition(walk, reading)) {
-        return anchor.returning ? strideHome(reading) : 0.0;
+    @Override
+    @SuppressWarnings("MathClampDouble")
+    public long samplePeriod(long maximum, int sketchSampleSize) {
+      if (!isSlowAdapting(maximum)) {
+        return sketchSampleSize;
       }
-      // a starvation confirm hands control back to the density arm within this same sample
-      return density.steer(reading.steeringError(), reading);
-    } else if (hasPendingUndo()) {
-      return undoStride(reading);
-    } else if (anchor.returning) {
-      return strideHome(reading);
-    } else if (anchor.isRetestDue(reading)) {
-      retestReturn(reading);
-      return 0.0;
-    } else if (reading.hasBlindCorner()) {
-      return isBackingOff() ? holdOrAudit(reading) : armStarvationProbe(reading);
-    } else if (anchor.vetoTriggered(reading, rates)) {
-      return strideHome(reading);
-    } else if (auditClock.isDue()) {
-      return armEquilibriumAudit(reading);
-    } else if (anchor.held) {
-      // density already showed it steers away from a measurably better position here, so it stays
-      // suppressed and the audit clock owns exploration
-      return 0.0;
-    }
-    return density.steer(reading.steeringError(), reading);
-  }
-
-  /** Ages a freshly parked confirm's shield by one sample; a walk neither spends nor ages it. */
-  private void ageParkShield() {
-    if (isShielded()) {
-      anchor.ageShield();
-    }
-  }
-
-  /**
-   * Ages a retreat's cover by one sample. Every stride of the retreat re-arms it, so it runs out
-   * on the sample after the last one, which is the sample the window lands on.
-   */
-  private void ageRetreatCover() {
-    if (retreatLeft > 0) {
-      retreatLeft--;
-    }
-  }
-
-  /**
-   * Whether a freshly parked confirm is riding out weather this sample. A walk stands outside the
-   * shield, neither spending it nor covered by it, so a shift during a walk armed from the park
-   * stands the park down and takes the shield with it.
-   */
-  private boolean isShielded() {
-    return (walk == null) && anchor.isShielded();
-  }
-
-  /**
-   * Whether this sample's rate move announces a workload change. The machine's own re-tests do
-   * not stand the anchor down: an audit's walk out of a park and the retreat that ends it, and a
-   * veto's return until its retest has judged the claim, since the crash-scale moves those
-   * produce are the machine's and the retest or the audit clock prices the ending.
-   */
-  private boolean isWorkloadShift(Reading reading) {
-    return (Math.abs(sample.hitRateChange(reading.hitRate)) >= RESTART_THRESHOLD)
-        && !isShielded() && !isParkTest() && !isReturnTest();
-  }
-
-  /**
-   * Whether a retreat's cover is running or a veto's return has landed with its claim still to
-   * be judged: the landing sample and the settle samples the retest spends, whose recovery is
-   * the return's own and is judged by the retest rather than read as a shift.
-   */
-  private boolean isReturnTest() {
-    return (retreatLeft > 0) || ((anchor.retestClaim >= 0) && !anchor.returning);
-  }
-
-  /** Whether a held park's own audit is walking out of it this sample. */
-  private boolean isParkTest() {
-    return anchor.held && (walk != null) && walk.isAudit;
-  }
-
-  /**
-   * Maintains the goal-metric references: the smoothed rate pair, then the anchor judged against
-   * it. An unseeded sample only seeds the rates, since there is nothing yet to smooth towards.
-   */
-  private void updateRateReferences(Reading reading) {
-    if (rates.isUnseeded()) {
-      rates.seed(reading.hitRate);
-    } else {
-      rates.update(reading.hitRate);
-      anchor.track(reading, rates, /* probing= */ isProbing());
-    }
-  }
-
-  /**
-   * Whether a probe cycle is in progress. It spans the walk and the retreat that undoes it, since
-   * a capped return drains across later samples with the walk already ended.
-   */
-  private boolean isProbing() {
-    return (walk != null) || hasPendingUndo();
-  }
-
-  /* --------------- Exceptional Scenarios --------------- */
-
-  /** Whether a capped return to a probe's start is still draining across later samples. */
-  private boolean hasPendingUndo() {
-    return undoRemaining != 0;
-  }
-
-  /**
-   * Returns the next stride of a multi-sample restore toward the probe's base. The ledger is kept
-   * in entries and charged with the command as published, since the cache truncates each command
-   * and a ledger charged with the fractional stride would close short of the base.
-   */
-  private double undoStride(Reading reading) {
-    @SuppressWarnings("LongDoubleConversion")
-    double stride = reading.cappedStride(undoRemaining);
-    undoRemaining -= (long) stride;
-    retreatLeft = RETREAT_COVER;
-    return step.commit(stride);
-  }
-
-  /** Returns a capped stride of a return towards the anchor. */
-  private double strideHome(Reading reading) {
-    return step.commit(anchor.strideHome(reading));
-  }
-
-  /**
-   * Settles a completed return on the anchor and stands its claim down if the position no longer
-   * earns it. Arriving is not evidence for the claim that sent the window here: the arrival's own
-   * drop can fall under the crash-scale threshold while the claim is still a past regime's.
-   */
-  private void retestReturn(Reading reading) {
-    if (anchor.retestFails(rates) && anchor.standDown(reading)) {
-      // the regime that earned the discarded claim also produced the reference it was measured
-      // against, so the goal metric re-learns from here
-      rates.reset();
-    }
-  }
-
-  /** Whether the starvation machine is still serving the refractory the last undo imposed. */
-  private boolean isBackingOff() {
-    return refractoryLeft > 0;
-  }
-
-  /**
-   * Returns the refractory hold's command or an audit's entry stride when the clock came due during
-   * the backoff. A hold moves nothing, so a blind corner that never clears would otherwise stand
-   * still through the whole backoff with a re-test already owed.
-   */
-  private double holdOrAudit(Reading reading) {
-    return auditClock.isDue() ? armEquilibriumAudit(reading) : holdInRefractory(reading);
-  }
-
-  /**
-   * Returns the command for a refractory sample, which moves the window only to lift it off a
-   * sub-floor position. Density cannot be trusted here, so the climber holds rather than falling
-   * through to a steering step, where a handful of window hits in an otherwise blank sample would
-   * authorize the maximum step. A hold is not recorded as a step, so the stride a walk continues
-   * from stays the last one its driver took.
-   */
-  private double holdInRefractory(Reading reading) {
-    refractoryLeft--;
-    return reading.atLeastFloor(0.0);
-  }
-
-  /** Returns the entry stride of a walk armed out of a blind corner. */
-  private double armStarvationProbe(Reading reading) {
-    var armed = armProbe(reading, reading.shouldProbeDown(), /* isAudit= */ false);
-    return walkStep(armed, /* entry= */ true, reading);
-  }
-
-  /**
-   * Returns the entry stride of a walk that re-tests a long-held, sighted equilibrium with the
-   * machine's full exit discipline. The starvation triggers fire only at the corners, so nothing
-   * else re-examines an interior equilibrium.
-   */
-  private double armEquilibriumAudit(Reading reading) {
-    var armed = armProbe(reading, auditClock.chooseDirection(
-        reading, audit.stride(reading), rates.smoothed, anchor.held), /* isAudit= */ true);
-    auditClock.restart();
-    return walkStep(armed, /* entry= */ true, reading);
-  }
-
-  /**
-   * Keeps the position a walk validated, returning whether the climber parks on this sample. The
-   * position becomes the anchor at once so the guard rail can defend what the walk paid for, and
-   * the window returns to it when the verdict is for ground the walk has already passed. An
-   * audit's confirm parks as well, since density disagreed with this position by construction and
-   * would dismantle it, and so does a starvation confirm that density reverses after the deepest
-   * commitment when the goal metric confirms it, which is an audit in all but name; any other
-   * starvation confirm hands back to density, whose disagreement the ladder has already priced.
-   */
-  private boolean keepConfirmedPosition(Walk walk, Reading reading) {
-    boolean park = walk.isAudit || walk.isAuditGrade(reading);
-    long position = walk.verdictWindow(reading);
-    anchor.plant(position, rates.smoothed);
-    if (park) {
-      anchor.park(AuditClock.AUDIT_WAIT_INITIAL);
-      if (position != reading.windowMax) {
-        anchor.beginReturn();
+      double initialStep = Step.STEP_PERCENT * maximum;
+      double magnitude = Math.max(step.magnitude(), initialStep / SLOW_ADAPT_RATIO_CAP);
+      if (magnitude == 0.0) {
+        return sketchSampleSize;
       }
-    } else {
-      anchor.release();
+      double ratio = Math.max(1.0, Math.min(SLOW_ADAPT_RATIO_CAP, initialStep / magnitude));
+      return (ratio == 1.0) ? sketchSampleSize : (long) (sketchSampleSize * ratio);
     }
-    return park;
-  }
 
-  /* --------------- Probe Walk --------------- */
-
-  /**
-   * Returns a probe armed for this sample, whose entry stride the caller takes. The caller gates
-   * and directs it: a large region earning nothing is visible to density and must not arm one, or a
-   * scan-filled main beside a small window earning everything would shrink the one region that is
-   * working. The walk is measured against the smoothed rate of the position it leaves rather than
-   * the anchor's claim. Whether that position is measurably worse than the anchor is the guard
-   * rail's question, and a claim the workload can no longer produce would be a bar no walk could
-   * clear.
-   */
-  private Walk armProbe(Reading reading, boolean down, boolean isAudit) {
-    var ladder = isAudit ? audit : starvation;
-    walk = new Walk(ladder, isAudit, down, reading.windowMax,
-        reading.requestCount, reading.hitRate, rates.smoothed, reading.probationDensity);
-    return walk;
-  }
-
-  /**
-   * Returns a bold-driver stride of the probe's walk. A reversal that would cross back through the
-   * probe's own start found nothing and finishes as a failed experiment rather than walking out the
-   * other side.
-   */
-  private double walkStep(Walk walk, boolean entry, Reading reading) {
-    @Var double stride = nextStride(walk, entry, reading);
-    if (walk.crossesBase(reading.windowMax + stride)) {
-      endWalk();
-      walk.ladder.crashStreak = 0;
-      return undoProbe(walk, ProbeEnding.FAILED, reading);
-    } else if ((stride < 0) && ((reading.windowMax + stride) < reading.floor)) {
-      stride = reading.flooredDescent();
+    @Override
+    public long climb(Sample sample, long maximum, long windowMax, long mainProtectedMax) {
+      double hitRateChange = sample.hitRateChange();
+      double amount = step.heading(/* forward= */ hitRateChange >= 0);
+      step.commit((Math.abs(hitRateChange) >= RESTART_THRESHOLD)
+          ? Math.copySign(Step.restartMagnitude(maximum), amount)
+          : (decayRate(maximum) * amount));
+      return (long) amount;
     }
-    walk.samples++;
-    return step.commit(stride);
+
+    /** Returns whether this maximum falls in the slow-adapt regime. */
+    static boolean isSlowAdapting(long maximum) {
+      return maximum <= SLOW_ADAPT_THRESHOLD;
+    }
+
+    /** Returns the step decay rate. */
+    private static double decayRate(long maximum) {
+      return isSlowAdapting(maximum) ? SLOW_ADAPT_DECAY_RATE : Step.STEP_DECAY_RATE;
+    }
   }
 
   /**
-   * Returns the stride this sample takes. The seed on entry, a decayed stride while a below-bar dip
-   * is still being adjudicated by the persistence counter, and otherwise the bold driver. Letting
-   * an unbelieved dip drive a reversal turns cheap crashes into rung-doubling failures through the
-   * walk's own base.
+   * A hill climber that shifts capacity toward the region with more hits per unit of capacity.
+   * Comparing regions within the same sample reduces sensitivity to workload changes between
+   * samples.
+   * <p>
+   * Hit density describes only resident entries and can favor a split with a poor overall hit rate.
+   * Probes explore regions with too few hits to measure, while audits test whether moving away from
+   * the current split improves the hit rate. An anchor records a known good position for recovery
+   * after an unproductive adjustment.
    */
-  private double nextStride(Walk walk, boolean entry, Reading reading) {
-    double magnitude = walk.ladder.stride(reading);
-    if (entry) {
-      return walk.direction() * magnitude;
-    } else if (walk.isAudit && (walk.belowBarStreak > 0)) {
-      double held = Step.decayed(step.size);
-      return Step.isFrozen(held) ? step.atMinimum() : held;
-    }
-    double bar = walk.reversalBar(rates);
-    double hitRateChange = sample.hitRateChange(reading.hitRate);
-    @Var double stride = step.heading(/* forward= */ hitRateChange > -bar);
-    stride = (Math.abs(hitRateChange) >= bar)
-        ? Math.copySign(magnitude, stride)
-        : Step.decayed(stride);
-    return Step.isFrozen(stride) ? (walk.direction() * magnitude) : stride;
-  }
+  static final class DensityClimber implements Climber {
+    /** The cache size threshold between reactive and density feedback. */
+    static final long DENSITY_THRESHOLD = 4096L;
+    /** A longer sample period stabilize density estimates at the cost of slower adaptation. */
+    static final long SAMPLE_MULTIPLIER = 4L;
+    /** The step per unit of log density-ratio error, as a fraction of the maximum. */
+    static final double DENSITY_GAIN = 0.03d;
+    /** The samples covered by a retreat stride, including its arrival sample. */
+    static final int RETREAT_COVER = 2;
 
-  /** Returns how the probe's walk ends. */
-  private ProbeEnding probeEnding(Walk walk, Reading reading) {
-    boolean belowBar = (reading.hitRate <= (walk.baseHitRate - walk.crashBar(rates)));
-    walk.belowBarStreak = belowBar ? (walk.belowBarStreak + 1) : 0;
-    if (walk.shouldCrashAbort(belowBar)) {
-      // Probe damage and an exogenous shift are indistinguishable here, so the refractory re-arms
-      // without doubling rather than mispricing a phase as a failed experiment. That holds for one
-      // crash, not a cycle. A shift moves the rate once while a damaging probe moves it on every
-      // arm, so consecutive crashes escalate the walk's own ladder like completed failures.
-      endWalk();
-      walk.ladder.crash();
-      return ProbeEnding.CRASHED;
-    }
-    boolean above = (reading.hitRate > (walk.baseSmoothedRate + VETO_MARGIN_MIN));
-    walk.aboveStreak = above ? (walk.aboveStreak + 1) : 0;
-    walk.rememberBest(above, reading);
-    walk.beatBase |= (reading.hitRate >= walk.baseHitRate);
-    return walk.isAudit ? auditEnding(walk) : starvationEnding(walk, reading);
-  }
+    final AuditClock auditClock;
+    final Ladder starvation;
+    final Anchor anchor;
+    final Ladder audit;
+    final Rates rates;
+    final Step step;
 
-  /**
-   * Returns how an audit's walk ends. The goal metric adjudicates it, not density, as density holds
-   * this equilibrium and would veto every walk away from it which is the bias the audit exists to
-   * re-test.
-   */
-  private ProbeEnding auditEnding(Walk walk) {
-    if (walk.isConfirmed()) {
-      endWalk();
-      walk.ladder.reset();
-      refractoryLeft = 0;
-      starvation.reward();
-      auditClock.settle(walk.down, rates.smoothed);
-      return ProbeEnding.CONFIRMED;
-    } else if (walk.isBudgetSpent()) {
-      endWalk();
-      walk.ladder.crashStreak = 0;
-      return ProbeEnding.FAILED;
-    }
-    return ProbeEnding.WALKING;
-  }
+    @Nullable Walk walk;
 
-  /**
-   * Returns how a starvation probe's walk ends. A density verdict for the probed direction keeps
-   * the position; any other verdict must fail the probe, or else density walks the window home
-   * and the probe simply refires. A confirm that the density arm reverses in the same sample keeps
-   * nothing either, so it deepens the ladder as a failure does, and so does a confirm at or short
-   * of the farthest window the ladder's walks have already confirmed: that ground was found and
-   * lost, and a walk that only finds it again has not earned the reward, which would pin the
-   * ladder at its first rung on every cycle. The reward belongs to a kept position on new ground;
-   * resetting the ladder otherwise would restart it on every cycle of a dither that stops short
-   * of the band.
-   */
-  private ProbeEnding starvationEnding(Walk walk, Reading reading) {
-    if (walk.canAdjudicate(reading, starvation.commitmentDepth())) {
-      endWalk();
-      walk.ladder.crashStreak = 0;
-      if ((walk.verdictSignal(reading) * walk.direction()) > 0.0) {
-        if (walk.isReversedBy(reading)
-            || walk.ladder.isRepeat(walk.down, reading.windowMax, reading.band)) {
-          walk.ladder.escalate();
-        } else {
-          walk.ladder.reward();
+    long undoRemaining;
+    int refractoryLeft;
+    int retreatLeft;
+
+    DensityClimber(Step step) {
+      this.auditClock = new AuditClock();
+      this.starvation = new Ladder();
+      this.anchor = new Anchor();
+      this.audit = new Ladder();
+      this.rates = new Rates();
+      this.step = step;
+    }
+
+    /** Returns whether the cache is large enough to use density feedback. */
+    static boolean appliesTo(long maximum) {
+      return maximum > DENSITY_THRESHOLD;
+    }
+
+    @Override
+    public long samplePeriod(long maximum, int sketchSampleSize) {
+      @Var long period = SAMPLE_MULTIPLIER * maximum;
+      if ((period / SAMPLE_MULTIPLIER) != maximum) {
+        period = Long.MAX_VALUE;
+      }
+      return Math.min(period, sketchSampleSize);
+    }
+
+    @Override
+    public long climb(Sample sample, long maximum, long windowMax, long mainProtectedMax) {
+      double amount = route(new Reading(sample, maximum, windowMax, mainProtectedMax));
+      auditClock.tick(windowMax, Reading.stableBand(maximum));
+      return (long) amount;
+    }
+
+    /** Returns the next adjustment, giving probes and recovery priority over density steering. */
+    private double route(Reading reading) {
+      ageParkShield();
+      ageRetreatCover();
+
+      if (isWorkloadShift(reading) && anchor.standDown(reading)) {
+        // Discard the old workload's rate history along with its anchor
+        rates.reset();
+      }
+      updateRateReferences(reading);
+
+      var walk = this.walk;
+      if (walk != null) {
+        var ending = probeEnding(walk, reading);
+        if (ending == ProbeEnding.WALKING) {
+          return walkStep(walk, /* entry= */ false, reading);
+        } else if (ending != ProbeEnding.CONFIRMED) {
+          return undoProbe(walk, ending, reading);
+        } else if (keepConfirmedPosition(walk, reading)) {
+          return anchor.returning ? strideHome(reading) : 0.0;
         }
-        walk.ladder.remember(walk.down, reading.windowMax);
-        refractoryLeft = 0;
-        return ProbeEnding.CONFIRMED;
+        // A starvation confirm resumes density steering in the same sample
+        return steer(reading.steeringError(), reading);
+      } else if (hasPendingUndo()) {
+        return undoStride(reading);
+      } else if (anchor.returning) {
+        return strideHome(reading);
+      } else if (anchor.isRetestDue(reading)) {
+        retestReturn(reading);
+        return 0.0;
+      } else if (reading.hasBlindCorner()) {
+        return isBackingOff() ? holdOrAudit(reading) : armStarvationProbe(reading);
+      } else if (anchor.vetoTriggered(reading, rates)) {
+        return strideHome(reading);
+      } else if (auditClock.isDue()) {
+        return armEquilibriumAudit(reading);
+      } else if (anchor.held) {
+        // Density would move away from this better position. Wait for an audit to explore again
+        return 0.0;
       }
-      return ProbeEnding.FAILED;
-    } else if (walk.isBudgetSpent()) {
-      endWalk();
-      walk.ladder.crashStreak = 0;
-      return ProbeEnding.FAILED;
+      return steer(reading.steeringError(), reading);
     }
-    return ProbeEnding.WALKING;
-  }
 
-  /**
-   * Returns the stride back to where the probe started, pricing the ending on the owning layer's
-   * ladder. A walk arrives here crashed or failed, and a crash is priced as a failure once its run
-   * escalates. The refractory is the starvation machine's own backoff, armed by its own endings;
-   * an audit's retreat leaves whatever hold is running to run out. A starvation walk that keeps
-   * nothing also shows that the terrain its ladder remembers has moved, so the memory goes.
-   */
-  private double undoProbe(Walk walk, ProbeEnding ending, Reading reading) {
-    boolean crashed = (ending == ProbeEnding.CRASHED);
-    boolean failed = !crashed || walk.ladder.crashEscalates();
-    if (failed) {
-      walk.ladder.escalate();
+    /** Ages the protection against workload shifts while parked, pausing during a walk. */
+    private void ageParkShield() {
+      if (isShielded()) {
+        anchor.ageShield();
+      }
     }
-    if (walk.isAudit) {
-      auditClock.reschedule(failed, crashed, audit.rung);
-    } else {
-      refractoryLeft = starvation.rung;
-      starvation.forget();
+
+    /**
+     * Ages the protection against rate changes caused by a retreat. Each stride renews it through
+     * the arrival sample.
+     */
+    private void ageRetreatCover() {
+      if (retreatLeft > 0) {
+        retreatLeft--;
+      }
     }
-    retreatLeft = RETREAT_COVER;
-    return returnToBase(walk, reading);
+
+    /**
+     * Returns whether a recently confirmed position is protected from workload shifts. Walks
+     * suspend this protection so a shift can still invalidate the position during exploration.
+     */
+    private boolean isShielded() {
+      return (walk == null) && anchor.isShielded();
+    }
+
+    /**
+     * Returns whether the hit-rate change indicates a new workload. Audits of a parked position
+     * and returns can cause large rate changes themselves, so their results are judged separately.
+     */
+    private boolean isWorkloadShift(Reading reading) {
+      return (Math.abs(reading.hitRateChange) >= RESTART_THRESHOLD)
+          && !isShielded() && !isParkTest() && !isReturnTest();
+    }
+
+    /** Returns whether a retreat or anchor retest is suppressing workload-change detection. */
+    private boolean isReturnTest() {
+      return (retreatLeft > 0) || ((anchor.retestClaim >= 0) && !anchor.returning);
+    }
+
+    /** Returns whether an audit is testing a parked position. */
+    private boolean isParkTest() {
+      return anchor.held && (walk != null) && walk.isAudit;
+    }
+
+    /** Updates the smoothed hit rate and anchor, using the first sample to initialize the rates. */
+    private void updateRateReferences(Reading reading) {
+      if (rates.isUnseeded()) {
+        rates.seed(reading.hitRate);
+      } else {
+        rates.update(reading.hitRate);
+        anchor.track(reading, rates, /* probing= */ isProbing());
+      }
+    }
+
+    /**
+     * Returns whether a probe or its retreat is in progress. A capped retreat may continue across
+     * several samples after the walk ends.
+     */
+    private boolean isProbing() {
+      return (walk != null) || hasPendingUndo();
+    }
+
+    /* --------------- Exceptional Scenarios --------------- */
+
+    /** Returns whether part of a probe's retreat remains to be applied. */
+    private boolean hasPendingUndo() {
+      return undoRemaining != 0;
+    }
+
+    /**
+     * Returns the next stride toward the probe's starting position. Account for the truncated
+     * command, since subtracting fractional strides would leave the retreat short of its target.
+     */
+    private double undoStride(Reading reading) {
+      @SuppressWarnings("LongDoubleConversion")
+      double stride = reading.cappedStride(undoRemaining);
+      undoRemaining -= (long) stride;
+      retreatLeft = RETREAT_COVER;
+      return step.commit(stride);
+    }
+
+    /** Returns a capped stride of a return towards the anchor. */
+    private double strideHome(Reading reading) {
+      return step.commit(anchor.strideHome(reading));
+    }
+
+    /**
+     * Discards the anchor after a return if its old hit rate is no longer achievable. A return can
+     * reach an obsolete anchor without a large enough rate change to trigger workload detection.
+     */
+    private void retestReturn(Reading reading) {
+      if (anchor.retestFails(rates) && anchor.standDown(reading)) {
+        // Subsequent anchors must use rate measurements from the new workload
+        rates.reset();
+      }
+    }
+
+    /** Returns whether starvation probes are waiting after a retreat. */
+    private boolean isBackingOff() {
+      return refractoryLeft > 0;
+    }
+
+    /**
+     * Starts a due audit or holds the window during backoff. Starvation backoff must not delay
+     * audits, since a persistently starved window would otherwise remain untested.
+     */
+    private double holdOrAudit(Reading reading) {
+      return auditClock.isDue() ? armEquilibriumAudit(reading) : holdInRefractory(reading);
+    }
+
+    /**
+     * Holds the window during backoff, except to raise it to the minimum size. Sparse hits can
+     * produce an extreme density ratio, so steering on this sample would defeat the backoff.
+     * Leave the previous step intact for the next walk.
+     */
+    private double holdInRefractory(Reading reading) {
+      refractoryLeft--;
+      return reading.atLeastFloor(0.0);
+    }
+
+    /** Starts a starvation probe and returns its first step. */
+    private double armStarvationProbe(Reading reading) {
+      var armed = armProbe(reading, reading.shouldProbeDown(), /* isAudit= */ false);
+      return walkStep(armed, /* entry= */ true, reading);
+    }
+
+    /**
+     * Starts an audit and returns its first step. Audits explore stable positions where density
+     * steering and starvation probes would otherwise make no progress.
+     */
+    private double armEquilibriumAudit(Reading reading) {
+      var armed = armProbe(reading, auditClock.chooseDirection(
+          reading, audit.stride(reading), rates.smoothed, anchor.held), /* isAudit= */ true);
+      auditClock.restart();
+      return walkStep(armed, /* entry= */ true, reading);
+    }
+
+    /**
+     * Records a confirmed position and returns whether the window should remain there. Audit
+     * confirmations suspend density steering, which could undo the improvement. Starvation probes
+     * normally resume steering; {@link Walk#isAuditGrade} identifies those with enough evidence
+     * to park as well.
+     */
+    private boolean keepConfirmedPosition(Walk walk, Reading reading) {
+      boolean park = walk.isAudit || walk.isAuditGrade(reading);
+      long position = walk.verdictWindow(reading);
+      anchor.plant(position, rates.smoothed);
+      if (park) {
+        anchor.park(AuditClock.AUDIT_WAIT_INITIAL);
+        if (position != reading.windowMax) {
+          anchor.beginReturn();
+        }
+      } else {
+        anchor.release();
+      }
+      return park;
+    }
+
+    /* --------------- Probe Walk --------------- */
+
+    /**
+     * Starts a probe from the current position and its smoothed hit rate. The anchor's rate may
+     * describe another position or an old workload, so using it could reject real improvements.
+     */
+    private Walk armProbe(Reading reading, boolean down, boolean isAudit) {
+      var ladder = isAudit ? audit : starvation;
+      walk = new Walk(ladder, isAudit, down, reading.windowMax,
+          reading.requestCount, reading.hitRate, rates.smoothed, reading.probationDensity);
+      return walk;
+    }
+
+    /**
+     * Returns the next step of the probe. Crossing back through its starting position ends the
+     * probe as a failure; continuing would explore in the opposite direction.
+     */
+    private double walkStep(Walk walk, boolean entry, Reading reading) {
+      @Var double stride = nextStride(walk, entry, reading);
+      if (walk.crossesBase(reading.windowMax + stride)) {
+        endWalk();
+        walk.ladder.crashStreak = 0;
+        return undoProbe(walk, ProbeEnding.FAILED, reading);
+      } else if ((stride < 0) && ((reading.windowMax + stride) < reading.floor)) {
+        stride = reading.flooredDescent();
+      }
+      walk.samples++;
+      return step.commit(stride);
+    }
+
+    /**
+     * Returns the next probe step. While an audit waits to distinguish a crash from noise, keep
+     * its direction and decay the step. Reversing during that wait could cross the starting
+     * position and turn a temporary dip into a completed failure.
+     */
+    private double nextStride(Walk walk, boolean entry, Reading reading) {
+      double magnitude = walk.ladder.stride(reading);
+      if (entry) {
+        return walk.direction() * magnitude;
+      } else if (walk.isAudit && (walk.belowBarStreak > 0)) {
+        double held = Step.decayed(step.size);
+        return Step.isFrozen(held) ? step.atMinimum() : held;
+      }
+      double bar = walk.reversalBar(rates);
+      double hitRateChange = reading.hitRateChange;
+      @Var double stride = step.heading(/* forward= */ hitRateChange > -bar);
+      stride = (Math.abs(hitRateChange) >= bar)
+          ? Math.copySign(magnitude, stride)
+          : Step.decayed(stride);
+      return Step.isFrozen(stride) ? (walk.direction() * magnitude) : stride;
+    }
+
+    /** Checks for a crash, then evaluates the probe's progress. */
+    private ProbeEnding probeEnding(Walk walk, Reading reading) {
+      boolean belowBar = (reading.hitRate <= (walk.baseHitRate - walk.crashBar(rates)));
+      walk.belowBarStreak = belowBar ? (walk.belowBarStreak + 1) : 0;
+      if (walk.shouldCrashAbort(belowBar)) {
+        // A workload change can resemble probe damage. Retry the first crash without increasing
+        // backoff; repeated crashes suggest the probe itself is harmful
+        endWalk();
+        walk.ladder.crash();
+        return ProbeEnding.CRASHED;
+      }
+      boolean above = (reading.hitRate > (walk.baseSmoothedRate + VETO_MARGIN_MIN));
+      walk.aboveStreak = above ? (walk.aboveStreak + 1) : 0;
+      walk.rememberBest(above, reading);
+      walk.beatBase |= (reading.hitRate >= walk.baseHitRate);
+      return walk.isAudit ? auditEnding(walk) : starvationEnding(walk, reading);
+    }
+
+    /**
+     * Evaluates an audit by hit rate. Density already favors the original split, so using it to
+     * judge the audit would reject the alternatives the audit is meant to test.
+     */
+    private ProbeEnding auditEnding(Walk walk) {
+      if (walk.isConfirmed()) {
+        endWalk();
+        walk.ladder.reset();
+        refractoryLeft = 0;
+        starvation.reward();
+        auditClock.settle(walk.down, rates.smoothed);
+        return ProbeEnding.CONFIRMED;
+      } else if (walk.isBudgetSpent()) {
+        endWalk();
+        walk.ladder.crashStreak = 0;
+        return ProbeEnding.FAILED;
+      }
+      return ProbeEnding.WALKING;
+    }
+
+    /**
+     * Evaluates a starvation probe by density. A confirmation only resets the retry ladder if it
+     * makes new progress that steering will keep. Reversed or repeated confirmations escalate the
+     * ladder so later probes can explore beyond the same short excursion.
+     */
+    private ProbeEnding starvationEnding(Walk walk, Reading reading) {
+      if (walk.canAdjudicate(reading, starvation.commitmentDepth())) {
+        endWalk();
+        walk.ladder.crashStreak = 0;
+        if ((walk.verdictSignal(reading) * walk.direction()) > 0.0) {
+          if (walk.isReversedBy(reading)
+              || walk.ladder.isRepeat(walk.down, reading.windowMax, reading.band)) {
+            walk.ladder.escalate();
+          } else {
+            walk.ladder.reward();
+          }
+          walk.ladder.remember(walk.down, reading.windowMax);
+          refractoryLeft = 0;
+          return ProbeEnding.CONFIRMED;
+        }
+        return ProbeEnding.FAILED;
+      } else if (walk.isBudgetSpent()) {
+        endWalk();
+        walk.ladder.crashStreak = 0;
+        return ProbeEnding.FAILED;
+      }
+      return ProbeEnding.WALKING;
+    }
+
+    /**
+     * Begins the retreat from a failed or aborted walk and updates its retry schedule. Only
+     * starvation probes reset the starvation backoff; an audit's retreat leaves an existing wait
+     * intact.
+     */
+    private double undoProbe(Walk walk, ProbeEnding ending, Reading reading) {
+      boolean crashed = (ending == ProbeEnding.CRASHED);
+      boolean failed = !crashed || walk.ladder.crashEscalates();
+      if (failed) {
+        walk.ladder.escalate();
+      }
+      if (walk.isAudit) {
+        auditClock.reschedule(failed, crashed, audit.rung);
+      } else {
+        refractoryLeft = starvation.rung;
+        starvation.forget();
+      }
+      retreatLeft = RETREAT_COVER;
+      return returnToBase(walk, reading);
+    }
+
+    /** Returns the stride back to the walk's starting window. */
+    private double returnToBase(Walk walk, Reading reading) {
+      long amount = (walk.baseWindow - reading.windowMax);
+      @SuppressWarnings("LongDoubleConversion")
+      double stride = reading.cappedStride(amount);
+      undoRemaining = (amount - (long) stride);
+      return step.commit(stride);
+    }
+
+    /** Ends the walk. */
+    private void endWalk() {
+      walk = null;
+    }
+
+    /** Returns a proportional density adjustment, respecting the step cap and minimum window. */
+    @SuppressWarnings("MathClampDouble")
+    double steer(double error, Reading r) {
+      double magnitude = Math.min(r.maxStep(), Math.abs(error) * DENSITY_GAIN * r.maximum);
+      double stride = (error >= 0) ? magnitude : -magnitude;
+      double clamped = ((stride < 0) && ((r.windowMax + stride) < r.floor))
+          ? r.flooredDescent()
+          : stride;
+      return step.commit(r.atLeastFloor(clamped));
+    }
   }
 
-  /** Returns the stride back to the walk's starting window. */
-  private double returnToBase(Walk walk, Reading reading) {
-    long amount = (walk.baseWindow - reading.windowMax);
-    @SuppressWarnings("LongDoubleConversion")
-    double stride = reading.cappedStride(amount);
-    undoRemaining = (amount - (long) stride);
-    return step.commit(stride);
-  }
-
-  /** Ends the walk. */
-  private void endWalk() {
-    walk = null;
-  }
-
-  /** The counters for the sample in progress and the cross-sample memory. */
+  /** The current sample's hit and miss counts, with the previous sample's hit rate. */
   static final class Sample {
     double previousHitRate;
     long probationHits;
@@ -568,9 +617,8 @@ final class WindowClimber {
     long hits;
 
     /**
-     * Records a cache hit on an entry. Zero-weight entries must be excluded at the call site, since
-     * they earn hits while occupying no capacity and break the hits-earned-by-capacity invariant
-     * the region densities divide by.
+     * Records a cache hit. Callers must exclude zero-weight entries, whose hits would inflate
+     * density without consuming capacity.
      */
     void recordHit(boolean inWindow, boolean inProbation) {
       hits++;
@@ -582,8 +630,8 @@ final class WindowClimber {
     }
 
     /**
-     * Records a cache miss. Zero-weight entries must be included, since an insert's demand is real,
-     * so the sampled rate can sit below the user-visible one.
+     * Records a cache miss, including zero-weight entries. Their misses still represent demand,
+     * so excluding their hits can make the sampled hit rate lower than the user-visible rate.
      */
     void recordMiss() {
       misses++;
@@ -599,28 +647,35 @@ final class WindowClimber {
       return (double) hits / requestCount();
     }
 
-    /** Returns how far this sample's rate moved from the one before it. */
-    double hitRateChange(double hitRate) {
-      return hitRate - previousHitRate;
+    /** Returns the change in hit rate since the previous sample. */
+    double hitRateChange() {
+      return hitRate() - previousHitRate;
     }
 
-    /** Closes the sample at the rate it earned, which becomes the next one's reference. */
-    void close(double hitRate) {
-      previousHitRate = hitRate;
-      probationHits = 0;
-      windowHits = 0;
-      misses = 0;
-      hits = 0;
+    /** Clears the sample, retaining its hit rate for the next comparison. */
+    void close() {
+      close(hitRate());
     }
 
     /** Discards the sample and cross-sample memory. */
     void reset() {
       close(0.0);
     }
+
+    /** Clears the counters and sets the reference hit rate. */
+    private void close(double hitRate) {
+      previousHitRate = hitRate;
+      probationHits = 0;
+      windowHits = 0;
+      misses = 0;
+      hits = 0;
+    }
   }
 
-  /** The sample's derived view of the two regions (densities, starvation bar, and geometry). */
+  /** The measurements and region bounds used for one density adjustment. */
   static final class Reading {
+    /** The minimum hit count used for steering, as a fraction of the starvation threshold. */
+    static final double STEERING_FLOOR_FRACTION = 0.125d;
     /** The band within which two positions count as the same, as a fraction of the maximum. */
     static final double STABLE_BAND_FRACTION = 0.02d;
     /** The density law's lower bound on the window, as a fraction of the maximum. */
@@ -629,14 +684,13 @@ final class WindowClimber {
     static final double MAX_STEP_FRACTION = 0.30d;
     /** The smoothing constant that keeps a starved region's density ratio defined. */
     static final double DENSITY_EPSILON = 1e-9d;
-    /** The floor on the starvation bar, for samples too short for the proportional bar to bind. */
+    /** The minimum hit count needed to measure a region, even for short samples. */
     static final long MIN_STARVATION_BAR = 4L;
     /** The right-shift of the sample's request count that sets the starvation bar. */
     static final int MIN_SIGNAL_SHIFT = 10;
-    /** The fraction of the starvation bar imputed to a blank region in the steering error. */
-    static final double STEERING_FLOOR_FRACTION = 0.125d;
 
     final double probationDensity;
+    final double hitRateChange;
     final double windowDensity;
     final double mainDensity;
     final double hitRate;
@@ -653,23 +707,23 @@ final class WindowClimber {
     final long band;
     final long bar;
 
-    Reading(double hitRate, long requestCount, long maximum, long windowMax,
-        long mainProtectedMax, long windowHits, long mainHits, long probationHits) {
-      this.bar = Math.max(MIN_STARVATION_BAR, requestCount >> MIN_SIGNAL_SHIFT);
+    Reading(Sample sample, long maximum, long windowMax, long mainProtectedMax) {
+      this.mainHits = (sample.hits - sample.windowHits);
+      this.bar = Math.max(MIN_STARVATION_BAR, sample.requestCount() >> MIN_SIGNAL_SHIFT);
       this.mainDensity = mainHits / (double) Math.max(1L, maximum - windowMax);
-      this.windowDensity = windowHits / (double) Math.max(1L, windowMax);
-      this.probationDensity = probationHits / (double) Math.max(
+      this.windowDensity = sample.windowHits / (double) Math.max(1L, windowMax);
+      this.probationDensity = sample.probationHits / (double) Math.max(
           1L, maximum - windowMax - mainProtectedMax);
+      this.windowStarved = (sample.windowHits < bar);
+      this.hitRateChange = sample.hitRateChange();
       this.floor = WINDOW_FLOOR_FRACTION * maximum;
-      this.windowStarved = (windowHits < bar);
+      this.requestCount = sample.requestCount();
       this.mainStarved = (mainHits < bar);
-      this.requestCount = requestCount;
+      this.windowHits = sample.windowHits;
+      this.hitRate = sample.hitRate();
       this.band = stableBand(maximum);
-      this.windowHits = windowHits;
       this.windowMax = windowMax;
-      this.mainHits = mainHits;
       this.maximum = maximum;
-      this.hitRate = hitRate;
     }
 
     /** Returns the band, in entries, within which a position counts as the same place. */
@@ -693,45 +747,45 @@ final class WindowClimber {
       return (Math.abs(amount) > cap) ? Math.copySign(cap, amount) : amount;
     }
 
-    /** Returns the stride a restart seeds at, for this sample's geometry. */
+    /** Returns the initial step size for this cache. */
     double restartMagnitude() {
       return Step.restartMagnitude(maximum);
     }
 
-    /** Returns a down move stopped at the floor; the negative zero keeps the move headed down. */
+    /** Returns a descent limited by the floor, preserving negative zero to retain its direction. */
     double flooredDescent() {
       return Math.min(-0.0d, floor - windowMax);
     }
 
-    /** Returns the stride, raised to lift a sub-floor window back to the signal-capable floor. */
+    /** Increases the stride if needed to raise an undersized window to the floor. */
     double atLeastFloor(double stride) {
       return (windowMax < floor) ? Math.max(stride, floor - windowMax) : stride;
     }
 
-    /** Returns whether the whole sample earned too little for either region to measure itself. */
+    /** Returns whether neither region has enough hits for a reliable density estimate. */
     boolean isDeadSample() {
       return windowStarved && mainStarved;
     }
 
     /**
-     * Returns whether the density signal is blind here. A starved main beside a large window is
-     * not a blind corner: the equilibrium audit owns that terrain.
+     * Returns whether sparse hits require a starvation probe. A starved main beside a large
+     * window is left to equilibrium audits; probing it could shrink a productive window.
      */
     boolean hasBlindCorner() {
       return isDeadSample() || (windowStarved && (windowMax <= (maximum >>> 2)));
     }
 
-    /** Returns the direction a starvation probe walks out of this corner. */
+    /** Returns whether the probe should shrink the window to move away from the nearer bound. */
     boolean shouldProbeDown() {
       return isDeadSample() && (windowMax >= (maximum >>> 1));
     }
 
-    /** Returns the raw density ratio the probe verdicts adjudicate against. */
+    /** Returns the log density ratio used by probe verdicts. */
     double error() {
       return Math.log((windowDensity + DENSITY_EPSILON) / (mainDensity + DENSITY_EPSILON));
     }
 
-    /** Returns the steering form of the density error. */
+    /** Returns the log density ratio with minimum hit counts to limit sparse-sample steps. */
     double steeringError() {
       double windowFloor = (STEERING_FLOOR_FRACTION * bar) / Math.max(1L, windowMax);
       double mainFloor = (STEERING_FLOOR_FRACTION * bar) / Math.max(1L, maximum - windowMax);
@@ -739,37 +793,31 @@ final class WindowClimber {
     }
   }
 
-  /**
-   * The hill climber's step size: how far one adjustment moves the window, signed by direction. It
-   * decays towards convergence as the climber settles, and re-seeds at restart magnitude when the
-   * workload changes.
-   */
+  /** The signed adjustment used to continue, reverse, or decay the climber's next step. */
   static final class Step {
     /** Lower bound on the initial step size so that small caches have an opportunity to adapt. */
     static final double MIN_INITIAL_STEP = 2.0d;
-    /** The percent of the total size to adapt the window by. */
+    /** The initial step size as a fraction of the cache's maximum size. */
     static final double STEP_PERCENT = 0.0625d;
-    /** The rate to decrease the step size to adapt by. */
+    /** The multiplier used to reduce the step size toward convergence. */
     static final double STEP_DECAY_RATE = 0.98d;
 
     double size;
 
-    /** Returns the stride a restart seeds at. */
-    static double restartMagnitude(long maximum) {
-      return Math.max(STEP_PERCENT * maximum, MIN_INITIAL_STEP);
-    }
-
-    /** Returns the step walked one decay towards convergence. */
-    static double decayed(double step) {
-      return STEP_DECAY_RATE * step;
-    }
-
     /**
-     * Whether a step has shrunk too small to move the window, so its driver must re-seed. Only a
-     * step clamped at the window floor arrives here as decay cannot reach it in the density tier.
+     * Resets the step for the new maximum. Very small caches start by growing because their
+     * initial window contains only a few entries; larger caches start by shrinking.
      */
-    static boolean isFrozen(double step) {
-      return Math.abs(step) < MIN_INITIAL_STEP;
+    void reset(long maximum) {
+      double magnitude = restartMagnitude(maximum);
+      size = ReactiveClimber.isSlowAdapting(maximum) ? magnitude : -magnitude;
+    }
+
+    /** Records and returns the step for this sample. */
+    @CanIgnoreReturnValue
+    double commit(double step) {
+      size = step;
+      return step;
     }
 
     /** Returns the last step, repeated or reversed. */
@@ -782,258 +830,104 @@ final class WindowClimber {
       return Math.abs(size);
     }
 
-    /** Returns the smallest step that still moves the window, headed the way the last one was. */
+    /** Returns the minimum step size in the current direction. */
     double atMinimum() {
       return Math.copySign(MIN_INITIAL_STEP, size);
     }
 
-    /** Returns the step this sample commands, recording it as the last one taken. */
-    @CanIgnoreReturnValue
-    double commit(double step) {
-      size = step;
-      return step;
+    /** Returns the initial step size for the given maximum. */
+    static double restartMagnitude(long maximum) {
+      return Math.max(STEP_PERCENT * maximum, MIN_INITIAL_STEP);
+    }
+
+    /** Returns the step reduced by one decay factor. */
+    static double decayed(double step) {
+      return STEP_DECAY_RATE * step;
     }
 
     /**
-     * Seeds the opening command when the cache's maximum size is changed. The slow-adapt regime's
-     * window is only a few entries, so it opens by growing; every larger cache opens by shrinking.
+     * Returns whether the step needs to be restarted. In the density tier, the floor clamp can
+     * reduce a step this far, but decay alone cannot do so within a walk's budget.
      */
-    void reset(long maximum) {
-      double magnitude = restartMagnitude(maximum);
-      size = ReactiveClimber.isSlowAdapting(maximum) ? magnitude : -magnitude;
+    static boolean isFrozen(double step) {
+      return Math.abs(step) < MIN_INITIAL_STEP;
     }
   }
 
-  /**
-   * The hit-rate control law, used at or below {@link DensityClimber#DENSITY_THRESHOLD}: continue
-   * in the direction that matched or beat the last sample's rate, reverse otherwise, decay
-   * the step towards convergence, and re-seed at restart magnitude when the rate moves enough to
-   * call the workload changed. No starved corner can blind it, so it needs none of the probe
-   * machinery, but it cannot separate the window's own contribution from a workload phase.
-   * <p>
-   * At or below {@link #SLOW_ADAPT_THRESHOLD} the window is only a few integer entries and one
-   * sample is too noisy to trust, so the law opens by growing, stretches its sample period as the
-   * step decays, and decays that step more slowly.
-   */
-  static final class ReactiveClimber {
-    /**
-     * The size at/below which the climber adapts slowly and deliberately, because the window is
-     * only a few integer entries and a single sample is too noisy to trust.
-     */
-    static final long SLOW_ADAPT_THRESHOLD = 512L;
-    /** Maximum factor by which the sample period may grow in the slow-adapt regime. */
-    static final double SLOW_ADAPT_RATIO_CAP = 4.0d;
-    /** The decay rate in the slow-adapt regime to keep the step large enough for restarts. */
-    static final double SLOW_ADAPT_DECAY_RATE = 0.995d;
-
-    final Step step;
-
-    ReactiveClimber(Step step) {
-      this.step = step;
-    }
-
-    /** Whether this maximum falls in the slow-adapt regime. */
-    static boolean isSlowAdapting(long maximum) {
-      return maximum <= SLOW_ADAPT_THRESHOLD;
-    }
-
-    /** Returns the step the window moves by. */
-    double climb(double hitRateChange, long maximum) {
-      double amount = step.heading(/* forward= */ hitRateChange >= 0);
-      step.commit((Math.abs(hitRateChange) >= RESTART_THRESHOLD)
-          ? Math.copySign(Step.restartMagnitude(maximum), amount)
-          : (decayRate(maximum) * amount));
-      return amount;
-    }
-
-    /** Returns the number of requests this climber samples before it steps. */
-    @SuppressWarnings("MathClampDouble")
-    long samplePeriod(long maximum, int sketchSampleSize) {
-      if (!isSlowAdapting(maximum)) {
-        return sketchSampleSize;
-      }
-      double initialStep = Step.STEP_PERCENT * maximum;
-      double magnitude = Math.max(step.magnitude(), initialStep / SLOW_ADAPT_RATIO_CAP);
-      if (magnitude == 0.0) {
-        return sketchSampleSize;
-      }
-      double ratio = Math.max(1.0, Math.min(SLOW_ADAPT_RATIO_CAP, initialStep / magnitude));
-      return (ratio == 1.0) ? sketchSampleSize : (long) (sketchSampleSize * ratio);
-    }
-
-    /** Returns the step decay rate. */
-    private static double decayRate(long maximum) {
-      return isSlowAdapting(maximum) ? SLOW_ADAPT_DECAY_RATE : Step.STEP_DECAY_RATE;
-    }
-  }
-
-  /**
-   * The hit-density control law, used above {@link #DENSITY_THRESHOLD}: compare the two regions'
-   * hits per unit of capacity within one sample and move capacity towards whichever earns more. The
-   * step is proportional to the signed error, so a starved window takes a large step and a balanced
-   * one settles, and being computed inside one sample it is immune to the cross-sample swings the
-   * reactive law cannot see past.
-   * <p>
-   * The signal is resident-only, so a region earning roughly nothing is a state this law cannot
-   * read and must never be trusted to hold position in. The probe machine, the audit layer and the
-   * anchor that guard its blind and false equilibria belong to the supervisor.
-   */
-  static final class DensityClimber {
-    /** The cache's maximum size above which this climber adjusts the window's size. */
-    static final long DENSITY_THRESHOLD = 4096L;
-    /** The step per unit of log density-ratio error, as a fraction of the maximum. */
-    static final double DENSITY_GAIN = 0.03d;
-    /**
-     * The sample period, as a multiple of the maximum size, kept small enough to react promptly
-     * while large enough so that brief, noisy density estimates near a small converged window do
-     * not jitter it off a frequency-friendly optimum.
-     */
-    static final long SAMPLE_MULTIPLIER = 4L;
-
-    final Step step;
-
-    DensityClimber(Step step) {
-      this.step = step;
-    }
-
-    /**
-     * Whether this maximum's regions are large enough to measure separately within one sample.
-     * <p>
-     * The density signal, being resident-only, is both unreliable and prone to pinning at an
-     * extreme when a region is small, and its within-sample gains only exceed the hit-rate
-     * climber's above this size (they are roughly neutral below it), so it is scoped here to keep
-     * the hit-rate climber's robustness at smaller sizes while adding density's wins for large
-     * caches.
-     */
-    static boolean appliesTo(long maximum) {
-      return maximum > DENSITY_THRESHOLD;
-    }
-
-    /** Returns a proportional step by the density error, clamped to the signal-capable floor. */
-    @SuppressWarnings("MathClampDouble")
-    double steer(double error, Reading r) {
-      double magnitude = Math.min(r.maxStep(), Math.abs(error) * DENSITY_GAIN * r.maximum);
-      double stride = (error >= 0) ? magnitude : -magnitude;
-      double clamped = ((stride < 0) && ((r.windowMax + stride) < r.floor))
-          ? r.flooredDescent()
-          : stride;
-      return step.commit(r.atLeastFloor(clamped));
-    }
-
-    /** Returns the number of requests this climber samples before it steps. */
-    long samplePeriod(long maximum, int sketchSampleSize) {
-      @Var long period = SAMPLE_MULTIPLIER * maximum;
-      if ((period / SAMPLE_MULTIPLIER) != maximum) {
-        period = Long.MAX_VALUE;
-      }
-      return Math.min(period, sketchSampleSize);
-    }
-  }
-
-  /**
-   * A walk in flight: bounded, adjudicated motion out of a blind or audited position. The bases are
-   * frozen at the arm and are what the endings judge against, the counters are the sequential
-   * detectors those endings read, and the ladder is the retry ledger of the layer that armed it,
-   * the only one its ending may deepen.
-   */
+  /** A bounded sequence of window adjustments used by a starvation probe or equilibrium audit. */
   static final class Walk {
+
     /*
-     * Exit bars. A walk has two interior exits and they test different statistics, so they are
-     * priced separately. The crash abort is a level test, the hit rate against the rate frozen at
-     * the arm, measuring the damage the walk has done; the reversal is a first-difference test,
-     * this sample against the last, measuring whether the previous stride hurt.
+     * The crash and reversal thresholds test different losses: the drop from the starting hit rate,
+     * and the drop since the previous sample. A starvation probe scales both thresholds with the
+     * workload's deviation, subject to a floor and cap. The deviation stays live so the walk can
+     * tolerate its own transient effects; freezing it at the start aborts useful walks.
      *
-     * A starvation probe prices both against the workload's own scatter (three deviations, floored
-     * at RESTART_THRESHOLD, capped at PROBE_BAR_CAP times that floor), because a fixed threshold
-     * sits below real per-sample noise and ordinary weather then aborts the walk that is a blind
-     * corner's only exit. The deviation is read live rather than frozen at the arm, since the
-     * walk's own transient lifts the bar exactly while the walk is exposed to the weather.
+     * An audit's crash threshold stays absolute. Widening it with the deviation allows too many
+     * audits to confirm and hold positions that density would reject. At low hit rates the
+     * threshold is capped at a fraction of the starting rate, since an absolute threshold could
+     * exceed the entire rate and never detect a loss.
      *
-     * An audit's crash abort keeps the absolute threshold; pricing it against the scatter lets
-     * audits confirm and park far more often, which over-commits the window to positions density
-     * disagrees with. Being a level test it is unsatisfiable where the whole rate is smaller than
-     * the threshold, and only the budget would bound the walk, so AUDIT_BAR_FRACTION of the
-     * starting rate takes over there, which binds only where that rate is under a third. At a rate
-     * of exactly zero the bar is zero too and the walk aborts on its first still-dead sample, which
-     * is intended: a region earning nothing has no damage to measure, and the crash defers the
-     * retry.
+     * The audit's reversal threshold also accounts for deviation to avoid reversing on ordinary
+     * sample noise. The absolute cap prevents excessive tolerance on noisy workloads. A reversal
+     * through the starting window counts as a failed walk and increases the retry wait.
      *
-     * An audit's reversal takes the same fraction of the larger of that rate and the scatter, so a
-     * difference test is never priced below the noise it must survive. Priced on the rate alone it
-     * is a hair trigger wherever a workload is noisy relative to what it earns, and a reversal
-     * back through the walk's own base is charged as a completed failure, which doubles the
-     * layer's ladder and its wait. The absolute cap is load-bearing: it keeps the noise term from
-     * becoming the widening that the crash abort must never take.
+     * Starvation probes abort on the first sample below the crash threshold. An audit retry after a
+     * crash requires consecutive such samples, allowing it to cross a temporary dip. Extending this
+     * duration tolerates brief losses without raising the allowed drop.
      *
-     * Abort timing. A starvation probe aborts on its first below-bar sample. Only the retry of an
-     * equilibrium that already crashed an audit is tolerant, aborting only once
-     * AUDIT_CRASH_PERSISTENCE consecutive samples sit below the bar: an audit leaves a sighted
-     * equilibrium and may have to cross terrain, where a one-sample abort makes any valley deeper
-     * than the bar unreachable at every rung, and lone exogenous pulses ratchet separate audits
-     * into a crash streak. Tolerance is spent in time, never in the bar's depth, or walks travel
-     * and park at the extremes.
+     * Audit confirmation requires a streak of raw samples above the starting smoothed rate, after a
+     * minimum number of steps. Scaling this margin by deviation, as the guard rail does, would
+     * obscure the window's small contribution to the total rate. A false confirmation can be
+     * corrected by the next audit; a false veto repeatedly returns to the anchor. The walk must
+     * also match its starting raw rate at least once, since that sample may already exceed the
+     * smoothed reference. Equality is allowed so a perfect starting rate can still be confirmed.
      *
-     * Confirm. An audit confirms on AUDIT_CONFIRM_STREAK consecutive raw samples above a reference
-     * frozen at the arm, the smoothed rate of the position the walk leaves, taken at
-     * AUDIT_COMMITMENT depth. The streak is not deviation-priced the way the rail's margin is: the
-     * deviation is workload-scale while an audit resolves the window's few-percent contribution,
-     * so a priced bar never fires. The two want opposite pricings and must not share one, since a
-     * false confirm self-heals at the next audit while a false veto churns the anchor. The streak
-     * alone is not sufficient: its reference is absolute and can be colder than the walk, so a
-     * confirm also requires beatBase. That test is inclusive because a saturating arming sample
-     * makes any strictly-greater bar unsatisfiable.
+     * A starvation probe compares densities once the watched region has enough hits. An up-probe
+     * uses the initial probation density: growing the window displaces probation entries, while
+     * main's average overvalues that capacity by including the protected core. The baseline is
+     * frozen because the walk's own demotions inflate live probation density and can prevent any
+     * confirmation. A down-probe uses average densities; the window has no comparable subdivision.
      *
-     * Verdict. A starvation probe is adjudicated by density once the watched region earns
-     * PROBE_EXIT_BAR_MULTIPLE times the starvation bar. An up-probe is priced against main's margin
-     * (the probation density frozen at the arm) rather than its average: growing the window takes
-     * capacity whose squeeze demotes into probation, so probation is what a grow taxes, while
-     * main's average is dominated by the protected core and vetoes winning positions. The freeze
-     * matters because the walk's own demotions enrich live probation into a permanent veto. A
-     * down-probe keeps the average test, having no marginal substructure to price against.
-     *
-     * Budget. PROBE_WALK_BUDGET bounds every walk, because neither exit can be relied on to end
-     * one: stray hits scale with region size and must not end a walk early, and a hit-rate veto is
-     * blind to damage under its own bar. It comfortably exceeds the longest confirmed escape, a
-     * corner-to-corner traverse of ~13 decaying steps.
+     * Every walk has a sample budget. Neither the density verdict nor the hit-rate thresholds
+     * guarantee termination, and a walk may continue making small losses below those thresholds.
      */
 
-    /** The samples a walk may take without confirmation before it is a failed experiment. */
-    static final int PROBE_WALK_BUDGET = 16;
-    /** The ceiling on a starvation probe's walk-interior bar, as a multiple of the threshold. */
-    static final double PROBE_BAR_CAP = 3.0d;
-    /** The multiple of the starvation bar at which the watched region may adjudicate a probe. */
-    static final long PROBE_EXIT_BAR_MULTIPLE = 4L;
-    /** The consecutive below-bar samples at which a tolerant audit's walk crash-aborts. */
-    static final int AUDIT_CRASH_PERSISTENCE = 3;
-    /** The walk samples an audit commits before it may be adjudicated. */
-    static final int AUDIT_COMMITMENT = 5;
-    /** The consecutive raw samples above the frozen reference that confirm an audit. */
-    static final int AUDIT_CONFIRM_STREAK = 4;
     /**
-     * The fraction an audit's walk-interior bars are priced at. It caps the crash abort against the
-     * rate frozen at the arm, and prices the reversal against the larger of that rate and the
-     * scatter, so the two exits share a fraction without sharing a bar. Sharing one constant is
-     * deliberate: the level is derived rather than tuned and sits near a measured cliff, so it must
-     * not become two independently adjustable bars.
+     * The scale shared by the audit's crash and reversal thresholds. The crash threshold uses the
+     * starting rate; the reversal threshold uses the larger of that rate and the noise band.
      */
     static final double AUDIT_BAR_FRACTION = 0.15d;
+    /** The consecutive below-threshold samples required to abort an audit retry after a crash. */
+    static final int AUDIT_CRASH_PERSISTENCE = 3;
+    /** The consecutive raw samples above the frozen reference that confirm an audit. */
+    static final int AUDIT_CONFIRM_STREAK = 4;
+    /** The minimum samples before an audit can confirm. */
+    static final int AUDIT_COMMITMENT = 5;
+    /** The hit count required for a density verdict, as a multiple of the starvation threshold. */
+    static final long PROBE_EXIT_BAR_MULTIPLE = 4L;
+    /** The starvation probe's maximum crash threshold, in multiples of the restart threshold. */
+    static final double PROBE_BAR_CAP = 3.0d;
+    /** The maximum samples before an unconfirmed walk fails. */
+    static final int PROBE_WALK_BUDGET = 16;
 
-    final boolean down;
-    final Ladder ladder;
-    final boolean isAudit;
-    final long baseWindow;
-    final double baseHitRate;
+    final double baseProbationDensity;
     final double baseSmoothedRate;
     final long baseRequestCount;
-    final double baseProbationDensity;
+    final double baseHitRate;
+    final long baseWindow;
 
-    int samples;
-    int aboveStreak;
+    final boolean isAudit;
+    final Ladder ladder;
+    final boolean down;
+
     int belowBarStreak;
+    int aboveStreak;
+    int samples;
 
-    long bestWindow;
-    double bestRate;
     boolean beatBase;
+    double bestRate;
+    long bestWindow;
 
     Walk(Ladder ladder, boolean isAudit, boolean down, long baseWindow, long baseRequestCount,
         double baseHitRate, double baseSmoothedRate, double baseProbationDensity) {
@@ -1050,10 +944,8 @@ final class WindowClimber {
     }
 
     /**
-     * Remembers the best sample of the run that may confirm this walk. A broken run starts the
-     * memory over, so the verdict is always for a position the confirming run itself stood on.
-     * Ties are kept by the later sample, leaving a walk that finds no strictly better position
-     * than the one it ends on to park where it ends.
+     * Records the best position within the current confirmation streak. A broken streak clears the
+     * record, and ties favor the later position to avoid unnecessary backtracking.
      */
     void rememberBest(boolean above, Reading r) {
       if (!above) {
@@ -1066,12 +958,9 @@ final class WindowClimber {
     }
 
     /**
-     * Returns the position a confirm is for: the best sample of the confirming run rather than the
-     * one the run completed on. The streak needs four samples above the reference and the walk
-     * strides on through all four, so a crest it crosses early is left behind by the time the
-     * verdict comes in. The margin is the one the streak itself clears, since a walk over a flat
-     * plateau has a best sample by noise alone and parking on it is a coin flip. A starvation
-     * probe is adjudicated by density on the current sample and takes that position.
+     * Returns the confirmed position. An audit may have passed a better position while collecting
+     * its confirmation streak, so it returns there if the difference exceeds the confirmation
+     * margin. A starvation probe evaluates the current sample and keeps its position.
      */
     long verdictWindow(Reading r) {
       boolean better = isAudit && (bestWindow >= 0)
@@ -1084,17 +973,17 @@ final class WindowClimber {
       return down ? -1.0 : 1.0;
     }
 
-    /** Whether the walk has spent its sample budget without ever reaching a verdict. */
+    /** Returns whether the walk has exhausted its sample budget. */
     boolean isBudgetSpent() {
       return samples >= PROBE_WALK_BUDGET;
     }
 
-    /** Whether this stride would carry the walk back across the window it started from. */
+    /** Returns whether the proposed position crosses back through the starting window. */
     boolean crossesBase(double position) {
       return down ? (position > baseWindow) : (position < baseWindow);
     }
 
-    /** Returns the drop below the rate frozen at the arm that crash-aborts this walk. */
+    /** Returns the drop from the starting hit rate that makes a sample count as a crash. */
     @SuppressWarnings("MathClampDouble")
     double crashBar(Rates rates) {
       return isAudit
@@ -1103,7 +992,7 @@ final class WindowClimber {
               Math.max(RESTART_THRESHOLD, rates.noiseBand()));
     }
 
-    /** Returns the sample-to-sample drop that reverses this walk's bold driver. */
+    /** Returns the drop since the previous sample that reverses the walk's step. */
     double reversalBar(Rates rates) {
       return isAudit
           ? Math.min(RESTART_THRESHOLD,
@@ -1112,16 +1001,15 @@ final class WindowClimber {
     }
 
     /**
-     * Whether the watched region earns enough for a starvation probe to be judged at the committed
-     * depth. The caller passes the starvation ladder's depth unconditionally, since an audit
-     * returns on the goal metric before this is reached.
+     * Returns whether a starvation probe has enough hits and has reached the required depth for
+     * a density verdict.
      */
     boolean canAdjudicate(Reading r, int commitment) {
       long watched = down ? r.mainHits : r.windowHits;
       return (watched >= (PROBE_EXIT_BAR_MULTIPLE * r.bar)) && (samples >= commitment);
     }
 
-    /** Returns the signal a completed probe is adjudicated by. */
+    /** Returns the density comparison, scaling the frozen baseline to the current sample length. */
     double verdictSignal(Reading r) {
       if (down) {
         return r.error();
@@ -1132,32 +1020,25 @@ final class WindowClimber {
           / (baseline + Reading.DENSITY_EPSILON));
     }
 
-    /** Whether a below-bar sample ends the walk now; only a crashed audit's retry is tolerant. */
+    /** Returns whether to abort on this loss, allowing an audit retry to tolerate brief dips. */
     boolean shouldCrashAbort(boolean belowBar) {
       boolean tolerant = isAudit && ladder.hasCrashed();
       return belowBar && (!tolerant || (belowBarStreak >= AUDIT_CRASH_PERSISTENCE));
     }
 
-    /**
-     * Whether an audit's verdict has come in: the streak, at committed depth, by a walk that also
-     * matched or beat its own starting sample at least once.
-     */
+    /** Returns whether the walk meets the audit's depth, streak, and starting-rate tests. */
     boolean isConfirmed() {
       return (samples >= AUDIT_COMMITMENT) && (aboveStreak >= AUDIT_CONFIRM_STREAK) && beatBase;
     }
 
-    /**
-     * Whether the density arm's command on this sample opposes the walk, so that a confirmed
-     * position is walked home in the same sample rather than kept.
-     */
+    /** Returns whether density steering would immediately move back from the confirmed position. */
     boolean isReversedBy(Reading r) {
       return (r.steeringError() * direction()) < 0.0;
     }
 
     /**
-     * Whether a starvation walk's confirm is one an audit would have reached: it took the deepest
-     * commitment, the goal metric confirms it, and density would walk it home, so keeping it means
-     * parking it.
+     * Returns whether a deep starvation walk meets the audit's confirmation tests but would be
+     * reversed by density steering. This position must be held to retain the improvement.
      */
     boolean isAuditGrade(Reading r) {
       return (samples >= Ladder.PROBE_COMMITMENT_DEEP) && isReversedBy(r) && isConfirmed();
@@ -1165,29 +1046,25 @@ final class WindowClimber {
   }
 
   /**
-   * A layer's retry ledger: the refractory rung that a completed experiment deepens when it keeps
-   * nothing (a failure, a confirm the density arm reverses, or a confirm that only re-finds ground
-   * already confirmed and lost), the run of consecutive crash endings after which a crash stops
-   * being priced as an exogenous workload shift, and the farthest window the layer's walks have
-   * confirmed. The starvation machine and the audit layer own one each, and an ending may only
-   * deepen the ledger of the layer that produced it; sharing one lets rate pulses irrelevant to
-   * the window drive the other layer to its deepest rung.
+   * Retry state for starvation probes or audits. Repeated unsuccessful walks increase both the wait
+   * and the extent of exploration. Each layer has its own ladder so failures in one do not delay
+   * exploration by the other.
    */
   static final class Ladder {
-    /** The initial period after a failed probe, in samples. */
-    static final int PROBE_BACKOFF_INITIAL = 16;
-    /** The longest period between probes after repeated failures. */
-    static final int PROBE_BACKOFF_MAX = 64;
-    /** The consecutive crash endings at which a probe's crashes stop being priced as exogenous. */
-    static final int PROBE_CRASH_ESCALATION = 2;
-    /** The walk's stride multiple at the middle refractory rung (one doubling). */
+    /** The stride multiplier after one backoff doubling. */
     static final double PROBE_STRIDE_SCALE_MID = 2.0d;
-    /** The walk's stride multiple at the deepest refractory rung. */
+    /** The stride multiplier at the maximum backoff. */
     static final double PROBE_STRIDE_SCALE_DEEP = 4.0d;
-    /** The walk samples committed before the stray exit may fire, at the middle refractory rung. */
+    /** The minimum samples before a density verdict after one backoff doubling. */
     static final int PROBE_COMMITMENT_MID = 2;
-    /** The walk samples committed before the stray exit may fire, at the deepest rung. */
+    /** The minimum samples before a density verdict at the maximum backoff. */
     static final int PROBE_COMMITMENT_DEEP = 10;
+    /** The consecutive crashes before a retry escalates as it would after a failed walk. */
+    static final int PROBE_CRASH_ESCALATION = 2;
+    /** The initial backoff, in samples, before escalation. */
+    static final int PROBE_BACKOFF_INITIAL = 16;
+    /** The maximum backoff rung, in samples. */
+    static final int PROBE_BACKOFF_MAX = 64;
 
     boolean farthestDown;
     int crashStreak;
@@ -1198,21 +1075,21 @@ final class WindowClimber {
       reset();
     }
 
-    /** Restores the ledger to its opening state, as a resize or a confirmed audit does. */
+    /** Restores the initial backoff and clears the walk history. */
     void reset() {
       rung = PROBE_BACKOFF_INITIAL;
       crashStreak = 0;
       forget();
     }
 
-    /** Forgets the farthest confirmed window, as a walk that keeps nothing does. */
+    /** Clears the farthest confirmed position. */
     void forget() {
       farthest = -1;
     }
 
     /**
-     * Whether a confirm here is at or short of the farthest window a walk in the same direction
-     * has already confirmed, so it re-finds ground the machine has since lost.
+     * Returns whether this confirmation makes no further progress than an earlier walk in the same
+     * direction. Repeatedly recovering a lost position should not reset the backoff.
      */
     boolean isRepeat(boolean down, long window, long band) {
       if ((farthest < 0) || (down != farthestDown)) {
@@ -1231,26 +1108,25 @@ final class WindowClimber {
       }
     }
 
-    /** Deepens the rung, as a completed experiment that keeps nothing does. */
+    /** Doubles the backoff, up to its maximum. */
     void escalate() {
       rung = Math.min(PROBE_BACKOFF_MAX, 2 * rung);
     }
 
-    /** Records a crash ending; the run saturates once it prices like a completed failure. */
+    /** Records a consecutive crash, saturating at the escalation threshold. */
     void crash() {
       crashStreak = Math.min(PROBE_CRASH_ESCALATION, crashStreak + 1);
     }
 
-    /** Rewards a kept confirm: the crash run is forgiven and the next arm is nearly free. */
+    /** Resets the crash streak and shortens the next retry after a successful walk. */
     void reward() {
       crashStreak = 0;
       rung = 1;
     }
 
     /**
-     * Returns the walk samples a probe must take before stray hits may end it. Stray and
-     * transferred hits reach the earnings bar where the small window is genuinely correct, so
-     * first-round probes exit cheaply; deeper rungs commit the next walk past that stray zone.
+     * Returns the minimum samples before a density verdict. Early retries can stop cheaply, while
+     * deeper retries continue past incidental hits that would otherwise end exploration too soon.
      */
     int commitmentDepth() {
       return (rung >= PROBE_BACKOFF_MAX)
@@ -1259,18 +1135,16 @@ final class WindowClimber {
     }
 
     /**
-     * Returns the full-size stride a walk armed from this rung takes, capped at the maximum step.
-     * The audit's room rule and the walk must measure the same move, or a direction is admitted
-     * whose entry stride clamps at the wall.
+     * Returns the starting stride for this rung. The audit's direction check uses this same
+     * distance so it does not choose a direction with too little room for the first step.
      */
     double stride(Reading r) {
       return Math.min(r.maxStep(), strideScale() * r.restartMagnitude());
     }
 
     /**
-     * Returns how much wider than a flat stride this rung's walk strides. Deep rungs bought a
-     * committed walk permission to pass the stray zone but not speed, leaving wide stray walls
-     * absorbing.
+     * Returns the stride multiplier. Deeper retries need larger steps as well as more samples to
+     * reach beyond broad regions of incidental hits.
      */
     private double strideScale() {
       return (rung >= PROBE_BACKOFF_MAX)
@@ -1278,55 +1152,42 @@ final class WindowClimber {
           : (rung >= (2 * PROBE_BACKOFF_INITIAL)) ? PROBE_STRIDE_SCALE_MID : 1;
     }
 
-    /** Whether this layer's last ending was a crash, which arms its escalated response. */
+    /** Returns whether this layer's last walk crashed. */
     boolean hasCrashed() {
       return crashStreak >= 1;
     }
 
-    /** Whether this crash continues a run long enough to price like a completed failure. */
+    /** Returns whether consecutive crashes require the same backoff as a failed walk. */
     boolean crashEscalates() {
       return crashStreak >= PROBE_CRASH_ESCALATION;
     }
   }
 
   /**
-   * The audit layer's schedule: how long the window has held still, how much stillness the next
-   * audit waits for, and which way that audit will explore. What must be still is the position,
-   * never the rate. A wall held by large commands that the transfer geometry discards is exactly an
-   * equilibrium worth auditing and a periodic rate swing would otherwise suppress audits forever.
+   * The timing and direction of equilibrium audits. Stillness is measured by the window's actual
+   * position, since changing hit rates or adjustments blocked by a boundary can conceal a stable
+   * allocation that needs testing.
    */
   static final class AuditClock {
-    /** The quiet samples at a sighted equilibrium before an audit probe re-tests it. */
+    /** The stillness samples before a routine equilibrium audit. */
     static final int AUDIT_WAIT_INITIAL = 32;
-    /**
-     * The stillness samples before the first audit after a (re)size; a cold-start calibration
-     * probe. A sighted false equilibrium pins from the very first sample, so waiting the standard
-     * clock leaves a short trace motionless before the machine may test it at all and every later
-     * wait uses the standard clock. A starvation confirm must not touch this schedule or the
-     * calibration is spent before it runs. The cost is one early misconfirm window on a steadily
-     * rising workload, bounded by the park's shield and the audit that follows it.
-     */
+    /** The shorter wait for the first audit after a resize. */
     static final int AUDIT_WAIT_FIRST = 4;
-    /** The longest wait between audits, reached by doubling on completed deepest-rung failures. */
+    /** The longest wait between audits. */
     static final int AUDIT_WAIT_MAX = 512;
 
+    double settledRate;
     int stillSamples;
     int waitSamples;
     long lastWindow;
-    /** Whether the next audit explores downward first; the audit after it takes the other side. */
-    boolean down = true;
-    /** The smoothed rate at the last confirm, until the park's first audit has read it. */
-    double settledRate;
+    boolean down;
 
     AuditClock() {
+      down = true;
       reset();
     }
 
-    /**
-     * Restores the clock to its opening state, as a resize does. The direction is left standing: it
-     * alternates across audits for coverage, and a resize has no opinion about the next one. The
-     * last window is negative until one has closed.
-     */
+    /** Restores the initial schedule without changing the preferred direction. */
     void reset() {
       waitSamples = AUDIT_WAIT_FIRST;
       settledRate = Double.NaN;
@@ -1334,16 +1195,14 @@ final class WindowClimber {
       lastWindow = -1;
     }
 
-    /** Starts the stillness run over, as an arming audit does. */
+    /** Restarts the stillness count when an audit begins. */
     void restart() {
       stillSamples = 0;
     }
 
     /**
-     * Restores the standard wait between audits and points the next audit along the confirmed
-     * walk, keeping the rate the walk confirmed at, as a confirmed audit does. A confirm ends a
-     * walk on evidence of improvement rather than its exhaustion, so the ground beyond it is the
-     * unexplored side.
+     * Restores the standard wait and continues in the confirmed walk's direction. Confirmation
+     * stopped the walk while it was improving, so the next audit tests for further improvement.
      */
     void settle(boolean down, double rate) {
       waitSamples = AUDIT_WAIT_INITIAL;
@@ -1352,10 +1211,9 @@ final class WindowClimber {
     }
 
     /**
-     * Advances the clock by one sample. A moving sample decays the run rather than zeroing it: a
-     * hard reset lets one super-band move per wait suppress audits forever, and a density imbalance
-     * of only about two between the regions commands such a step. The first sample of a run is
-     * still by construction, as nothing may move the window before that sample closes.
+     * Updates the stillness count. A moving sample decrements the count rather than resetting it,
+     * so occasional movement cannot suppress audits indefinitely. The first sample counts as still
+     * because no adjustment precedes it.
      */
     void tick(long windowMax, long band) {
       boolean samePlace = (lastWindow < 0) || (Math.abs(windowMax - lastWindow) <= band);
@@ -1363,16 +1221,15 @@ final class WindowClimber {
       lastWindow = windowMax;
     }
 
-    /** Whether the position has been still long enough for the clock to re-test it. */
+    /** Returns whether the position has been still long enough for an audit. */
     boolean isDue() {
       return stillSamples >= waitSamples;
     }
 
     /**
-     * Sets when the next audit may arm, from the audit ladder's rung. An unconfirmed audit retries
-     * on that cadence while the rung still deepens. Only a completed failure at the deepest rung
-     * doubles the clock. A crash keeps the cadence at any rung, since it is priced as a workload
-     * shift and deferring would starve the re-exploration.
+     * Sets the next wait from the audit's backoff. A completed failure at the deepest rung doubles
+     * the wait. A crash uses the rung directly, since a workload shift calls for another audit
+     * without that extra delay.
      */
     void reschedule(boolean failed, boolean crashed, int rung) {
       waitSamples = (failed && !crashed && (rung >= Ladder.PROBE_BACKOFF_MAX))
@@ -1381,15 +1238,10 @@ final class WindowClimber {
     }
 
     /**
-     * Returns the direction the next audit explores: the side it was pointed at when that has a
-     * stride of room, otherwise the other; the audit after it takes the opposite side for
-     * coverage. A park's first audit follows the confirmed walk only while the park stands and
-     * the smoothed rate has held within a restart threshold since the confirm; a rate that moved
-     * that much with the window still says the workload moved, and the walk's direction says
-     * nothing about the terrain. A direction with less than one stride of room is refused, since
-     * the walk would clamp at the wall and burn its whole budget producing no evidence. The
-     * stride is the one the arming ladder's rung will actually take, not the flat restart
-     * magnitude.
+     * Returns an audit direction with room for the first stride. The first audit after a
+     * confirmation continues the walk only while the position is held and its smoothed rate remains
+     * close to the confirmed rate. Otherwise, exploration alternates directions. A corner-forced
+     * direction leaves the alternation unchanged to avoid retracing it later.
      */
     boolean chooseDirection(Reading r, double stride, double rate, boolean parked) {
       if (!Double.isNaN(settledRate)) {
@@ -1414,23 +1266,27 @@ final class WindowClimber {
   }
 
   /**
-   * The goal metric's memory and its defense: the last operating point the cache is known to have
-   * done well at, the park that holds the window there, and the veto that returns it. Density alone
-   * cannot supply this since its rest point is a share-matching allocation rather than the hit-rate
-   * optimum. The anchor does not steer; it refuses to remain measurably worse than somewhere the
-   * cache has already been.
-   * <p>
-   * A shield lives and dies with the park it protects ({@link #park}/{@link #hold}/{@link #release}
-   * are its only writers), a park defends only a planted anchor ({@link #discard} takes the hold
-   * and the retest with it), and a return implies its park and the retest that judges it.
+   * A reference position and hit rate used to reject sustained regressions. It can hold a confirmed
+   * position or return to it after a loss. This supplements density steering, whose equilibrium
+   * need not maximize the hit rate.
    */
   static final class Anchor {
+
+    /*
+     * A confirmed position has a grace period for large hit-rate changes. That period belongs to
+     * its hold and ends when the hold is released. A veto also holds the window, but does not renew
+     * the grace period because returning to an old position is not new evidence for it.
+     *
+     * A return rechecks the reference rate on arrival. The retest freezes the rate at departure and
+     * is valid only for that position; discarding or replacing the anchor cancels it.
+     */
+
+    /** The maximum samples allowed for a return to the anchor. */
+    static final int VETO_RETURN_BUDGET = 8;
+    /** The settling samples at the anchor before its reference rate is retested. */
+    static final int RETEST_SETTLE = 2;
     /** The consecutive shortfall samples that sustain a guard-rail veto. */
     static final int VETO_STREAK = 4;
-    /** The samples a veto's return may take before it settles where it stands. */
-    static final int VETO_RETURN_BUDGET = 8;
-    /** The samples a returned window settles on the anchor before its claim is re-tested. */
-    static final int RETEST_SETTLE = 2;
 
     int shortfallStreak;
     double retestClaim;
@@ -1446,7 +1302,7 @@ final class WindowClimber {
       reset();
     }
 
-    /** Restores the layer to its opening state. */
+    /** Clears the reference position and any pending return. */
     void reset() {
       shortfallStreak = 0;
       returnLeft = 0;
@@ -1454,35 +1310,31 @@ final class WindowClimber {
       discard();
     }
 
-    /**
-     * Forgets the position. A discarded anchor cannot be defended and has no claim left to prove,
-     * so the hold and any pending retest go with it.
-     */
+    /** Discards the reference position, releasing its hold and cancelling any pending retest. */
     void discard() {
       release();
       endRetest();
       window = -1;
     }
 
-    /** Whether a position is remembered at all. */
+    /** Returns whether a reference position has been recorded. */
     boolean isPlanted() {
       return window >= 0;
     }
 
-    /** Whether the window stands on the anchor, within the band a held equilibrium orbits in. */
+    /** Returns whether the window is within the tolerance band of the anchor. */
     boolean isAt(long windowMax, long band) {
       return isPlanted() && (Math.abs(windowMax - window) <= band);
     }
 
-    /** Whether the window stands measurably off a planted anchor. */
+    /** Returns whether the window is outside the tolerance band of an existing anchor. */
     boolean isAwayFrom(long windowMax, long band) {
       return isPlanted() && !isAt(windowMax, band);
     }
 
     /**
-     * Remembers this position and its claim, as a validated walk or a clear improvement does. A
-     * pending retest goes with the move: its claim was frozen for the position the return set out
-     * for, and this is no longer that position.
+     * Records a position and its reference rate. Any pending retest is cancelled because its frozen
+     * rate belongs to the previous anchor, even if the new anchor is at the current window.
      */
     void plant(long windowMax, double claimed) {
       window = windowMax;
@@ -1490,17 +1342,15 @@ final class WindowClimber {
       endRetest();
     }
 
-    /** Re-syncs the claim to the live measurement, so a stale claim decays into reality. */
+    /** Refreshes the reference rate from a measurement at the anchor. */
     void resync(double claimed) {
       rate = claimed;
     }
 
     /**
-     * Follows the live measurement by one sample: re-sync the claim while standing on the anchor,
-     * or move the anchor to a measurably better position. Planting waits for a settled sample,
-     * since a transient window paired with a rate earned elsewhere is a phantom claim. The re-sync
-     * does not wait: the window stands on the anchor, and later on-anchor samples decay a walk's
-     * transient blend into reality.
+     * Refreshes the rate at the anchor or records a better position. A new position must be settled
+     * so its reference rate does not come from a walk or return still in progress. Refreshing at
+     * the anchor is always allowed; later samples gradually remove any transient measurements.
      */
     void track(Reading r, Rates rates, boolean probing) {
       boolean settled = !probing && !returning;
@@ -1516,43 +1366,34 @@ final class WindowClimber {
       }
     }
 
-    /**
-     * Holds the window here and shields the hold from crash-scale weather, as an audit's confirm
-     * does. Only a confirm arms a shield; it is spent only while the park it protects stands.
-     */
+    /** Starts a hold with a grace period for large hit-rate changes after confirmation. */
     void park(int shield) {
       freshLeft = shield;
       held = true;
     }
 
-    /**
-     * Holds the window without arming a shield, as the guard rail's veto does. A rail veto is not a
-     * fresh claim about the position, so it neither earns a shield nor spends one.
-     */
+    /** Starts a guard-rail hold without changing the remaining grace period. */
     void hold() {
       held = true;
     }
 
-    /** Releases the hold and the shield. */
+    /** Releases the hold and ends its grace period. */
     void release() {
       freshLeft = 0;
       held = false;
     }
 
-    /** Whether a freshly parked confirm is still riding out crash-scale weather. */
+    /** Returns whether a confirmed position is still held within its grace period. */
     boolean isShielded() {
       return held && (freshLeft > 0);
     }
 
-    /** Spends one sample of the shield. */
+    /** Consumes one sample of the grace period. */
     void ageShield() {
       freshLeft--;
     }
 
-    /**
-     * Returns whether the guard rail vetoes, which a sustained, noise-cleared shortfall against
-     * the anchor's rate does; the veto sends the window back there.
-     */
+    /** Begins a return and reports a veto after a sustained shortfall exceeds the noise margin. */
     boolean vetoTriggered(Reading r, Rates rates) {
       if (isAwayFrom(r.windowMax, r.band) && (rates.smoothed < (rate - rates.vetoMargin()))) {
         shortfallStreak++;
@@ -1568,11 +1409,9 @@ final class WindowClimber {
     }
 
     /**
-     * Stands the layer down after a crash-scale swing, returning whether the claim was discarded.
-     * A claim tested at its own position and found wrong is discarded, but a crash far from the
-     * anchor is typically the controller's own retreat crossing a band edge, so the reference
-     * survives there. The audit clock is untouched either way: stillness is a property of the
-     * position, not of the rate.
+     * Releases the hold and stops any return, reporting whether the anchor was discarded. Only
+     * a change at the anchor invalidates its rate; a change elsewhere may result from the
+     * controller's own movement.
      */
     boolean standDown(Reading r) {
       boolean discarded = isAt(r.windowMax, r.band);
@@ -1585,10 +1424,7 @@ final class WindowClimber {
       return discarded;
     }
 
-    /**
-     * Begins a veto's return: the hold is armed, the strides back are budgeted, and the claim the
-     * return sets out for is frozen for the retest on arrival.
-     */
+    /** Begins a bounded return to the anchor and freezes its rate for the retest on arrival. */
     void beginReturn() {
       returnLeft = VETO_RETURN_BUDGET;
       settleLeft = RETEST_SETTLE;
@@ -1598,8 +1434,8 @@ final class WindowClimber {
     }
 
     /**
-     * Returns a capped stride of a veto's return towards the anchor, spending one budgeted sample.
-     * The return ends when the stride arrives or the budget runs out, settling where it stands.
+     * Returns a capped step toward the anchor. The return ends when the step reaches the anchor or
+     * uses the last budgeted sample.
      */
     double strideHome(Reading r) {
       returnLeft--;
@@ -1610,14 +1446,14 @@ final class WindowClimber {
       return r.cappedStride(remaining);
     }
 
-    /** Ends the return, wherever it reached. */
+    /** Ends the return, including one that exhausted its budget before arrival. */
     void endReturn() {
       returning = false;
     }
 
     /**
-     * Whether a return has ended on the anchor with the claim it set out for still to be judged. A
-     * return that settled short of the anchor never reached the position its claim describes.
+     * Returns whether the return has ended at the anchor with a retest pending. An incomplete
+     * return cannot test the reference rate and cancels the retest.
      */
     boolean isRetestDue(Reading r) {
       if ((retestClaim < 0) || returning) {
@@ -1630,9 +1466,8 @@ final class WindowClimber {
     }
 
     /**
-     * Spends one settle sample and, on the last, returns whether the position fell short of the
-     * claim that brought the window here. The claim is the one frozen at the return's start: the
-     * on-anchor re-sync decays the live claim into the very shortfall being tested.
+     * Returns whether the settled rate falls short of the reference frozen at departure. Using the
+     * live reference would hide the shortfall as measurements at the anchor refresh it.
      */
     boolean retestFails(Rates rates) {
       if (--settleLeft > 0) {
@@ -1643,7 +1478,7 @@ final class WindowClimber {
       return rates.smoothed < (claimed - rates.vetoMargin());
     }
 
-    /** Ends the retest, judged or abandoned. */
+    /** Clears a completed or cancelled retest. */
     void endRetest() {
       retestClaim = -1;
       settleLeft = 0;
@@ -1651,21 +1486,18 @@ final class WindowClimber {
   }
 
   /**
-   * The goal metric's view of the workload: a smoothed sample hit rate and the smoothed mean
-   * absolute deviation around it. The deviation prices a claim against the workload's own scatter
-   * rather than a fixed number; the guard rail's shortfall margin and the starvation probe's
-   * walk-interior bar are both three deviations wide. The audit's confirming streak is deliberately
-   * not priced this way.
+   * A smoothed hit rate and mean absolute deviation. The deviation determines the noise margin for
+   * guard-rail vetoes and starvation probes; audit confirmation uses a fixed margin instead.
    */
   static final class Rates {
-    /** The floor on the guard rail's shortfall margin, in absolute hit rate. */
-    static final double VETO_MARGIN_MIN = 0.01d;
-    /** The smoothing constant for the goal-metric references (~5 sample memory). */
-    static final double RATE_SMOOTHING = 0.2d;
-    /** The seed for the hit-rate deviation estimate, wide so a cold cache cannot veto early. */
-    static final double DEVIATION_SEED = 0.05d;
     /** The shortfall margin as a multiple of the smoothed hit-rate deviation. */
     static final double VETO_MARGIN_SCALE = 3.0d;
+    /** The floor on the guard rail's shortfall margin, in absolute hit rate. */
+    static final double VETO_MARGIN_MIN = 0.01d;
+    /** The initial deviation estimate, allowing for cold-start variability. */
+    static final double DEVIATION_SEED = 0.05d;
+    /** The smoothing constant for the goal-metric references (~5 sample memory). */
+    static final double RATE_SMOOTHING = 0.2d;
 
     double deviation;
     double smoothed;
@@ -1674,13 +1506,13 @@ final class WindowClimber {
       reset();
     }
 
-    /** Restores the references to their opening state. */
+    /** Clears the smoothed rate and restores the initial deviation. */
     void reset() {
       smoothed = Double.NaN;
       deviation = DEVIATION_SEED;
     }
 
-    /** Whether no sample has been folded in yet, so there is nothing to smooth towards. */
+    /** Returns whether the initial hit rate has yet to be recorded. */
     boolean isUnseeded() {
       return Double.isNaN(smoothed);
     }
@@ -1690,35 +1522,35 @@ final class WindowClimber {
       smoothed = hitRate;
     }
 
-    /** Folds one sample in. The deviation updates against the pre-update mean, as an EMA pair. */
+    /** Updates both estimates, measuring deviation from the previous smoothed rate. */
     void update(double hitRate) {
       deviation += RATE_SMOOTHING * (Math.abs(hitRate - smoothed) - deviation);
       smoothed += RATE_SMOOTHING * (hitRate - smoothed);
     }
 
     /**
-     * Returns the width of the workload's own per-sample scatter, as the priced bars measure it.
-     * Read live rather than frozen at a walk's arm; see the walk note for why.
+     * Returns a noise margin of three current deviations. Walks use the live estimate to tolerate
+     * their own transient effects; see the implementation notes in {@link Walk}.
      */
     double noiseBand() {
       return VETO_MARGIN_SCALE * deviation;
     }
 
-    /** Returns the guard rail's shortfall margin, floored so a quiet workload still has one. */
+    /** Returns the guard rail's noise margin, with a minimum for quiet workloads. */
     double vetoMargin() {
       return Math.max(VETO_MARGIN_MIN, noiseBand());
     }
   }
 
-  /** How a probe's walk ends. */
+  /** The outcome of a walk sample. */
   private enum ProbeEnding {
-    /** The hit rate collapsed below the probe's start: undo without escalating the ladder. */
-    CRASHED,
-    /** The walk validated its position: keep it and make probes cheap again. */
+    /** The walk continues with another step. */
+    WALKING,
+    /** The walk's confirmation criteria were met. */
     CONFIRMED,
-    /** A completed, failed experiment: undo and double the refractory ladder. */
+    /** A hit-rate loss requires returning to the starting position. */
+    CRASHED,
+    /** The walk failed to confirm an improvement and requires a longer backoff. */
     FAILED,
-    /** No ending fired: take the next bold-driver stride. */
-    WALKING
   }
 }

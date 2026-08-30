@@ -28,7 +28,6 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.stream.Stream;
@@ -64,18 +63,29 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
     writeReport(tabulate());
   }
 
-  /** Returns the results for the (policy, maximumSize) to the metric value being compared. */
-  private Map<Label, String> tabulate() {
+  /** Returns the policy order and metric values, validating the inputs before writing the report. */
+  private Table tabulate() {
     var results = new TreeMap<Label, String>();
     var columns = new LinkedHashSet<String>();
+    var policies = new LinkedHashSet<String>();
+    var duplicatesByInput = new ArrayList<ImmutableList<String>>();
     inputFiles.forEach((maximumSize, path) -> {
       try (var reader = CsvReader.builder().ofNamedCsvRecord(path)) {
+        var names = ImmutableList.<String>builder();
         for (var record : reader) {
           var column = resolveMetric(record.getHeader());
           var label = new Label(record.getField(POLICY_KEY), maximumSize);
           results.put(label, column.map(record::getField).orElse(""));
           columns.addAll(record.getHeader());
+          names.add(label.policy());
         }
+        var policiesInFile = names.build();
+        var duplicates = HashMultiset.create(policiesInFile).entrySet().stream()
+            .filter(entry -> entry.getCount() > 1)
+            .map(Multiset.Entry::getElement)
+            .collect(toImmutableList());
+        duplicatesByInput.add(duplicates);
+        policies.addAll(policiesInFile);
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
@@ -83,7 +93,11 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
     checkArgument(columns.stream().anyMatch(column -> column.equalsIgnoreCase(metric)),
         "Metric '%s' not found; available: %s", metric, columns.stream()
             .filter(column -> !column.equals(POLICY_KEY)).collect(toImmutableList()));
-    return results;
+    for (var duplicates : duplicatesByInput) {
+      checkState(duplicates.isEmpty(),
+          "Policies share a display name so their rows would collapse: %s", duplicates);
+    }
+    return new Table(ImmutableList.copyOf(policies), ImmutableMap.copyOf(results));
   }
 
   /** Returns the metric's column name ignoring case, or empty if this report omitted it. */
@@ -92,19 +106,18 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
   }
 
   /** Writes a combined report with the headers: policy, maximumSize, and the metric. */
-  private void writeReport(Map<Label, String> table) {
+  private void writeReport(Table table) {
     var formatter = NumberFormat.getInstance(US);
     var headers = Stream
         .concat(Stream.of(POLICY_KEY), inputFiles.keySet().stream().map(formatter::format))
         .collect(toImmutableList());
-    var policies = policies();
     try (var writer = CsvWriter.builder().build(outputFile)) {
       writer.writeRecord(headers);
-      for (var policy : policies) {
+      for (var policy : table.policies()) {
         var values = new ArrayList<String>();
         values.add(policy);
         for (long size : inputFiles.keySet()) {
-          values.add(table.getOrDefault(new Label(policy, size), ""));
+          values.add(table.values().getOrDefault(new Label(policy, size), ""));
         }
         writer.writeRecord(values);
       }
@@ -113,27 +126,8 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
     }
   }
 
-  /** Returns the policy names in the order first seen, as a report may omit or add one. */
-  private ImmutableList<String> policies() {
-    var policies = new LinkedHashSet<String>();
-    for (var input : inputFiles.values()) {
-      try (var reader = CsvReader.builder().ofNamedCsvRecord(input)) {
-        var names = reader.stream()
-            .map(record -> record.getField(POLICY_KEY))
-            .collect(toImmutableList());
-        var duplicates = HashMultiset.create(names).entrySet().stream()
-            .filter(entry -> entry.getCount() > 1)
-            .map(Multiset.Entry::getElement)
-            .collect(toImmutableList());
-        checkState(duplicates.isEmpty(),
-            "Policies share a display name so their rows would collapse: %s", duplicates);
-        policies.addAll(names);
-      } catch (IOException e) {
-        throw new UncheckedIOException(e);
-      }
-    }
-    return ImmutableList.copyOf(policies);
-  }
+  /** The first-seen policy order and metric values across all input reports. */
+  private record Table(ImmutableList<String> policies, ImmutableMap<Label, String> values) {}
 
   private record Label(String policy, long size) implements Comparable<Label> {
     Label {

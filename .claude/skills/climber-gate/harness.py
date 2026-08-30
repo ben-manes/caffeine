@@ -34,8 +34,8 @@ MARGINAL_FIELDS = '''  // MEASUREMENT HARNESS (worktree-only): region-attributed
   // STATIC window. The band is the delta*W nodes nearest the eviction end, maintained by a
   // midpoint marker in O(1) amortized (MySQL/InnoDB's trick).
   static final boolean MEASURE = Boolean.getBoolean("caffeine.marginal.measure");
-  static final double TAIL_FRACTION =
-      Double.parseDouble(System.getProperty("caffeine.marginal.tail", "0.2"));
+  static final double TAIL_FRACTION = Double.parseDouble(
+      java.util.Objects.requireNonNullElse(System.getProperty("caffeine.marginal.tail"), "0.2"));
   private @Nullable Node windowMark;
   private long windowMarked;
   private long windowNodes;
@@ -83,7 +83,8 @@ FLAGS = '''
   // EXPERIMENT HARNESS (worktree-only, wired in by the climber-gate skill's harness.py, never
   // committed): a per-sample stderr trace plus system-property variants for A/B ablation.
   static final boolean DEBUG = Boolean.getBoolean("caffeine.climber.debug");
-  static final String VARIANT = System.getProperty("caffeine.climber.variant", "hybrid");
+  static final String VARIANT = java.util.Objects.requireNonNullElse(
+      System.getProperty("caffeine.climber.variant"), "hybrid");
   /** reactive: force the hit-rate tier at every size. */
   static final boolean REACTIVE_TIER = VARIANT.equals("reactive");
   /** density: force the density tier at every size (the reactive arm's mirror). */
@@ -101,6 +102,8 @@ FLAGS = '''
   static final boolean HARDRESET = VARIANT.equals("hardreset") || VARIANT.equals("prefix");
   /** starvwrite: the pre-round-3 schedule, where a starvation confirm writes the audit wait. */
   static final boolean STARVWRITE = VARIANT.equals("starvwrite") || VARIANT.equals("prefix");
+  /** nocheapen: an audit's confirm leaves the starvation ladder and refractory alone. */
+  static final boolean NOCHEAPEN = VARIANT.equals("nocheapen");
   /** absprobe: the pre-adv3 absolute walk-interior bar for starvation probes. */
   static final boolean ABSPROBE = VARIANT.equals("absprobe");
   /** precrash: the pre-crash-semantics machine, with one shared ladder and no crash tolerance. */
@@ -216,8 +219,8 @@ FLAGS = '''
    * auditbar: the audit's crash-bar fraction of the rate frozen at arm; 0 restores the pre-fix
    * absolute bar, where nothing floors the level test.
    */
-  static final double AUDIT_BAR = Double.parseDouble(
-      System.getProperty("caffeine.climber.auditbar", Double.toString(Walk.AUDIT_BAR_FRACTION)));
+  static final double AUDIT_BAR = Double.parseDouble(java.util.Objects.requireNonNullElse(
+      System.getProperty("caffeine.climber.auditbar"), Double.toString(Walk.AUDIT_BAR_FRACTION)));
   String dbgMode = "";
   long dbgSample;
 
@@ -268,16 +271,16 @@ STARTWIN = '''
    * frequency-optimal window can be measured on a trace whose optimum the default start already
    * sits at.
    */
-  static final double START_WINDOW =
-      Double.parseDouble(System.getProperty("caffeine.climber.startwin", "-1"));
+  static final double START_WINDOW = Double.parseDouble(
+      java.util.Objects.requireNonNullElse(System.getProperty("caffeine.climber.startwin"), "-1"));
   /**
    * Whether the plant re-splits main 80/20, as a `setMaximum` resize does. The default holds
    * probation at its shipped capacity, which is the geometry the climber itself produces
    * (`increaseWindow` conserves window and protected), so the cell differs from a default start by
    * window position alone.
    */
-  static final boolean START_RESPLIT =
-      System.getProperty("caffeine.climber.startsplit", "climber").equals("resize");
+  static final boolean START_RESPLIT = "resize".equals(
+      System.getProperty("caffeine.climber.startsplit"));
 '''
 
 # (name, file, anchor, replacement) — every anchor is CODE, so javadoc edits cannot break it.
@@ -382,6 +385,11 @@ EDITS = [
      "        dbgMode = (walk.isAudit ? \"audit\" : \"\")\n"
      "            + ((ending == ProbeEnding.CRASHED) ? \"Crash\" : \"Fail\");\n"
      "        return undoProbe(walk, ending, reading);\n"),
+
+    ("nocheapen", W,
+     "      walk.ladder.reset();\n      refractoryLeft = 0;\n      starvation.reward();\n",
+     "      walk.ladder.reset();\n      if (!NOCHEAPEN) {\n        refractoryLeft = 0;\n"
+     "        starvation.reward();\n      }\n"),
 
     ("mode-auditconfirm", W,
      "      } else if (keepConfirmedPosition(walk, reading)) {\n"

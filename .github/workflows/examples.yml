@@ -39,7 +39,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -49,31 +49,31 @@ jobs:
         with:
           persist-credentials: false
       - name: Write-behind (rxjava)
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments:  build --project-dir examples/write-behind-rxjava
       - name: Coalescing Bulkloader (reactor)
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments:  build --project-dir examples/coalescing-bulkloader-reactor
       - name: Hibernate (jcache)
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments:  build --project-dir examples/hibernate
       - name: Indexable
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments:  build --project-dir examples/indexable
       - name: Resilience (failsafe)
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
@@ -88,7 +88,7 @@ jobs:
       JAVA_VERSION: 25
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -98,13 +98,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Build snapshot
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: caffeine:jar
       - name: Graal Native Image (Profile)
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           distribution: graalvm
           java: ${{ env.JAVA_VERSION }}
@@ -115,7 +115,7 @@ jobs:
       - name: Graal Native Image (Metadata)
         run: git diff --exit-code -- examples/graal-native/src/main/resources/META-INF/native-image
       - name: Graal Native Image (Run)
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           distribution: graalvm
           java: ${{ env.JAVA_VERSION }}
@@ -129,7 +129,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -139,7 +139,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Simulate
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
@@ -150,7 +150,7 @@ jobs:
             -Dcaffeine.simulator.files.paths.1=lirs:loop.trace.gz
             -Dcaffeine.simulator.files.paths.2=corda:trace_vaultservice.gz
       - name: Chart Simulation
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
@@ -171,7 +171,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -181,25 +181,25 @@ jobs:
         with:
           persist-credentials: false
       - name: Memory Overhead
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: caffeine:memoryOverhead
       - name: Stresser (read)
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: caffeine:stress --workload=read --duration PT1M
       - name: Stresser (write)
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments: caffeine:stress --workload=write --duration PT1M
       - name: Stresser (refresh)
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         with:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}

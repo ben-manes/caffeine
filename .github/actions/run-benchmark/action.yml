@@ -54,7 +54,7 @@ runs:
           echo "enabled=true" >> "$GITHUB_OUTPUT"
         fi
     - name: ${{ inputs.name }} JMH Benchmark
-      uses: ./.github/actions/run-gradle
+      uses: $/.github/actions/run-gradle
       with:
         java: ${{ inputs.java }}
         distribution: ${{ inputs.distribution }}

@@ -98,87 +98,9 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   }
 
   @Override
-  @SuppressWarnings("FutureReturnValueIgnored")
   default CompletableFuture<V> refresh(K key) {
     requireNonNull(key);
-
-    var startTime = new long[1];
-    @SuppressWarnings({"unchecked", "Varifier"})
-    @Nullable V[] oldValue = (V[]) new Object[1];
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    @Nullable CompletableFuture<? extends V>[] reloading = new CompletableFuture[1];
-    Object keyReference = cache().referenceKey(key);
-
-    var future = cache().refreshes().compute(keyReference, (k, existing) -> {
-      if ((existing != null) && !Async.isReady(existing) && !cache().isPendingEviction(key)) {
-        return existing;
-      }
-
-      try {
-        startTime[0] = cache().statsTicker().read();
-        oldValue[0] = cache().getIfPresentQuietly(key);
-        var refreshFuture = (oldValue[0] == null)
-            ? cacheLoader().asyncLoad(key, cache().executor())
-            : cacheLoader().asyncReload(key, oldValue[0], cache().executor());
-        reloading[0] = requireNonNull(refreshFuture, "Null future");
-        return refreshFuture;
-      } catch (Exception e) {
-        throw toUnchecked(e);
-      }
-    });
-
-    if (reloading[0] != null) {
-      reloading[0].whenComplete((newValue, error) -> {
-        long loadTime = cache().statsTicker().read() - startTime[0];
-        if (error != null) {
-          if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
-            logger.log(Level.WARNING, "Exception thrown during refresh", error);
-          }
-          cache().refreshes().remove(keyReference, reloading[0]);
-          cache().statsCounter().recordLoadFailure(loadTime);
-          return;
-        }
-
-        try {
-          var discard = new boolean[1];
-          var hints = new LocalCache.RemapHints();
-          var value = cache().compute(key, (K k, @Nullable V currentValue) -> {
-            // Keep the refresh registered until the write clears it to avoid refreshAfterWrite
-            // readers from prematurely scheduling another reload
-            boolean owned = (cache().refreshes().get(keyReference) == reloading[0]);
-            if (owned && (currentValue == oldValue[0])) {
-              return (currentValue == null) && (newValue == null) ? null : newValue;
-            }
-            // When a successor refresh owns the registration, leave it intact so a stale
-            // completion's by-key discard cannot steal the successor's token (its fresh value
-            // would then be discarded in turn)
-            hints.preserveRefresh = !owned;
-            hints.preserveTimestamps = true;
-            discard[0] = (currentValue != newValue);
-            return currentValue;
-          }, cache().expiry(), /* recordLoad= */ false,
-              /* recordLoadFailure= */ true, hints);
-
-          if (discard[0] && (newValue != null)) {
-            var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
-            cache().notifyRemoval(key, newValue, cause);
-          }
-          if (newValue == null) {
-            cache().statsCounter().recordLoadFailure(loadTime);
-          } else {
-            cache().statsCounter().recordLoadSuccess(loadTime);
-          }
-        } catch (Throwable t) {
-          logger.log(Level.WARNING, "Exception thrown during refresh", t);
-          cache().refreshes().remove(keyReference, reloading[0]);
-          cache().statsCounter().recordLoadFailure(loadTime);
-        }
-      });
-    }
-
-    @SuppressWarnings("unchecked")
-    var castedFuture = (CompletableFuture<V>) future;
-    return requireNonNull(castedFuture);
+    return new RefreshOperation<>(this, key).execute();
   }
 
   @Override
@@ -224,5 +146,109 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   /** Returns whether the supplied cache loader has bulk load functionality. */
   static boolean hasLoadAll(CacheLoader<?, ?> cacheLoader) {
     return hasMethodOverride(CacheLoader.class, cacheLoader, "loadAll", Set.class);
+  }
+
+  /** A manual refresh operation. */
+  final class RefreshOperation<K, V> {
+    private final AsyncCacheLoader<? super K, V> cacheLoader;
+    private final LocalCache<K, V> cache;
+    private final Object keyReference;
+    private final K key;
+
+    private @Nullable CompletableFuture<? extends V> reloading;
+    private @Nullable V oldValue;
+    private long startTime;
+
+    RefreshOperation(LocalLoadingCache<K, V> loadingCache, K key) {
+      this.keyReference = loadingCache.cache().referenceKey(key);
+      this.cacheLoader = loadingCache.cacheLoader();
+      this.cache = loadingCache.cache();
+      this.key = key;
+    }
+
+    /** Returns an existing refresh or starts one and registers its completion. */
+    @SuppressWarnings("FutureReturnValueIgnored")
+    CompletableFuture<V> execute() {
+      var future = register();
+      if (reloading != null) {
+        reloading.whenComplete(this::complete);
+      }
+      @SuppressWarnings("unchecked")
+      var castedFuture = (CompletableFuture<V>) future;
+      return requireNonNull(castedFuture);
+    }
+
+    /** Coalesces an in-flight refresh or loads the entry's next value. */
+    private @Nullable CompletableFuture<?> register() {
+      return cache.refreshes().compute(keyReference, (k, existing) -> {
+        if ((existing != null) && !Async.isReady(existing) && !cache.isPendingEviction(key)) {
+          return existing;
+        }
+
+        try {
+          startTime = cache.statsTicker().read();
+          oldValue = cache.getIfPresentQuietly(key);
+          var refreshFuture = (oldValue == null)
+              ? cacheLoader.asyncLoad(key, cache.executor())
+              : cacheLoader.asyncReload(key, oldValue, cache.executor());
+          reloading = requireNonNull(refreshFuture, "Null future");
+          return refreshFuture;
+        } catch (Exception e) {
+          throw toUnchecked(e);
+        }
+      });
+    }
+
+    /** Applies the refresh result and records the load's outcome. */
+    private void complete(@Nullable V newValue, @Nullable Throwable error) {
+      long loadTime = cache.statsTicker().read() - startTime;
+      if (error != null) {
+        if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
+          logger.log(Level.WARNING, "Exception thrown during refresh", error);
+        }
+        cache.refreshes().remove(keyReference, reloading);
+        cache.statsCounter().recordLoadFailure(loadTime);
+        return;
+      }
+
+      try {
+        commit(newValue);
+        if (newValue == null) {
+          cache.statsCounter().recordLoadFailure(loadTime);
+        } else {
+          cache.statsCounter().recordLoadSuccess(loadTime);
+        }
+      } catch (Throwable t) {
+        logger.log(Level.WARNING, "Exception thrown during refresh", t);
+        cache.refreshes().remove(keyReference, reloading);
+        cache.statsCounter().recordLoadFailure(loadTime);
+      }
+    }
+
+    /** Installs the refreshed value if still owned, otherwise notifies its disposal. */
+    private void commit(@Nullable V newValue) {
+      var discard = new boolean[1];
+      var hints = new LocalCache.RemapHints();
+      var value = cache.compute(key, (K k, @Nullable V currentValue) -> {
+        // Keep the refresh registered until the write clears it to avoid refreshAfterWrite
+        // readers from prematurely scheduling another reload
+        boolean owned = (cache.refreshes().get(keyReference) == reloading);
+        if (owned && (currentValue == oldValue)) {
+          return (currentValue == null) && (newValue == null) ? null : newValue;
+        }
+        // When a successor refresh owns the registration, leave it intact so a stale
+        // completion's by-key discard cannot steal the successor's token (its fresh value
+        // would then be discarded in turn)
+        hints.preserveRefresh = !owned;
+        hints.preserveTimestamps = true;
+        discard[0] = (currentValue != newValue);
+        return currentValue;
+      }, cache.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true, hints);
+
+      if (discard[0] && (newValue != null)) {
+        var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
+        cache.notifyRemoval(key, newValue, cause);
+      }
+    }
   }
 }

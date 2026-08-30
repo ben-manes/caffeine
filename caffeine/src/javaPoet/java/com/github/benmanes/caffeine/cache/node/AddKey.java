@@ -26,7 +26,7 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Rule;
 import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
-import com.github.benmanes.caffeine.cache.node.NodeContext.Visibility;
+import com.github.benmanes.caffeine.cache.node.NodeContext.FieldAccess;
 import com.palantir.javapoet.AnnotationSpec;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.FieldSpec;
@@ -61,7 +61,7 @@ public final class AddKey implements Rule<NodeContext> {
     context.classSpec
         .addField(fieldSpec.build())
         .addMethod(context.newGetter(context.keyStrength(), kTypeVar, "key",
-            (context.keyStrength() == Strength.STRONG) ? Visibility.OPAQUE : Visibility.PLAIN))
+            (context.keyStrength() == Strength.STRONG) ? FieldAccess.OPAQUE : FieldAccess.PLAIN))
         .addMethod(MethodSpec.methodBuilder("getKeyReference")
             .addModifiers(context.publicFinalModifiers())
             .addStatement("return $L.getOpaque(this)", varHandleName("key"))

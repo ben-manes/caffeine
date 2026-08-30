@@ -236,6 +236,21 @@
     font-family: system-ui, sans-serif;
   }
 
+  .box > p:first-child,
+  .rule > p:first-child {
+    margin-top: 0;
+  }
+
+  .box > p:last-child,
+  .rule > p:last-child {
+    margin-bottom: 0;
+  }
+
+  body > ul > li + li,
+  section.chapter > ul > li + li {
+    margin-top: 0.65em;
+  }
+
   .rule {
     border-left: 3px solid var(--blue);
     padding: 4px 16px;
@@ -503,6 +518,17 @@
   .machine-map th:nth-child(2) { width: 27% }
   .machine-map th:nth-child(3) { width: 39% }
 
+  .interaction-map table {
+    table-layout: fixed;
+    font-size: 0.84em;
+  }
+
+  .interaction-map th:nth-child(1) { width: 15% }
+  .interaction-map th:nth-child(2) { width: 25% }
+  .interaction-map th:nth-child(3) { width: 19% }
+  .interaction-map th:nth-child(4) { width: 22% }
+  .interaction-map th:nth-child(5) { width: 19% }
+
   .measurement-key .term {
     display: block;
     margin: 2px 0;
@@ -651,14 +677,14 @@
     text-underline-offset: 2px;
   }
 
-  @media (min-width: 1360px) {
+  @media (min-width: 1480px) {
     #toc:not([hidden]) {
       display: block;
-      right: max(16px, calc(50vw - 686px));
+      right: max(16px, calc(50vw - 712px));
     }
   }
 
-  @media (max-width: 1359px) {
+  @media (max-width: 1479px) {
     #tocToggle:not([hidden]) {
       display: block;
     }
@@ -742,29 +768,31 @@
 <body>
 
 <h1>The Adaptive Window, From the Ground Up</h1>
-<p class="byline introonly">How Caffeine decides, at runtime, how much of the cache should serve
-  recency and how much should serve frequency: the problem, why it is hard, the design
-  that held for a decade, the designs that fail, and the tiered controller that ships
-  today. Written for a reader who knows caching well but was not on this project's
-  journey. Every design choice arrives with the measurement that forced it.</p>
+<p class="byline introonly">How Caffeine divides cache capacity between recency and
+  frequency, and adjusts that balance as the workload changes. A guide to the design
+  and its evidence for readers who know caching but are new to this controller.</p>
 
 <div class="box introonly">
-  <b>Part I (§1–§4)</b> is the problem: what the window
-  controls, why adapting it is hard, the incumbent that answered it for a decade, and a
-  tour of the solution families, including the ones that fail.<br>
-  <b>Part II (§5–§9)</b> builds the shipped controller one mechanism at a time,
-  each introduced by the failure it prevents.<br>
-  <b>Part III (§10–§12)</b> is the evidence and a field guide. Sections are self-contained chapters;
-  use <b>Contents</b> to jump. The folded asides are the maintainer's record, pricing each
-  decision and naming the traces and dead alternatives behind it; nothing in the main
-  line depends on opening them.</div>
+  <p><b>Part I (§1–§4): the problem and the alternatives.</b> What the window controls,
+    why adaptation is hard, and what the original reactive climber already does well.</p>
+  <p><b>Part II (§5–§9): the controller.</b> Each mechanism is introduced by the failure
+    it prevents. Chapter 9 brings them together.</p>
+  <p><b>Part III (§10–§12): the evidence and the limits.</b> Measurements, a diagnostic
+    field guide, and a recap of the design.</p>
+  <p>Read one chapter at a time, or use <b>Contents</b> to jump. The expandable notes
+    explain detailed decisions and their measured costs; you can follow the main
+    explanation without opening them.</p>
+  <p>For a shorter first pass, read <a href="#s1-2">the cache layout (§1.2)</a>,
+    <a href="#s2-6">the failure modes (§2.6)</a>,
+    <a href="#s5">the controller map (§5)</a>, and
+    <a href="#s12">the recap (§12)</a>.</p>
+</div>
 
 
 <h2 id="s1"><a class="hl" href="#s1">1 · The problem: one knob between two philosophies</a></h2>
-<p class="chapterlede">A cache is a bet about the future. This chapter introduces the
-  two classic ways to bet, shows that real workloads need a mix, and identifies the
-  single number in W-TinyLFU that controls the mix. By the end, the design goal is
-  concrete: pick that number, online, per workload.</p>
+<p class="chapterlede">A cache is a bet about the future. Recency and frequency offer
+  two ways to make that bet, and real workloads need both. In W-TinyLFU, one number
+  controls the balance: the admission window's share of capacity.</p>
 
 <h3 id="s1-1"><a class="hl" href="#s1-1">1.1 Recency and frequency</a></h3>
 <p><b>Recency</b> policies (the LRU family) bet that whatever was touched most recently
@@ -773,12 +801,11 @@
 <p><b>Frequency</b> policies (the LFU family) bet on whatever was touched most often,
   which is the right bet for skewed popularity: hot products, hot keys, the Zipfian head
   that dominates most production traffic.</p>
-<p>Each bet has a canonical failure, and real workloads trigger both. One table scan
-  flushes an LRU of its entire working set; one viral era leaves an LFU defending
-  yesterday's celebrities while today's arrivals can't get a seat. A database page cache
-  sees the Zipf head <i>and</i> the scans; a CDN node sees viral objects <i>and</i>
-  one-shot crawlers. Committing to either philosophy forfeits real hit rate somewhere,
-  and "somewhere" is always some user's production system.</p>
+<p>Each bet has a characteristic failure. A table scan can flush an LRU's working set;
+  a shift in popularity can leave an LFU retaining formerly hot keys at the expense of
+  new arrivals. Real workloads expose both weaknesses. A database page cache serves
+  popular pages <i>and</i> scans; a CDN node serves viral objects <i>and</i> one-shot
+  crawlers.</p>
 <figure>
   <svg viewBox="0 0 740 236" role="img" font-family="system-ui,sans-serif" font-size="12">
     <title>the recency–frequency spectrum and the knob that moves along it</title>
@@ -978,13 +1005,17 @@
     </svg>
   <figcaption>Fig. 3 — Hit rate under every fixed split, one simulation per point: every curve is a different answer, and the answers also move with cache size and with time.</figcaption>
 </figure>
-<p>Three consequences frame everything that follows. Adaptation is worth real points
-  (mid single digits on representative workloads, which for a cache in front of a database is
-  often a double-digit reduction in backend load). The optimum is a property of
-  (workload, capacity), not workload alone: a reuse pattern that fits beside the hot
-  head at one size competes with it at another. And no configuration-time answer
-  exists, since nobody re-tunes per deployment, per size, and per traffic era. The
-  cache must find the split itself.</p>
+<p>Three consequences frame everything that follows.</p>
+<ul>
+  <li><b>Adaptation is worth real points.</b> Mid single digits on representative
+    workloads, which for a cache in front of a database is often a double-digit
+    reduction in backend load.</li>
+  <li><b>The optimum belongs to the workload and the capacity together</b>, not to the
+    workload alone. A reuse pattern that fits beside the hot head at one size competes
+    with it at another.</li>
+  <li><b>No configuration-time answer exists</b>, because nobody re-tunes per
+    deployment, per size, and per traffic era. The cache must find the split itself.</li>
+</ul>
 <p>That first consequence is the payoff for adapting at all. The reactive climber of §3
   already collects most of it, so what this document adds is measured against that
   climber rather than against a static window.</p>
@@ -1011,20 +1042,18 @@
 <p>Caffeine largely gets the threshold question for free. TinyLFU admission compares
   <i>two entries</i> (the candidate against the incumbent victim) rather than testing
   either against a global score, so the admission bar self-adjusts to whatever the
-  local contest is. What that leaves genuinely undecided is allocation: how much
+  local contest is. What that leaves undecided is allocation: how much
   capacity each philosophy controls. That is a direct dial (move a boundary, capacity
   shifts), it is meaningful at every workload, and its units are the cache's own. So
   the region split is the knob, and everything else stays fixed policy.</p>
 
 
 <h2 id="s2"><a class="hl" href="#s2">2 · Why this is a hard control problem</a></h2>
-<p class="chapterlede">"Find the best window fraction online" sounds like a one-line
-  optimization loop. It is really a <i>moving</i> optimization problem, probed blind:
-  the objective can only be evaluated where the cache currently stands, the terrain is
-  rarely a friendly hill, every measurement is noisy, every move has a price, and the
-  whole curve shifts under your feet. This chapter walks those difficulties one at a
-  time and ends with a checklist of six failure modes; every mechanism in Part II
-  answers one of them.</p>
+<p class="chapterlede">The cache observes only the split it is currently using.
+  Trying another split costs hits, and a later improvement might come from the workload
+  rather than the move. These constraints make adaptation difficult even before we
+  consider the shape of the optimum. The chapter ends with six failure modes that
+  guide the design in Part II.</p>
 
 <h3 id="s2-1"><a class="hl" href="#s2-1">2.1 The terrain</a></h3>
 <p>Call the objective <var>HR</var>(<var>w</var>): the hit rate as a function of the
@@ -1126,24 +1155,24 @@
 <figcaption>Fig. 4b — Shape B in a real trace. <b>P3 @152508</b>: growing the window off 1% costs 2.4 points before it pays, and the payoff arrives only past 40%. The density controller rests at 1.4%, inside the valley; §5.3 shows why, and why the escape does not reach it.</figcaption>
 </figure>
 
-<p>The honest problem statement, then: zeroth-order optimization of a noisy, drifting,
-  occasionally deceptive objective, with access to its value only at the single point
-  currently occupied, and a real cost charged for every move. The next four subsections
-  take those clauses one at a time.</p>
+<p>In optimization terms, this is a <i>zeroth-order</i> problem: the cache observes the
+  objective's value, but not its slope. That value is noisy, the curve changes with the
+  workload, and each move has a cost. The next four subsections explain these constraints.</p>
 
 <h3 id="s2-2"><a class="hl" href="#s2-2">2.2 You only see the point you stand on</a></h3>
 <p>An optimizer would like to evaluate <var>HR</var>(<var>w</var>) at several
   <var>w</var> and compare. The cache cannot: it runs one split, on live traffic, and
-  observes only what that split earns. Everything else is a counterfactual. Per sample,
-  the observables are four cheap counters (hits in total, hits in the window, hits in
-  probation, misses); what cannot be observed at any price is the derivative
-  d<var>HR</var>/d<var>w</var>, because there is no paired trial, and differencing
-  across time confounds the window's effect with the workload's own motion (§2.4).</p>
+  observes only what that split earns. Everything else is a counterfactual.</p>
+<p>Each sample provides four cheap counters: total hits, window hits, probation hits,
+  and misses. These do not reveal the derivative d<var>HR</var>/d<var>w</var>, or how
+  hit rate would change with window size. There is no paired trial at another split,
+  and comparing samples taken at different times mixes the window's effect with changes
+  in the workload (§2.4).</p>
 <p>The classic answer is ghost state: ARC keeps metadata for recently evicted keys, so
   a "ghost hit" says <i>you evicted this too soon</i>, and each ghost list acts as a
   gravitational pull on the split, the hope being that opposing pulls settle at the
-  right equilibrium. Caffeine rejects this family deliberately, and the deeper reason
-  is worth being precise about.</p>
+  right equilibrium. Caffeine rejects this family deliberately. The reason deserves
+  precision.</p>
 <p>A ghost hit answers "would this <i>key</i> have
   survived?", but pricing a resize needs "would this <i>allocation</i> earn more?", and those differ in both directions. The region might have needed to be far larger
   than the ghost implies before that key survived, with everything displaced from the
@@ -1227,7 +1256,7 @@
     <text
       x="654" y="146" text-anchor="end" fill="#1baf7a" font-weight="600">every fixed window scores 33.3</text>
     <text x="46" y="244" fill="#5b6572">sample number → &#160;&#160; <tspan fill="#2a78d6" font-weight="600">
-        hit rate</tspan> &#160; <tspan fill="#eb6834" font-weight="600">% window</tspan> &#160;·&#160; 22 samples; final hit rate 30.96 — 2.4pp lost to churn on a flat curve</text>
+        hit rate</tspan> &#160; <tspan fill="#eb6834" font-weight="600">% window</tspan> &#160;·&#160; 22 samples; final hit rate 30.96, 2.4pp lost to churn on a flat curve</text>
     </svg>
   <figcaption>Fig. 5 — Chasing weather: on corda’s flat terrain the right move is to stop, but sample-to-sample weather keeps triggering restarts, and the motion costs 10.5 points. The failure is in the signal, not the tuning.</figcaption>
 </figure>
@@ -1241,17 +1270,18 @@
 <h3 id="s2-5"><a class="hl" href="#s2-5">2.5 There is no setpoint</a></h3>
 <p>Classical feedback control regulates toward a known target; a thermostat knows the
   temperature it wants. Here nobody knows what hit rate the workload permits, so there
-  is nothing to regulate toward. That single fact disqualifies the PID family: an
-  integrator fed an error with no true zero integrates noise without bound. It was
-  tried in an earlier era of this project and produced the worst results ever measured
-  on the benchmark (−32 to −98pp on flat terrain, unfixable by anti-windup). In
-  control-theory vocabulary the problem is <i>extremum seeking</i>: hold an unknown,
-  moving optimum, detectable only by perturbation, where perturbation itself carries
-  §2.3's price tag.</p>
+  is no hit-rate target to regulate toward. A PID loop built around an assumed target
+  accumulates an error whose zero need not be attainable or desirable. Earlier designs
+  tried this and produced the worst results measured on the benchmark (−32 to −98pp on
+  flat terrain); anti-windup did not rescue them.</p>
+<p>The task is instead <i>extremum seeking</i>: search for an unknown, moving optimum
+  by making changes and observing their effects. Each change carries the cost described
+  in §2.3. The density controller in §5 does use a balance target, but that target is
+  derived from regional measurements, not from an assumed achievable hit rate.</p>
 <details class="fold">
   <summary>Why §5 turns out to be regulation after all</summary>
-  <p>The sentence above is true of the <i>goal metric</i>, and it is worth being precise
-    about what it is not true of, because the distinction is the whole design. The
+  <p>The disqualification above applies to the <i>goal metric</i>. It does not apply to the
+    density error of §5, and the distinction is the whole design. The
     controller of §5 commands a <i>change</i> in window size and the cache accumulates
     it, so the plant is a pure integrator and the proportional law of §5.3 <i>is</i>
     integral action with a setpoint, namely error = 0. There is no second integrator
@@ -1341,18 +1371,18 @@
     </tr>
   </table>
 </div>
-<p>Two standing constraints ride along rather than being solvable: the <b>lag limit</b>
-  (phases faster than the sampling cadence are invisible by construction; the honest
-  goal there is to not be catastrophic, §11) and <b>run-to-run variance</b> (on
+<p>Two standing constraints ride along rather than being solvable. The <b>lag limit</b>:
+  phases faster than the sampling cadence are invisible by construction, and the only
+  goal there is to avoid catastrophe (§11). <b>Run-to-run variance</b>: on
   alternation-heavy workloads the outcome is basin-dependent, with identical runs
   landing ±8pp apart, which disciplines how this design is measured as much as how it
-  behaves, §10.1).</p>
+  behaves (§10.1).</p>
 
 <h2 id="s3"><a class="hl" href="#s3">3 · The incumbent: the reactive climber</a></h2>
 <p class="chapterlede">Before the machine this document builds, Caffeine answered §2 with
   twenty lines of code, and for seven years that answer held. This chapter is that design
   on its own terms: what it is, why it works, the properties it turns out to have been
-  providing silently, and exactly where it breaks. It is not a museum piece. It still
+  providing silently, and where it breaks. It is not a museum piece. It still
   ships as the climber for caches up to 4096 entries (§9.1), it is the baseline every
   measurement in §10 is differenced against, and for a cache that wants adaptivity at
   minimal complexity it remains the design to copy.</p>
@@ -1452,10 +1482,10 @@
 <text x="724" y="127.6" text-anchor="end" fill="#1baf7a" font-weight="600">best fixed window 47.2 (at 20%)</text>
 <text x="724" y="155.6" text-anchor="end" fill="#5b6572" font-weight="600">LRU 42.8</text>
 <line x1="77.6" y1="221.9" x2="77.6" y2="175.9" stroke="#5b6572" stroke-width="1" />
-<text x="77.6" y="163.9" text-anchor="middle" fill="#1a1f24" font-size="11" font-weight="600" class="ann">seeded shrink, refuted in two samples</text>
+<text x="150" y="163.9" text-anchor="middle" fill="#1a1f24" font-size="11" font-weight="600" class="ann">seeded shrink, refuted in two samples</text>
 <line x1="220.0" y1="159.7" x2="220.0" y2="131.7" stroke="#5b6572" stroke-width="1" />
 <text x="220.0" y="119.7" text-anchor="middle" fill="#1a1f24" font-size="11" font-weight="600" class="ann">restart upward; the climb</text>
-<text x="46" y="256" fill="#5b6572">sample number → &#160;&#160; <tspan fill="#2a78d6" font-weight="600">hit rate</tspan> &#160; <tspan fill="#eb6834" font-weight="600">% window</tspan> &#160;·&#160; 44 samples; whole-trace 46.4 — a fixed 1% window scores 42.3</text>
+<text x="46" y="256" fill="#5b6572">sample number → &#160;&#160; <tspan fill="#2a78d6" font-weight="600">hit rate</tspan> &#160; <tspan fill="#eb6834" font-weight="600">% window</tspan> &#160;·&#160; 44 samples; whole-trace 46.4, where a fixed 1% window scores 42.3</text>
 </svg>
   <figcaption>Fig. 7 — OLTP @ 2048, the shipped tier: the seeded shrink is refuted in two
     samples, the restart re-arms upward, and by sample ten the window is inside the broad
@@ -1472,7 +1502,7 @@
   LRU's 33.3), while the loop rewards a closed one (a 1% window scores 45.1 where LRU
   scores 0.0):</p>
 <figure>
-<svg viewBox="0 0 740 284" role="img" font-family="system-ui,sans-serif" font-size="11.5">
+<svg viewBox="0 0 740 298" role="img" font-family="system-ui,sans-serif" font-size="11.5">
 <title>the stress test @ 513 — blockchain vault, analytical loop, and back</title>
 <line x1="46" y1="250.0" x2="726" y2="250.0" stroke="#e3e7eb" />
 <line x1="46" y1="205.2" x2="726" y2="205.2" stroke="#e3e7eb" />
@@ -1494,9 +1524,9 @@
 <text x="41" y="74.8" text-anchor="end" fill="#5b6572">80</text>
 <text x="41" y="30.0" text-anchor="end" fill="#5b6572">100</text>
 <line x1="46.0" y1="175.3" x2="163.9" y2="175.3" stroke="#1baf7a" stroke-dasharray="5 4" stroke-width="1.7" />
-<text x="104.9" y="169.3" text-anchor="middle" fill="#1baf7a" font-weight="600" font-size="10.5">corda: best fixed 33.3 = LRU</text>
+<text x="122" y="169.3" text-anchor="middle" fill="#1baf7a" font-weight="600" font-size="10.5">corda: best fixed 33.3 = LRU</text>
 <line x1="163.9" y1="149.0" x2="612.7" y2="149.0" stroke="#1baf7a" stroke-dasharray="5 4" stroke-width="1.7" />
-<text x="388.3" y="143.0" text-anchor="middle" fill="#1baf7a" font-weight="600" font-size="10.5">loop: best fixed 45.1 (LRU 0.0)</text>
+<text x="388.3" y="131" text-anchor="middle" fill="#1baf7a" font-weight="600" font-size="10.5">loop: best fixed 45.1 (LRU 0.0)</text>
 <line x1="612.7" y1="175.3" x2="726.0" y2="175.3" stroke="#1baf7a" stroke-dasharray="5 4" stroke-width="1.7" />
 <line x1="109.5" y1="151.4" x2="109.5" y2="117.4" stroke="#5b6572" stroke-width="1" />
 <text x="109.5" y="105.4" text-anchor="middle" fill="#1a1f24" font-size="11" font-weight="600" class="ann">opens until it matches LRU</text>
@@ -1506,7 +1536,8 @@
 <text x="308.9" y="219.6" text-anchor="middle" fill="#1a1f24" font-size="11" font-weight="600" class="ann">one entry: the MRU regime</text>
 <line x1="626.3" y1="219.1" x2="626.3" y2="159.1" stroke="#5b6572" stroke-width="1" />
 <text x="626.3" y="147.1" text-anchor="middle" fill="#1a1f24" font-size="11" font-weight="600" class="ann">corda returns: reopen</text>
-<text x="46" y="278" fill="#5b6572">sample number → &#160;&#160; <tspan fill="#2a78d6" font-weight="600">hit rate</tspan> &#160; <tspan fill="#eb6834" font-weight="600">% window</tspan> &#160;·&#160; whole-splice 39.3; composite per-phase optimum 41.0, LRU 11.6, best fixed window 29.0</text>
+<text x="46" y="278" fill="#5b6572">sample number → &#160;&#160; <tspan fill="#2a78d6" font-weight="600">hit rate</tspan> &#160; <tspan fill="#eb6834" font-weight="600">% window</tspan></text>
+<text x="46" y="292" fill="#5b6572">whole-splice 39.3; composite per-phase optimum 41.0, LRU 11.6, best fixed window 29.0</text>
 </svg>
   <figcaption>Fig. 8 — LRU → MRU → LRU: the window opens until the rate locks onto LRU,
     snaps shut two samples into the loop era, and reopens when the vault
@@ -1515,10 +1546,12 @@
 <p>This chart is the law's character in one image. It can be confused: the blips in the
   loop era are restarts kicked off by weather, each costing a sample or two before the
   walk re-converges, and the corda phases wander because at LRU parity every window
-  ties. What it cannot do is stay wrong, because the thing it optimizes is the thing
-  being measured. The flips are deliberately more abrupt than production traffic, which
-  is what makes it a stress test: a law that tracks the cliff tracks the drift. Merlin
-  (OSDI '26) names this adaptation pattern as one its architecture cannot express, every
+  ties. Its strength is that each move is checked against hit rate itself, and a large
+  change restores a useful step size. In this test, those two rules let it recover
+  after each transition.</p>
+<p>The flips are deliberately more abrupt than typical production changes, making this
+  a stress test of recovery. Merlin
+  (OSDI '26) names this adaptation pattern as one its architecture cannot express. Every
   §4 family that swaps the goal metric for a proxy gives the property up somewhere, and
   §7 exists to buy it back.</p>
 
@@ -1527,8 +1560,10 @@
   removing them turned out to be expensive.</p>
 <p><b>The reversal is the window floor.</b> Nothing in the reactive law bounds the window
   from below except the cache's one-entry minimum; the 2% floor that protects the density
-  tier (§5) does not exist here. It was never needed, because a bold driver cannot
-  sustain a run: any worsening sample reverses it. Give the law more commitment (a noise
+  tier (§5) does not exist here. It was never needed, because the reversal rule (the
+  classic <i>bold driver</i>: keep stepping while the rate holds or improves, reverse the
+  moment it drops) cannot sustain a run past a single worsening sample. Give the law
+  more commitment (a noise
   band on the reversal, a longer period, a confidence gate) and the implicit floor
   silently goes with it. Measured, a banded reactive law walks corda's window to nearly
   zero, where TinyLFU refuses every new arrival against an established victim, and the
@@ -1537,9 +1572,9 @@
 <p><b>The restart is an era detector, and it re-arms magnitude only.</b> Direction still
   comes from the comparison; what the restart buys is a step large enough to matter in
   the new regime, which is what both of Fig. 8's recoveries are made of. The same
-  five-point constant survives into the machine as the crash bar's depth and the
-  stand-down's shift trigger (§6, §8): three mechanisms reading one definition of "the
-  workload changed".</p>
+  five-point constant survives into Part II's machine as its one definition of "the
+  workload changed", read by a walk's crash bar (§6.4) and by the anchor's stand-down
+  (§8.2).</p>
 <details class="fold">
   <summary>Why not just give it a noise band? (the measured answer)</summary>
   <p>The obvious repair for §3.5's magnitude problem is a band: reverse only on a drop
@@ -1548,23 +1583,23 @@
     shipped machine. Constructed families: five of six lose, by 10 to 26 points. A band
     buys commitment, and commitment without an adjudicator is a direction chosen by early
     noise that nothing can revoke. The reversal <i>is</i> the never-persistently-wrong
-    property, and a band spends exactly that. What a committed walk actually needs is a
-    verdict on the evidence, which is §6's machinery.</p>
+    property, and a band spends it. What a committed walk needs is a verdict on the
+    evidence, which is §6's machinery.</p>
 </details>
 
 <h3 id="s3-4"><a class="hl" href="#s3-4">3.4 The scorecard, seven years on</a></h3>
-<p>The honest ledger, from §10's own instruments, because the incumbent is the arm every
-  battery runs against. On the adversarial gate's 51 paired rows it is ahead of the
-  shipped machine on 18, and on 28 the machine's edge is under a point. On the real
+<p>The reactive climber is the baseline for §10's measurements. On the adversarial
+  battery's 51 paired rows it is ahead of the shipped machine on 18; on 28, the
+  machine's edge is under a point. On the real
   205-cell corpus the machine wins significantly on 41 cells and loses on 9, everything
   else a tie, for a whole-corpus mean edge of +0.38pp.</p>
 <p>Both directions are true at once:
   most workloads never needed the machine, and the ones that did, where a signal starves
   or an optimum sits across a plateau, needed it badly.</p>
-<p>The reactive law's own real-trace
-  losses have one shape: where frequency should own nearly everything it hovers above the
-  tiny optimal window and pays for the visit, occasionally landing under LRU, and where
-  the optimum is far away at scale it crawls (§3.5). On sharp frequency cliffs,
+<p>The reactive law's own real-trace losses have two shapes. Where frequency should own
+  nearly everything, it hovers above the tiny optimal window and pays for the visit,
+  occasionally landing under LRU. Where the optimum is far away at scale, it crawls
+  (§3.5). On sharp frequency cliffs,
   meanwhile, it matches the static optimum that the density signal's bias gives away. One
   measurement hazard remains: on constructed traps its runs are bimodal, so a single-seed
   comparison reads near-parity and is wrong. Use three runs, or a seeded pair.</p>
@@ -1621,21 +1656,21 @@
 </figure>
 <ul>
   <li><b>It chases weather (F-1), and pays full price on flat terrain (F-2).</b> The
-    before/after difference is exactly §2.4's confounded comparison, and Fig. 5 is this
+    before/after difference is §2.4's confounded comparison, and Fig. 5 is this
     law: on corda's flat curve the restart re-energizes the walk forever, and the motion
     itself costs 10.5 points. The cure must come from the signal, not the tuning (§5).</li>
   <li><b>It learns one bit per sample.</b> The magnitude of an imbalance is discarded, so
     a window that should move 30% of the range crawls there in decaying coin-flip steps;
     on OLTP at 37k entries the slowness is worth 6.9 points (Fig. 10, next chapter).
-    Measurement later sharpened the blame: it is partly the reversal <i>rule</i>, not the
-    signal, since ten unreversed decaying steps already cover 57% of the range and a
+    Measurement later sharpened the blame. Part of it is the reversal <i>rule</i> rather
+    than the signal: ten unreversed decaying steps already cover 57% of the range, and a
     banded variant recovers the whole OLTP-class gap before the band's own failures kill
     it (§3.3's fold). The durable question it leaves is <i>under what evidence may a
     climber commit to a run</i>, and §6's adjudicated walks are the shipped answer.</li>
   <li><b>It cannot cross plateaus.</b> Bold-driver reversal flips on any worsening
     sample, and a plateau crossing necessarily contains samples that look no better, so a
-    wide valley is an effective wall. The probe machine re-uses exactly this walker with
-    its reversal retuned for that job (§6.3). The law is sound; the stock tuning answers
+    wide valley is an effective wall. The probe machine re-uses this walker with its
+    reversal retuned for that job (§6.3). The law is sound; the stock tuning answers
     a different question.</li>
 </ul>
 
@@ -1644,21 +1679,19 @@
   is not a compromise at all: it is what Caffeine runs today, because at those sizes a
   sample does not contain the information the density signal needs (§9.1). Above them it
   is still a pragmatic choice.</p>
-<p>Twenty lines, one remembered rate, one signed step: easy
-  to maintain, easy to reason about, and it recovers from any confusion by construction.
+<p>Twenty lines, one remembered rate, one signed step: a small implementation whose
+  decisions follow directly from the hit-rate comparison.
   §3.5's prices are real, but they are collected mostly on adversarial constructions and
   at scales the tiering now assigns to the machine; on ordinary traffic this law is
   usually within a point of the best Caffeine can do (§3.4).</p>
-<p>The successor did not come
-  from users asking for more. It came from asking whether the defaults could be better,
-  and from a willingness to spend internal complexity so that they are. If that is not a
-  budget you want to carry, ship this chapter. Follow two rules: measure any variant at
-  three runs or more (§3.4), and if you extend the law's commitment in any way, add the
-  window floor its reversal was silently providing (§3.3). The rest of this document is
-  what "better" costs.</p>
+<p>The larger controller spends additional complexity on the cases where this simple
+  design falls short. For an implementation that stops here, two rules matter: measure
+  any variant at three runs or more (§3.4), and if you extend the law's commitment, add
+  the window floor its reversal was silently providing (§3.3). The following chapters
+  explain the additional mechanisms and the evidence for their cost.</p>
 
 <h2 id="s4"><a class="hl" href="#s4">4 · The design space: seven families, and where each breaks</a></h2>
-<p class="chapterlede">Most plausible answers to §2 were actually built and measured in
+<p class="chapterlede">Most plausible answers to §2 were built and measured in
   this project's history. This chapter is the map: each family gets its idea, its
   virtue, and the measured way it breaks. The shipped controller is a composition of
   the survivors, so knowing why the others fail is what makes it legible.</p>
@@ -1666,15 +1699,14 @@
 <h3 id="s4-1"><a class="hl" href="#s4-1">4.1 Follow the goal metric: hill climbing</a></h3>
 <p>The most direct answer to "no setpoint, no derivative" is finite-difference hill
   climbing on the hit rate itself: §3's incumbent, taking its place in the design space
-  as family one. Its virtue is §3.2's. It optimizes the actual objective, so it can be
-  confused but never systematically wrong, and the restart keeps it exploring across
-  eras, which is why the shipped design keeps it twice over, as the small tier's law
+  as family one. Its virtue is §3.2's: it judges moves by the actual objective, and
+  the restart renews exploration when the workload changes. The shipped design keeps
+  it in two roles: as the small tier's law
   (§9.1) and as the probe machine's walker (§6.3). Its three measured failures are
   §3.5's: it chases weather and churns on flat terrain (F-1/F-2, corda's 10.5pp), it
-  cannot cross plateaus, and it learns one bit per sample. That last one means the
-  magnitude of an imbalance is discarded, so a window that should move 30% of the range
-  crawls there in decaying coin-flip steps, and at density-tier scale the crawl is the
-  family's disqualifying price:</p>
+  cannot cross plateaus, and it learns one bit per sample. The last is the disqualifying
+  price at density-tier scale: the magnitude of an imbalance is discarded, so a window
+  that should move 30% of the range crawls there in decaying coin-flip steps:</p>
 <figure>
 <svg viewBox="0 0 740 250" role="img" font-family="system-ui,sans-serif" font-size="11.5">
     <title>OLTP @ 37376 — reactive climber</title>
@@ -1751,13 +1783,13 @@
     </svg>
   <figcaption>Fig. 10 — One bit per sample: the reactive climber knows the direction but discovers the magnitude one decaying coin-flip at a time; the §5 controller reads the imbalance’s size directly. +6.9 points between the panels.</figcaption>
 </figure>
-<p>Verdict: keep the goal-metric honesty where its statistics work: small caches
-  (§9.1), and bounded, committed experiments that must cross plateaus deliberately
-  (§6 re-uses exactly this walker with its reversal rule retuned for that job).</p>
+<p>Verdict: keep the goal metric where its statistics work, in small caches (§9.1) and
+  in bounded, committed experiments that must cross plateaus deliberately (§6 re-uses
+  this walker with its reversal rule retuned for that job).</p>
 
 <h3 id="s4-2"><a class="hl" href="#s4-2">4.2 Regulate to a target</a></h3>
 <p>PID and its relatives presume an error against a setpoint, and §2.5 explained why
-  none exists. Tried anyway, in several dressings, the integrator is the fatal organ:
+  none exists. Tried anyway, in several dressings, the integrator is the part that fails:
   fed a proxy error with no true zero it winds the window to a rail and keeps it
   there. The measured best was lag; the measured worst was the largest regression in
   the benchmark's history. Regulation machinery answers a different problem.</p>
@@ -1774,12 +1806,12 @@
 <h3 id="s4-4"><a class="hl" href="#s4-4">4.4 Ask the counterfactual: ghosts and shadows</a></h3>
 <p>ARC's ghost lists, and their scaled-up form (shadow-simulate alternative
   configurations, switch to the winner), are the only family that genuinely answers
-  §2.2. Rejecting them was a considered decision, on three grounds. The §2.2 argument:
-  a ghost hit prices a key, not an allocation, and allocation value is non-uniform,
+  §2.2. Rejecting them was a considered decision, on three grounds. <b>The §2.2
+  argument</b>: a ghost hit prices a key, not an allocation, and allocation value is non-uniform,
   so per-key gravity neither crosses valleys nor authorizes profitable sacrifices.
-  The cost: ghost metadata scales with capacity, charged to every deployment for the
-  minority of moments adaptation binds. And the measured record: the approach has not
-  actually proven better. On a LIRS loop trace at small sizes the ghosts miss the
+  <b>The cost</b>: ghost metadata scales with capacity, charged to every deployment for
+  the minority of moments adaptation binds. <b>The measured record</b>: the approach has
+  not proven better. On a LIRS loop trace at small sizes the ghosts miss the
   cycle entirely and don't help; at larger sizes ARC improves only modestly on LRU.
   Ghost feedback can be a useful <i>ingredient</i> (Merlin uses ghosts to compensate
   its threshold adaptation), but as the load-bearing signal it buys little for its
@@ -1795,7 +1827,7 @@
   switching churns state (§2.3). Measured, the switching was driven by noise rather
   than merit. A late, subtler variant (blending a goal-metric nudge into steering
   continuously, gated by a confidence estimate) was built and instrumented carefully
-  enough to deserve its own autopsy (§8.3); it fails for a reason that generalizes:
+  enough to deserve its own autopsy (§8.3). It fails for a reason that generalizes:
   <b>continuous authority granted to a noisy judge is authority exercised by
   noise</b>. The shipped design grants the goal metric authority only in discrete,
   committed, adjudicated doses.</p>
@@ -1806,7 +1838,7 @@
   correlation with the optimal window across the corpus (recency demand is about the
   <i>timing</i> of reuse, not the popularity histogram), and near-zero skew readings
   actively mis-steered looping workloads. The project's standing rule came out of
-  this: <b>classify your signal, not the workload</b>: decide per sample whether each
+  this: <b>classify your signal, not the workload</b>. Decide per sample whether each
   measurement is trustworthy, rather than which archetype the traffic resembles. The
   starvation bar (§6.1), the stillness clock (§7.3), and the noise-cleared margins
   (§8.1) are all signal classifiers.</p>
@@ -1817,21 +1849,19 @@
   earns more per slot? If one region's slots out-earn the other's, capacity is worth
   more there. No memory, no model, no ghosts, and one decisive property, developed
   in §5: both regions are measured in the same sample, so the workload's phase
-  multiplies both sides and cancels. Its obligations are just as important: the
-  signal sees only residents (F-3 remains), it measures average rather than marginal
-  value (replacing the average with a true marginal was eventually built in four
-  forms and measured to a frontier rather than a free win; §11.1 carries that
-  result), and its equilibrium can be self-consistently wrong (F-4). The shipped
-  controller is this signal plus one machine per obligation.</p>
+  affects both regions together, allowing that shared effect to cancel.</p>
+<p>The limitations are just as important. The signal sees only residents (F-3 remains),
+  and measures average rather than marginal value. Four attempts to measure marginal
+  value directly each traded gains on some workloads for losses on others (§11.1).
+  Density can also settle at a self-consistent but suboptimal split (F-4). Part II
+  starts with density steering, then adds a mechanism for each limitation.</p>
 
-<div class="box"><b>The map, compressed.</b> Goal-metric climbing: honest but
-  noise-coupled and slow; keep it for small caches, probe walks, and audit judgments.
-  Regulation: needs a setpoint that doesn't exist. Model fitting: presumes terrain
-  shapes the terrain doesn't have. Ghosts: price keys instead of allocations, at
-  capacity-scale cost, without a winning record. Arbitration: hands the wheel to
-  noise. Classification: answers a question one level too high. Density comparison:
-  the one structurally quiet signal, with three named blind spots, each of which
-  gets a purpose-built machine in Part II.</div>
+<div class="box"><b>What the design keeps.</b> Goal-metric climbing remains useful in
+  small caches, probe walks, and audit judgments, where its noise and speed are
+  manageable. Density comparison supplies quieter ordinary steering. The other
+  families did not justify their assumptions, noise sensitivity, or storage cost in
+  the measured designs. Part II combines the two surviving signals and addresses
+  density's blind spots.</div>
 
 
 <figure>
@@ -1918,8 +1948,8 @@
     <li><b>Refractory</b> — the post-walk cooldown, counted in blind-corner samples (§6.5).</li>
     <li><b>Crash / reversal</b> — the walk's two interior exits: a level test against
       the launch rate, and a first-difference test against the last stride (§6.4).</li>
-    <li><b>Adjudication</b> — the walk's honest ending, a verdict against evidence
-      frozen at arm time (§6.4).</li>
+    <li><b>Adjudication</b> — the walk's one ending that renders a verdict, against
+      evidence frozen at arm time (§6.4).</li>
     <li><b>Audit</b> — the periodic re-test of a long-held position, judged by the
       goal metric (§7).</li>
     <li><b>Stillness</b> — samples with the window held in-band, the audit clock's
@@ -1935,36 +1965,35 @@
 </details>
 
 <h3 id="s5-1"><a class="hl" href="#s5-1">5.1 The signal</a></h3>
-<p>A slot of capacity is worth the hits it produces. Within one sample, each region's
-  production is directly observable, so each region has a <b>hit density</b>, hits per
-  slot per sample:</p>
+<p>A slot of capacity is worth the hits it produces, and within one sample each region's
+  hits are counted directly. So each region has a <b>hit density</b>: hits per slot per
+  sample.</p>
 <pre>d<sub>w</sub> = windowHits / windowSize        d<sub>m</sub> = mainHits / (C − windowSize)</pre>
-<p>If <var>d<sub>w</sub></var> &gt; <var>d<sub>m</sub></var>, window slots are
-  out-earning main slots and the split should shift toward the window; the reverse
-  shrinks it; equality is rest. This is an average-yield proxy for the economic goal
-  of equalizing marginal returns, implemented with two integer counters. The
-  distinction matters: §5.6 measures the bias it introduces. The steering error is
-  the log of the ratio,</p>
+<p>If the window's density is the higher one, its slots are out-earning main's and the
+  split should shift toward the window. If main's is higher, the window should shrink.
+  Equal densities mean rest. The steering error is the log of the ratio,</p>
 <pre>error = ln(d<sub>w</sub> / d<sub>m</sub>)</pre>
-<p>logged for symmetry: "the window earns 3× main" and "main earns 3× the window"
-  become +1.10 and −1.10 rather than 3.0 and 0.33. The signed error says which way
-  and how far out of balance the split is, in a unit that behaves the same in both
-  directions.</p>
+<p>taken as a log so that the two directions are symmetric: "the window earns three
+  times main" and "main earns three times the window" become +1.10 and −1.10 rather
+  than 3.0 and 0.33. The sign says which way the split is out of balance and the
+  magnitude says how far. Two integer counters implement it.</p>
+<p>One caveat belongs here rather than later. Density is an average yield per slot, and
+  the economic goal is to equalize marginal yields. The two are not the same, and §5.6
+  measures the bias the difference introduces.</p>
 
 <h3 id="s5-2"><a class="hl" href="#s5-2">5.2 Why this signal is quiet</a></h3>
-<p>Now the property that makes this family the winner. Suppose a rough phase scales
-  everyone's earnings down by a factor α that has nothing to do with the split:</p>
+<p>This signal has the property that decides the design: the weather cancels out of it.
+  Suppose a rough phase scales every region's earnings down by the same factor α,
+  unrelated to the split:</p>
 <pre>error′ = ln(α·d<sub>w</sub> / (α·d<sub>m</sub>)) = ln(d<sub>w</sub> / d<sub>m</sub>) = error</pre>
-<p>The common-mode factor cancels. The §2.4 weather, which sets the reactive climber's
-  direction bit, is to first order exactly such a factor: phases change how much
-  traffic is cacheable at all, scaling both regions together, while the split's
-  quality changes how the catchable traffic divides. The within-sample ratio isolates
-  the second effect; the workload's mood never enters the signal. (The cancellation
-  is first-order: a phase that specifically redistributes reuse between short and
-  long distances does move the ratio, and should; that part is signal.)</p>
+<p>The common factor cancels. Changes in the cacheable fraction of traffic can affect
+  both regions together; comparing their densities within the same sample removes that
+  shared effect. This is the advantage over §2.4's comparison across samples.</p>
+<p>Cancellation is only first-order. A phase that shifts reuse between short and long
+  distances changes the ratio, as it should: the preferred split may have changed too.</p>
 <p>The same corda trace that defeated the reactive climber, under this controller:</p>
 <figure>
-<svg viewBox="0 0 740 250" role="img" font-family="system-ui,sans-serif" font-size="11.5">
+<svg viewBox="0 0 740 264" role="img" font-family="system-ui,sans-serif" font-size="11.5">
     <title>corda_large @ 8192 — density climber: converge and hold</title>
     <line x1="46" y1="216.0" x2="726" y2="216.0" stroke="#e3e7eb" />
     <line x1="46" y1="178.0" x2="726" y2="178.0" stroke="#e3e7eb" />
@@ -2065,7 +2094,8 @@
       x="710" y="147.7" text-anchor="end" fill="#1baf7a" font-weight="600">fixed-window ceiling 33.3</text>
     <text x="46" y="244" fill="#5b6572">sample number → &#160;&#160; <tspan fill="#2a78d6" font-weight="600">
         hit rate</tspan> &#160; <tspan fill="#eb6834" font-weight="600">% window</tspan> &#160; dots = probe-walk
-      samples &#160;·&#160; 57 samples (density samples 2.5× more often); final 33.01</text>
+      samples</text>
+    <text x="46" y="258" fill="#5b6572">57 samples (density samples 2.5× more often); final 33.01</text>
     </svg>
 <svg viewBox="0 0 740 270" role="img" font-family="system-ui,sans-serif" font-size="11.5">
     <title>corda → 5×loop → corda phase-shift stress @ 8192 — the density climber</title>
@@ -2173,7 +2203,7 @@
     <text x="46" y="264" fill="#5b6572">sample number → &#160;&#160; <tspan fill="#2a78d6" font-weight="600">
         hit rate</tspan> &#160; <tspan fill="#eb6834" font-weight="600">% window</tspan> &#160; dashed = per-phase ceiling</text>
     <text
-      x="146.2" y="160.1" text-anchor="middle" fill="#1baf7a" font-weight="600" font-size="10.5">corda ceiling 33.3
+      x="185" y="160.1" text-anchor="middle" fill="#1baf7a" font-weight="600" font-size="10.5">corda ceiling 33.3
       (flat: every window ties)</text>
     <text
       x="386.0" y="44" text-anchor="middle" fill="#1baf7a" font-weight="600" font-size="10.5"
@@ -2193,28 +2223,25 @@
 <h3 id="s5-3"><a class="hl" href="#s5-3">5.3 From error to step</a></h3>
 <pre>step   = sign(error) · min( 0.30·C, |error| · 0.03·C )
 window = max(window + step, 0.02·C)</pre>
-<p>Proportional control: move hard when far out of balance, barely at all near
-  equilibrium. Convergence and re-annealing stop being separate mechanisms; both are
-  the error's own magnitude. Three constants, three rationales:</p>
+<p>This is proportional control: move hard when far out of balance, barely at all near
+  it. The reactive law needed a decay to converge and a restart to re-energize; here
+  both come from the error's own magnitude. Three constants, three rationales:</p>
 <ul>
-  <li><b>The gain (0.03·C per nat)</b> makes a several-nat imbalance, a fresh cache
-    starving a recency workload, say, traverse to its optimum in a handful of
-    samples, while near balance the step vanishes smoothly. Validated against its
-    neighbors: higher gains jitter converged windows, lower ones give back traverse
-    speed.</li>
+  <li><b>The gain (0.03·C per nat)</b> sets how quickly the window moves. A <i>nat</i>
+    is one unit of natural-log error. A several-nat imbalance, such as a fresh cache starving a recency workload, reaches its optimum in
+    a handful of samples, while near balance the step vanishes smoothly. Neighboring
+    gains were tried: higher ones jitter converged windows, lower ones give back
+    traverse speed.</li>
   <li><b>The cap (0.30·C)</b> bounds any single move, because resizes displace
     residents (§2.3).</li>
-  <li><b>The floor (0.02·C)</b> is a <i>signal-capable</i> floor, not a performance
-    floor: below some size a window earns too few hits to measure its own density,
-    and a blind controller cannot recover (F-3). Two percent is spent keeping the
-    measurement alive. The initial window is 1%, so the clamp also lifts a sub-floor
-    window up on its first decision, and the blind-corner refractory hold honors the
-    same lift, because a workload whose every sample is blind takes no ordinary
-    decision at all and would otherwise wedge the initial window under the floor for
-    the life of the run. Enforcing the floor there has one measured price: a
-    thin-signal floor cell that was quietly enjoying the 1% wedge pays the floor's
-    documented cost (w50 −0.5pp), which is what the signal-capability is bought
-    with.</li>
+  <li><b>The floor (0.02·C)</b> keeps the signal alive; it is not a performance floor.
+    Below some size a window earns too few hits to measure its own density, and a blind
+    controller cannot recover (F-3), so two percent of capacity is spent on
+    measurability. The initial window is 1%, and the first decision lifts it to the
+    floor. The blind-corner hold of §6.3 applies the same lift, because a workload whose
+    every sample is blind takes no ordinary decision and would otherwise keep the window
+    under the floor for the life of the run. The lift has one measured price, half a
+    point on a thin-signal cell that did better wedged at 1%.</li>
 </ul>
 <details class="fold">
   <summary>Where this rests, and the bias that follows from it</summary>
@@ -2255,15 +2282,16 @@ window = max(window + step, 0.02·C)</pre>
 </details>
 
 <h3 id="s5-4"><a class="hl" href="#s5-4">5.4 What "earned nothing" may mean</a></h3>
-<p>The formula divides by earnings, so empty regions need care, and this corner held
-  two real defects. Guarding ln(0) with a tiny ε is the obvious move and the wrong
-  one: for a starved region, ln(<var>d<sub>w</sub></var>/ε) is a ~20-nat error, the
-  strongest command the controller can emit, purchasable by a handful of hits on the
-  other side. The repair splits the signal's two consumers: for <b>steering</b>, a
-  starved region's density is floored at an eighth of the starvation bar spread over
-  the region ("earned nothing" is priced low, not infinitely low), while the probe
-  <b>verdicts</b> of §6 keep the ε form, since they only run behind a bar that
-  guarantees real signal.</p>
+<p>The formula divides by earnings, so a region that earned nothing needs a rule of its
+  own, and this corner held two real defects. The obvious guard, a tiny ε in place of
+  zero, is the wrong one. Against a starved region, ln(<var>d<sub>w</sub></var>/ε) is an
+  error of about twenty nats, the strongest command the controller can emit, and a
+  handful of stray hits on the other side is enough to buy it. The repair gives the
+  signal's two consumers different floors. For <b>steering</b>, a starved region's
+  density is floored at an eighth of the starvation bar spread over the region, so
+  "earned nothing" is priced low rather than infinitely low. The probe <b>verdicts</b>
+  of §6 keep the ε form, because they only run behind a bar that guarantees real
+  signal.</p>
 <details class="fold">
   <summary>The measured damage, and the surviving asymmetry</summary>
   <p>In an otherwise-dead sample (a pure scan phase), six stray window hits produced a
@@ -2283,53 +2311,54 @@ window = max(window + step, 0.02·C)</pre>
 </details>
 
 <h3 id="s5-5"><a class="hl" href="#s5-5">5.5 The sample period</a></h3>
-<p>Each decision consumes one sample of 4·C requests (capped by the sketch's aging
-  period, whose entry-denominated count also keeps byte-weighted caches from
-  inflating the period by the mean entry size). Shorter periods buy more decisions
-  per era but noisier densities; at 2·C, measured escapes died of verdict noise.
-  Longer periods starve finite traces of decisions. Four capacities per decision is
-  the measured compromise, and it means adaptation is a minutes-to-hours mechanism
-  on production caches, not milliseconds. None of this touches the request path;
-  sampling is a by-product of maintenance the cache already does (§9.3).</p>
+<p>Each decision consumes a sample of 4·C requests. Shorter periods allow more
+  decisions but produce noisier densities; at 2·C, verdict noise prevented measured
+  escapes. Longer periods leave finite traces with too few decisions. Four capacities
+  per decision is the measured compromise.</p>
+<p>The period is also capped by the sketch's aging period, which counts entries rather
+  than bytes, so a byte-weighted cache cannot inflate it by its mean entry size.
+  Elapsed time depends on capacity and request rate: adaptation may take minutes or
+  hours in production. Sampling is a by-product of maintenance, so these decisions add
+  no work to the request path (§9.3).</p>
 
 <h3 id="s5-6"><a class="hl" href="#s5-6">5.6 What this signal cannot do</a></h3>
 <ul>
   <li><b>It only sees residents.</b> Both densities are measured over what the current
-    split retains. A region squeezed until it retains nothing measures as worthless,
-    which is exactly the reading that keeps it squeezed. The floor keeps the window
-    measurable, but measurable is not fairly represented: a 2% window shows a reuse
-    band needing 30% of C <i>nothing</i>, because those entries die before their
-    second touch. The signal isn't weak there; it is systematically, self-consistently
-    wrong. §6 answers.</li>
-  <li><b>Its rest point is share-matching, not hit-rate-optimal.</b> Algebraically the
-    error equals logit(hitShare) − logit(capacityShare), so the controller rests where
-    capacity share equals hit share. A reasonable allocation rule, and not the same
-    objective as maximizing hit rate: window hits are cheaper to earn (main could
-    often have re-earned them had the entries been admitted), so on
-    frequency-favoring workloads share-matching holds a somewhat-too-large window.
-    The chronic bill is 0.5–2.5pp against pure frequency, 4.3 worst observed, always
-    far above LRU. The acute form is worse: nothing prevents the equilibrium from
-    being wrong while every region still earns, §7's subject.</li>
-  <li><b>Averages are not margins.</b> <var>d<sub>m</sub></var> is main's average,
-    dominated by the protected core; what a window-grow actually taxes is main's
-    <i>edge</i>. The steering signal ships with the average; the probe verdict (§6.4)
-    refuses to, and the difference is worth double digits on the workloads where it
-    binds.</li>
+    split retains, so a region squeezed until it retains nothing measures as worthless,
+    and that reading keeps it squeezed. The floor keeps the window measurable, but
+    measurable is not fairly represented. A 2% window shows <i>nothing</i> of a reuse
+    band that needs 30% of the cache, because those entries die before their second
+    touch. The signal is not weak there. It is wrong, and consistently so. §6
+    answers.</li>
+  <li><b>Its rest point is share-matching, not the hit-rate optimum.</b> Algebraically
+    the error is logit(hitShare) − logit(capacityShare), so the controller rests where
+    each region's share of capacity equals its share of hits. That is a reasonable
+    allocation rule, but not the same objective as maximizing hit rate. Window hits are
+    cheaper to earn, since main could often have re-earned them had the entries been
+    admitted, so on frequency-favoring workloads share-matching holds a somewhat too
+    large window. The chronic bill is typically half a point to two and a half against
+    pure frequency, 4.3 at worst, and always far above LRU. The acute form is worse:
+    nothing prevents the equilibrium from being wrong while every region still earns.
+    That is §7's subject.</li>
+  <li><b>Averages are not margins.</b> <var>d<sub>m</sub></var> is main's average
+    density, dominated by the protected core, but what a window grow actually taxes is
+    main's <i>edge</i>. Steering ships with the average. The probe verdict (§6.4)
+    refuses to, and on the workloads where it binds the difference is worth double
+    digits.</li>
 </ul>
-<p>Virtues and debts on the table, the remaining chapters are one machine per debt:
-  starved-and-wrong gets the probe machine (§6), sighted-and-wrong gets the audit
-  (§7), and "the controller optimizes a proxy" gets the anchor and guard rail
-  (§8).</p>
+<p>With the virtues and debts on the table, each of the next three chapters pays one
+  debt: starved-and-wrong gets the probe machine (§6), sighted-and-wrong gets the audit
+  (§7), and "the controller optimizes a proxy" gets the anchor and guard rail (§8).</p>
 
 
 <h2 id="s6"><a class="hl" href="#s6">6 · The probe machine</a></h2>
 <p class="chapterlede">Where the density signal admits it cannot see, the climber runs
-  a real experiment: walk the window for a bounded time, judge the result against the
-  honestly-priced alternative, and undo everything unless it clearly won. The state
-  machine below is the whole shape; the rest of the chapter is each transition, with
-  the workload that breaks without it. Without this machine, pure density steering
-  parks ~28 points below LRU on constructible workloads and never leaves: the
-  catastrophe class whose absence is this design's first requirement.</p>
+  a real experiment. It walks the window for a bounded time, judges the result against
+  the alternative at its true price, and undoes everything unless the walk clearly won.
+  The state machine below is the whole shape; the rest of the chapter takes each
+  transition with the workload that breaks without it. The stakes are the design's
+  first requirement: without this machine, pure density steering can park about 28
+  points below LRU on a constructible workload and never leave.</p>
 <figure>
 <svg viewBox="0 0 740 250" role="img" font-family="system-ui,sans-serif" font-size="11.5">
     <title>Probe machine states</title>
@@ -2372,70 +2401,74 @@ window = max(window + step, 0.02·C)</pre>
 </figure>
 
 <h3 id="s6-1"><a class="hl" href="#s6-1">6.1 Declaring blindness</a></h3>
-<p>A region is <b>starved</b> when its sample hits fall below
-  <code>bar = max(4, requests/1024)</code>: one hit per thousand requests, floored for
-  short samples. The constant is calibrated rather than guessed; trapped regions
-  measure about two orders of magnitude below it, while floor-sized windows on
-  genuinely frequency-bound traces earn comfortably above it. It is a signal
-  classifier in §4.6's sense: "is this measurement meaningful?", never "is this
-  workload recency-ish?"</p>
-<p>One honesty note shapes everything after. There is no threshold that separates
-  "starved because trapped" from "starved because the workload truly has no recency";
-  the two overlap on every resident-only statistic tried, including per-entry reuse
-  flags. Both look identical from inside. That measured impossibility is why what
-  follows runs experiments instead of computing a smarter predicate.</p>
+<p>A region is <b>starved</b> when its hits in a sample fall below the bar,
+  <code>max(4, requests/1024)</code>: one hit per thousand requests, floored for short
+  samples. The constant was calibrated, not guessed. Trapped regions measure about two
+  orders of magnitude below it, while floor-sized windows on frequency-bound traces earn
+  comfortably above it. The bar is a signal classifier in §4.6's sense. It asks "is this
+  measurement meaningful?", never "is this workload recency-ish?"</p>
+<p>One fact shapes everything after. No threshold separates "starved because trapped"
+  from "starved because the workload has no recency to offer". The two overlap on every
+  resident-only statistic tried, per-entry reuse flags included; from inside the cache
+  they look identical. That is why what follows runs experiments instead of computing a
+  smarter predicate.</p>
 
 <h3 id="s6-2"><a class="hl" href="#s6-2">6.2 When to probe: starved <i>and small</i></a></h3>
-<p>Starvation alone doesn't trigger. The rule is the <b>blind corner</b>: probe only
-  when the starved window is small (starved at ≤ C/4 probes up; a fully dead sample
-  probes away from the nearer wall, splitting at C/2). A large starved region needs no
-  probe, because the other region's density already says what to do, and probing "on
-  its behalf" is destructive. The scar: a scan fills main, main earns nothing, and a
-  naive rule concludes the small, hard-working window should be raided mid-scan. Corda
-  lost double digits to that logic in an early variant. A starved main beside a large
-  window arms nothing either: the ratio at that wall can only point upward, so the
-  window cannot move, stillness accrues by construction, and the equilibrium audit
-  (§7) owns the re-test there. The probe that once armed at that corner confirmed
-  onto positions main could not price, and deleting it read as a gain or a tie on
-  every cell where it fired. Small-and-starved is the only corner where nobody can
-  see and nothing else will look.</p>
+<p>Starvation alone does not trigger a probe. The rule is the <b>blind corner</b>: probe
+  only when the starved window is small. A window starved at a quarter of capacity or
+  less probes upward; a sample in which both regions are dead probes away from the
+  nearer wall, splitting at half. A large starved region needs no probe, because the
+  other region's density already says what to do, and probing on its behalf is
+  destructive. The scar behind that rule: a scan fills main, main earns nothing, and a
+  naive rule concludes that the small, hard-working window should be raided mid-scan.
+  An early variant lost double digits on corda to that logic.</p>
+<p>A starved main beside a large window arms nothing either. At that wall the ratio can
+  only point upward, so the window cannot move, stillness accrues by construction, and
+  the audit of §7 owns the re-test. A probe once armed at that corner; it confirmed
+  onto positions main could not price, and deleting it read as a gain or a tie on every
+  cell where it had fired. Small-and-starved is the only corner where nobody can see
+  and nothing else will look.</p>
 
 <h3 id="s6-3"><a class="hl" href="#s6-3">6.3 The walk</a></h3>
-<p>Inside the corner, control reverts to the goal metric: §3's climber, resurrected
-  for a bounded cameo with its weaknesses patched for this job. It is <b>seeded
-  big</b> (the first stride is the full 6.25%·C restart magnitude; this is an
-  expedition, not a drift). It is <b>stubborn</b> (direction reverses only on a
-  sample-to-sample drop past the walk's reversal bar, priced in §6.4, because a
-  probe exists to cross plateaus and the stock flip-on-any-worsening turns
-  crossings into random walks).
-  And on later retries its <b>strides scale</b> (×2, then ×4, capped at the 30% max
-  step) so that deep attempts move decisively instead of creeping. The machine
-  remembers its launch point, and undo means returning exactly there, step-capped
-  with the remainder carried across samples. While a probe's aftermath cools down,
-  blind-corner samples hold still entirely; falling through to a steering step was
-  the delivery vehicle for §5.4's rider.</p>
+<p>Inside the corner, control reverts to the goal metric. The walker is §3's climber,
+  brought back for a bounded walk with its weaknesses patched for this job in three
+  ways.</p>
+<ul>
+  <li>It is <b>seeded big</b>. The first stride is the full 6.25%·C restart magnitude,
+    because this is a deliberate walk, not a drift.</li>
+  <li>It is <b>stubborn</b>. Direction reverses only on a sample-to-sample drop past the
+    walk's reversal bar, priced in §6.4. A probe exists to cross plateaus, and the stock
+    flip-on-any-worsening rule turns a crossing into a random walk.</li>
+  <li>Its <b>strides scale</b> on later retries, ×2 and then ×4, capped at the 30%
+    maximum step, so that deep attempts move decisively instead of creeping.</li>
+</ul>
+<p>The machine remembers its launch point, and undo means returning there, step-capped
+  with the remainder carried across samples. While a probe's aftermath cools down (the
+  <b>refractory</b>), blind-corner samples hold still entirely. Falling through to a
+  steering step during that hold was how the stray-hit trickle of §5.4 once bought its
+  oversized steps.</p>
 
 <h3 id="s6-4"><a class="hl" href="#s6-4">6.4 How a walk ends</a></h3>
-<p>A walk has two interior exits, and they test different statistics. The <b>crash
-  abort</b> is a <i>level</i> test (this sample against the rate frozen when the walk
-  armed), measuring how much damage the walk has done in total. The bold driver's
-  <b>reversal</b> is a <i>first-difference</i> test (this sample against the previous
-  one), measuring whether the last stride hurt. One bar cannot price both: a
-  reversal priced by the level fires at whatever each workload's rate-to-scatter
-  ratio happens to make of it. So each exit carries its own bar, and they only
-  share a bar where both are priced from the same scatter.</p>
+<p>A walk can end through a crash, a reversal back past its launch point, its budget,
+  or adjudication (Fig. 14). A <b>crash</b> compares the current hit rate with the rate
+  frozen at launch: how much has the walk lost overall? A <b>reversal</b> compares the
+  current sample with the previous one: did the last stride hurt?</p>
+<p>These comparisons measure different things, so their thresholds need different
+  treatment. They share a threshold only where both are based on the same estimate of
+  sample-to-sample scatter. Only <b>adjudication</b> can keep the new position.</p>
 <figure>
 <svg viewBox="0 0 740 400" role="img" font-family="system-ui,sans-serif" font-size="10">
   <title>the four ends of a walk</title>
   <g>
-    <text x="10" y="16" fill="#1a1f24" font-weight="600" font-size="12" class="paneltitle">A · adjudication — the honest ending</text>
+    <text x="10" y="16" fill="#1a1f24" font-weight="600" font-size="12" class="paneltitle">A · adjudication, the verdict</text>
     <line x1="28" y1="150" x2="350" y2="150" stroke="#5b6572" stroke-dasharray="5 4" stroke-width="1.2"/>
     <text x="30" y="164" fill="#5b6572" class="ann" font-size="9.5">launch</text>
     <path d="M40,150 H80 V128 H120 V106 H160 V84 H200" fill="none" stroke="#2a78d6" stroke-width="2.2"/>
     <path d="M200,84 H330" fill="none" stroke="#1baf7a" stroke-width="2.6"/>
     <circle cx="206" cy="84" r="5" fill="#1baf7a" stroke="#ffffff" stroke-width="1.4"/>
     <text x="212" y="70" fill="#1baf7a" font-weight="600">watched region earned 4× the bar:</text>
-    <text x="212" y="102" fill="#1baf7a" font-weight="600">confirmed → kept, ladder resets (deepens if steering reverses it)</text>
+    <text x="212" y="102" fill="#1baf7a" font-weight="600">confirmed → kept, ladder resets</text>
+    <text x="212" y="115" fill="#1baf7a" font-weight="600">(deepens if steering reverses it)</text>
   </g>
   <g transform="translate(370,0)">
     <text x="10" y="16" fill="#1a1f24" font-weight="600" font-size="12" class="paneltitle">B · reversal</text>
@@ -2473,7 +2506,7 @@ window = max(window + step, 0.02·C)</pre>
   </g>
   <text x="370" y="394" text-anchor="middle" fill="#5b6572" class="ann">sample number → &#160;·&#160; the line is the window's position &#160;·&#160; dashed = the launch position</text>
 </svg>
-<figcaption>Fig. 14 — The four ends of a walk; adjudication is the honest one, and the sixteen-sample budget guarantees an ending when nothing else fires.</figcaption>
+<figcaption>Fig. 14 — The four ends of a walk; only adjudication renders a verdict, and the sixteen-sample budget guarantees an ending when nothing else fires.</figcaption>
 </figure>
 <div class="rule"><b>Crash</b>: the rate falls below the launch rate by the crash bar.
   Undo now. One crash retries gently; a second consecutive crash escalates like an
@@ -2485,32 +2518,32 @@ window = max(window + step, 0.02·C)</pre>
     once; a probe whose own damage crashes it does so on every attempt, so the second
     consecutive crash escalates <b>on the walk's own ladder</b>: audit crashes count
     on the audit layer's streak and rung, starvation crashes on the probe machine's,
-    because on the shared form three exogenous pulses paired three lone audit crashes
-    into the deepest rung and a 130-sample stand-down at the floor (the H4-C1 pulse
-    train).</p>
+    because on the shared form three exogenous pulses, paired with three lone audit
+    crashes, drove the machine to the deepest rung and a 130-sample stand-down at the
+    floor.</p>
   <p>A starvation probe's bar is priced against the workload's own scatter: three
     measured deviations, floored at 5pp and capped at 15pp. Unpriced, weather aborted
     the walk that is a blind corner's only exit, and uncapped, all-blind workloads
     whose scatter is enormous let damaging walks roam; the cap keeps a real collapse
     aborting. The deviation is read live rather than frozen: the walk's own transient
-    lifts the bar exactly while the walk is exposed to the weather.</p>
+    lifts the bar for as long as the walk is exposed to the weather.</p>
   <p>An audit's walk keeps the absolute 5pp in <i>depth</i> (every depth pricing
     traded real-corpus basin cadence for constructed prizes), capped at 15% of the
-    rate frozen at the arm, because the threshold is a <i>level</i> test and a
-    workload earning less than 5pp in total cannot satisfy it at all, leaving a walk
-    that halves the hit rate bounded by nothing but its budget (arc_S3).
-    That cap binds only where the launch rate is under a third and is inert
-    everywhere above it: it narrows the bar where the absolute one is vacuous, the
-    opposite of the pricings that died. The audit also prices persistence in
-    <i>time</i>: a first audit crash aborts on its first below-bar sample exactly
-    like a starvation probe, while the retry of an equilibrium that already crashed
-    one audit tolerates two below-bar samples, holding its committed direction at a
-    decayed stride while the dip is adjudicated, and aborts on the third. Two samples
-    of tolerance cross the terrain valley that an absolute one-sample abort made an
-    absorbing horizon (the moat: the far bank is one stride past where the abort
-    fired, at every rung) and absorb one-sample pulses; a sustained collapse still
-    aborts at 5pp, and a first abort stays cheap everywhere (every-walk tolerance
-    made short traces pay longer failed excursions).</p>
+    rate frozen at the arm. The cap exists because the threshold is a <i>level</i>
+    test: a workload earning less than 5pp in total can never trip it, leaving a walk
+    that halves the hit rate bounded by nothing but its budget (arc_S3). The cap binds
+    only where the launch rate is under a third and is inert everywhere above it, so it
+    narrows the bar where the absolute one is vacuous, the opposite of the pricings
+    that died. The audit also prices persistence in <i>time</i>. A first audit crash
+    aborts on its first below-bar sample, like a starvation probe. The retry of an
+    equilibrium that already crashed one audit tolerates two below-bar samples, holding
+    its committed direction at a decayed stride while the dip is adjudicated, and
+    aborts on the third. Two samples of tolerance cross the terrain valley that a
+    one-sample abort made an absorbing horizon (the moat family: the far bank is one
+    stride past where the abort fired, at every rung), and they absorb one-sample
+    pulses. A sustained collapse still aborts at 5pp, and a first abort stays cheap
+    everywhere, since tolerance on every walk made short traces pay for longer failed
+    excursions.</p>
 </details>
 <div class="rule"><b>Reversal</b>: a sample-to-sample drop past the reversal bar flips
   the bold driver, and a reversed walk that would cross back past its launch point
@@ -2525,7 +2558,7 @@ window = max(window + step, 0.02·C)</pre>
     test must never be priced below the noise it has to survive, and a reversal
     through base is charged as a completed failure (it doubles the audit ladder and
     its wait), so a bar the noise can trip is expensive. Priced by the level alone it
-    was exactly that: on the give-back sentinel that exposed it (shieldtrap) the bar
+    was: on the give-back sentinel that exposed it (shieldtrap) the bar
     measured a median 0.28 deviations, and one walk died to a 0.17-deviation sample
     at a 14.4% window that, held, confirms at 56.4%. The level is not a new
     constant: 15% of the three-deviation band is 0.45 deviations, with a measured
@@ -2536,26 +2569,25 @@ window = max(window + step, 0.02·C)</pre>
 <div class="rule"><b>Budget</b>: sixteen samples, then undo and fail. Nothing else is
   guaranteed to fire; the crash exit is arithmetically dead when the base rate is
   under 5%, so without a hard budget an unlucky walk was a liveness hole.</div>
-<div class="rule"><b>Adjudication</b>, the honest ending: once the watched region has
-  earned enough to judge (4× the bar), the verdict is rendered. An upward probe
-  confirms only if the grown window out-earned, per slot, <b>probation's density as
-  it was frozen when the probe armed</b>. The two densities come from different
-  samples, so the frozen one is scaled to the current sample's length before they are
-  compared. A confirmed position is kept and the retry ladder resets; if steering
-  reverses the position in the same sample the walk kept nothing, and the ladder
-  deepens instead (§6.5). Anything else, including "no better, no worse", is undone in
-  full.</div>
+<div class="rule"><b>Adjudication</b>, the one ending with a verdict. Once the watched
+  region has earned enough to judge, four times the bar, the verdict is rendered. An
+  upward probe confirms only if the grown window out-earned, per slot, <b>probation's
+  density as it was frozen when the probe armed</b>; the frozen density is scaled to the
+  current sample's length first, since the two come from different samples. A confirmed
+  position is kept and the retry ladder resets. If steering reverses the position in
+  the same sample, the walk kept nothing and the ladder deepens instead (§6.5).
+  Anything else, including "no better, no worse", is undone in full.</div>
 <details class="fold">
   <summary>Why probation, why frozen: five designs, and the one priced trade</summary>
   <p>That verdict took five designs, and both of its choices are load-bearing. Why
     <i>probation</i>: follow a window-grow through §1.2's geometry: the quota comes
     out of protected, protected overflow demotes into probation, and probation expels
-    its coldest tail. Probation's edge is what the grow actually displaces, so it is
-    the honest price. Why <i>frozen</i>: the walk contaminates its own evidence, since
+    its coldest tail. Probation's edge is what the grow displaces, so it is the true
+    price. Why <i>frozen</i>: the walk contaminates its own evidence, since
     its demotions push warm entries into probation and enrich the live rate while the
     walk runs, so a live comparison becomes a veto that always says no.</p>
-  <p>Judging against main's <i>average</i> (the obvious simpler form) vetoes genuinely
-    winning positions because the average is dominated by the protected core the grow
+  <p>Judging against main's <i>average</i> (the obvious simpler form) vetoes winning
+    positions because the average is dominated by the protected core the grow
     never touches: a family of modest-reuse-band workloads sat 14–17 points below its
     achievable rate under that verdict, and three other trap families traded the same
     way. Judging against <i>live</i> probation was demonstrated to be absorbing on a
@@ -2571,32 +2603,39 @@ window = max(window + step, 0.02·C)</pre>
     vetoes an escape the sloppier average form occasionally confirmed by luck; no
     real-trace echo across the defended set, kept as a named sentinel.</p>
 </details>
+<p>In short, a walk ends by crash, reversal, budget, or verdict. The first three undo it.
+  Only the verdict can keep it, and only against the price the walk actually
+  displaced.</p>
 
 <h3 id="s6-5"><a class="hl" href="#s6-5">6.5 Strays, and escalating commitment</a></h3>
-<p>The subtlest mechanism resolves a genuine dilemma. When the window grows, its
-  ledger fills with hits that are not evidence: <b>transferred</b> hits (grown
-  boundaries relabel probation entries as window entries, whose ordinary traffic now
-  counts as window traffic) and <b>stray</b> hits (more slots incidentally catch
-  re-touches the window deserves no credit for). Both scale with the window's size
-  while their density stays low, so a deep walk manufactures its own earnings.
-  Against an absolute adjudication trigger this cuts both ways: where the small
-  window is correct, strays trip the trigger early and the probe exits cheaply,
-  which is exactly right; where the small window is a trap, the same early trigger
-  fires one stride short of the reuse band, the verdict fails on stray-quality
-  evidence, and the trap becomes absorbing. No single exit rule wins both; four rule
-  families were measured onto exactly this tradeoff.</p>
-<div class="rule"><b>Escalating commitment</b> prices the two cases apart over time.
-  First-attempt probes may exit at the first judgment opportunity: cheap, and on
-  healthy workloads that is the whole story. Each round that keeps nothing doubles the
-  rung (16 → 32 → 64): a <i>failed</i> verdict, which also serves the refractory
-  wait, or a confirm that steering reverses at once, which serves none. The deeper rungs
-  <b>commit</b> the next walk to a minimum depth (2 samples, then 10) before the early
-  exit may fire, pushing it past the stray zone. A steady trap escalates itself out in about three
-  rounds (~100 samples: a bounded dip instead of a permanent pin); a workload whose
-  floor is genuinely correct never escalates far enough to pay the deep-walk price,
-  its retries just get rarer. Confirmation is not exempt from the gate; early
-  confirms on stray evidence reset the ladder and neuter the escalation (measured:
-  a long-trace escape fell from 53.3 to 38.7 with the exemption).</div>
+<p>The subtlest mechanism resolves a real dilemma. When the window grows, its ledger
+  fills with hits that are not evidence. <b>Transferred</b> hits come from probation
+  entries that a grown boundary relabels as window entries, so their ordinary traffic
+  now counts as the window's. <b>Stray</b> hits come from the extra slots incidentally
+  catching re-touches the window deserves no credit for. Both grow with the window's
+  size while their density stays low, so a deep walk manufactures its own earnings.
+  Against a fixed adjudication trigger this cuts both ways. Where the small window is
+  correct, strays trip the trigger early and the probe exits cheaply, which is right.
+  Where the small window is a trap, the same early trigger fires one stride short of
+  the reuse band, the verdict fails on stray-quality evidence, and the trap becomes
+  absorbing. No single exit rule wins both cases; four rule families were measured onto
+  this tradeoff.</p>
+<div class="rule">
+  <p><b>Escalating commitment</b> keeps early attempts cheap while giving repeated
+    failures a way out. The first probe may stop at its first judgment opportunity.</p>
+  <p>A failed verdict deepens the retry rung: 16 → 32 → 64 samples, and incurs the
+    corresponding refractory wait. A confirmation immediately reversed by steering
+    also deepens the rung, without that wait. Crash endings follow §6.4's separate rule.</p>
+  <p>The deeper rungs require at least two, then ten, samples before adjudication can
+    end the next walk. This commitment carries the probe beyond the stray-hit zone.
+    It applies to confirmations as well as failures: an early confirmation on stray
+    evidence would reset the ladder before the walk reached useful territory.</p>
+</div>
+<p>On the measured steady trap, this escalation produces an escape in about three
+  rounds, roughly 100 samples. A workload whose floor is correct does not escalate far
+  enough to pay the deep-walk price; its retries become rarer. Exempting confirmations
+  from the minimum depth had a measurable cost: a long-trace escape fell from 53.3 to
+  38.7.</p>
 <p>A confirm can be reversed because the two prices differ. The verdict compares the
   grown window with the probation it displaced; steering compares it with main's
   average, which the protected core dominates. When the window out-earns a thin
@@ -2730,13 +2769,13 @@ window = max(window + step, 0.02·C)</pre>
 <h3 id="s6-6"><a class="hl" href="#s6-6">6.6 What it adds up to</a></h3>
 <p>The probe machine is §4.4's family rebuilt without ghosts: it doesn't simulate the
   counterfactual, it briefly becomes it, on the real cache, where measurement has no
-  fidelity gap. Every discipline above bounds the cost of that honesty: arm only
+  fidelity gap. Every discipline above bounds the cost of that experiment: arm only
   where the incumbent signal has recused itself, walk under budget, judge against
-  the frozen honest price, undo everything short of a confirmed win, and pay for
+  the frozen true price, undo everything short of a confirmed win, and pay for
   repeated failure with patience instead of damage. On workloads that never trap,
-  the whole machine amounts to a few shallow excursions per era, measured on the
-  real corpus as a ~1pp premium on three cells and nothing elsewhere. Insurance,
-  priced like insurance.</p>
+  the whole machine amounts to a few shallow walks per era, measured on the
+  real corpus as a ~1pp premium on three cells and nothing elsewhere. The premium is
+  small because the payout is rare and large.</p>
 
 
 <h2 id="s7"><a class="hl" href="#s7">7 · The audit</a></h2>
@@ -2763,15 +2802,19 @@ window = max(window + step, 0.02·C)</pre>
 
 <h3 id="s7-2"><a class="hl" href="#s7-2">7.2 The audit contract</a></h3>
 <h4 id="s7-2-1"><a class="hl" href="#s7-2-1">7.2.1 When audits arm</a></h4>
-<div class="rule"><b>The audit.</b> When the window has held one position (within a
-  2%-of-C band) for 32 consecutive samples, arm the §6 machine from the held
-  equilibrium, walking toward the farther wall. The first audit after a (re)size is
-  a <b>cold-start calibration probe</b> and arms after only four still samples. The
-  walk itself is §6's: same strides, same crash/reversal/budget exits, with §6.4's
-  audit-specific bar pricing. The audit escalates and schedules on its <b>own</b>
-  rung and crash streak, and only a completed <i>failure</i> at the deepest rung
-  doubles the wait between audits, up to 512 samples, so a settled workload is
-  re-tested ever more rarely.</div>
+<div class="rule">
+  <p><b>The audit.</b> An audit becomes due when the positional-stillness counter reaches
+    its current wait, normally 32. At the next eligible decision, it starts the §6
+    walker toward the farther wall. Each sample adds one to the counter when the window
+    differs from its previous sampled position by no more than 2% of capacity; a larger
+    move subtracts one, down to zero (§7.3).</p>
+  <p>The first audit after a start or a resize is a <b>cold-start calibration</b>, due
+    after only four still samples. It uses §6's strides and crash, reversal, and budget
+    exits, with the audit's own thresholds from §6.4.</p>
+  <p>The audit keeps its own rung and crash streak, separate from the starvation probe's.
+    Only a completed <i>failure</i> at the deepest rung doubles the wait between audits,
+    up to 512 samples. A settled workload is therefore re-tested less often.</p>
+</div>
 <h4 id="s7-2-2"><a class="hl" href="#s7-2-2">7.2.2 One walker, two contracts</a></h4>
 <p>Both triggers drive the same walker, so the two are easiest to read side by side. The
   strides, the exits and the budget are shared; the arming, the pricing, the judge and
@@ -2790,8 +2833,8 @@ window = max(window + step, 0.02·C)</pre>
     <tr>
       <td><b>arms when</b></td>
       <td>the starved region is the small one</td>
-      <td>the window has held one 2%-of-C band for 32 samples, or 4 after a
-        (re)size</td>
+      <td>the stillness counter reaches its wait: normally 32, or 4 after a
+        (re)size; movement of at most 2% of C counts as still (§7.3)</td>
     </tr>
     <tr>
       <td><b>direction</b></td>
@@ -2847,60 +2890,71 @@ window = max(window + step, 0.02·C)</pre>
   confirm leaves the audit schedule untouched.</p>
 <details class="fold">
   <summary>The schedule's fine print: direction, calibration, ordering, cadence</summary>
-  <p><b>Direction.</b> The walk alternates at interior positions, except that a park's
-    first audit follows the walk that confirmed it while the park stands and the smoothed
-    rate has held within a restart threshold since the confirm (a confirm ends a walk on
-    evidence of improvement, not its exhaustion), and it refuses a
-    direction with less than one stride of room: a walk sent into a nearer wall
-    clamps on its entry stride, stands still for the rest of its budget, and that
-    information-free expiry would be priced as a failed experiment, doubling both
-    the refractory ladder and the audit clock.</p>
+  <p><b>Direction.</b> The walk alternates at interior positions. A park's first audit
+    is the exception: it follows the walk that confirmed the park, while the park stands
+    and the smoothed rate has held within a restart threshold since the confirm, because
+    a confirm ends a walk on evidence of improvement rather than on its exhaustion. A
+    direction with less than one stride of room is refused: a walk sent into a nearer
+    wall clamps on its entry stride, stands still for the rest of its budget, and that
+    information-free expiry would be priced as a failed experiment, doubling both the
+    refractory ladder and the audit clock.</p>
   <p><b>Why the calibration arms at four.</b> A sighted false equilibrium pins from
     its first sample, and waiting the standard clock spends most of a short trace
-    motionless while the reactive tier would have been exploring from sample one; the mixture trap's entire deficit against it was this prefix. Every
-    later wait uses the standard clock, and the schedule is the audit layer's own: a
-    starvation probe's confirm leaves it untouched. (It once reset it to the
-    standard wait, spending the calibration before the first audit ever ran, and
-    handing the §7.3 position jam the 32-sample bar that ordinary burstiness can
-    keep breaking; the same cross-subsystem latch shape as the fresh-park shield's.) The landing a starvation confirm validates is density's
-    opinion, which is exactly what an audit must not take on faith. The priced cost
-    is one early misconfirm window on a steadily rising workload (a trend clears any
-    raw streak; regimeramp ~−1.3 once the walk-beats-base gate recovered part of it,
-    bounded by the shield plus the next audit), plus the calibration's exploration
-    on short traces whose escape came from a starvation probe (mixture d025 ~−0.9,
-    still above LRU with a steady state 3 points over); the prize on sighted traps
-    is the whole prefix (mixture stock +18.7, to above the reactive arm).</p>
+    motionless while the reactive tier would have been exploring from sample one; the
+    mixture trap's entire deficit against it was this prefix. Every later wait uses the
+    standard clock, and the schedule belongs to the audit layer alone: a starvation
+    probe's confirm leaves it untouched, because the landing that confirm validates is
+    density's opinion, which is what an audit must not take on faith. (That confirm
+    once reset the schedule to the standard wait, spending the calibration before the
+    first audit ever ran and handing the §7.3 position jam a 32-sample bar that ordinary
+    burstiness can keep breaking; the same cross-subsystem latch shape as the
+    fresh-park shield's, §8.2.) The priced cost has two parts. One is an early
+    misconfirm window on a steadily rising workload, since a trend clears any raw
+    streak (regimeramp ~−1.3 once the walk-beats-start gate recovered part of it,
+    bounded by the shield plus the next audit). The other is the calibration's
+    exploration on short traces whose escape came from a starvation probe (mixture
+    d025 ~−0.9, still above LRU with a steady state 3 points over). The prize on
+    sighted traps is the whole prefix (mixture stock +18.7, to above the reactive
+    arm).</p>
   <p><b>Ordering.</b> An audit may also arm from a blind-corner sample the probe
-    machine would otherwise spend holding: the blind-corner gate outranks the goal-metric
-    branches, which is right for the guard rail, since it adjudicates a shortfall
-    <i>on</i> the starved sample, and wrong for an audit, which adjudicates over the
-    samples that follow. Left ordered beneath it, a corner that never cleared served
-    its whole refractory motionless while the clock said the position was due.</p>
+    machine would otherwise spend holding. The blind-corner gate outranks the
+    goal-metric branches, which is right for the guard rail (it adjudicates a shortfall
+    <i>on</i> the starved sample) and wrong for an audit (it adjudicates over the samples
+    that follow). With the audit ordered beneath the gate, a corner that never cleared
+    sat motionless through its whole refractory while the clock said the position was
+    due.</p>
   <p><b>Cadence.</b> The audit's endings neither deepen the starvation machine's
     ladder (which sets that machine's stride and commitment), nor re-arm its
     refractory, nor inherit its escalation. An unconfirmed audit retries on its ladder's cadence; a crash, lone
     or streak-escalated, keeps the cadence at any rung, because deferring the retry
-    is exactly what an exogenous pulse train would want.</p>
+    is what an exogenous pulse train would want.</p>
 </details>
 <h4 id="s7-2-3"><a class="hl" href="#s7-2-3">7.2.3 Why hit rate judges the audit</a></h4>
 <p>One question decides whether audits work: who judges the walk? The first
   implementation reused the probe's density verdict and failed in the most
   instructive way in this project. On a wide-window equilibrium the audit walked the
   window from 80% of the cache down to 20% with the hit rate rising the whole way,
-  and density failed the walk at depth five. Of course it did: the audited position
-  is density's own attractor, every step away registers as imbalance, and the signal
-  under audit votes to end the audit. A proxy cannot adjudicate the re-examination
-  of its own opinion.</p>
-<div class="rule"><b>The audit verdict.</b> Audits are judged by the goal metric,
-  under §2.4's precautions: the walk must survive a committed depth of five samples,
-  then confirms only on a <b>streak of four consecutive raw samples</b> above the
-  pre-walk reference <b>frozen when the audit armed</b> (the same self-contamination
-  logic as the frozen probation baseline) plus the 1% margin floor, <b>and</b> only if
-  the walk matched or beat the sample it started from at least once. Otherwise the
-  walk runs out its budget and undoes in full. The reference is the smoothed rate of
-  the position the walk leaves, never the anchor's claim. Whether that position is
-  measurably worse than the anchor is the rail's question, and a claim earned in a
-  regime that has ended is a bar no walk can clear.</div>
+  and density failed the walk at depth five. The failure was structural: the audited
+  position is density's own attractor, every step away registers as imbalance, and so
+  the signal being audited also decides the audit. A proxy cannot adjudicate the
+  re-examination of its own opinion.</p>
+<div class="rule">
+  <p><b>The audit verdict.</b> Audits are judged by hit rate. Confirmation requires
+    all three conditions:</p>
+  <ul>
+    <li>The walk has reached its committed depth of five samples.</li>
+    <li>Four consecutive raw samples exceed the frozen pre-walk reference plus
+      a margin of one percentage point.</li>
+    <li>At least one sample has matched or beaten the sample the walk started from.</li>
+  </ul>
+  <p>The reference is the smoothed rate of the position the walk leaves, frozen when
+    the audit starts. Freezing prevents the walk from changing its own benchmark.
+    Without confirmation, the walk exhausts its budget and undoes its movement, unless
+    a crash or reversal ends it earlier.</p>
+  <p>The anchor's claim serves a different decision: whether the guard rail should
+    return to a previously proven position. Using that claim to judge an audit could
+    demand a hit rate from a workload regime that has already ended.</p>
+</div>
 <details class="fold">
   <summary>The audit measured against the anchor's claim, and what it cost</summary>
   <p>The claim was the reference for as long as an anchor was planted. It re-syncs to
@@ -2908,9 +2962,9 @@ window = max(window + step, 0.02·C)</pre>
     before a regime shift that lands with the window elsewhere outlives the regime
     that earned it, and every audit armed away from the anchor was judged against
     it. On the constructed witness the audit walked from a 23% hit rate to a 53%
-    wall and sat there for ten samples, and failed at budget against a claim of
-    58% (31.2 against a 54.1 ceiling at 128 samples); on a real cloud-physics
-    trace a claim planted while the cache filled held the confirm off a genuine
+    wall, sat there for ten samples, and failed at budget against a claim of 58%
+    (31.2 against a 54.1 ceiling at 128 samples). On a real cloud-physics trace a
+    claim planted while the cache filled held the confirm off a genuine
     prize and the walk ran past it to the floor (44.1 → 46.1 with the reference
     it leaves). Measured against the rate it leaves, the witness reads 48.5, sixty
     of the sixty-eight battery rows are bit-identical at eight seeds, and the rest
@@ -2927,13 +2981,13 @@ window = max(window + step, 0.02·C)</pre>
     inert on every real cell of a 32-trace corpus: bars of 4.3–62.4pp (median 20.7)
     against 1–10pp effects, the 1pp floor binding on none, with instrumented walks
     measuring real +5.4pp and +11pp gains and rejecting them. A consecutive run
-    prices the bar by run-length statistics instead: a sensitivity gain
-    of roughly 2–3×, not noise-independence: the walk offers about a dozen
-    overlapping chances, so a genuinely neutral position under symmetric scatter
-    still leaks confirms at a material rate (the priced costs on trending openings
-    are this exposure), but the streak needs the positional gain to clear the
-    per-sample noise trough rather than three deviations, and raw samples carry no
-    smoothing lag, so a confirm lands at the position that earned it. The asymmetry
+    prices the bar by run-length statistics instead. That is a sensitivity gain of
+    roughly 2–3×, not noise-independence: the walk offers about a dozen overlapping
+    chances, so a neutral position under symmetric scatter still leaks confirms at a
+    material rate, and the priced costs on trending openings are this exposure. But
+    the streak needs the positional gain to clear only the per-sample noise trough
+    rather than three deviations, and raw samples carry no smoothing lag, so a confirm
+    lands at the position that earned it. The asymmetry
     with the rail is intentional, since a false confirm self-heals at the next audit
     while a false veto churns the anchor continuously.</p>
   <p><b>Why the streak alone is not enough.</b> The reference
@@ -2959,30 +3013,31 @@ window = max(window + step, 0.02·C)</pre>
 </details>
 
 <h4 id="s7-2-4"><a class="hl" href="#s7-2-4">7.2.4 What the audit buys</a></h4>
-<p><b>Sighted false equilibrium.</b> The whisper pin converts from 9 points below LRU
-  to 2 above it: 55.5 → 66.8 against 64.6. The streak verdict buys the escape, and
-  cold-start calibration removes the pinned prefix.</p>
-<p><b>Hit-rate weather.</b> The escape survives modulation that defeated the
-  deviation-priced verdict. At ±8pp, it reaches 65.2 with period 12 and 64.5 with
-  period 6—approximately LRU and above the reactive climber's 59.4. A deeper dose
-  crosses the audit's crash bar once; §6.4's crash-streak tolerance repairs that
-  failure to within half a point of LRU. The mixture-with-modulation dose clears LRU
-  on every seed (48.0 → 56.6 against 55.3), and the at-scale pins escape as far as
-  each trace lets the ladder escalate.</p>
-<p><b>Real corpus.</b> The layer is neutral insurance on average (−0.03pp) and
-  load-bearing on particular cells. On cp_w097@16384 the audits are worth 3.3 points
-  (46.9 with them, 43.6 without) of a gap that still leaves the machine 3.2 behind
-  the reactive climber: their confirms land at high windows, around 56% and 26%, not
-  at the broad 5–15% static optimum. §11 separates that recovery from the steering
+<p><b>Sighted false equilibrium.</b> The whisper pin, the §7.1 shape built as a trap,
+  converts from 9 points below LRU to 2 above it (55.5 → 66.8 against LRU's 64.6). The
+  streak verdict buys the escape, and the cold-start calibration removes the pinned
+  prefix.</p>
+<p><b>Hit-rate weather.</b> The escape survives rate modulation that defeated the
+  earlier deviation-priced verdict. Under ±8pp of modulation the audit still reaches
+  approximately LRU (65.2 at period 12, 64.5 at period 6) where the reactive climber
+  reaches 59.4. A deeper dose crosses the audit's crash bar once, and §6.4's
+  crash-streak tolerance repairs that to within half a point of LRU. The mixture family
+  under the same modulation clears LRU on every seed (48.0 → 56.6 against 55.3), and
+  the at-scale pins escape as far as each trace lets the ladder escalate.</p>
+<p><b>Real corpus.</b> On real traces the layer is neutral insurance on average
+  (−0.03pp) and decisive on a few cells. On one cloud-physics cell (cp_w097 at 16k) the
+  audits are worth 3.3 points, and the machine still finishes 3.2 behind the reactive
+  climber there, because its confirms land at high windows, around 56% and 26%, rather
+  than at the broad 5–15% static optimum. §11 separates that recovery from the steering
   bias it cannot repair.</p>
-<p><b>Layer ablation.</b> Across the 52-row constructed battery, removing the audit
-  costs 268 points over the 31 rows it helps and returns 13 over the 16 it hurts—about
-  21:1, with a worst single-row cost of 2.4. The gain is concentrated: without the
-  audit, all eleven whisper / jam / pulse-train rows collapse to about 55.5, and the
-  at-scale mixture pins collapse to 31–35. The rows it hurts are already far above
-  LRU; those losses are the duty-cycle price carried into §11.</p>
-<p><b>Reading rule.</b> Do not attribute the bimodal-alternation battery mean to this
-  layer. With N=8 and the arms rotated, the audit is roughly inert there; the density
+<p><b>Layer ablation.</b> Across the 52-row constructed battery, removing the audit costs
+  about 21 points for every one it returns (268 points lost over the 31 rows it helps,
+  13 regained over the 16 it hurts, worst single row 2.4). The gain is concentrated:
+  without the audit, all eleven whisper, jam and pulse-train rows collapse to about
+  55.5, and the at-scale mixture pins collapse to 31–35. The rows it hurts are already
+  far above LRU, and those losses are the duty-cycle price carried into §11.</p>
+<p><b>Reading rule.</b> Do not credit the bimodal-alternation battery mean to this
+  layer. With N=8 and the arms rotated the audit is roughly inert there; the density
   tier produces the value on those rows.</p>
 <figure>
 <svg viewBox="0 0 740 266" role="img" font-family="system-ui,sans-serif" font-size="11.5">
@@ -3049,50 +3104,54 @@ window = max(window + step, 0.02·C)</pre>
       <tspan x="46" dy="16">the 65536 cell carries no LRU anchor; it narrows a −27pp gap to the
       reactive climber to −8pp, ending mid-escalation</tspan></text>
     </svg>
-  <figcaption>Fig. 16 — The audit converts the whisper pin from 9 points below LRU to 2 above it, and the at-scale constructions escape as far as each trace’s length lets the ladder escalate. The bars record the layer at its introduction, before the shipped build lifted whisper clear of LRU (66.8 against 64.6).</figcaption>
+  <figcaption>Fig. 16 — Results when the audit layer was introduced. Audits lift the
+    whisper construction from 9 points below LRU to approximately LRU; the larger
+    constructions recover as far as their trace lengths allow the retry ladder to
+    progress. Later changes raise whisper to 66.8, about 2 points above LRU's 64.6
+    (§7.2.4).</figcaption>
 </figure>
 
 <h3 id="s7-3"><a class="hl" href="#s7-3">7.3 The clock counts stillness of position</a></h3>
-<p>The clock behind "32 quiet samples" carries a lesson bought in hostile review. The
-  first clock counted <i>calm</i>: samples without a big rate swing or a big
+<p>The clock behind "32 still samples" carries a lesson from hostile review. The first
+  clock counted <i>calm</i>: samples without a big rate swing and without a big
   commanded step. Both halves are the wrong observable. A periodic crash-scale rate
-  swing arriving faster than the wait (achievable innocently by bursty traffic)
-  zeroes a calm-based clock forever, disabling exactly the layer built to catch
-  confident wrongness. And "no large commanded step" confuses the controller's
-  requests with the cache's state; a position held <i>against</i> discarded commands
-  (a rail) is precisely a held equilibrium worth auditing. The repaired clock counts
-  <b>positional stillness only</b>: samples whose actual window stayed within the
-  band accumulate, and rate events never touch the count. A band rather than a
-  point, because held equilibria orbit; the transfer geometry alone keeps the window
+  swing that arrives faster than the wait, which bursty traffic can produce innocently,
+  zeroes a calm-based clock forever and disables the layer built to catch confident
+  wrongness. And "no large commanded step" confuses the controller's requests with the
+  cache's state: a position held <i>against</i> discarded commands, which is what the
+  guard rail produces, is a held equilibrium worth auditing. The repaired clock counts
+  <b>positional stillness only</b>. Samples whose actual window stayed within the band
+  accumulate, and rate events never touch the count. It is a band rather than a point
+  because held equilibria orbit; the transfer geometry alone keeps the window
   wiggling.</p>
-<p>A later hostile review bought the same lesson from the other side. Positional
-  stillness with a <i>hard reset</i> is an observable an adversary can drive too: a
-  run that zeroes on any super-band move never completes if the window can be made
-  to move once per wait, and the density arm commands a super-band step for a
-  modest earnings imbalance, a factor of e<sup>band/gain</sup> ≈ 2 between the
-  regions. A dose-matched whisper construction that merely <i>modulates</i> its
-  trickle's delivery (same volume, same optimum; LRU and every static window
-  unchanged) held the count at zero on 121 of 122 samples and pinned the climber at
-  the audit-free value, 8.9 points below LRU, and ±50% jitter on the burst timing
-  still jammed, so this was not an alignment stunt.</p>
-<p>The repaired clock <b>decays by
-  one on a moving sample instead of resetting</b>: a mostly-still workload still
-  accumulates toward its audit, while a window moving on at least half its samples (genuine motion, not a held orbit) never accumulates. That half-motion threshold
-  is analytic, not realizable.</p>
-<p>Measured 50%- and 67%-motion cadences fail to jam
-  (steering does not hold a clean partial alternation, and the decisive control is
-  that the audit-free arm <i>outscores</i> the layer there: inert, not suppressed),
-  leaving aligned every-sample motion the only starving cadence (§11). The decay
-  rate is load-bearing at one: the burst cadences that recover do so because the
-  calibration audit gets a foothold, parks, and the park's own stillness sustains
-  the audit cycle.</p>
+<p>A later hostile review taught the same lesson from the other side. Positional
+  stillness with a <i>hard reset</i> is an observable an adversary can drive too. A
+  count that zeroes on any move past the band never completes if the window can be
+  made to move once per wait, and density commands such a move for a modest earnings
+  imbalance, a factor of about two between the regions (e<sup>band/gain</sup>). A
+  whisper construction that merely <i>modulates</i> the delivery of its trickle, with
+  the same volume, the same optimum, and LRU and every static window unchanged, held
+  the count at zero on 121 of 122 samples and pinned the climber 8.9 points below LRU,
+  at the audit-free value. It still jammed with ±50% jitter on the burst timing, so
+  this was not an alignment stunt.</p>
+<p>So the repaired clock <b>decays by one on a moving sample instead of resetting</b>. A
+  mostly still workload still accumulates toward its audit, while a window that moves
+  on at least half its samples, real motion rather than a held orbit, never
+  accumulates. That half-motion threshold is analytic rather than realizable. Measured
+  50% and 67% motion cadences fail to jam, because steering does not hold a clean
+  partial alternation, and the decisive control is that the audit-free arm
+  <i>outscores</i> the layer there, so the layer is inert rather than suppressed. That
+  leaves motion on every sample, aligned to the grid, as the only starving cadence
+  (§11). The decay of one per moving sample is what the recovery rests on. The burst
+  cadences that recover do so because the calibration audit gets a foothold, parks,
+  and the park's own stillness sustains the audit cycle.</p>
 <details class="fold">
-  <summary>The companion repairs, and the ablations that prove each is load-bearing</summary>
+  <summary>The companion repairs, and the ablations that prove each is needed</summary>
   <p>After a confirmed probe that density keeps, the retry ladder resets so re-probing
-    is cheap (load-bearing for phase alternation), unless the confirm only re-finds ground the
-    ladder had already confirmed and lost, which deepens it instead. An audit inheriting that reset would re-arm
-    within a sample or two, so the audit retry is floored at the initial refractory
-    (16 samples). On the periodic-swing construction the defended value is 63.7
+    is cheap (phase alternation depends on it), unless the confirm only re-finds ground
+    the ladder had already confirmed and lost, which deepens it instead. An audit
+    inheriting that reset would re-arm within a sample or two, so the audit retry is
+    floored at the initial refractory (16 samples). On the periodic-swing construction the defended value is 63.7
     against an undisturbed control's 63.8, and disabling either the positional clock
     or the retry floor alone gives the broken 55.2 back.</p>
   <p>The position jam had a companion of its own: the starvation confirm's schedule
@@ -3102,7 +3161,8 @@ window = max(window + step, 0.02·C)</pre>
     attack (the schedule fix alone recovers the jittered burst, the decay alone the
     period-2.5 burst) and only together do they close every unaligned variant
     (56.0 → 66.4/66.5 against a 66.9 dose-matched control). The residue is the
-    <i>sample-aligned</i> every-sample jam, which no consecutive-run clock survives, a §11 limit with a known study direction, priced with the grid's other
+    <i>sample-aligned</i> every-sample jam, which no consecutive-run clock survives; §11
+    carries it as a limit with a known study direction, priced with the grid's other
     alignment exposures.</p>
 </details>
 
@@ -3111,55 +3171,62 @@ window = max(window + step, 0.02·C)</pre>
   what the goal metric has actually witnessed and refuse to stand anywhere measurably
   worse. That memory is one remembered position with one remembered claim, plus the
   discipline that bounds the claim. Most of this chapter is that discipline;
-  each rule was bought by a specific failure.</p>
+  each rule answers a specific measured failure.</p>
 
 <h3 id="s8-1"><a class="hl" href="#s8-1">8.1 A place worth defending</a></h3>
 <p>Two failure shapes demand the memory. Share-matching's rest point moves with the
   traffic mix, so the controller can walk away from a better position that remains
-  available (F-5). And a probe- or audit-won position can be quietly dismantled: an
-  audit's win is, by construction, a position density disagrees with, and measured
-  concretely, a hot co-tenant occupying ~10% of main makes the walk-home look
+  available (F-5). And a probe- or audit-won position can be quietly dismantled, since
+  an audit's win is, by construction, a position density disagrees with. Measured
+  concretely: a hot co-tenant occupying ~10% of main makes the walk home look
   density-balanced while the victim's rate falls.</p>
-<div class="rule"><b>The anchor</b> is the last window position at which the cache
-  demonstrably did well, with the smoothed hit rate it earned there. Alongside run a
-  smoothed sample rate (≈5-sample memory) and its mean absolute deviation, seeded
-  wide (5pp) so a cold cache cannot veto early, so every comparison clears the
-  workload's own noise. <b>The guard rail</b>: standing away
-  from the anchor with the smoothed rate below the anchor's claim by
-  max(1pp, 3·MAD) for four consecutive samples is a veto: return to the anchor
-  (capped strides, small budget) and park. A return that arrives re-tests what brought
-  it: the claim is frozen when the return commits, and after a two-sample settle on the
-  anchor a rate that still falls a margin short of it stands the claim down. The rail
-  never steers; it only refuses to remain somewhere measurably worse than a place the
-  cache has already been.</div>
-<p>One dynamic looks like a bug until it doesn't: <b>the margins widen exactly when
-  the rate moves</b>. A genuine step-change feeds its |Δ| into the same deviation
-  estimate that sets the margins, so for the first several samples after any step the
-  rail and the ratchet hold fire, engaging as the smoothing settles (typically 5–10
-  samples). At the moment of a step, "the workload changed" and "the noise got
-  louder" are the same observation; acting before the distinction exists is how
-  §2.4's weather-chasers were built. The scenario tests pin this lag on purpose.</p>
+<div class="rule">
+  <p><b>The anchor</b> records a proven window position and the smoothed hit rate earned
+    there; that rate is its <i>claim</i>. The controller also tracks the current
+    smoothed rate (≈5-sample memory) and its mean absolute deviation (MAD). The
+    deviation starts wide, at 5pp, so a cold cache cannot veto early.</p>
+  <p><b>The guard rail</b> returns the window to the anchor when the current position
+    has earned measurably less. While away from the anchor, a smoothed rate below its
+    claim by max(1pp, 3·MAD) for four consecutive samples triggers a return, using
+    capped strides and a small budget. On arrival, the window parks.</p>
+  <p>The return also tests whether the claim is still valid. The claim is frozen when
+    the return commits. At the end of the two-sample settle, a smoothed rate still a
+    margin below that claim causes the controller to discard the anchor, release the
+    hold, and re-seed its rate estimates. The rail supplies a return decision, rather
+    than continuous steering.</p>
+</div>
+<p>One dynamic looks like a bug and is not: <b>the margins widen just when the rate
+  moves</b>. A real step change feeds its |Δ| into the same deviation estimate that
+  sets the margins, so for the first several samples after any step the rail and the
+  ratchet hold fire, and they engage as the smoothing settles, typically after 5 to 10
+  samples. At the moment of a step, "the workload changed" and "the noise got louder"
+  are the same observation. Acting before the two can be told apart is how §2.4's
+  weather-chasers were built, and the scenario tests pin this lag on purpose.</p>
 
 <h3 id="s8-2"><a class="hl" href="#s8-2">8.2 The lifecycle</a></h3>
+<p>Each rule below closes one way the memory could lie: a claim seeded on transient
+  evidence, a claim that outlives its regime, a return that proves nothing, or a
+  paid-for position quietly dismantled.</p>
 <ul>
-  <li><b>Seed only at rest.</b> A probe's transient window paired with a rate earned
-    elsewhere is a phantom claim the rail would later defend; the anchor initializes
-    only while no walk, undo or return is in progress. The undo is listed separately
-    because it runs after the walk has ended and before any return begins.</li>
+  <li><b>Seed only at rest.</b> The anchor initializes only while no walk, undo or
+    return is in progress, because a probe's transient window paired with a rate earned
+    elsewhere is a phantom claim the rail would later defend. (The undo is listed
+    separately because it runs after the walk has ended and before any return begins.)</li>
   <li><b>Re-sync while standing on it.</b> On-anchor samples overwrite the claim with
     the live rate, so stale glory decays into reality instead of vetoing forever.</li>
-  <li><b>Judge the return where it lands.</b> Arriving is not evidence for the claim
-    that sent the window home. The drop the arrival itself produces is the only test
-    the machine would otherwise apply, and it can fall under the crash threshold while
-    the claim is still a past regime's, leaving the window parked on it for the rest of
-    the run. The claim frozen at the return's commit is re-tested against the settled
-    rate, and one the position cannot earn is stood down as a crash would have. The
-    landing's own swing is not that verdict: the recovery a return produces is the
-    machine's move, so the stand-down waits for the retest rather than reading it as a
-    workload change. The
-    frozen claim is the judge because the re-sync above decays the live one into the
-    shortfall being tested. A return that spends its budget short of the anchor never
-    reached the position its claim describes, so there is nothing to test.</li>
+  <li><b>Judge the return where it lands.</b> Arriving at the anchor is not evidence for
+    the claim that sent the window home. So the claim is frozen when the return commits
+    and re-tested once the window has settled on the anchor for two samples; a claim the
+    position cannot earn is stood down, as a crash would have stood it down. Without
+    that retest the only check would be the drop the arrival itself produces, which can
+    stay under the crash threshold while the claim belongs to a past regime, leaving
+    the window parked on it for the rest of the run. The landing's own swing is not the
+    verdict, because the recovery a return produces is the machine's own move; the
+    stand-down waits for the retest rather than reading the swing as a workload
+    change. The frozen claim is the judge rather than the live one because the re-sync
+    above would decay the live claim into the very shortfall being tested. A return
+    that spends its budget short of the anchor never reached the position its claim
+    describes, so there is nothing to test.</li>
   <li><b>Ratchet on cleared evidence.</b> Standing elsewhere with the rate a full
     margin above the claim moves the anchor there. (Requiring the new position to
     also be still first was measured: no benefit, and it destabilized an alternation
@@ -3169,10 +3236,10 @@ window = max(window + step, 0.02·C)</pre>
     the controller having wandered somewhere worse. Distance decides: refute claims
     where they were made. A discarding stand-down also re-seeds the smoothed rate
     and its deviation, because the regime that earned the discarded claim also
-    produced the reference it was measured against. Stillness does not decide: a
+    produced the reference it was measured against. Stillness does not decide. A
     swing that lands with the window motionless is as often the retreat's own echo,
-    or the terrain eroding under a position the retreat left the window on, as it
-    is the workload's, and there the claim is what recovers the prize.
+    or the terrain eroding under the position the retreat left the window on, as it
+    is the workload's, and in those cases the claim is what recovers the prize.
     <details class="fold">
       <summary>Why the re-seed, and the aging and still-discard alternatives that died</summary>
       <p>Re-sync runs only on-anchor, so without the re-seed the claim froze the
@@ -3185,14 +3252,14 @@ window = max(window + step, 0.02·C)</pre>
         measured dead in both forms: symmetric aging lets the claim chase the rate
         upward so no position can ever clear it by the margin that moves the anchor
         (regimeramp −11.9), and one-sided aging disarms the rail. Discarding on a
-        still swing fixes the stale-claim witness exactly as the audit's reference
-        change does and costs the moat rows, the rail's own control: on the h4000
+        still swing fixes the stale-claim witness just as the audit's reference
+        change does, and it costs the moat rows, the rail's own control. On the h4000
         dose the undo's arrival lands the window inside a band of where it then
-        stands and the collapse arrives one sample later, on h3000 the window sits
-        still for fourteen samples while its hits erode and then break, and both
-        times the discarded claim was the position the rail vetoes home to (0.62
-        kept, 0.46 discarded; −0.7 to −1.9 on every seed with two or three boundaries
-        of stillness required). Re-seeding the goal metric on a still swing while
+        stands and the collapse arrives one sample later; on h3000 the window sits
+        still for fourteen samples while its hits erode and then break; both times
+        the discarded claim was the position the rail vetoes home to (0.62 kept, 0.46
+        discarded; −0.7 to −1.9 on every seed with two or three boundaries of
+        stillness required). Re-seeding the goal metric on a still swing while
         keeping the claim is worse still: the re-seeded deviation reads the shortfall
         as real and the rail vetoes into the dead anchor within four samples.</p>
     </details></li>
@@ -3201,20 +3268,19 @@ window = max(window + step, 0.02·C)</pre>
     first sample. This is the co-tenant repair (victim 57.4 → 59.6 of an undosed
     64.1; the remainder is bounded audit duty, §11).</li>
   <li><b>Audit confirms also park.</b> After an audit win, steering is suspended at
-    the anchor, beginning with the confirming sample itself, which returns without
-    a parting density step off the paid-for position. The audit clock owns
-    re-exploration, releasing on a crash-scale shift unless the shift is the
-    machine's own re-test: the park's audit walking out of it and the retreat that
-    ends the walk, or a veto's return until its retest has ruled (above). Density
-    disagrees with the position by construction, so handing it the wheel dismantles
-    the win. A
-    starvation-probe confirm parks only when it is an audit in all but name: the walk
-    took the deepest commitment, the goal metric confirms it, and density would reverse
-    it. Every other starvation confirm hands to density, and cheap re-probing
-    afterward is load-bearing (removing it cost 11–15 points across three trap
-    families).</li>
+    the anchor, because density disagrees with the position by construction and
+    handing it the wheel dismantles the win. The suspension begins with the confirming
+    sample itself, which returns without a parting density step off the paid-for
+    position. Re-exploration belongs to the audit clock. A crash-scale shift releases
+    the park, unless the shift is the machine's own re-test: the park's audit walking
+    out of it and the retreat that ends that walk, or a veto's return until its retest
+    has ruled (above). A starvation-probe confirm parks only when it is an audit in all
+    but name: the walk took the deepest commitment, the goal metric confirms it, and
+    density would reverse it. Every other starvation confirm hands back to density,
+    and cheap re-probing afterward matters (removing it cost 11–15 points across three
+    trap families).</li>
   <li><b>A fresh park rides out weather.</b> For one initial audit wait after the
-    confirm, crash-scale swings do not release the park; the shield is deliberately
+    confirm, crash-scale swings do not release the park. The shield is deliberately
     bounded: a stationary optimum is re-confirmed before it lapses, and a drifting
     workload regains full tracking right after it.
     <details class="fold">
@@ -3222,14 +3288,17 @@ window = max(window + step, 0.02·C)</pre>
       <p>On workloads whose per-sample scatter reaches the restart threshold, the
         stand-down otherwise freed a just-validated position within ~5 samples and
         density re-ballooned off it (cp_w097's audits confirm real improvements at
-        high windows and weather then loses the lower park). And the bound is
-        load-bearing in the other direction:
-        unconditional persistence was measured and converts the tracking controller
-        into hold-and-retest exactly where tracking is the cure (regimeramp −6.4,
-        widepin −6.3, phases −4.1), while the bounded shield holds all three at
-        their ship values.</p>
+        high windows and weather then loses the lower park). The bound matters in the
+        other direction too: unconditional persistence converts the tracking controller
+        into hold-and-retest where tracking is the cure (regimeramp −6.4, widepin −6.3,
+        phases −4.1), while the bounded shield holds all three at their ship values.</p>
     </details></li>
 </ul>
+<p>In short, the anchor is planted only on evidence earned at rest or by a confirmed
+  walk. It is re-synced while stood on, moved only on a cleared gain, discarded only by
+  a crash at home, and defended by a veto whose return must re-earn the claim it acted
+  on. What a swing, a blind corner, a shortfall, or a due audit does to each of these
+  holds is tabulated mode by mode in §9.2.</p>
 <figure>
 <svg viewBox="0 -14 740 274" role="img" font-family="system-ui,sans-serif" font-size="11">
     <title>the goal-metric layer's states</title>
@@ -3282,7 +3351,7 @@ window = max(window + step, 0.02·C)</pre>
   <figcaption>Fig. 17 — The goal-metric layer around the §6 machine: stillness accumulates toward audits, confirms plant the anchor (audit confirms also park), and a sustained shortfall vetoes back. A crash-scale swing releases holds, discarding the claim only when it lands nearby; the machine's own re-tests (a park's audit walk and retreat, a veto's return until its retest) are exempt.</figcaption>
 </figure>
 <figure>
-<svg viewBox="0 0 740 240" role="img" font-family="system-ui,sans-serif" font-size="11.5">
+<svg viewBox="0 0 740 258" role="img" font-family="system-ui,sans-serif" font-size="11.5">
     <title>trap families before and after the goal-metric layer</title>
 
     <line x1="46" y1="206.0" x2="726" y2="206.0" stroke="#e3e7eb" />
@@ -3358,12 +3427,13 @@ window = max(window + step, 0.02·C)</pre>
     <text x="656" y="226" text-anchor="middle" fill="#5b6572">widepin</text>
     <text x="46" y="240" fill="#5b6572"><tspan fill="#eb6834" font-weight="600">before</tspan> ·
       <tspan fill="#2a78d6" font-weight="600">after</tspan> · dashed = the cell's reference (control, undosed victim,
-      or LRU) · phases/widepin are bimodal families — means over N=8</text>
+      or LRU)</text>
+    <text x="46" y="254" fill="#5b6572">phases and widepin are bimodal families; means over N=8</text>
     </svg>
-  <figcaption>Fig. 18 — Trap families before and after the layer: the rate-swing jam fully closed, the co-tenant recovery partial by design, and the alternation families still far under LRU — that distance is §2.3’s lag limit, not this layer’s target.</figcaption>
+  <figcaption>Fig. 18 — Trap families before and after the layer: the rate-swing jam fully closed, the co-tenant recovery partial by design, and the alternation families still far under LRU; that distance is §2.3’s lag limit, not this layer’s target.</figcaption>
 </figure>
 
-<h3 id="s8-3"><a class="hl" href="#s8-3">8.3 The autopsy that draws the boundary</a></h3>
+<h3 id="s8-3"><a class="hl" href="#s8-3">8.3 Why hit rate does not continuously steer</a></h3>
 <p>If the goal metric deserves a veto, why not a vote? Blend a reactive step into
   density steering continuously, weighted by a confidence estimate, and let the two
   signals share the wheel. It would even dissolve a tier boundary. The blend was
@@ -3371,23 +3441,21 @@ window = max(window + step, 0.02·C)</pre>
   instrumented study with pre-registered predictions, and it fails on three
   independent grounds that generalize beyond it.</p>
 <ul>
-  <li><b>The attractor eats uncommitted nudges.</b> Density's rest point pulls back
+  <li><b>Density cancels small corrections.</b> Density's rest point pulls back
     within a sample or two, so per-sample nudges accomplish nothing; on its own
-    target workloads the blend produced zero rescue. Only committed excursions cross
+    target workloads the blend produced zero rescue. Only committed walks cross
     basins.</li>
-  <li><b>Its confidence measured loudness, not attributability.</b> On flat terrain
+  <li><b>Large rate changes do not establish a window effect.</b> On flat terrain
     with white or alternating noise, regimes where the rate contains no information
     about the window at all, the |ΔHR|-based confidence read 0.78 and 1.00. An
     attribution estimator (sign-agreement between step and response) read ≈0
     nearly everywhere.</li>
-  <li><b>Its jitter disabled the audits.</b> Continuous nudging kept the window off
-    the stillness band, so §7's clock never accumulated: the calm-suppression attack
-    rebuilt by the defense's own hand, paying back 1.1 of whisper's hard-won
-    points.</li>
+  <li><b>Continuous movement prevents audits.</b> Continuous nudging kept the window off
+    the stillness band, so §7's clock never accumulated. This recreated the audit
+    suppression described in §7.3 and lost 1.1 points on whisper.</li>
 </ul>
-<p>The rule this bought, honored everywhere: <b>steering stays quiet; the goal
-  metric exercises authority only through committed, adjudicated, undoable
-  grants</b>: a probe, an audit, a veto.</p>
+<p>These results explain the separation: density supplies ordinary steering, while
+  hit rate guides bounded walks, judges audits, and triggers returns to the anchor.</p>
 
 
 
@@ -3399,15 +3467,15 @@ window = max(window + step, 0.02·C)</pre>
   previous five chapters bolted together.</p>
 
 <h3 id="s9-1"><a class="hl" href="#s9-1">9.1 Size is a parameter: the three tiers</a></h3>
-<p>Everything in §5–§8 describes caches above 4096 entries, and it has a name: by its
-  steering signal it is the <b>density climber</b>; in full, a <b>goal-audited density
-  climber</b>, since density steers, probes rescue the blind corners, and the
+<p>Everything in §5–§8 describes caches above 4096 entries. That controller is the
+  <b>density climber</b>, named for its steering signal; in full, the <b>goal-audited
+  density climber</b>, since density steers, probes rescue the blind corners, and the
   goal-metric layer audits what density cannot judge for itself. Below 4096 the
-  <b>reactive climber</b> of §3 ships unchanged, likewise named for its signal, and
-  below 512 it runs with gentler tuning. Together they are the <b>window climber</b>,
-  the one class that ships. The tiering follows from statistics, not hedging: adaptation quality is a function of
-  informative decisions, and both the information per sample and the price of a move
-  change with C.</p>
+  <b>reactive climber</b> of §3 ships unchanged, and below 512 it runs with gentler
+  tuning. Together they are the <b>window climber</b>, the one class that ships. The
+  tiering follows from statistics rather than hedging. Adaptation quality depends on
+  how many informative decisions a cache gets, and both the information in a sample
+  and the price of a move change with C.</p>
 <figure>
 <svg viewBox="0 0 740 116" role="img" font-family="system-ui,sans-serif" font-size="10.5">
   <title>the three tiers by maximum size</title>
@@ -3440,19 +3508,19 @@ window = max(window + step, 0.02·C)</pre>
     inverts the density tier's: with this little signal, protect the ability to keep
     exploring rather than the precision of any decision.</li>
   <li><b>512 &lt; C ≤ 4096.</b> The awkward middle. Density's per-region counts are
-    still quantization-noisy (a floor window of 20 entries moves its density in steps
-    of 0.05), and measurement says the density machinery is ~neutral here, with an
-    occasional regression when the boundary was lowered. Neutral upside plus any
-    downside keeps the simpler algorithm. The boundary is empirical, held by the
-    standing battery; a density form explicit about small counts could collapse this
-    tier someday. The switch itself has a measured price: an alternation family
-    constructed to straddle the boundary moves −7.6pp on one entry of capacity
-    while LRU and both pure laws are continuous across it: an open sentinel, and
-    a fix must move the 4096/4097 pair together.</li>
-  <li><b>C &gt; 4096.</b> Densities have real resolution, proportional control
-    compounds, and, §7.1's arithmetic, the sighted-false-equilibrium failure grows
-    more available with scale, which is why the audit layer matters most exactly
-    where the density tier lives.</li>
+    still quantized (a floor window of 20 entries moves its density in steps of 0.05),
+    and measurement says the density machinery is about neutral here, with an occasional
+    regression when the boundary was lowered. Neutral upside plus any downside keeps the
+    simpler algorithm. The boundary is empirical and held by the standing battery; a
+    density form explicit about small counts could collapse this tier someday. The
+    switch itself has a measured price. An alternation family built to straddle the
+    boundary moves −7.6pp on one entry of capacity, while LRU and both pure laws are
+    continuous across it. That is an open sentinel, and a fix must move the 4096 and
+    4097 cells together.</li>
+  <li><b>C &gt; 4096.</b> Densities have real resolution and proportional control
+    compounds. By §7.1's arithmetic the sighted-false-equilibrium failure also grows
+    more available with scale, which is why the audit layer matters most where the
+    density tier lives.</li>
 </ul>
 <figure>
 <svg viewBox="0 0 740 300" role="img" font-family="system-ui,sans-serif" font-size="11">
@@ -3576,9 +3644,12 @@ window = max(window + step, 0.02·C)</pre>
   if sampleRequests &lt; period: return        // period = min(4·C, sketchSample)
   if C ≤ 4096: reactive climber             // §3, §9.1
   else:
-    crash stand-down on |ΔHR| ≥ 5pp         // release holds; near-anchor → discard; own re-tests exempt (§8.2)
+    crash stand-down on |ΔHR| ≥ 5pp         // release holds (§8.2); a crash
+                                            //   near the anchor discards the
+                                            //   claim; own re-tests exempt
     bookkeeping: smoothed rate · anchor     // §8.1–§8.2
-    walk in flight → its endings            // stride / crash / reverse / adjudicate (§6.4, §7.2)
+    walk in flight → its endings            // stride / crash / reverse /
+                                            //   adjudicate (§6.4, §7.2)
     undo or veto-return in flight → continue it
     blind corner → hold, or arm a probe     // §6
     sustained shortfall vs anchor → veto    // §8.1
@@ -3599,8 +3670,9 @@ window = max(window + step, 0.02·C)</pre>
     verdict = probeDown
       ? error                             // down-probe: average test
       : ln(d_w / (frozenProbation·span))  // up-probe: §6.4
-    if |ΔHR| ≥ 5pp and not (shielded or parkTest or returnTest):   // crash stand-down (§8.2)
-      // parkTest: the park's own audit walk; returnTest: its retreat, or a veto's return until re-tested
+    if |ΔHR| ≥ 5pp and not (shielded or parkTest or returnTest):
+      // crash stand-down (§8.2); parkTest: the park's own audit walk;
+      // returnTest: its retreat, or a veto's return until re-tested
       release any park or veto-return; discard the anchor only if
       the crash landed within its band (far crash = the rail's own
       evidence), and a discard re-seeds the smoothed rate + deviation
@@ -3618,15 +3690,15 @@ window = max(window + step, 0.02·C)</pre>
         ? min(5pp, 0.15·max(launchRate, 3·dev))
         : crashBar                   // first-difference test vs the
                                      // previous sample (§6.4)
-      crash (below launch by crashBar; an audit RETRY — auditCrashStreak ≥ 1 —
-        tolerates 2 below-bar samples first, holding direction) → undo (capped);
-        2nd consecutive crash escalates the walk's OWN ladder (audit rung vs
-        starvation rung — never each other's)
+      crash (below launch by crashBar; an audit retry, auditCrashStreak ≥ 1,
+        tolerates 2 below-bar samples first, holding direction)
+        → undo (capped); a 2nd consecutive crash escalates the walk's own
+        ladder (audit rung vs starvation rung, never each other's)
       audit walk → goal-metric judge at depth ≥5 vs frozen reference;
         confirm: keep + plant anchor + PARK (no parting steer);
-        budget out: undo, retry on the audit ladder's cadence (wait ×2 only on a
-        failed walk at the deepest audit rung; a crash — even streak-escalated —
-        keeps the cadence)
+        budget out: undo, retry on the audit ladder's cadence (wait ×2 only
+        on a failed walk at the deepest audit rung; a crash, even
+        streak-escalated, keeps the cadence)
       starvation walk → watched ≥ 4·bar at committed depth: density
         verdict; confirm: keep + plant anchor + ladder reset (×2 instead if
         steering reverses it at once; PARK when that reversed confirm is
@@ -3652,21 +3724,113 @@ window = max(window + step, 0.02·C)</pre>
     next audit; movement decays it by one (§7.3)
   commit the step as the pending adjustment; reset sample counters</pre>
 </details>
-<p>The ordering encodes priorities: an in-flight walk finishes its sample before
-  anything else acts; restoration outranks new decisions; blindness outranks the veto
-  (a starved sample cannot reliably adjudicate a shortfall); and the plain density
-  step is the default, running the overwhelming majority of samples. Everything above
-  it is exception machinery.</p>
+<p>The ordering encodes four priorities.</p>
+<ul>
+  <li>An in-flight walk finishes its sample before anything else acts.</li>
+  <li>Restoration, an undo or a veto's return, outranks any new decision.</li>
+  <li>Blindness outranks the veto, because a starved sample cannot reliably adjudicate
+    a shortfall.</li>
+  <li>The plain density step is the default and runs the overwhelming majority of
+    samples. Everything above it is exception machinery.</li>
+</ul>
+<p>Three observers run before the router on every sample: the smoothed rate and its
+  deviation update, the anchor re-syncs its claim if the window stands on it and may seed
+  or ratchet on a settled sample, and a crash-scale swing stands the goal-metric layer
+  down. After the router, the audit clock ticks on the window's actual position. The
+  table reads the same priorities the other way round, by mode: what the machine does in
+  each of its states when one of the four events arrives.</p>
+<div class="tablewrap interaction-map">
+  <table>
+    <caption>What each mode does when an event arrives</caption>
+    <thead>
+      <tr>
+        <th scope="col">mode</th>
+        <th scope="col">crash-scale swing<br><span class="gloss">|ΔHR| ≥ 5pp</span></th>
+        <th scope="col">blind corner</th>
+        <th scope="col">sustained shortfall vs the anchor</th>
+        <th scope="col">audit clock due</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>steering</b> (the default)</td>
+        <td>stand-down: any park or return is released; the claim is discarded, and the
+          goal metric re-seeded, only if the window stands on the anchor. Steering
+          continues</td>
+        <td>arms a probe, or holds if the refractory is still running</td>
+        <td>veto: a return toward the anchor begins, and the window is held there on
+          arrival</td>
+        <td>arms an audit</td>
+      </tr>
+      <tr>
+        <td><b>blind-corner hold</b> (refractory running)</td>
+        <td>the same stand-down; the hold continues</td>
+        <td>holds, counting the refractory down; the window moves only to lift off a
+          sub-floor position</td>
+        <td>not judged: a starved sample cannot adjudicate a shortfall, and the streak
+          neither grows nor resets</td>
+        <td>arms an audit; a due clock pre-empts the hold</td>
+      </tr>
+      <tr>
+        <td><b>walk in flight</b> (probe or audit)</td>
+        <td>the walk continues; only its own crash bar can end it. A park the walk did not
+          arm out of is released; a park whose own audit is walking is covered</td>
+        <td>ignored; a probe's verdict reads the starved region's earnings itself</td>
+        <td>frozen: the streak neither grows nor resets, and the anchor cannot move while a
+          walk is in progress</td>
+        <td>waits for the walk to end; stillness decays while the window moves</td>
+      </tr>
+      <tr>
+        <td><b>retreat draining</b> (a capped undo)</td>
+        <td>covered for the stride and the sample it lands on; a later swing stands the
+          layer down as usual</td>
+        <td>waits for the retreat to complete</td>
+        <td>frozen, as during the walk</td>
+        <td>waits</td>
+      </tr>
+      <tr>
+        <td><b>veto return</b>, striding home</td>
+        <td>ends the return and releases the hold; the claim is discarded only if the
+          window already stands on the anchor</td>
+        <td>waits</td>
+        <td>already answering it</td>
+        <td>waits</td>
+      </tr>
+      <tr>
+        <td><b>veto return</b>, landed and settling</td>
+        <td>covered until the retest has ruled: the landing's own swing is the return's
+          doing</td>
+        <td>waits</td>
+        <td>the retest: after two settle samples, a claim the position cannot earn is
+          stood down, and the goal metric re-seeded</td>
+        <td>waits</td>
+      </tr>
+      <tr>
+        <td><b>parked</b></td>
+        <td>releases the park and discards the claim, since the window stands on the
+          anchor, unless the park is fresh (one initial audit wait after an audit's
+          confirm) or its own audit is walking</td>
+        <td>arms a probe; the blind corner outranks the park</td>
+        <td>cannot fire: the window stands on the anchor</td>
+        <td>arms an audit out of the park; its first direction follows the walk that
+          confirmed the park while the claim stands</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p>How a walk itself ends, and what each ending does to the ladders and the schedule, is
+  the table in §7.2.2.</p>
 
 <h3 id="s9-3"><a class="hl" href="#s9-3">9.3 The plumbing</a></h3>
 <p>None of this touches the request path. A read records into a lossy striped ring
   buffer (full stripes drop records, an intentional trade protecting read
-  scalability); the buffer drains under the eviction lock during maintenance, and
-  each drained access reorders its entry and, for entries with nonzero policy weight
-  outside quiet completions (a hygiene rule below), feeds <code>recordHit(inWindow, inProbation)</code>,
-  the probation flag captured before the access promotes the entry. Misses arrive via
-  the lossless write buffer's insert task. Read-buffer loss slightly undercounts hits
-  uniformly across regions, so the density <i>ratio</i> is unbiased by it.</p>
+  scalability), and the buffer drains under the eviction lock during maintenance. Each
+  drained access reorders its entry and, for an entry with nonzero policy weight
+  outside a quiet completion (a hygiene rule below), feeds
+  <code>recordHit(inWindow, inProbation)</code>, with the probation flag captured
+  before the access promotes the entry. Misses arrive via the lossless write buffer's
+  insert task. Read-buffer loss slightly undercounts hits uniformly across regions, so
+  the density <i>ratio</i> is unbiased by it.</p>
 <p>After eviction and expiry in each maintenance cycle, <code>climb()</code> asks the
   climber for a decision and applies the pending adjustment by moving region
   boundaries, transferring at most 1,000 nodes per cycle with the remainder carried
@@ -3800,27 +3964,27 @@ window = max(window + step, 0.02·C)</pre>
     library under the trace simulator, never a reimplementation.</li>
   <li><b>Anchors, not raw scores.</b> Each cell reads against fresh LRU, Bélády where
     tractable, and a static-window sweep: the ceiling for <i>this</i> design, and the
-    honest target for an adaptive one. LRU is a floor rather than a rival. A
+    right target for an adaptive one. LRU is a floor rather than a rival. A
     general-purpose cache that drops under it on some workload has failed there whatever
     its average says, so rows are written as <i>stayed above</i>, not <i>won by</i>.</li>
   <li><b>A noise model, and N to match.</b> Admission jitter gives ±0.1–0.8pp
     run-to-run; claims under 2.5pp need N=5. Alternation-heavy families are bimodal
-    (identical runs land ±8pp apart), so they adjudicate on seeded N=8 means with
-    arms rotated inside each seed, a policy bought with three separate single-run
-    embarrassments.</li>
-  <li><b>Bars are instruments, and instruments rot.</b> An audit of all 52 gate rows
+    (identical runs land ±8pp apart), so they are assessed using seeded N=8 means,
+    with arms rotated inside each seed. Three misleading single-run results led to
+    this protocol.</li>
+  <li><b>Acceptance bars need reproducible anchors.</b> An audit of all 52 gate rows
     found 37 bars defective. A bar is therefore stated as a margin over a
     re-derivable anchor: above LRU on every seed, a gap to the static ceiling, or no
     drift below the row's own seeded mean, never as a bare level.
     <details class="fold">
       <summary>The four defects, and how a trajectory is read</summary>
-      <p>Each flavour had previously been found only by accident: a bar inside the
+      <p>The audit found four kinds of defect: a bar inside the
         row's own seeded spread (a coin flip), a bar set below LRU (it cannot fail
         for the reason the row exists), a recorded level that no longer reproduces
         (levels rot; margins do not), and a bar on a trace too short to converge (it
         prices warmup and reads as quality).</p>
-      <p>Every row is also checked for how many decisions its trace actually
-        contains, since a ~50-sample trace holds at most one audit cycle, its
+      <p>Every row is also checked for how many decisions its trace contains,
+        since a ~50-sample trace holds at most one audit cycle, its
         whole-trace mean measures convergence speed, and quality is read from the
         final third. Trajectories are read in six blocks, because a thirds average
         renders oscillation as smooth drift.</p>
@@ -3829,9 +3993,9 @@ window = max(window + step, 0.02·C)</pre>
     design; only real traces score it.</li>
   <li><b>A cell that starts where the product starts cannot test the descent.</b> Every
     row began at the shipped 1% window, which on a frequency-favoring trace is already
-    the optimum, so the row passed without the controller moving and a machine that
+    the optimum. So the row passed without the controller moving, and a machine that
     could only climb would have scored clean on the whole corpus. Planting the window
-    away from 1% is what closes it. Ten frequency-optimal real cells, planted at 5–80%:
+    away from 1% closes the hole. Ten frequency-optimal real cells, planted at 5–80%:
     recovery tracks the trace's decision count and nothing else, from full at 41 samples
     to none at two, and the density law recovers about twice as much of a deep plant as
     the reactive law it replaced. This is the same shape as the bar defects above, an
@@ -3868,6 +4032,7 @@ window = max(window + step, 0.02·C)</pre>
     decisions for the climber to adapt fully. Repeating a long-working-set trace shows the
     difference (later passes start warm, which lifts every static number, so each row is
     read within itself):
+    <div class="tablewrap">
     <table>
       <caption class="sr-only">One cell at three horizons: the density tier against the reactive law and the static 1% window</caption>
       <tr>
@@ -3885,6 +4050,7 @@ window = max(window + step, 0.02·C)</pre>
       <tr><td>30</td><td>44.20</td><td>45.51</td><td>45.95</td><td>−1.31</td></tr>
       <tr><td>102</td><td>44.83</td><td>46.82</td><td>47.00</td><td>−1.99</td></tr>
     </table>
+    </div>
     On DS1 the early loss is warmup and the laws tie once the horizon is long; on S3 what
     remains is the audit's duty cycle on terrain that falls steeply from the optimum
     (§11.1).</li>
@@ -3948,28 +4114,25 @@ window = max(window + step, 0.02·C)</pre>
       is in the appendix)</td></tr>
   </table>
 </div>
-<p>The mean undersells what the wins are made of, and the reading is worth
-  spelling out, because a ±2pp table invites "the simpler climber is good enough."
-  Most public traces give <i>any</i> window policy little to win: the terrain scan
-  behind §2.1 found no interior optimum on any of its 22 real cells (flat from the
-  floor or gently rising), and on flat terrain every sane climber ties, so most
-  cells <i>should</i> tie. The separation appears where the window matters, and
-  there it is qualitative rather than incremental. The below-LRU rows above are one
-  form of it, and two more follow.</p>
+<p>The modest average differences reflect how little room most traces leave for
+  improvement. The terrain scan behind §2.1 found no interior optimum on any of its
+  22 real cells: the curves were flat from the floor or gently rising. On flat terrain,
+  different climbers should tie. Where window size matters, the evidence distinguishes
+  three benefits: avoiding below-LRU outcomes, retaining valuable objects in weighted
+  caches, and reducing run-to-run variation.</p>
 <p>The weighted view: where object identity and byte cost diverge, the
   density signal prices slots rather than requests, and the gap stops being small.
-  metaCDN_rprn @4G trades a −0.73 object rate for <b>+10.69 in byte hit rate</b>
-  (49.59 against 38.90), because the retained large objects are exactly what the
-  byte metric pays for.</p>
-<p>Repeatability is the second distinction: on several cells the reactive
-  climber's outcome is a draw among basins rather than a number, so two identical
-  runs of the same workload return materially different hit rates; the density
-  climber returns the same number to within tenths (N=20 per arm: umass F1 @32k
-  spreads 3.8pp against density's 0.2, arc P5 @32k 4.1 against 0.2, arc P11 @64k
-  2.5 against 1.1). The constructed battery (§10.4)
-  is where the separation becomes dramatic, with 15–28 point escapes on the pin
-  families, but those three properties, not the corpus mean, are what the extra
-  machinery buys on real traffic.</p>
+  metaCDN_rprn @4G trades −0.73pp in object hit rate for <b>+10.69pp in byte hit rate</b>
+  (49.59 against 38.90), because the retained large objects are what the byte metric
+  pays for.</p>
+<p>Repeatability is the third distinction. On several cells, the reactive climber
+  settles in different basins across runs of the same workload. Density narrows the
+  resulting hit-rate spread. With N=20 per arm, the spreads were 3.8pp versus 0.2 on
+  umass F1 @32k, 4.1 versus 0.2 on arc P5 @32k, and 2.5 versus 1.1 on arc P11 @64k,
+  with reactive first in each pair.</p>
+<p>The constructed battery (§10.4) shows larger separations, including 15–28 point
+  escapes on the pin families. On real traffic, the case for the extra machinery rests
+  on the three properties above.</p>
 <p>The one row that deserves its paragraph is the last red one. cp_w097 at 16k is a
   density-family structural loss rather than a regression of the safety layers. On the
   current tree it reads 46.9 against the reactive climber's 50.1 and LRU's 41.7, and
@@ -4142,7 +4305,11 @@ window = max(window + step, 0.02·C)</pre>
     <text x="46" y="244" fill="#5b6572">sample number → &#160;&#160; <tspan fill="#2a78d6" font-weight="600">
         hit rate</tspan> &#160; <tspan fill="#eb6834" font-weight="600">% window</tspan></text>
     </svg>
-  <figcaption>Fig. 21 — Conduct on a three-regime workload, from a normal and from a deliberately terrible 60% start: overshoot would indict aggression, failing to leave 60% would indict timidity, and neither appears. The reactive climber (bottom) pays its wandering tax at every transition.</figcaption>
+  <figcaption>Fig. 21 — Adaptation across three workload regimes. The density climber
+    starts at the normal 1% window (top) and a deliberately displaced 60% window
+    (middle); the reactive climber is below. Both density runs track the transitions
+    without sustained overshoot, and the displaced run recovers from its poor start.
+    The reactive run continues to wander after each transition.</figcaption>
 </figure>
 <figure>
 <svg viewBox="0 0 740 250" role="img" font-family="system-ui,sans-serif" font-size="11.5">
@@ -4217,7 +4384,9 @@ window = max(window + step, 0.02·C)</pre>
     <text x="46" y="244" fill="#5b6572">sample number → &#160;&#160; <tspan fill="#2a78d6" font-weight="600">
         hit rate</tspan> &#160; <tspan fill="#eb6834" font-weight="600">% window</tspan></text>
     </svg>
-  <figcaption>Fig. 22 — The sealed-holdout demonstration, on a trace no version of this design ever executed: the reactive climber finishes 8.7 points under LRU; the shipped controller closes to within 1.3 — +7.5 on first contact.</figcaption>
+  <figcaption>Fig. 22 — First evaluation on the sealed holdout financial1 @262144.
+    The reactive climber finishes 8.7 points below LRU; the shipped controller closes
+    to within 1.3, a 7.5-point improvement.</figcaption>
 </figure>
 
 <h3 id="s10-3"><a class="hl" href="#s10-3">10.3 Weighted caches</a></h3>
@@ -4366,14 +4535,12 @@ window = max(window + step, 0.02·C)</pre>
   misbehavior report against it.</p>
 
 <h3 id="s11-1"><a class="hl" href="#s11-1">11.1 Known limits</a></h3>
-<p>Each limit is measured and mechanism-named and, where a workload class could
-  exercise it, scanned for against the real corpus. Each carries its gain
-  potential: <span class="lim lim-open">open</span> a residual with a live fix
-  direction; <span class="lim lim-trade">priced trade</span> the refinement was
-  built, measured, and declined; <span class="lim lim-constructed">constructed-only</span>
-  no scanned real workload reaches it. The statement is one line; the mechanism and
-  its measurements are in each fold. The closing paragraph is what makes this a
-  finite list rather than an open-ended one.</p>
+<p>Each limit has a measured example and a named mechanism. The labels distinguish
+  an <span class="lim lim-open">open</span> fix direction, a
+  <span class="lim lim-trade">priced trade</span> whose refinement was built,
+  measured, and declined, and a <span class="lim lim-constructed">constructed-only</span>
+  failure not found in the scanned real corpus. Expand each item for its mechanism,
+  measurements, and reachability checks.</p>
 <ul>
   <li><span class="lim lim-trade">priced trade</span> <b>The lag limit.</b> Phases
     shorter than ~2 sample periods (≈8·C requests) are untrackable by construction;
@@ -4423,9 +4590,9 @@ window = max(window + step, 0.02·C)</pre>
         is real (the full form at half gain earns +0.83pp mean over nine cells,
         with rest-point tracking 0.983 against ship's 0.950), but every denominator
         sits on one monotone frontier trading corpus prize against robustness on a
-        slow whole-set handover whose heavy inflow fills probation with transients:
-        about 16pp there per 1pp of corpus, gain does not move the frontier, and
-        the family's ceiling is 37.52 against that row's ≥40 bar. A trust-gated arm
+        slow whole-set handover whose heavy inflow fills probation with transients.
+        The exchange rate is about 16pp there per 1pp of corpus, gain does not move the
+        frontier, and the family's ceiling is 37.52 against that row's ≥40 bar. A trust-gated arm
         escapes the frontier (+0.69, tracking 1.000) and still fails the bar; its
         residue is recovery from a hole already dug, a parked window where
         steering is never consulted again, which nothing living in the steering
@@ -4439,7 +4606,7 @@ window = max(window + step, 0.02·C)</pre>
     average-versus-marginal steering sign.
     <details class="fold">
       <summary>What the audits recover, and why the bounded rescues were declined</summary>
-      <p>The audits are load-bearing here: the cell reads 46.9 with them and 43.6
+      <p>The audits matter here: the cell reads 46.9 with them and 43.6
         without. Their confirms land at high windows, around 56% and 26%, and weather
         later releases the lower park; that release is visible but is not the
         remainder. Holding the parks longer (up to a near-permanent bound), following
@@ -4466,19 +4633,19 @@ window = max(window + step, 0.02·C)</pre>
         then eliminates a real trace's good basin at the holdout (P8 −2.5, w097
         −1.1), because the cheap early abort is what keeps audit duty low and
         basin-reaching cadence intact. What shipped instead attacks the two failure
-        modes separately: the crash-streak retry tolerates two below-bar samples in
+        modes separately. The crash-streak retry tolerates two below-bar samples in
         <i>time</i> (§6.4), which healed the dose family's collapse to under a
-        point below LRU, and the reversal, a different statistic that never
-        deserved the level's bar, is priced at the same fraction of the larger of
-        the frozen rate and the scatter (§6.4), which returned the give-back
-        sentinel's loss (+0.8/+1.8/+1.2 by seed) while 47 of 52 battery rows were
-        bit-identical and the real corpus moved −0.02 mean. The sub-point residuals
+        point below LRU. The reversal, a different statistic that never deserved the
+        level's bar, is priced at the same fraction of the larger of the frozen rate
+        and the scatter (§6.4), which returned the give-back sentinel's loss
+        (+0.8/+1.8/+1.2 by seed) while 47 of 52 battery rows were bit-identical and
+        the real corpus moved −0.02 mean. The sub-point residuals
         on the dose sentinels are the crash abort's remaining robustness price, and
         they are what staying out of the widening family costs.</p>
     </details></li>
   <li><span class="lim lim-trade">priced trade</span> <b>Bounded audit duty.</b>
     Where a win must be continually re-won, the residual is a duty cycle of
-    excursions rather than a held position; the one proposed remedy failed to
+    walks rather than a held position; the one proposed remedy failed to
     reproduce and was withdrawn.
     <details class="fold">
       <summary>The duty's reach, and the withdrawn candidate</summary>
@@ -4514,9 +4681,9 @@ window = max(window + step, 0.02·C)</pre>
         only by luck, the same exposure class as the grid's trace-start offset. The
         cost is not a forgone increment: at N=8 seeded the controller scores 56.08
         ±0.05 against the reactive climber's 65.37 ±0.20, a deterministic nine-point
-        regression against the law this tier replaced, and below that cell's LRU
-        of 64.9 where that law is above it, on a shape it has no failure mode
-        for. The dose-matched flat control runs the other way, and
+        regression against the law this tier replaced. It is also below that cell's
+        LRU of 64.9, where that law is above it, on a shape that law has no failure
+        mode for. The dose-matched flat control runs the other way, and
         is the reason the finding is about the jam rather than the terrain: there
         the controller is 66.92 ±0.01 against the reactive arm's 64.61
         ±<b>10.71</b>, so on the same traffic without the jam it is both better and
@@ -4556,21 +4723,21 @@ window = max(window + step, 0.02·C)</pre>
         main out entirely with one whose optimum is a 1% window costs ~8pp against
         both the static ceiling and the reactive arm: the window balloons to 80%
         of the cache within three samples of every blackout, while still sitting
-        26 points above LRU, which is exactly the reading an LRU-only bar cannot
-        see. Dose-response on repeated blackouts is ~1.2pp per episode. Not a
+        26 points above LRU, which is the reading an LRU-only bar cannot see. Dose-response on repeated blackouts is ~1.2pp per episode. Not a
         defect to chase; the cell exists so any future reformulation of the
         ε-asymmetry has its price on record.</p>
     </details></li>
 </ul>
-<p>What closes the list: the six rows flagged by the release anchoring: the
+<p>Six constructed failure shapes received additional reachability checks during
+  release anchoring: the
   aligned jam (posjam), the density-inverted latch (bandtrap2), the grid-locked
   alternation (phases d050), the zero-main balloon (balloonflip), the moat terrain
   (whose valley §6.4's crash-streak tolerance now crosses), and the
-  modulated-mixture dose instrument (mixmod), each carry a named mechanism and a
+  modulated-mixture dose instrument (mixmod). Each carries a named mechanism and a
   reachability scan against the same fourteen real cells, and all six are
   constructed-only.</p>
-<p>The scans also say why: the co-occurrences the traps need do
-  not arise in real traffic. High scatter rides narrow terrain (every real cell
+<p>The co-occurrences these traps need did not appear in the scanned real traffic.
+  High scatter rides narrow terrain (every real cell
   whose scatter is three bars deep has under 3pp of terrain to lose, and every
   wide-terrain cell is quiet), cadences do not lock to the sample grid, and
   stillness starvation co-occurs with nothing worth finding. Where a real cell
@@ -4578,8 +4745,8 @@ window = max(window + step, 0.02·C)</pre>
   exposure to cost anything (corda under two of the scans; the one full match,
   cp_w044, has half a point of terrain and banks +0.16 over LRU) or the scatter is
   window-informative, which is what the goal-metric layer exists to answer
-  (arc_ConCat). A limit on this list is a real limit, and the workload that pays
-  it has, so far, had to be built on purpose.</p>
+  (arc_ConCat). The reachability checks found these six combinations only in
+  deliberately constructed workloads.</p>
 
 <h3 id="s11-2"><a class="hl" href="#s11-2">11.2 Symptoms, and first hypotheses</a></h3>
 <div class="tablewrap">
@@ -4594,7 +4761,7 @@ window = max(window + step, 0.02·C)</pre>
       <td>"hit rate differs between two runs / versions on the same workload"</td>
       <td>basin lottery on an alternation-heavy workload</td>
       <td>N=8 both configurations; compare distributions, not draws: a regression
-        shifts the mean, a lottery widens the eyes</td>
+        shifts the mean, a lottery widens the spread</td>
     </tr>
     <tr>
       <td>"frequency-heavy workload slightly worse than the old climber"</td>
@@ -4641,24 +4808,23 @@ window = max(window + step, 0.02·C)</pre>
 </div>
 
 <h2 id="s12"><a class="hl" href="#s12">12 · Closing</a></h2>
-<p>The design in brief, to check understanding against. Split the cache into a recency
-  window and a frequency-guarded main space, and size the window by comparing what each
-  region's slots earn within one sample, a signal in which the workload's weather
-  cancels, steered by proportional control that settles at balance.</p>
+<p>The window climber combines density with hit rate. For large caches, density
+  provides routine steering: compare the hits each region earns per slot within one
+  sample, then move capacity toward the denser region. The proportional step becomes
+  smaller as the densities approach balance.</p>
 <p>That signal fails three ways, and each failure gets one machine:</p>
 <ul>
-  <li><b>Blind.</b> Where a region is too starved to measure, run a real, budgeted,
-    fully-undoable experiment, judged against the honestly-priced alternative with
-    evidence frozen against self-contamination, retried on an escalating ladder that
-    commits harder as it grows patient.</li>
-  <li><b>Sighted but wrong.</b> Re-test held equilibria on a schedule, judged by the
-    goal metric, because a proxy cannot audit itself.</li>
-  <li><b>A proxy throughout.</b> Remember the best position the goal metric has
-    witnessed, and refuse to stand anywhere measurably worse.</li>
+  <li><b>A starved region.</b> Run a budgeted probe and restore the allocation if the
+    result does not justify keeping it. Judge the experiment against a frozen estimate
+    of what the displaced capacity would earn. Longer retry waits allow deeper experiments.</li>
+  <li><b>A wrong equilibrium.</b> Periodically audit a held position, judging the
+    experiment by hit rate, because balanced densities need not maximize hits.</li>
+  <li><b>A good position lost.</b> Remember a proven position as an anchor, and return
+    to it when the current position earns measurably less.</li>
 </ul>
 <p>Feed it only hits that resident capacity earned. Below the sizes where per-region
-  statistics work, run the simple reactive climber instead. Everything else is a
-  constant with a story.</p>
+  statistics work, run the simple reactive climber instead. Every remaining constant
+  has a measured reason behind it (§9.4).</p>
 <p>That is the goal-audited density climber; with the reactive tier
   beneath it, it ships as the window climber. Going deeper:
   <code>WindowClimber.java</code> is the implementation, one plain
@@ -4666,9 +4832,8 @@ window = max(window + step, 0.02·C)</pre>
   from deterministic generators bundled with the simulator; the appendix holds the
   measurement charts. The W-TinyLFU and adaptive-TinyLFU papers supply the substrate
   this design stands on.</p>
-<p>What the work buys is not a larger number on the public corpora, where the incumbent
-  was already near the ceiling. It is that the number holds on the workloads those
-  corpora do not contain.</p>
+<p>The main contribution is robustness: retaining the reactive climber's strong
+  results while recovering from failure modes that the public corpora rarely expose.</p>
 
 
 <h2 id="appendix"><a class="hl" href="#appendix">Appendix · Measurements</a></h2>
@@ -4680,7 +4845,7 @@ window = max(window + step, 0.02·C)</pre>
   arm is bimodal on umass F1 @32k, arc P11, and arc P5 (spreads up to ±2.6), so its
   single draws are not quotable. An earlier three-arm run tied a §5–§6 controller
   without the goal-metric layer to within noise on the corpus mean; cellwise the
-  layer is load-bearing where its audits confirm (cp_w097@16k is 3.3 points better
+  layer matters where its audits confirm (cp_w097@16k is 3.3 points better
   with it, §10.2). The raw per-rep data lives with the experiment ledger.</p>
 <div class="tablewrap">
   <table>
@@ -4982,19 +5147,22 @@ window = max(window + step, 0.02·C)</pre>
   <figcaption>Fig. A — Exhaustive fixed-window sweeps at 8k with LRU and Bélády anchors; the adaptive result is the orange marker. These are the real instances behind §2.1’s schematic shapes.</figcaption>
 </figure>
 <h3 id="ap-ladders"><a class="hl" href="#ap-ladders">A.3 Hit rate across sizes, every workload</a></h3>
-<p class="sans" style="color:var(--muted);font-size:0.92em">Up to four lines per chart —
+<p class="sans" style="color:var(--muted);font-size:0.92em">Up to four lines per chart:
   <b>Optimal</b> (Bélády, where tractable), <b>LRU</b>, the <b>reactive</b> climber,
-  and the <b>density</b> climber, across each trace's size ladder. (The sweep predates
-  the §5 layer; the final design measures corpus-identical to the density arm (−0.03pp
-  mean over the §7.2 three-arm re-run), so these curves remain representative of what
-  ships. The release re-verification against current master re-anchors this: 24 of
-  the 28 A.1 cells reproduce within ±0.4pp, and the movers are A.1's, not the ladders':
-  no charted workload is among them.) Grouped by pattern; each title is
-  marked by status as well as color:
+  and the <b>density</b> climber, across each trace's size ladder. The charts are grouped
+  by pattern; each title is marked by status as well as color:
   <br/><span style="color:var(--aqua);font-weight:600">✓ green</span> = wins or ties everywhere on the ladder
   <br/><span style="color:#8a5a00;font-weight:600">≈ amber</span> = mixed within tolerance (3pp)
   <br/><span style="color:#b3261e;font-weight:600">! red</span> = a beyond-tolerance loss exists (none in this corpus)
 </p>
+<details class="fold">
+  <summary>How these earlier sweeps relate to the shipped build</summary>
+  <p>The sweep predates the §5 layer. The final design measures within noise of the
+    density arm: −0.03pp mean over the §7.2 three-arm re-run. The release
+    re-verification against current master provides a later check: 24 of the 28 A.1
+    cells reproduce within ±0.4pp. The changed cells are recorded in A.1; none is
+    among the workloads charted here.</p>
+</details>
 <div class="sans" style="display:flex;gap:14px;flex-wrap:wrap;font-size:0.85em;color:var(--muted);margin:10px 0">
   <span><b style="color:var(--aqua)">—</b> Optimal</span><span><b style="color:var(--muted)">- -</b> LRU</span><span><b
       style="color:var(--orange)">—</b> reactive</span><span><b style="color:var(--blue)">—</b> density
@@ -7417,11 +7585,11 @@ window = max(window + step, 0.02·C)</pre>
     <text x="40" y="202" fill="#5b6572" font-size="9">sizes: 3k 12k 36k 121k 243k 487k</text>
     </svg></div>
 </div>
-<h3 id="ap-corpus-full"><a class="hl" href="#ap-corpus-full">A.4 The full local corpus, dispositioned</a></h3>
-<p>Everything under the local trace tree, including what is <em>not</em> informative and why, so
-  absence from the tables above reads as a recorded decision rather than an omission. The
-  measured tables are from the release battery (density = the shipped build, reactive
-  = the master climber it replaces, interleaved runs; raw data with the experiment ledger).</p>
+<h3 id="ap-corpus-full"><a class="hl" href="#ap-corpus-full">A.4 Full corpus inventory</a></h3>
+<p>This inventory records every family in the local trace collection, including those
+  that provide little information about adaptation and why. The tables report the
+  release battery: density is the shipped build, reactive is the master climber it
+  replaces, and the runs were interleaved. Raw data remains with the experiment ledger.</p>
 <details class="fold">
   <summary>The release battery: the merge holdout and first measurements</summary>
   <p>The frozen 12-cell merge holdout (four families never touched by any climber arm; LRU-only
@@ -7513,7 +7681,7 @@ window = max(window + step, 0.02·C)</pre>
   </div>
 </details>
 <details class="fold">
-  <summary>Every family and its disposition</summary>
+  <summary>Every family and its status</summary>
   <div class="tablewrap">
     <table>
       <caption class="sr-only">Corpus family inventory and disposition</caption>
@@ -7710,12 +7878,12 @@ window = max(window + step, 0.02·C)</pre>
           return;
         }
         var value = text.nodeValue;
-        var re = /§(\d+)(?:\.(\d+))?/g;
+        var re = /§(\d+)(?:\.(\d+))?(?:\.(\d+))?/g;
         var frag = document.createDocumentFragment();
         var last = 0;
         var m;
         while ((m = re.exec(value)) !== null) {
-          var id = 's' + m[1] + (m[2] ? ('-' + m[2]) : '');
+          var id = 's' + m[1] + (m[2] ? ('-' + m[2]) : '') + (m[3] ? ('-' + m[3]) : '');
           if (!document.getElementById(id) || (chapterOf(id) === index)) {
             continue;
           }
@@ -7912,7 +8080,7 @@ window = max(window + step, 0.02·C)</pre>
       }
     }, {passive: true});
     window.addEventListener('resize', function () {
-      if (window.innerWidth >= 1360) {
+      if (window.innerWidth >= 1480) {
         setTocOpen(false);
       }
       spy();

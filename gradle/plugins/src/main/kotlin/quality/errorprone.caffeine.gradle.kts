@@ -77,10 +77,10 @@ tasks.withType<JavaCompile>().configureEach {
         annotatedPackages.add("com.google.inject")
         handleTestAssertionLibraries = true
         checkOptionalEmptiness = true
+        jspecifyExperimental = true
         suggestSuppressions = true
         checkContracts = true
         jspecifyMode = true
-        jspecifyExperimental = true
         error()
       }
     }

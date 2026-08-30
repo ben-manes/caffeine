@@ -27,7 +27,7 @@ jobs:
       && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -62,7 +62,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Run dependency-check
-        uses: ./.github/actions/run-gradle
+        uses: $/.github/actions/run-gradle
         continue-on-error: true
         timeout-minutes: 30
         env:

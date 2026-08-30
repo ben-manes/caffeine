@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.WindowClimber.RETREAT_COVER;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.RETEST_SETTLE;
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_FIRST;
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_INITIAL;
 import static com.github.benmanes.caffeine.cache.WindowClimber.AuditClock.AUDIT_WAIT_MAX;
+import static com.github.benmanes.caffeine.cache.WindowClimber.DensityClimber.RETREAT_COVER;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_INITIAL;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_MAX;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_CRASH_ESCALATION;
@@ -28,6 +28,8 @@ import static com.github.benmanes.caffeine.cache.WindowClimber.Step.MIN_INITIAL_
 import static com.github.benmanes.caffeine.cache.WindowClimber.Walk.AUDIT_CRASH_PERSISTENCE;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Walk.PROBE_WALK_BUDGET;
 import static com.google.common.truth.Truth.assertWithMessage;
+
+import com.github.benmanes.caffeine.cache.WindowClimber.DensityClimber;
 
 /**
  * The window climber's state-machine invariants, asserted from the climber alone.
@@ -52,20 +54,39 @@ final class ClimberInvariants {
         .that(climber.sample.windowHits + climber.sample.probationHits)
         .isAtMost(climber.sample.hits);
 
-    assertWithMessage("the starvation rung stays within its schedule")
-        .that(climber.starvation.rung).isAtLeast(1);
-    assertWithMessage("the starvation rung stays within its schedule")
-        .that(climber.starvation.rung).isAtMost(PROBE_BACKOFF_MAX);
-    assertWithMessage("the countdown is non-negative")
-        .that(climber.refractoryLeft).isAtLeast(0);
-    assertWithMessage("a retreat's cover stays within its span")
-        .that(climber.retreatLeft).isAtLeast(0);
-    assertWithMessage("a retreat's cover stays within its span")
-        .that(climber.retreatLeft).isAtMost(RETREAT_COVER);
-    assertWithMessage("the refractory countdown is bounded by its own rung")
-        .that(climber.refractoryLeft).isAtMost(climber.starvation.rung);
+    // the cap is a double the climber never truncates, so recomputing it in entries here needs one
+    // of headroom. The bound is stricter than the adjudicated reality: a negative policyWeight
+    // inflates the transfer loop's quota and carries the excess back, a sanctioned transient that
+    // no subject-validated test drives.
+    long bound = (long) Math.max(MIN_INITIAL_STEP, (MAX_STEP_FRACTION * maximum)) + 1;
+    assertWithMessage("the adjustment honors the maximum step")
+        .that(Math.abs(climber.adjustment())).isAtMost(bound);
+    assertWithMessage("the step size honors the maximum step")
+        .that(Math.abs(climber.step.size)).isAtMost((double) bound);
+    assertWithMessage("the step size is finite")
+        .that(Double.isFinite(climber.step.size)).isTrue();
 
-    var walk = climber.walk;
+    var density = (climber.tier instanceof DensityClimber) ? (DensityClimber) climber.tier : null;
+    assertWithMessage("the tier is the one bound for this maximum")
+        .that(density != null).isEqualTo(DensityClimber.appliesTo(maximum));
+    if (density == null) {
+      return;
+    }
+
+    assertWithMessage("the starvation rung stays within its schedule")
+        .that(density.starvation.rung).isAtLeast(1);
+    assertWithMessage("the starvation rung stays within its schedule")
+        .that(density.starvation.rung).isAtMost(PROBE_BACKOFF_MAX);
+    assertWithMessage("the countdown is non-negative")
+        .that(density.refractoryLeft).isAtLeast(0);
+    assertWithMessage("a retreat's cover stays within its span")
+        .that(density.retreatLeft).isAtLeast(0);
+    assertWithMessage("a retreat's cover stays within its span")
+        .that(density.retreatLeft).isAtMost(RETREAT_COVER);
+    assertWithMessage("the refractory countdown is bounded by its own rung")
+        .that(density.refractoryLeft).isAtMost(density.starvation.rung);
+
+    var walk = density.walk;
     if (walk != null) {
       assertWithMessage("a walk is bounded by its budget")
           .that(walk.samples).isAtLeast(0);
@@ -78,7 +99,7 @@ final class ClimberInvariants {
       assertWithMessage("a below-bar run is adjudicated at the audit persistence")
           .that(walk.belowBarStreak).isAtMost(AUDIT_CRASH_PERSISTENCE - 1);
       assertWithMessage("a walk's ledger is the one its own layer owns")
-          .that(walk.ladder).isSameInstanceAs(walk.isAudit ? climber.audit : climber.starvation);
+          .that(walk.ladder).isSameInstanceAs(walk.isAudit ? density.audit : density.starvation);
       assertWithMessage("a walk's best sample is a window it stood on, or unset")
           .that(walk.bestWindow).isAtLeast(-1L);
       assertWithMessage("a walk's best sample is a window it stood on, or unset")
@@ -97,101 +118,89 @@ final class ClimberInvariants {
     }
 
     assertWithMessage("a ladder's memory is a window or unset")
-        .that(climber.starvation.farthest).isAtLeast(-1L);
+        .that(density.starvation.farthest).isAtLeast(-1L);
     assertWithMessage("a ladder's memory is a window or unset")
-        .that(climber.starvation.farthest).isAtMost(maximum);
+        .that(density.starvation.farthest).isAtMost(maximum);
     // the audit layer's endings are adjudicated by the goal metric and never consult the memory
     assertWithMessage("the audit ladder keeps no memory")
-        .that(climber.audit.farthest).isEqualTo(-1L);
+        .that(density.audit.farthest).isEqualTo(-1L);
 
     assertWithMessage("the audit rung stays within its schedule")
-        .that(climber.audit.rung).isAtLeast(PROBE_BACKOFF_INITIAL);
+        .that(density.audit.rung).isAtLeast(PROBE_BACKOFF_INITIAL);
     assertWithMessage("the audit rung stays within its schedule")
-        .that(climber.audit.rung).isAtMost(PROBE_BACKOFF_MAX);
+        .that(density.audit.rung).isAtMost(PROBE_BACKOFF_MAX);
     assertWithMessage("each ledger's crash streak is non-negative")
-        .that(climber.audit.crashStreak).isAtLeast(0);
+        .that(density.audit.crashStreak).isAtLeast(0);
     assertWithMessage("each ledger's crash streak is non-negative")
-        .that(climber.starvation.crashStreak).isAtLeast(0);
+        .that(density.starvation.crashStreak).isAtLeast(0);
     assertWithMessage("each ledger's crash streak saturates once it escalates")
-        .that(climber.audit.crashStreak).isAtMost(PROBE_CRASH_ESCALATION);
+        .that(density.audit.crashStreak).isAtMost(PROBE_CRASH_ESCALATION);
     assertWithMessage("each ledger's crash streak saturates once it escalates")
-        .that(climber.starvation.crashStreak).isAtMost(PROBE_CRASH_ESCALATION);
+        .that(density.starvation.crashStreak).isAtMost(PROBE_CRASH_ESCALATION);
     // the schedule's floor is the cold-start calibration seed; every retry after the first
     // audit is floored at the initial refractory by undoProbe
     assertWithMessage("the audit wait stays within its schedule")
-        .that(climber.auditClock.waitSamples).isAtLeast(AUDIT_WAIT_FIRST);
+        .that(density.auditClock.waitSamples).isAtLeast(AUDIT_WAIT_FIRST);
     assertWithMessage("the audit wait stays within its schedule")
-        .that(climber.auditClock.waitSamples).isAtMost(AUDIT_WAIT_MAX);
+        .that(density.auditClock.waitSamples).isAtMost(AUDIT_WAIT_MAX);
     // The clock may outrun the ladder only once the ladder is exhausted: `undoProbe` reaches the
     // doubling branch only at the deepest audit rung, and the two places that lower the rung (an
     // audit confirm, a resize) reset the wait in the same breath. This is the pulse-train ratchet
     // as an invariant. That defect drove the wait to 128 while the rung was still climbing.
     assertWithMessage("the audit clock outruns its ladder only at the deepest rung")
-        .that((climber.auditClock.waitSamples <= PROBE_BACKOFF_MAX)
-            || (climber.audit.rung == PROBE_BACKOFF_MAX)).isTrue();
+        .that((density.auditClock.waitSamples <= PROBE_BACKOFF_MAX)
+            || (density.audit.rung == PROBE_BACKOFF_MAX)).isTrue();
     assertWithMessage("the stillness count is non-negative")
-        .that(climber.auditClock.stillSamples).isAtLeast(0);
-    if (!Double.isNaN(climber.auditClock.settledRate)) {
+        .that(density.auditClock.stillSamples).isAtLeast(0);
+    if (!Double.isNaN(density.auditClock.settledRate)) {
       assertWithMessage("the settled rate is a rate")
-          .that(climber.auditClock.settledRate).isAtLeast(0.0);
+          .that(density.auditClock.settledRate).isAtLeast(0.0);
       assertWithMessage("the settled rate is a rate")
-          .that(climber.auditClock.settledRate).isAtMost(1.0);
+          .that(density.auditClock.settledRate).isAtMost(1.0);
     }
 
     assertWithMessage("the fresh-park shield lives and dies with the park")
-        .that((climber.anchor.freshLeft == 0) || climber.anchor.held).isTrue();
+        .that((density.anchor.freshLeft == 0) || density.anchor.held).isTrue();
     assertWithMessage("the fresh-park shield stays within its schedule")
-        .that(climber.anchor.freshLeft).isAtLeast(0);
+        .that(density.anchor.freshLeft).isAtLeast(0);
     assertWithMessage("the fresh-park shield stays within its schedule")
-        .that(climber.anchor.freshLeft).isAtMost(AUDIT_WAIT_INITIAL);
+        .that(density.anchor.freshLeft).isAtMost(AUDIT_WAIT_INITIAL);
     assertWithMessage("the veto return budget is non-negative")
-        .that(climber.anchor.returnLeft).isAtLeast(0);
+        .that(density.anchor.returnLeft).isAtLeast(0);
     assertWithMessage("a walk and a veto return are mutually exclusive")
-        .that((walk != null) && climber.anchor.returning).isFalse();
+        .that((walk != null) && density.anchor.returning).isFalse();
     assertWithMessage("an in-progress return implies the park that follows it")
-        .that(!climber.anchor.returning || climber.anchor.held).isTrue();
+        .that(!density.anchor.returning || density.anchor.held).isTrue();
     assertWithMessage("a walk holds no undo remainder")
-        .that((walk == null) || (climber.undoRemaining == 0)).isTrue();
+        .that((walk == null) || (density.undoRemaining == 0)).isTrue();
     assertWithMessage("a park defends a planted anchor")
-        .that(!climber.anchor.held || climber.anchor.isPlanted()).isTrue();
+        .that(!density.anchor.held || density.anchor.isPlanted()).isTrue();
     assertWithMessage("a retest's settle lives and dies with the claim it judges")
-        .that((climber.anchor.settleLeft > 0) == (climber.anchor.retestClaim >= 0)).isTrue();
+        .that((density.anchor.settleLeft > 0) == (density.anchor.retestClaim >= 0)).isTrue();
     assertWithMessage("a retest's settle stays within its span")
-        .that(climber.anchor.settleLeft).isAtMost(RETEST_SETTLE);
+        .that(density.anchor.settleLeft).isAtMost(RETEST_SETTLE);
     assertWithMessage("a retest judges a planted anchor")
-        .that((climber.anchor.retestClaim < 0) || climber.anchor.isPlanted()).isTrue();
-    if (climber.anchor.retestClaim >= 0) {
+        .that((density.anchor.retestClaim < 0) || density.anchor.isPlanted()).isTrue();
+    if (density.anchor.retestClaim >= 0) {
       assertWithMessage("a retest's frozen claim is a rate")
-          .that(climber.anchor.retestClaim).isAtMost(1.0);
+          .that(density.anchor.retestClaim).isAtMost(1.0);
     }
 
-    // the cap is a double the climber never truncates, so recomputing it in entries here needs one
-    // of headroom. The bound is stricter than the adjudicated reality: a negative policyWeight
-    // inflates the transfer loop's quota and carries the excess back, a sanctioned transient that
-    // no subject-validated test drives.
-    long bound = (long) Math.max(MIN_INITIAL_STEP, (MAX_STEP_FRACTION * maximum)) + 1;
-    assertWithMessage("the adjustment honors the maximum step")
-        .that(Math.abs(climber.adjustment())).isAtMost(bound);
-    assertWithMessage("the step size honors the maximum step")
-        .that(Math.abs(climber.step.size)).isAtMost((double) bound);
-    assertWithMessage("the step size is finite")
-        .that(Double.isFinite(climber.step.size)).isTrue();
-
     assertWithMessage("the deviation estimate is non-negative and finite")
-        .that(climber.rates.deviation).isAtLeast(0.0);
+        .that(density.rates.deviation).isAtLeast(0.0);
     assertWithMessage("the deviation estimate is non-negative and finite")
-        .that(Double.isFinite(climber.rates.deviation)).isTrue();
-    if (!Double.isNaN(climber.rates.smoothed)) {
+        .that(Double.isFinite(density.rates.deviation)).isTrue();
+    if (!Double.isNaN(density.rates.smoothed)) {
       assertWithMessage("the smoothed rate is a rate")
-          .that(climber.rates.smoothed).isAtLeast(0.0);
+          .that(density.rates.smoothed).isAtLeast(0.0);
       assertWithMessage("the smoothed rate is a rate")
-          .that(climber.rates.smoothed).isAtMost(1.0);
+          .that(density.rates.smoothed).isAtMost(1.0);
     }
-    if (climber.anchor.isPlanted()) {
+    if (density.anchor.isPlanted()) {
       assertWithMessage("the anchor's claim is a rate")
-          .that(climber.anchor.rate).isAtLeast(0.0);
+          .that(density.anchor.rate).isAtLeast(0.0);
       assertWithMessage("the anchor's claim is a rate")
-          .that(climber.anchor.rate).isAtMost(1.0);
+          .that(density.anchor.rate).isAtMost(1.0);
     }
   }
 }

@@ -95,6 +95,10 @@ paths:
   CREATED resets to NONE (same-call create+delete is a no-op); DELETED with a null prior
   means `remove()` (or load-through then `remove()`) hit an absent/expired key — the
   `CacheWriter.delete` still fires (write-through), but no REMOVED event or removal stat.
+- **The EntryProcessor varargs array itself may be null.** The JSR-107 1.1.1 `invoke` and
+  `invokeAll` contracts require null checks for the key or keys and processor, but not for the
+  optional arguments array. Forward an explicitly null array unchanged to `process`; do not
+  normalize it to an empty array or reject it at the adapter boundary.
 - **EntryProcessor lazy-expiry is reconciled before the processor**: `invoke` reconciles a
   lazily-expired prior inline *before* running the processor — it publishes EXPIRED, counts
   the eviction, and passes the entry to the processor as absent,
@@ -144,6 +148,14 @@ paths:
   read-through `getAll` to `putIfAbsent`. (The race can emit two `CREATED`s for one key with no
   intervening `UPDATED` — an accepted concurrency edge; `loadAll` can't know at load time that a
   write will materialize, and JCache doesn't order concurrent events.)
+- **Read-through get timing excludes only the loader call and is operation-scoped.**
+  `LoadingCacheProxy.get` and `getAll` open a per-thread timing scope only after recording a miss.
+  `JCacheLoaderAdapter` contributes the duration of `delegate.load` or `loadAll` to that scope,
+  and the outer operation records its total minus the nested loader time from a `finally`.
+  Copying, expiry evaluation, event publication, and failure handling remain part of get time. A
+  native load reached through `unwrap(LoadingCache.class)` has no JCache timing scope and must not
+  change JCache get statistics. Do not restore a negative global pre-credit in the adapter; an
+  output-copy failure or native load can otherwise leave `AverageGetTime` negative.
 - **EventDispatcher**: Per-key ordering via CompletableFuture chains. Synchronous
   listeners tracked in ThreadLocal; callers must call `awaitSynchronous()` or
   `ignoreSynchronous()`. **Every publish is a dependent stage**, including the first event for a
@@ -191,6 +203,8 @@ paths:
   body must not `join()` that chain (the synchronous dispatches share its executor). The separate
   "no events to a closed listener" guarantee comes from `dispatch`'s `isClosed()` early-return, not
   from this barrier. See `jsr107-conformance.md`.
+  `loadAllAndNotify` returns that notification future; admission, submission, and barrier retirement
+  stay in `loadAll`, including its separate synchronous submission-failure catch.
 - **`close()` shuts down an *owned* `ExecutorService` — per-cache ownership is by-design**:
   `shutdownExecutor()` calls `es.shutdown()` when `executor instanceof ExecutorService` (the
   `PMD.CloseResource` suppression marks it deliberate). The `Factory<Executor>` contract means

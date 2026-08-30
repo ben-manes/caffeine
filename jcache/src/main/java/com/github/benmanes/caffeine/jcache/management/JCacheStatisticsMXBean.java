@@ -36,7 +36,15 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
   private final LongAdder getTimeNanos = new LongAdder();
   private final LongAdder removeTimeNanos = new LongAdder();
 
+  /** The loader time nested in the current thread's read-through cache operation. */
+  private final ThreadLocal<long[]> loadTimeNanos;
+
   private volatile boolean enabled;
+
+  /** Creates an empty statistics bean. */
+  public JCacheStatisticsMXBean() {
+    loadTimeNanos = new ThreadLocal<>();
+  }
 
   /** Returns if statistic collection is enabled. */
   public boolean isEnabled() {
@@ -181,6 +189,31 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
     if (enabled && (durationNanos != 0)) {
       getTimeNanos.add(durationNanos);
     }
+  }
+
+  /** Starts tracking the loader time nested inside a read-through cache operation. */
+  public void beginLoadTime() {
+    loadTimeNanos.set(new long[1]);
+  }
+
+  /** Returns whether a read-through cache operation is tracking its nested loader time. */
+  public boolean isRecordingLoadTime() {
+    return loadTimeNanos.get() != null;
+  }
+
+  /** Records loader time if it is nested inside a read-through cache operation. */
+  public void recordLoadTime(long durationNanos) {
+    long[] loadTime = loadTimeNanos.get();
+    if (loadTime != null) {
+      loadTime[0] += durationNanos;
+    }
+  }
+
+  /** Stops tracking and returns the loader time nested inside a read-through cache operation. */
+  public long endLoadTime() {
+    long[] loadTime = loadTimeNanos.get();
+    loadTimeNanos.remove();
+    return (loadTime == null) ? 0L : loadTime[0];
   }
 
   @Override

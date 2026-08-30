@@ -594,6 +594,82 @@ owns it; a confirmed family lands here and in the gate table.
   split), its deviation floor dead. Narrow by construction: 5,500 apart catches at the
   tenth stride, 6,600 passes the cap; at 16384 the band fits at 40% and the cell reads 4.8. Class
   4 (reach), the walk's exit pricing; a sentinel row beside the moat rows.
+- **moatweather** (`/audit-regret` round 9; spec `audit-regret/specs/moatweather.json` with its
+  dose-matched and peak-level controls, 96 samples, trace seed 11): the calibration audit's value
+  reverses sign under a level change that lands on its first strides. A zipf over 1.5·max at α 0.95
+  (50%) fills main, a band 6,400 requests apart (30%) is the prize, an 8% scan keeps probation thin,
+  and the attack is a fourth member, a pure one-shot scan at 12% of traffic square-modulated at
+  period 3 samples with amplitude 1, so its share steps between 0 and 24%. Static over 22 windows:
+  30.4 at 1% declining to 28.8 at 52%, a flat region spanning 1.6pp across 51 points of window, then
+  a 23pp step to a plateau, 51.80 at 64% and 51.19 at the cap; LRU 50.2. Reaching the plateau from
+  the floor takes ten consecutive strides. Against the unmodulated control the curve is the same
+  within 0.9pp over the whole operating region, the same argmax and the same plateau within 0.5pp;
+  only the 55–58% transition differs, three times the machine's window away and in the direction
+  that would help a walk. Seeded 1–8 the machine reads 31.20 ± 0.31 against the control's
+  47.30 ± 0.54, 16.1pp on 8 of 8 seeds. Undosed the calibration audit is the whole answer: it walks
+  ten strides across the flat region while the rate moves 0.294 → 0.302, catches the band on the
+  eleventh and parks at 65%, where `noaudit` must first escalate the starvation ladder to rung 64
+  and does not arrive before s47. Dosed it crashes on its first stride (a 5.57pp step against
+  `min(RESTART_THRESHOLD, AUDIT_BAR_FRACTION · base)` = 4.87pp), its retry's bold driver reverses on
+  a step and its raw-sample streak confirms at 675 entries on terrain flat within 1.6pp, and that
+  confirm's bridge write resets `starvation.rung` 32 → 1, so the ladder never reaches the rung-64 ×4
+  walk that crosses. `nocheapen` recovers +1.3 of the loss, so the bridge write is the smaller half.
+  The audit is worth −10.2 / −8.0 / −1.6 on trace seeds 11 / 7 / 13 and +7.5 undosed, with seed 7
+  bimodal (6 of 8 trapped) and the other two unimodal; the dose is a bar crossing, the audit's value
+  passing zero in 0.5–0.6 and stepping to −10 between amplitude 0.85 and 0.95 on both instances.
+  What the mechanism needs is the coincidence, not the noise: the same square wave at period 24
+  costs −9.4 when its first flip lands on the audit's first stride and +0.1 when a quarter-period
+  shift moves the flips six samples away, and period 3 is the period that makes the coincidence
+  unavoidable at every phase. Two controls separate it from the terrain: the scan held constant at
+  the attack's high level of 24% reads 42.97 ± 0.16 with the audit earning +6.8, and moving the
+  weather to samples 0–19 alone (21% of the trace) reproduces 79% of the loss while the same insult
+  moves `nocal` by 0.1. The second axis is the traverse length: with the band 3,200 requests apart a
+  first-round walk catches it and the cell is solved (gap 1.4), 4,800 costs 14.4 and 8,000 19.4.
+  Doubling the horizon widens the loss (33.27 against `nocal`'s 45.07) and 16384 keeps half. Class 9
+  (the abort and the verdict both decided by an exogenous step against a frozen reference) paid as
+  class 4, with class 6 as the secondary channel; owned by the recovery layer, responder
+  `Walk.crashBar`'s audit arm and `Walk.isConfirmed`'s streak. `b_moatnoise`, the blind lane's
+  independent construction (a sine modulation of a resident zipf on a gradient terrain), reproduces
+  the escalation block but not the reversal, since the calibration audit earns +1.7 there. Nearest
+  recorded: the F1 dose instruments, whose rows sit at LRU parity on shallow bases and whose largest
+  audit-layer cost was `flashpark`'s −3.8, and `shallowmoat`/`lowbar`, whose terrain this is; what
+  is new is a cell the machine solves undosed and loses entirely dosed, and a coincidence axis the
+  record does not price. No arm recovers it: nothing tested exceeds 41.8 against the 51.8 ceiling
+  under the modulation, so deferring or removing the audit is not the repair.
+
+
+- **ramp_retest** (spec `audit-regret/specs/ramp_retest.json`, 72 samples): a zipf core over
+  0.58·max at α 1.08 and a two-reference band at 0.31·max. The core's weight is 0.4 while the
+  band's weight rises linearly from 0.0304 toward 0.7296, so an initially valid high-rate anchor
+  becomes obsolete. At 8192, seed 1's rail returns the window from 4,123 to 1,055 at s24–25
+  against a frozen claim of 0.8422. The two arrival samples score 0.4032 and 0.3910; at the
+  completed retest, smoothed rate 0.5939 exceeds `claim − 3·deviation` = 0.5038 because the
+  arrival raised the live deviation to 0.1128. The retest accepts the claim, the window holds
+  at 12.9% for s28–38, and the s39 audit recovers the band at s44. The pre-return deviation
+  was 0.0239, which would give a 0.7705 cutoff at that same measurement. This is the return's
+  own change widening the tolerance that judges it, at the completed retest rather than the
+  walk's crash bar.
+  Seeded 1–8: hybrid 61.48 against the best tested static point 68.54 at 26%, LRU 65.43,
+  reactive 39.28 and noaudit 45.69. Removing the rail earns +5.54pp, while forcing completed
+  retests to reject earns +2.25pp (2.18–2.30 on all eight seeds). The latter keeps the return
+  and its observations unchanged through the completed verdict, then releases the hold and
+  re-seeds the goal metric. It prices that intervention, not the whole gap or a viable repair.
+  The same intervention earns +3.87pp at 16384 and +4.75 on trace seed 13; trace seed 11 takes
+  a clean route and is unchanged. A 32-sample stationary prelude preserves the interaction
+  (+6.57pp), while repeating the ramp twice reduces its price to +0.25pp. This is a finite
+  recovery delay, not a permanent pin. The measured neighborhood is conditional: at 8192 the
+  amplitude ladder changes from a correct rejection at 0.86 to a passed retest and eleven held
+  samples at 0.88; at 16384 that passed-retest route already exists at 0.84. The rail-path cost remains at distances
+  0.25–0.37; a 56-sample ramp triggers no veto, and the 88-sample ramp at 16384
+  rejects correctly. A gap-only bisection at much smaller amplitudes instead finds the known
+  audit-approach cost, with the retest working, and is not this boundary.
+  Class 6 (an obsolete claim surviving its retest), with class 3 (arrival-induced masking) and
+  class 4 (the held position waits for the audit); owner `Anchor.retestFails` with `Rates`' live
+  margin. Nearest recorded: `ghostclaim`'s obsolete return and `sidecliff`'s rail cost, where the
+  retest limits the loss. Here the existing retest is reached and passes because of the
+  arrival's tolerance increase. The two size cells are finite-horizon sentinels. No production
+  rule was proposed or priced against the corpus; unconditional rejection would also reject
+  the valid returns the rail exists to defend.
 
 
 ### Terrain classes, and what reachability means
@@ -888,20 +964,21 @@ Non-starved samples are the pure density step. The additions:
    period transiently runs below 4·maximum while steps already scale to the new maximum —
    accepted; it self-heals as the cache fills.
 
-Shape of the code: `determineAdjustment` closes the sample and `densityClimb` is a **router** —
-it builds one `Reading` (the sample's derived view: both densities, the starvation bar, the
-geometry every branch clamps against), advances the always-on observers, then dispatches down the
-priority lattice to one named branch method per outcome. Each branch owns the rationale that used
+Shape of the code: `determineAdjustment` gates on the tier's sample period, dispatches to the
+bound tier, and closes the sample; the density tier's `route` is a **router** — handed one
+`Reading` (the sample's derived view: both densities, the rate and its change, the starvation
+bar, the geometry every branch clamps against), it advances the always-on observers, then
+dispatches down the priority lattice to one named branch method per outcome. Each branch owns the rationale that used
 to sit inline as a comment block, and the conditions are questions (`Reading.hasBlindCorner`,
 `AuditClock.isDue`, `isBackingOff`, `Walk.shouldCrashAbort`, `Walk.isConfirmed`,
 `Walk.canAdjudicate`)
 rather than expressions needing a comment to read. An ending is priced by the layer that owns it:
 `probeEnding` asks the crash question of every walk and then hands to `auditEnding` or
 `starvationEnding`. Reading order for the whole machine is the router first, then the branch it
-sends you to; sectional comments (`Cache Interface`, `Density Climb`, `Exceptional Scenarios`,
-`Probe Walk`) carry that order, and the nested classes read in dependency order: `Sample` →
-`Reading` → `Step` → the two laws → `Walk`/`Ladder` → `AuditClock` → `Anchor`/`Rates` →
-`ProbeEnding`. Behavior lives with the state it reads (Beck's tests, applied mechanically in the
+sends you to; sectional comments (`Exceptional Scenarios`, `Probe Walk`) carry that order inside
+the density tier, and the nested types read in dependency order: the `Climber` interface →
+`Sample` → `Reading` → `Step` → the two tiers → `Walk`/`Ladder` → `AuditClock` →
+`Anchor`/`Rates` → `ProbeEnding`. Behavior lives with the state it reads (Beck's tests, applied mechanically in the
 2026-08 refactor sweeps); repeated quantities have one definition each — `Ladder.stride` (the
 rung-scaled stride the walk and the audit's room rule both read), `Reading.maxStep`,
 `Reading.upperCorner` (the wall line that the blind corner, the probe direction, and the
@@ -911,9 +988,12 @@ and the stand-down's shift trigger all steer by) — because two spellings of on
 the room-rule drift happened.
 
 State: fields on the package-private `WindowClimber` (reached through the `climber` field that
-`AddMaximum` generates), eviction-locked, cold path only. The flat fields are grouped into nine
-small objects — `Sample`, `Step`, `ReactiveClimber`, `DensityClimber`, `Walk`, two `Ladder`s,
-`AuditClock`, `Anchor`, `Rates` — each carrying the behavior that reads only its own state. The
+`AddMaximum` generates), eviction-locked, cold path only. The climber itself holds the shared
+observation and motion state (`Sample`, `Step`, the carry-over `adjustment`) plus the bound
+`tier`; everything density-only lives on the `DensityClimber` that tier names. The flat fields
+are grouped into small objects — `Sample`, `Step`, `ReactiveClimber`, `DensityClimber`, `Walk`,
+two `Ladder`s, `AuditClock`, `Anchor`, `Rates` — each carrying the behavior that reads only its
+own state. The
 grouping is the write-owner map made structural: each row below is one object, so a cross-layer
 write has to name the other owner to happen at all (landed object-by-object, each stage verified
 bit-close against the pre-refactor tree by the paired battery). The tuning constants live inside
@@ -924,17 +1004,18 @@ any one would misstate who owns it. Where a constant has one owner but a second 
 (`Rates.VETO_MARGIN_MIN` floors the audit confirm; the fresh-park shield is
 `AuditClock.AUDIT_WAIT_INITIAL` long), which keeps the sharing visible.
 
-**Both control laws are objects, and the climber is the supervisor.** `ReactiveClimber` holds the
-regime predicate, step rule, decay and period; `DensityClimber` holds the tier gate, the
-proportional step and its period; each steers the one shared `Step` (two laws, never concurrent),
-and `determineAdjustment`/`samplePeriod` are two-line switches over
-`DensityClimber.appliesTo(maximum)` so the tier boundary is written once. This is §2.1's
-supervisory switching made structural: everything else on `WindowClimber` — the probe machine,
-the audit layer, the anchor — is exception machinery the supervisor arms when a law cannot be
-trusted. The two laws keep different verbs on purpose (the reactive one *climbs*, the density one
-*steers*), and the two bold drivers (`ReactiveClimber.climb` and `nextStride`) stay separate:
-same algorithm, but their bars, reversal conditions, and return conventions differ, and §4/§5
-record each difference as load-bearing.
+**The tiers are types, and the density tier carries its own supervisor.** Both implement the
+`Climber` interface (`climb` over the open sample, and `samplePeriod`), and a (re)size constructs
+the one its maximum falls in: `DensityClimber.appliesTo` is the tier boundary, written once in
+`resized`, and construction is the reset, so a reactive-tier cache never allocates the density
+machinery. `ReactiveClimber` holds the regime predicate, step rule, decay and period;
+`DensityClimber` holds the proportional step and its period, and with them the probe machine, the
+audit layer and the anchor, the exception machinery §2.1's supervisory switching arms when its
+law cannot be trusted. Each tier steers the one shared `Step` (two laws, never concurrent,
+re-seeded at every bind). The two laws keep different verbs on purpose (the reactive one
+*climbs*, the density one *steers*), and the two bold drivers (`ReactiveClimber.climb` and
+`nextStride`) stay separate: same algorithm, but their bars, reversal conditions, and return
+conventions differ, and §4/§5 record each difference as load-bearing.
 
 **Declined refactors, decided rather than deferred:** no `WalkMachine` and no method object for
 the router — the branches write `refractoryLeft`, `undoRemaining`, `walk`, the anchor, the audit
@@ -942,7 +1023,7 @@ schedule and the *other* layer's ladder (the documented bridge writes), so eithe
 needs a back-reference and would move the cross-layer writes out of the class that owns them.
 `refractoryLeft` cannot join `Ladder` (the shared type would give the audit's instance a
 permanently dead field), and `undoRemaining` deliberately *outlives* the walk, which is why it is
-a climber field rather than `Walk` state.
+a density-tier field rather than `Walk` state.
 
 The **write-owner map** — which layer's endings may move which fields — is the boundary the
 H4-C1/F2 repairs restored; keep new writes inside their owner:
@@ -952,9 +1033,9 @@ H4-C1/F2 repairs restored; keep new writes inside their owner:
 | Observation | `sample` (a `Sample`: `hits`, `misses`, `windowHits`, `probationHits`, `previousHitRate`) | the counters are zeroed at sample close; `previousHitRate` deliberately keeps a different lifetime, since it is the memory ACROSS samples that the reactive climber's direction and the walk's bold driver compare against — `close(hitRate)` carries it forward while zeroing the rest, and only `reset` (a resize) discards it. `WindowClimber` keeps thin `recordHit`/`recordMiss`/`resetSample` delegates because `BoundedLocalCache` calls them on the read and write paths |
 | The active walk | `walk` (a `Walk`, null while none is in flight: `ladder`, `isAudit`, `down`, `baseWindow`, `baseHitRate`, `baseSmoothedRate`, `baseProbationDensity`, `samples`, `belowBarStreak`, `aboveStreak`, `beatBase`), `undoRemaining` | one walk at a time. It is an object rather than eleven flat fields, so "dead state while not probing" is the absent object rather than a comment, and a reader must hold a walk to ask it anything — `armProbe` is the complete constructor, `endWalk` clears the field, and the router keeps the ended walk in a local because the undo that prices it still reads the bases. The bases are `final`: frozen-at-arm is the property the verdict studies keep re-deriving (§4's "why frozen"), so the compiler now holds it. `walk.ladder` is the arming layer's ledger, which makes "an ending may only deepen the machine that produced it" a reference rather than a lookup; `refractoryLeft` is the starvation refractory alone and belongs to the row below |
 | Starvation retry | `starvation` (a `Ladder`: `rung`, `crashStreak`), `refractoryLeft` | moved by starvation endings only (an audit confirm cheapens `starvation.rung` and zeroes `refractoryLeft`, the one journaled bridge write, spelled out at its site rather than hidden behind `Ladder`'s methods; an audit's undo leaves the refractory alone) |
-| Audit retry + schedule | `audit` (a `Ladder`), `auditClock` (an `AuditClock`: `down`, `waitSamples`, `stillSamples`, `lastWindow`) | moved by audit endings and the position-stillness clock only. The clock owns `tick`/`isDue`/`restart`/`reset`, so the stillness rule (a moving sample **decays** the run, it does not zero it) lives with the counter it governs rather than in a climber method. `reset` deliberately leaves `down` standing — it alternates across audits for coverage and a resize has no opinion about which side to explore next, which is why a resize did not clear it before either. `rescheduleAudit` stays on the climber: it reads the ladder's rung and writes the clock, so it belongs to neither alone |
+| Audit retry + schedule | `audit` (a `Ladder`), `auditClock` (an `AuditClock`: `down`, `waitSamples`, `stillSamples`, `lastWindow`) | moved by audit endings and the position-stillness clock only. The clock owns `tick`/`isDue`/`restart`/`reset`, so the stillness rule (a moving sample **decays** the run, it does not zero it) lives with the counter it governs rather than in a climber method. `reset` deliberately leaves `down` standing — it alternates across audits for coverage and a resize has no opinion about which side to explore next, which is why a resize did not clear it before either. `AuditClock.reschedule` is handed the audit ladder's rung by the ending that prices it, so the clock never reads the other layer's ledger itself |
 | Goal guard | `anchor` (an `Anchor`: `window`, `rate`, `held`, `freshLeft`, `returning`, `returnLeft`, `shortfallStreak`), `rates` (a `Rates`: `smoothed`, `deviation`) | anchor/park/veto authority and the rate references. `Anchor` is the memory *and* its defense in one object because the layer's three invariants run between those parts, and it now holds them by construction rather than by assertion: a shield lives and dies with its park (`park`/`hold`/`release` are the only writers — an audit's confirm arms a shield, a rail veto holds without arming or spending one, since the shield's clock belongs to the confirm that armed it), a park defends only a planted anchor (`discard` takes the hold with it), and a return implies the park that follows it (`beginReturn` arms both). `isAt`/`isAwayFrom` give the band test one definition instead of three inline copies, and they are deliberately not each other's negation — an unplanted anchor is neither at nor away, and there is no claim to veto against. `Rates` owns the EMA pair and the two bars priced off it — `noiseBand` is the three-deviation width, `vetoMargin` is that floored at `VETO_MARGIN_MIN` — so the rail's margin and the starvation probe's walk-interior bar read one definition instead of recomputing `VETO_MARGIN_SCALE * deviation` apiece. The deviation is read LIVE, and the audit's confirming streak is deliberately not priced off it; both notes live on `noiseBand` itself. A stand-down that discards the claim re-seeds the pair (below): the event that invalidates a claim invalidates the reference the claim would be re-planted from, and the two are one layer's state |
-| Motion out | `step` (a `Step`: `size`), `reactive` and `density` (a `ReactiveClimber`/`DensityClimber`, each holding that same `Step`), `adjustment` | the single per-sample command. `step.size` and `adjustment` are NOT one object despite both being written once per completed sample: `adjustment` is drained by `BoundedLocalCache` across maintenance cycles as the transfer carry-over, so it changes at the cycle rate while the step changes at the sample rate. Both tiers write `step.size` — they are alternatives selected by the maximum, never concurrent, and `resized` re-seeds it — which is why each law holds a reference to the shared `Step` rather than a copy of its own |
+| Motion out | `step` (a `Step`: `size`), `tier` (the bound `Climber`, holding that same `Step`), `adjustment` | the single per-sample command. `step.size` and `adjustment` are NOT one object despite both being written once per completed sample: `adjustment` is drained by `BoundedLocalCache` across maintenance cycles as the transfer carry-over, so it changes at the cycle rate while the step changes at the sample rate. Both tiers write `step.size` — they are alternatives bound by the maximum, never concurrent, and `resized` re-seeds it — which is why each tier holds a reference to the shared `Step` rather than a copy of its own |
 
 Deliberate cross-writes (measured, kept): an audit confirm resets the starvation ladder to one
 (cheap re-probing; neutral) *and* clears `starvation.crashStreak` with it, since a reset ladder
@@ -1315,8 +1396,8 @@ rather than a rule for this shape.
   its six-cell median and p90 static-oracle regret were 0.197pp and 0.305pp: remote counterfactual
   ranking did contain useful information. The 27-policy realization then failed every production
   cost bar: 103,816 bytes retained when empty, 314,784 bytes steady, 24 bytes per sampled hit, a
-  median 1.96 bytes/request on the natural 95/5 mix, and a 37.52% median hot-hit regression. This
-  rejects that realization, not the information source.
+  median 1.96 bytes/request on the natural 95/5 mix, and a 37.52% median hot-hit throughput
+  regression. This rejects that realization, not the information source.
   The useful correctness subset was later extracted to main: registered MiniSim now preserves the
   live fixed-probation geometry, removes full and scaled aliases, and computes each integral move
   from the host's actual window coordinate. The expensive replicated controller remains rejected.

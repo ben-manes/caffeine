@@ -21,3 +21,5 @@ paths:
 - Hill-climber state is not generated: it lives in plain fields on the
   package-private `WindowClimber`, reached via the generated `climber` field
   (`AddMaximum`)
+- `NodeContext.FieldAccess.DIRECT` emits ordinary Java field access using the field's
+  declared semantics. `PLAIN` and `OPAQUE` instead select explicit VarHandle modes.

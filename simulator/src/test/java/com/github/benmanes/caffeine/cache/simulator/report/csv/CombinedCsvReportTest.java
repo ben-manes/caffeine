@@ -61,6 +61,31 @@ final class CombinedCsvReportTest {
   }
 
   @Test
+  void failsOnUnknownMetricBeforeDuplicatePolicies(@TempDir Path dir) throws IOException {
+    Path input = Files.writeString(dir.resolve("in.csv"),
+        "Policy,Hit Rate\nLru,50.0\nLru,40.0\n");
+    var report = new CombinedCsvReport(
+        ImmutableMap.of(512L, input), "Bogus", dir.resolve("out.csv"));
+
+    var error = assertThrows(IllegalArgumentException.class, report::run);
+    assertThat(error).hasMessageThat().contains("Bogus");
+    assertThat(error).hasMessageThat().contains("Hit Rate");
+  }
+
+  @Test
+  void leavesCellsEmptyWhenAReportOmitsTheMetric(@TempDir Path dir) throws IOException {
+    Path small = Files.writeString(dir.resolve("512.csv"), "Policy,Hit Penalty\nLru,1.0\n");
+    Path large = Files.writeString(dir.resolve("1024.csv"), "Policy,Hit Rate\nLru,60.0\n");
+    Path output = dir.resolve("out.csv");
+
+    new CombinedCsvReport(
+        ImmutableMap.of(512L, small, 1024L, large), "Hit Rate", output).run();
+
+    assertThat(Files.readAllLines(output))
+        .containsExactly("Policy,512,\"1,024\"", "Lru,,60.0").inOrder();
+  }
+
+  @Test
   void retainsPoliciesAbsentFromTheFirstReport(@TempDir Path dir) throws IOException {
     // A policy may be reported at one size and not another, so the rows are the union of the
     // inputs rather than whichever set the smallest size happened to produce
@@ -81,11 +106,13 @@ final class CombinedCsvReportTest {
     Path small = Files.writeString(dir.resolve("512.csv"), "Policy,Hit Rate\nLru,50.0\n");
     Path large = Files.writeString(dir.resolve("1024.csv"),
         "Policy,Hit Rate\nLru,60.0\nLru,40.0\n");
+    Path output = Files.writeString(dir.resolve("out.csv"), "Previous report\n");
     var report = new CombinedCsvReport(
-        ImmutableMap.of(512L, small, 1024L, large), "Hit Rate", dir.resolve("out.csv"));
+        ImmutableMap.of(512L, small, 1024L, large), "Hit Rate", output);
 
     var error = assertThrows(IllegalStateException.class, report::run);
     assertThat(error).hasMessageThat().contains("Lru");
+    assertThat(Files.readString(output)).isEqualTo("Previous report\n");
   }
 
   @Test

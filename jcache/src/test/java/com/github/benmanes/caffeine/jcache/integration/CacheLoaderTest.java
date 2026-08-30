@@ -15,9 +15,11 @@
  */
 package com.github.benmanes.caffeine.jcache.integration;
 
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -31,8 +33,12 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import javax.cache.Cache;
+import javax.cache.CacheException;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryExpiredListener;
@@ -47,10 +53,14 @@ import javax.cache.integration.CacheLoaderException;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
+import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
+import com.github.benmanes.caffeine.jcache.copy.Copier;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -66,6 +76,19 @@ final class CacheLoaderTest {
           config.setCacheLoaderFactory(() -> cacheLoader);
           config.setExpiryPolicyFactory(() -> expiry);
           config.setStatisticsEnabled(true);
+          config.setReadThrough(true);
+        }).build();
+  }
+
+  private static JCacheFixture jcacheFixture(
+      ExpiryPolicy expiry, CacheLoader<Integer, Integer> cacheLoader, Copier copier) {
+    return JCacheFixture.builder()
+        .loading(config -> {
+          config.setCacheLoaderFactory(() -> cacheLoader);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setCopierFactory(() -> copier);
+          config.setStatisticsEnabled(true);
+          config.setStoreByValue(true);
           config.setReadThrough(true);
         }).build();
   }
@@ -109,6 +132,128 @@ final class CacheLoaderTest {
       // is subtracted regardless of the loader's result.
       assertThat(JCacheFixture.getStatistics(fixture.jcacheLoading())
           .getAverageGetTime()).isLessThan(50_000f);
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("readOperations")
+  void load_outputCopyFailure_keepsGetTimeNonNegative(
+      Consumer<Cache<Integer, Integer>> operation, Set<Integer> keys) {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    var copies = new HashMap<Integer, Integer>();
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        if ((object instanceof Integer) && (((Integer) object) < 0)) {
+          var value = (Integer) object;
+          Integer priorCount = copies.get(value);
+          int count = (priorCount == null) ? 1 : (priorCount + 1);
+          copies.put(value, count);
+          if (count > 1) {
+            throw new CacheException("output copy failed");
+          }
+        }
+        return object;
+      }
+    };
+    try (var fixture = jcacheFixture(expiry, cacheLoader, copier);
+         var cache = fixture.jcacheLoading()) {
+      when(cacheLoader.load(any())).thenAnswer(invocation -> {
+        fixture.ticker().advance(java.time.Duration.ofMillis(100));
+        return -1;
+      });
+      when(cacheLoader.loadAll(anyIterable())).thenAnswer(invocation -> {
+        fixture.ticker().advance(java.time.Duration.ofMillis(100));
+        Iterable<Integer> loadedKeys = invocation.getArgument(0);
+        return Maps.toMap(loadedKeys, key -> -key);
+      });
+      assertThrows(CacheException.class, () -> operation.accept(cache));
+
+      assertThat(getStatistics(cache).getCacheMisses()).isEqualTo(keys.size());
+      assertThat(getStatistics(cache).getAverageGetTime()).isAtLeast(0f);
+      keys.forEach(key -> assertThat(cache.containsKey(key)).isTrue());
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("readOperations")
+  void load_failure_excludesLoaderTime(
+      Consumer<Cache<Integer, Integer>> operation, Set<Integer> keys) {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    try (var fixture = jcacheFixture(expiry, cacheLoader);
+         var cache = fixture.jcacheLoading()) {
+      when(cacheLoader.load(any())).thenAnswer(invocation -> {
+        fixture.ticker().advance(java.time.Duration.ofMillis(100));
+        throw new CacheLoaderException("load failed");
+      });
+      when(cacheLoader.loadAll(anyIterable())).thenAnswer(invocation -> {
+        fixture.ticker().advance(java.time.Duration.ofMillis(100));
+        throw new CacheLoaderException("load failed");
+      });
+      assertThrows(CacheLoaderException.class, () -> operation.accept(cache));
+
+      assertThat(getStatistics(cache).getCacheMisses()).isEqualTo(keys.size());
+      assertThat(getStatistics(cache).getAverageGetTime()).isAtLeast(0f);
+      assertThat(getStatistics(cache).getAverageGetTime()).isLessThan(50_000f);
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("readOperations")
+  void load_copierTime_includedInGetTime(
+      Consumer<Cache<Integer, Integer>> operation, Set<Integer> keys) {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    var onCopy = new AtomicReference<Runnable>(() -> {});
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        if ((object instanceof Integer) && (((Integer) object) < 0)) {
+          onCopy.get().run();
+        }
+        return object;
+      }
+    };
+    try (var fixture = jcacheFixture(expiry, cacheLoader, copier);
+         var cache = fixture.jcacheLoading()) {
+      onCopy.set(() -> fixture.ticker().advance(java.time.Duration.ofMillis(50)));
+      when(cacheLoader.load(any())).thenAnswer(invocation -> {
+        fixture.ticker().advance(java.time.Duration.ofMillis(100));
+        return -1;
+      });
+      when(cacheLoader.loadAll(anyIterable())).thenAnswer(invocation -> {
+        fixture.ticker().advance(java.time.Duration.ofMillis(100));
+        Iterable<Integer> loadedKeys = invocation.getArgument(0);
+        return Maps.toMap(loadedKeys, key -> -key);
+      });
+
+      operation.accept(cache);
+
+      assertThat(getStatistics(cache).getCacheMisses()).isEqualTo(keys.size());
+      assertThat(getStatistics(cache).getAverageGetTime()).isEqualTo(100_000f);
+      keys.forEach(key -> assertThat(cache.containsKey(key)).isTrue());
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void nativeLoad_doesNotChangeJCacheGetTime() {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    try (var fixture = jcacheFixture(expiry, cacheLoader);
+         var cache = fixture.jcacheLoading()) {
+      when(cacheLoader.load(any())).thenAnswer(invocation -> {
+        fixture.ticker().advance(java.time.Duration.ofMillis(100));
+        return -1;
+      });
+      var nativeCache = (LoadingCache<Integer, Expirable<Integer>>)
+          cache.unwrap(LoadingCache.class);
+
+      assertThat(nativeCache.get(1)).isNotNull();
+      assertThat(getStatistics(cache).getCacheGets()).isEqualTo(0L);
+
+      assertThat(cache.get(1)).isEqualTo(-1);
+      assertThat(getStatistics(cache).getAverageGetTime()).isAtLeast(0f);
     }
   }
 
@@ -577,5 +722,12 @@ final class CacheLoaderTest {
   @MethodSource
   static Stream<Exception> throwables() {
     return Stream.of(new IllegalStateException(), new CacheLoaderException());
+  }
+
+  static Stream<Arguments> readOperations() {
+    return Stream.of(
+        arguments((Consumer<Cache<Integer, Integer>>) cache -> cache.get(1), Set.of(1)),
+        arguments((Consumer<Cache<Integer, Integer>>) cache -> cache.getAll(Set.of(1, 2)),
+            Set.of(1, 2)));
   }
 }

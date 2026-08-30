@@ -1,0 +1,6 @@
+paths:
+  .github/workflows/**/*.{yml,yaml}:
+    ignore:
+      # Remove when actionlint supports self-repository references:
+      # https://github.com/rhysd/actionlint/issues/711
+      - '^specifying action "\$/\.github/actions/run-(gradle|benchmark)" in invalid format because ref is missing\.'

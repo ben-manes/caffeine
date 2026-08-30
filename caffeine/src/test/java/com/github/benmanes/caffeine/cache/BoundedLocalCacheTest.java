@@ -183,6 +183,8 @@ import com.github.benmanes.caffeine.cache.SnapshotEntry.ExpirableEntry;
 import com.github.benmanes.caffeine.cache.SnapshotEntry.ExpirableWeightedEntry;
 import com.github.benmanes.caffeine.cache.SnapshotEntry.RefreshableExpirableEntry;
 import com.github.benmanes.caffeine.cache.SnapshotEntry.WeightedEntry;
+import com.github.benmanes.caffeine.cache.WindowClimber.DensityClimber;
+import com.github.benmanes.caffeine.cache.WindowClimber.Walk;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Int;
@@ -3441,8 +3443,9 @@ final class BoundedLocalCacheTest {
     // The transfer applies as much of the stride as resident entries cover and gives the
     // remainder back into the climber's adjustment as the multi-cycle carry-over, so the applied
     // movement plus the carried remainder always equals the probe's entry stride.
+    var density = (DensityClimber) cache.climber().tier;
     long moved = cache.windowMaximum() - windowMaximum;
-    assertThat(walkOf(cache).down).isFalse();
+    assertThat(walkOf(density).down).isFalse();
     assertThat(moved).isAtLeast(0);
     assertThat(moved + cache.climber().adjustment()).isEqualTo(stride);
     assertThat(cache.mainProtectedMaximum()).isEqualTo(protectedMaximum - moved);
@@ -3472,8 +3475,9 @@ final class BoundedLocalCacheTest {
     cache.climb();
 
     // as above: the applied shrink plus the carried remainder equals the down stride
+    var density = (DensityClimber) cache.climber().tier;
     long moved = windowMaximum - cache.windowMaximum();
-    assertThat(walkOf(cache).down).isTrue();
+    assertThat(walkOf(density).down).isTrue();
     assertThat(moved).isAtLeast(0);
     assertThat(moved - cache.climber().adjustment()).isEqualTo(stride);
     assertThat(cache.mainProtectedMaximum()).isEqualTo(protectedMaximum + moved);
@@ -3538,6 +3542,7 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(floor + 100);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    var density = (DensityClimber) cache.climber().tier;
 
     long hits = (long) Integer.MAX_VALUE + 1;
     cache.climber().sample.windowHits = (hits >>> 8);
@@ -3548,7 +3553,7 @@ final class BoundedLocalCacheTest {
     long windowMaximum = cache.windowMaximum();
     determineAdjustment(cache);
 
-    assertThat(cache.climber().walk).isNull();
+    assertThat(density.walk).isNull();
     assertThat(cache.climber().adjustment()).isLessThan(0);
     assertThat(windowMaximum + cache.climber().adjustment()).isAtLeast(floor);
   }
@@ -3574,9 +3579,10 @@ final class BoundedLocalCacheTest {
 
     determineAdjustment(cache);
 
-    assertThat(walkOf(cache).down).isFalse();
+    var density = (DensityClimber) cache.climber().tier;
     assertThat(cache.climber().adjustment()).isGreaterThan(0);
-    assertThat(walkOf(cache).samples).isEqualTo(1);
+    assertThat(walkOf(density).samples).isEqualTo(1);
+    assertThat(walkOf(density).down).isFalse();
   }
 
   @ParameterizedTest
@@ -3590,6 +3596,7 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(cache.maximum() / 10);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    var density = (DensityClimber) cache.climber().tier;
 
     long hits = (long) Integer.MAX_VALUE + 1;
     cache.climber().sample.previousHitRate = 0.50;
@@ -3599,7 +3606,7 @@ final class BoundedLocalCacheTest {
 
     determineAdjustment(cache);
 
-    assertThat(cache.climber().walk).isNull();
+    assertThat(density.walk).isNull();
     assertThat(cache.climber().adjustment()).isGreaterThan(0);
   }
 
@@ -3614,7 +3621,8 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(cache.maximum() / 4);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
-    cache.climber().refractoryLeft = 2;
+    var density = (DensityClimber) cache.climber().tier;
+    density.refractoryLeft = 2;
 
     long hits = (long) Integer.MAX_VALUE + 1;
     cache.climber().sample.previousHitRate = 0.50;
@@ -3624,9 +3632,9 @@ final class BoundedLocalCacheTest {
 
     determineAdjustment(cache);
 
-    assertThat(cache.climber().walk).isNull();
+    assertThat(density.walk).isNull();
+    assertThat(density.refractoryLeft).isEqualTo(1);
     assertThat(cache.climber().adjustment()).isEqualTo(0);
-    assertThat(cache.climber().refractoryLeft).isEqualTo(1);
   }
 
   @ParameterizedTest
@@ -3642,8 +3650,9 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(cache.maximum() / 4);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    var density = (DensityClimber) cache.climber().tier;
     long hits = (long) Integer.MAX_VALUE + 1;
-    injectWalk(cache, /* down= */ false, /* baseWindow= */ floor,
+    injectWalk(density, /* down= */ false, /* baseWindow= */ floor,
         /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
         /* baseProbationDensity= */ 1_000_000.0).samples = 1;
     cache.climber().step.size = STEP_PERCENT * cache.maximum();
@@ -3656,9 +3665,8 @@ final class BoundedLocalCacheTest {
     long windowMaximum = cache.windowMaximum();
     determineAdjustment(cache);
 
-    assertThat(cache.climber().walk).isNull();
-    assertThat(cache.climber().starvation.rung)
-        .isEqualTo(2 * PROBE_BACKOFF_INITIAL);
+    assertThat(density.walk).isNull();
+    assertThat(density.starvation.rung).isEqualTo(2 * PROBE_BACKOFF_INITIAL);
     assertThat(cache.climber().adjustment()).isEqualTo(floor - windowMaximum);
   }
 
@@ -3675,12 +3683,13 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(cache.maximum() / 4);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    var density = (DensityClimber) cache.climber().tier;
     long hits = (long) Integer.MAX_VALUE + 1;
-    injectWalk(cache, /* down= */ false, /* baseWindow= */ floor,
+    injectWalk(density, /* down= */ false, /* baseWindow= */ floor,
         /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
         /* baseProbationDensity= */ 1_000_000.0).samples = PROBE_COMMITMENT_MID;
-    cache.climber().starvation.rung = PROBE_BACKOFF_MAX;
     cache.climber().step.size = STEP_PERCENT * cache.maximum();
+    density.starvation.rung = PROBE_BACKOFF_MAX;
 
     cache.climber().sample.windowHits = (hits >>> 6);
     cache.climber().sample.previousHitRate = 0.50;
@@ -3689,9 +3698,9 @@ final class BoundedLocalCacheTest {
 
     determineAdjustment(cache);
 
-    assertThat(cache.climber().walk).isNotNull();
+    assertThat(density.walk).isNotNull();
     assertThat(cache.climber().adjustment()).isGreaterThan(0);
-    assertThat(walkOf(cache).samples).isEqualTo(PROBE_COMMITMENT_MID + 1);
+    assertThat(walkOf(density).samples).isEqualTo(PROBE_COMMITMENT_MID + 1);
   }
 
   @ParameterizedTest
@@ -3705,8 +3714,9 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(cache.maximum() / 4);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    var density = (DensityClimber) cache.climber().tier;
     long hits = (long) Integer.MAX_VALUE + 1;
-    injectWalk(cache, /* down= */ false, /* baseWindow= */ floor,
+    injectWalk(density, /* down= */ false, /* baseWindow= */ floor,
         /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
         /* baseProbationDensity= */ 0.0).samples = PROBE_WALK_BUDGET;
 
@@ -3720,11 +3730,10 @@ final class BoundedLocalCacheTest {
     long windowMaximum = cache.windowMaximum();
     determineAdjustment(cache);
 
-    assertThat(cache.climber().walk).isNull();
-    assertThat(cache.climber().starvation.rung)
-        .isEqualTo(2 * PROBE_BACKOFF_INITIAL);
+    assertThat(density.walk).isNull();
+    assertThat(density.refractoryLeft).isEqualTo(density.starvation.rung);
+    assertThat(density.starvation.rung).isEqualTo(2 * PROBE_BACKOFF_INITIAL);
     assertThat(cache.climber().adjustment()).isEqualTo(floor - windowMaximum);
-    assertThat(cache.climber().refractoryLeft).isEqualTo(cache.climber().starvation.rung);
   }
 
   @ParameterizedTest
@@ -3738,8 +3747,9 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(floor + 200);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    var density = (DensityClimber) cache.climber().tier;
     long hits = (long) Integer.MAX_VALUE + 1;
-    injectWalk(cache, /* down= */ false, /* baseWindow= */ (floor + 100),
+    injectWalk(density, /* down= */ false, /* baseWindow= */ (floor + 100),
         /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
         /* baseProbationDensity= */ 0.0).samples = 2;
     cache.climber().step.size = STEP_PERCENT * cache.maximum();
@@ -3747,18 +3757,17 @@ final class BoundedLocalCacheTest {
     // A starvation probe's reversal is priced against the workload's own scatter, so the bar
     // floors at the restart threshold only on a quiet workload; at the DEVIATION_SEED the bar is
     // three deviations (15pp) and this 6pp drop would not reverse anything.
-    cache.climber().rates.deviation = 0.001;
     cache.climber().sample.previousHitRate = 0.56; // a crash-scale drop reverses the walk
     cache.climber().sample.windowHits = 0;
     cache.climber().sample.misses = hits;
     cache.climber().sample.hits = hits;
+    density.rates.deviation = 0.001;
 
     long windowMaximum = cache.windowMaximum();
     determineAdjustment(cache);
 
-    assertThat(cache.climber().walk).isNull();
-    assertThat(cache.climber().starvation.rung)
-        .isEqualTo(2 * PROBE_BACKOFF_INITIAL);
+    assertThat(density.walk).isNull();
+    assertThat(density.starvation.rung).isEqualTo(2 * PROBE_BACKOFF_INITIAL);
     assertThat(cache.climber().adjustment()).isEqualTo((floor + 100) - windowMaximum);
   }
 
@@ -3773,11 +3782,12 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(cache.maximum() / 4);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    var density = (DensityClimber) cache.climber().tier;
     long hits = (long) Integer.MAX_VALUE + 1;
-    injectWalk(cache, /* down= */ false, /* baseWindow= */ floor,
+    injectWalk(density, /* down= */ false, /* baseWindow= */ floor,
         /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
         /* baseProbationDensity= */ 0.0).samples = 10;
-    cache.climber().starvation.rung = PROBE_BACKOFF_MAX;
+    density.starvation.rung = PROBE_BACKOFF_MAX;
 
     cache.climber().sample.previousHitRate = 0.50;
     cache.climber().sample.windowHits = hits;
@@ -3786,10 +3796,10 @@ final class BoundedLocalCacheTest {
 
     determineAdjustment(cache);
 
-    assertThat(cache.climber().starvation.rung).isEqualTo(1);
-    assertThat(cache.climber().refractoryLeft).isEqualTo(0);
     assertThat(cache.climber().adjustment()).isGreaterThan(0);
-    assertThat(cache.climber().walk).isNull();
+    assertThat(density.starvation.rung).isEqualTo(1);
+    assertThat(density.refractoryLeft).isEqualTo(0);
+    assertThat(density.walk).isNull();
   }
 
   @ParameterizedTest
@@ -3802,8 +3812,9 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(cache.maximum() / 4);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    var density = (DensityClimber) cache.climber().tier;
     long hits = (long) Integer.MAX_VALUE + 1;
-    injectWalk(cache, /* down= */ true, /* baseWindow= */ (cache.maximum() / 2),
+    injectWalk(density, /* down= */ true, /* baseWindow= */ (cache.maximum() / 2),
         /* baseRequestCount= */ 4 * hits, /* baseHitRate= */ 0.90,
         /* baseProbationDensity= */ 0.0);
 
@@ -3815,10 +3826,10 @@ final class BoundedLocalCacheTest {
     long windowMaximum = cache.windowMaximum();
     determineAdjustment(cache);
 
-    assertThat(cache.climber().starvation.rung).isEqualTo(PROBE_BACKOFF_INITIAL);
-    assertThat(cache.climber().refractoryLeft).isEqualTo(PROBE_BACKOFF_INITIAL);
     assertThat(cache.climber().adjustment()).isEqualTo((cache.maximum() / 2) - windowMaximum);
-    assertThat(cache.climber().walk).isNull();
+    assertThat(density.starvation.rung).isEqualTo(PROBE_BACKOFF_INITIAL);
+    assertThat(density.refractoryLeft).isEqualTo(PROBE_BACKOFF_INITIAL);
+    assertThat(density.walk).isNull();
   }
 
   @ParameterizedTest
@@ -3832,6 +3843,7 @@ final class BoundedLocalCacheTest {
     cache.setWindowMaximum(floor / 2);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
+    var density = (DensityClimber) cache.climber().tier;
 
     long hits = (long) Integer.MAX_VALUE + 1;
     cache.climber().sample.windowHits = (hits >>> 8);
@@ -3842,7 +3854,7 @@ final class BoundedLocalCacheTest {
     long windowMaximum = cache.windowMaximum();
     determineAdjustment(cache);
 
-    assertThat(cache.climber().walk).isNull();
+    assertThat(density.walk).isNull();
     assertThat(cache.climber().adjustment()).isGreaterThan(0);
     assertThat(windowMaximum + cache.climber().adjustment()).isAtMost(floor);
     assertThat(windowMaximum + cache.climber().adjustment()).isAtLeast(floor - 1);
@@ -3853,21 +3865,23 @@ final class BoundedLocalCacheTest {
   void adapt_largeCache_resizeResetsProbeState(BoundedLocalCache<Int, Int> cache) {
     // Changing the maximum re-seeds the climber; stale probe state must not carry across.
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
-    injectWalk(cache, /* down= */ false, /* baseWindow= */ 1024,
+    var density = (DensityClimber) cache.climber().tier;
+    injectWalk(density, /* down= */ false, /* baseWindow= */ 1024,
         /* baseRequestCount= */ 1000, /* baseHitRate= */ 0.5,
         /* baseProbationDensity= */ 0.0);
-    cache.climber().refractoryLeft = 7;
+    density.refractoryLeft = 7;
     cache.climber().carryOver(-280_000);
     cache.climber().sample.previousHitRate = 0.80;
-    cache.climber().starvation.rung = PROBE_BACKOFF_MAX;
+    density.starvation.rung = PROBE_BACKOFF_MAX;
 
     cache.setMaximumSize(4 * DENSITY_THRESHOLD);
 
-    assertThat(cache.climber().walk).isNull();
+    var resetDensity = (DensityClimber) cache.climber().tier;
+    assertThat(resetDensity.walk).isNull();
+    assertThat(resetDensity.refractoryLeft).isEqualTo(0);
     assertThat(cache.climber().adjustment()).isEqualTo(0);
-    assertThat(cache.climber().refractoryLeft).isEqualTo(0);
     assertThat(cache.climber().sample.previousHitRate).isEqualTo(0);
-    assertThat(cache.climber().starvation.rung).isEqualTo(PROBE_BACKOFF_INITIAL);
+    assertThat(resetDensity.starvation.rung).isEqualTo(PROBE_BACKOFF_INITIAL);
   }
 
   @ParameterizedTest
@@ -3877,10 +3891,11 @@ final class BoundedLocalCacheTest {
     // multiply keeps the gate positive so an idle cache never fabricates samples.
     cache.setMaximumSize(Long.MAX_VALUE);
     cache.frequencySketch().ensureCapacity(1024);
+    var density = (DensityClimber) cache.climber().tier;
 
     determineAdjustment(cache);
 
-    assertThat(cache.climber().walk).isNull();
+    assertThat(density.walk).isNull();
     assertThat(cache.climber().adjustment()).isEqualTo(0);
     assertThat(Double.isNaN(cache.climber().step.size)).isFalse();
   }
@@ -4114,20 +4129,19 @@ final class BoundedLocalCacheTest {
   }
 
   /** The walk in flight, asserting that there is one; never hold it across an adaptation. */
-  private static WindowClimber.Walk walkOf(BoundedLocalCache<?, ?> cache) {
-    var walk = cache.climber().walk;
+  private static Walk walkOf(DensityClimber density) {
+    var walk = density.walk;
     assertThat(walk).isNotNull();
     return walk;
   }
 
   /** Puts a starvation walk in flight, as an arm would have left it. */
   @CanIgnoreReturnValue
-  private static WindowClimber.Walk injectWalk(BoundedLocalCache<?, ?> cache, boolean down,
-      long baseWindow, long baseRequestCount, double baseHitRate, double baseProbationDensity) {
-    var walk = new WindowClimber.Walk(cache.climber().starvation, /* isAudit= */ false, down,
-        baseWindow, baseRequestCount, baseHitRate, /* baseSmoothedRate= */ 0.0,
-        baseProbationDensity);
-    cache.climber().walk = walk;
+  private static Walk injectWalk(DensityClimber density, boolean down, long baseWindow,
+      long baseRequestCount, double baseHitRate, double baseProbationDensity) {
+    var walk = new Walk(density.starvation, /* isAudit= */ false, down, baseWindow,
+        baseRequestCount, baseHitRate, /* baseSmoothedRate= */ 0.0, baseProbationDensity);
+    density.walk = walk;
     return walk;
   }
 
