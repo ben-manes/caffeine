@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.guava.module;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -169,6 +170,6 @@ final class ModuleTest {
 
   private static ModuleDescriptor getModuleDescriptor() {
     var module = CaffeinatedGuava.class.getModule();
-    return module.getDescriptor();
+    return requireNonNull(module.getDescriptor(), "guava adapter is not a named module");
   }
 }

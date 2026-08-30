@@ -101,14 +101,14 @@ public final class CacheManagerImpl implements CacheManager {
 
       synchronized (lock) {
         requireNotClosed();
-        CacheProxy<?, ?> cache = caches.compute(cacheName, (name, existing) -> {
+        CacheProxy<?, ?> cache = requireNonNull(caches.compute(cacheName, (name, existing) -> {
           if (existing != null) {
             throw new CacheException("Cache " + cacheName + " already exists");
           } else if (CacheFactory.isDefinedExternally(this, cacheName)) {
             throw new CacheException("Cache " + cacheName + " is configured externally");
           }
           return CacheFactory.createCache(this, cacheName, configuration);
-        });
+        }));
 
         @SuppressWarnings("unchecked")
         var config = cache.getConfiguration(CompleteConfiguration.class);
@@ -156,6 +156,7 @@ public final class CacheManagerImpl implements CacheManager {
   }
 
   @Override
+  @SuppressWarnings("NullAway")
   public <K, V> @Nullable CacheProxy<K, V> getCache(String cacheName) {
     requireNonNull(cacheName);
     var classLoader = Thread.currentThread().getContextClassLoader();

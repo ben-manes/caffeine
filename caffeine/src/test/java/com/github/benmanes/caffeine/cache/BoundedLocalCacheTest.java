@@ -1290,7 +1290,7 @@ final class BoundedLocalCacheTest {
   }
 
   @Test
-  @SuppressWarnings("PMD.LooseCoupling")
+  @SuppressWarnings({"NullAway", "PMD.LooseCoupling"})
   void drainWriteBuffer_unpublishedTask() {
     var cache = asBoundedLocalCache(Caffeine.newBuilder()
         .executor(Runnable::run)
@@ -1688,7 +1688,8 @@ final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT})
   void entrySet_contains_collectedValue(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var entry = Map.entry(context.firstKey(), context.original().get(context.firstKey()));
+    var entry = Map.entry(context.firstKey(),
+        requireNonNull(context.original().get(context.firstKey())));
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var valueRef = (Reference<?>) node.getValueReference();
     valueRef.clear();
@@ -1948,13 +1949,13 @@ final class BoundedLocalCacheTest {
     }
 
     var expected = cache.accessOrderWindowDeque().stream()
-        .map(Node::getKey).collect(toImmutableList());
+        .map(node -> requireNonNull(node.getKey())).collect(toImmutableList());
     cache.setWindowMaximum(0L);
     var candidate = cache.evictFromWindow();
     assertThat(candidate).isNotNull();
 
     var actual = cache.accessOrderProbationDeque().stream()
-        .map(Node::getKey).collect(toImmutableList());
+        .map(node -> requireNonNull(node.getKey())).collect(toImmutableList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
@@ -1970,7 +1971,7 @@ final class BoundedLocalCacheTest {
     var expected = Stream
         .concat(cache.accessOrderProbationDeque().stream(),
             cache.accessOrderProtectedDeque().stream())
-        .map(Node::getKey)
+        .map(node -> requireNonNull(node.getKey()))
         .collect(toImmutableList());
     cache.setMaximumSize(0L);
     cache.cleanUp();
@@ -1995,7 +1996,7 @@ final class BoundedLocalCacheTest {
     Arrays.fill(cache.frequencySketch().table, 0L);
 
     var expected = cache.accessOrderWindowDeque().stream()
-        .map(Node::getKey).collect(toImmutableList());
+        .map(node -> requireNonNull(node.getKey())).collect(toImmutableList());
     cache.setMaximum(context.maximumSize() / 2);
     cache.setWindowMaximum(0);
     cache.evictEntries(0L);
@@ -2020,7 +2021,7 @@ final class BoundedLocalCacheTest {
     Arrays.fill(cache.frequencySketch().table, 0L);
 
     var expected = cache.accessOrderWindowDeque().stream()
-        .map(Node::getKey).collect(toImmutableList());
+        .map(node -> requireNonNull(node.getKey())).collect(toImmutableList());
     cache.setMaximum(context.maximumSize() / 2);
     cache.evictEntries(0L);
 
@@ -2053,7 +2054,7 @@ final class BoundedLocalCacheTest {
         .concat(cache.accessOrderWindowDeque().stream(),
             cache.accessOrderProbationDeque().stream(),
             cache.accessOrderProtectedDeque().stream())
-        .map(Node::getKey)
+        .map(node -> requireNonNull(node.getKey()))
         .collect(toImmutableList());
     cache.setMainProtectedMaximum(0L);
     cache.setWindowMaximum(0L);
@@ -2080,7 +2081,7 @@ final class BoundedLocalCacheTest {
         .concat(cache.accessOrderWindowDeque().stream(),
             cache.accessOrderProbationDeque().stream(),
             cache.accessOrderProtectedDeque().stream())
-        .map(Node::getKey)
+        .map(node -> requireNonNull(node.getKey()))
         .collect(toImmutableList());
     cache.setMaximumSize(0);
     cache.evictEntries(0L);
@@ -2175,12 +2176,12 @@ final class BoundedLocalCacheTest {
     try {
       var windowNode = cache.accessOrderWindowDeque().getFirst();
       var probationBefore = cache.accessOrderProbationDeque().stream()
-          .map(Node::getKey).collect(toImmutableList());
+          .map(node -> requireNonNull(node.getKey())).collect(toImmutableList());
 
       cache.reorderProbation(windowNode);
 
       var probationAfter = cache.accessOrderProbationDeque().stream()
-          .map(Node::getKey).collect(toImmutableList());
+          .map(node -> requireNonNull(node.getKey())).collect(toImmutableList());
       assertThat(probationAfter).containsExactlyElementsIn(probationBefore).inOrder();
     } finally {
       cache.evictionLock.unlock();
@@ -2325,12 +2326,12 @@ final class BoundedLocalCacheTest {
       var writing = new AtomicBoolean();
       var evictedValue = new AtomicReference<@Nullable Int>();
       var previousValue = new AtomicReference<@Nullable Int>();
-      var removedValues = new AtomicReference<@Nullable Int>(Int.valueOf(0));
+      var removedValues = new AtomicReference<>(Int.valueOf(0));
 
       RemovalListener<Int, Int> evictionListener =
           (k, v, cause) -> evictedValue.set(v);
       RemovalListener<Int, Int> removalListener =
-          (k, v, cause) -> removedValues.accumulateAndGet(v, Int::add);
+          (k, v, cause) -> removedValues.accumulateAndGet(requireNonNull(v), Int::add);
 
       var cache = Caffeine.newBuilder()
           .evictionListener(evictionListener)
@@ -8242,13 +8243,14 @@ final class BoundedLocalCacheTest {
         : asBoundedLocalCache(context.cache()));
   }
 
-  private static <K, V> BoundedLocalCache<K, V> asBoundedLocalCache(Cache<K, V> cache) {
+  private static <K, V extends @Nullable Object> BoundedLocalCache<K, V> asBoundedLocalCache(
+      Cache<K, V> cache) {
     return (BoundedLocalCache<K, V>) cache.asMap();
   }
 
   @SuppressFBWarnings("PDP_POORLY_DEFINED_PARAMETER")
-  private static <K, V> BoundedLocalCache<K, CompletableFuture<V>> asBoundedLocalCache(
-      AsyncCache<K, V> cache) {
+  private static <K, V extends @Nullable Object> BoundedLocalCache<K, CompletableFuture<V>>
+      asBoundedLocalCache(AsyncCache<K, V> cache) {
     var localCache = (LocalAsyncCache<K, V>) cache;
     return (BoundedLocalCache<K, CompletableFuture<V>>) localCache.cache();
   }

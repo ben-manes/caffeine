@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.MAXIMUM_EXPIRY;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.google.common.truth.Truth.assertThat;
@@ -65,7 +66,7 @@ final class AsyncTest {
   }
 
   @ParameterizedTest @MethodSource("unsuccessful")
-  void isReady_fails(CompletableFuture<Integer> future) {
+  void isReady_fails(@Nullable CompletableFuture<Integer> future) {
     assertThat(Async.isReady(future)).isFalse();
   }
 
@@ -75,7 +76,7 @@ final class AsyncTest {
   }
 
   @ParameterizedTest @MethodSource("unsuccessful")
-  void getIfReady_fails(CompletableFuture<Integer> future) {
+  void getIfReady_fails(@Nullable CompletableFuture<Integer> future) {
     assertThat(Async.getIfReady(future)).isNull();
   }
 
@@ -207,11 +208,11 @@ final class AsyncTest {
     verifyNoInteractions(delegate);
   }
 
-  static Stream<CompletableFuture<Integer>> unsuccessful() {
+  static Stream<@Nullable CompletableFuture<Integer>> unsuccessful() {
     return Stream.of(
         null,
         new CompletableFuture<>(),
-        CompletableFuture.completedFuture(null),
+        CompletableFuture.completedFuture(nullRef()),
         newFailedFuture(new InterruptedException()),
         newFailedFuture(new IllegalStateException()));
   }

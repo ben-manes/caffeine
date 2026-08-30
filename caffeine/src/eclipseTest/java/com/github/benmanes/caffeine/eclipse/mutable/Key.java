@@ -9,6 +9,8 @@
  */
 package com.github.benmanes.caffeine.eclipse.mutable;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Ported from Eclipse Collections 11.0.
  */
@@ -21,7 +23,7 @@ final class Key implements Comparable<Key> {
   }
 
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     if (this == obj) {
       return true;
     }

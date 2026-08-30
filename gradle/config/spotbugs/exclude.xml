@@ -176,8 +176,18 @@
     <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.LocalCache"/>
+    <Method name="nullRef"/>
+    <Bug pattern="NP_NONNULL_RETURN_VIOLATION"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.LocalLoadingCache"/>
     <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.LocalLoadingCache"/>
+    <Method name="loadSequentially"/>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache"/>

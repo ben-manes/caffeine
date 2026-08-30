@@ -44,7 +44,7 @@ final class MapTestFactory {
    * @return a suite of tests
    */
   @SuppressWarnings("PMD.JUnit4SuitesShouldUseSuiteAnnotation")
-  public static Test suite(String name, TestMapGenerator<?, ?> generator) {
+  public static <K, V> Test suite(String name, TestMapGenerator<K, V> generator) {
     return ConcurrentMapTestSuiteBuilder
         .using(generator)
         .named(name)

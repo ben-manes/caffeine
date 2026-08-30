@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
+import static com.github.benmanes.caffeine.cache.LocalCache.castNonNull;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
 import static java.lang.invoke.ConstantBootstraps.fieldVarHandle;
@@ -279,7 +280,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
           ? statsAware(mappingFunction, recordLoad).apply(k)
           : mappingFunction.apply(k);
       discardRefresh(k);
-      return computed;
+      return castNonNull(computed);
     });
     if (!missed[0] && recordStats) {
       statsCounter.recordHits(1);
@@ -289,7 +290,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public @Nullable V computeIfPresent(K key,
-      BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+      BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction) {
     requireNonNull(remappingFunction);
 
     // An optimistic fast path to avoid unnecessary locking
@@ -319,7 +320,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       }
     });
     if (replaced[0]) {
-      notifyOnReplace(key, oldValue[0], nv);
+      notifyOnReplace(key, oldValue[0], requireNonNull(nv));
     } else if (oldValue[0] != null) {
       notifyRemoval(key, oldValue[0], RemovalCause.EXPLICIT);
     }
@@ -338,7 +339,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public @Nullable V merge(K key, V value,
-      BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+      BiFunction<? super V, ? super V, ? extends @Nullable V> remappingFunction) {
     requireNonNull(remappingFunction);
     requireNonNull(value);
 
@@ -398,7 +399,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       }
     });
     if (replaced[0]) {
-      notifyOnReplace(key, oldValue[0], nv);
+      notifyOnReplace(key, oldValue[0], requireNonNull(nv));
     } else if (oldValue[0] != null) {
       notifyRemoval(key, oldValue[0], RemovalCause.EXPLICIT);
     }
@@ -739,7 +740,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public Object[] toArray() {
+    public @Nullable Object[] toArray() {
       return cache.data.keySet().toArray();
     }
 
@@ -932,7 +933,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public Object[] toArray() {
+    public @Nullable Object[] toArray() {
       return cache.data.values().toArray();
     }
 

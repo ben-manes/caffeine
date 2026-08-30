@@ -180,7 +180,7 @@ public interface AsyncCache<K, V extends @Nullable Object> {
    * @param valueFuture the value to be associated with the specified key
    * @throws NullPointerException if the specified key or value is null
    */
-  void put(K key, CompletableFuture<? extends V> valueFuture);
+  void put(K key, CompletableFuture<? extends @Nullable V> valueFuture);
 
   /**
    * Returns a view of the entries stored in this cache as a thread-safe map. Modifications made to

@@ -192,12 +192,12 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
         BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction) {
       return delegate().computeIfPresent(key, remappingFunction);
     }
-    @Override public V compute(K key,
-        BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    @Override public @Nullable V compute(K key,
+        BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction) {
       return delegate().compute(key, remappingFunction);
     }
-    @Override public V merge(K key, V value,
-        BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+    @Override public @Nullable V merge(K key, V value,
+        BiFunction<? super V, ? super V, ? extends @Nullable V> remappingFunction) {
       return delegate().merge(key, value, remappingFunction);
     }
     @Override public void forEach(BiConsumer<? super K, ? super V> action) {

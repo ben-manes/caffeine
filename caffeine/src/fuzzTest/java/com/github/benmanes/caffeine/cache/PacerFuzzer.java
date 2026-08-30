@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.util.concurrent.CompletableFuture;
@@ -141,7 +142,7 @@ final class PacerFuzzer {
   @SuppressWarnings("FutureReturnValueIgnored")
   private static void completeFuture(Pacer pacer) {
     if (pacer.future instanceof CompletableFuture) {
-      ((CompletableFuture<?>) pacer.future).complete(null);
+      ((CompletableFuture<?>) pacer.future).complete(nullRef());
     }
   }
 

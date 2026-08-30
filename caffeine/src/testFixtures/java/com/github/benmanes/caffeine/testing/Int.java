@@ -89,7 +89,7 @@ public final class Int implements Serializable {
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(@Nullable Object o) {
     return (o == this) || ((o instanceof Int) && (value == ((Int) o).value));
   }
 

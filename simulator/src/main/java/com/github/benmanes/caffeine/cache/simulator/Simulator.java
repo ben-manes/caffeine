@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator;
 import static com.github.benmanes.caffeine.cache.simulator.admission.Admission.CLAIRVOYANT;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Gatherers.windowFixed;
 
 import java.util.List;
@@ -129,7 +130,8 @@ public final class Simulator {
 
   /** Returns whether any configured policy or admitter needs the clairvoyant look-ahead. */
   private static boolean isClairvoyant(BasicSettings settings) {
-    var clairvoyant = ClairvoyantPolicy.class.getAnnotation(PolicySpec.class).name();
+    var clairvoyant = requireNonNull(
+        ClairvoyantPolicy.class.getAnnotation(PolicySpec.class)).name();
     return settings.admission().contains(CLAIRVOYANT)
         || CLAIRVOYANT.name().equalsIgnoreCase(settings.tinyLfu().sketch())
         || settings.policies().stream().anyMatch(clairvoyant::equalsIgnoreCase);

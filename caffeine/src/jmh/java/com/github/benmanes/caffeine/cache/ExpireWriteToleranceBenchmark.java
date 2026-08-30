@@ -135,7 +135,7 @@ public class ExpireWriteToleranceBenchmark {
   }
 
   @Benchmark @Threads(NUM_THREADS)
-  public Integer merge(ThreadState threadState) {
+  public @Nullable Integer merge(ThreadState threadState) {
     var key = ints[threadState.index++ & MASK];
     return map.merge(key, key, (k, v) -> k);
   }

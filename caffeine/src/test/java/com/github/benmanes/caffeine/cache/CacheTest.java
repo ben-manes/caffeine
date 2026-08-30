@@ -300,9 +300,12 @@ final class CacheTest {
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   void getAllPresent_present_partial(Cache<Int, Int> cache, CacheContext context) {
     var expect = new HashMap<Int, Int>();
-    expect.put(context.firstKey(), context.original().get(context.firstKey()));
-    expect.put(context.middleKey(), context.original().get(context.middleKey()));
-    expect.put(context.lastKey(), context.original().get(context.lastKey()));
+    expect.put(context.firstKey(),
+        requireNonNull(context.original().get(context.firstKey())));
+    expect.put(context.middleKey(),
+        requireNonNull(context.original().get(context.middleKey())));
+    expect.put(context.lastKey(),
+        requireNonNull(context.original().get(context.lastKey())));
     var result = cache.getAllPresent(expect.keySet());
     assertThat(result).containsExactlyEntriesIn(expect);
     assertThat(context).stats().hits(expect.size()).misses(0).success(0).failures(0);
@@ -694,7 +697,7 @@ final class CacheTest {
   void put_replace_sameValue(Cache<Int, Int> cache, CacheContext context) {
     var replaced = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
-      Int value = context.original().get(key);
+      Int value = requireNonNull(context.original().get(key));
       cache.put(key, intern(new Int(value)));
       assertThat(cache).containsEntry(key, value);
       replaced.put(key, value);
@@ -731,7 +734,7 @@ final class CacheTest {
     for (Int key : context.firstMiddleLastKeys()) {
       cache.put(key, context.absentValue());
       assertThat(cache).containsEntry(key, context.absentValue());
-      replaced.put(key, context.original().get(key));
+      replaced.put(key, requireNonNull(context.original().get(key)));
     }
     assertThat(cache).hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
@@ -801,7 +804,7 @@ final class CacheTest {
     assertThat(cache).containsExactlyEntriesIn(entries);
     var expect = context.isGuava() ? entries : replaced;
     for (var entry : expect.entrySet()) {
-      entry.setValue(context.original().get(entry.getKey()));
+      entry.setValue(requireNonNull(context.original().get(entry.getKey())));
     }
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(expect).exclusively();
@@ -838,7 +841,7 @@ final class CacheTest {
     var removed = new HashMap<Int, Int>();
     for (Int key : context.firstMiddleLastKeys()) {
       cache.invalidate(key);
-      removed.put(key, context.original().get(key));
+      removed.put(key, requireNonNull(context.original().get(key)));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache).hasSize(context.initialSize() - count);
@@ -1050,7 +1053,8 @@ final class CacheTest {
     if (context.isSync()) {
       checkReadObject(context.cache(), context.cache().getClass());
     } else {
-      checkReadObject(context.cache(), context.cache().getClass().getSuperclass());
+      checkReadObject(context.cache(),
+          requireNonNull(context.cache().getClass().getSuperclass()));
       checkReadObject(context.asyncCache(), context.asyncCache().getClass());
     }
   }

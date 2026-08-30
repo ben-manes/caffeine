@@ -47,7 +47,8 @@ public class CollectionSubject extends IterableSubject {
     return CollectionSubject::new;
   }
 
-  public static <E> CollectionSubject assertThat(@Nullable Collection<E> actual) {
+  public static <E extends @Nullable Object> CollectionSubject assertThat(
+      @Nullable Collection<E> actual) {
     return assertAbout(collection()).that(actual);
   }
 

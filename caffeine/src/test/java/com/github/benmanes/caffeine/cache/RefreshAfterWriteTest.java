@@ -275,7 +275,8 @@ final class RefreshAfterWriteTest {
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(
-            Map.entry(context.firstKey(), context.original().get(context.firstKey())),
+            Map.entry(context.firstKey(),
+                requireNonNull(context.original().get(context.firstKey()))),
             Map.entry(context.firstKey(), context.absentKey().negate()))
         .exclusively();
   }
@@ -300,7 +301,8 @@ final class RefreshAfterWriteTest {
     assertThat(cache.policy().refreshes()).doesNotContainKey(context.firstKey());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(
-            Map.entry(context.firstKey(), context.original().get(context.firstKey())),
+            Map.entry(context.firstKey(),
+                requireNonNull(context.original().get(context.firstKey()))),
             Map.entry(context.firstKey(), context.absentKey().negate()))
         .exclusively();
   }
@@ -754,7 +756,8 @@ final class RefreshAfterWriteTest {
 
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(
-            Map.entry(context.firstKey(), context.original().get(context.firstKey())),
+            Map.entry(context.firstKey(),
+                requireNonNull(context.original().get(context.firstKey()))),
             Map.entry(context.firstKey(), context.absentValue()))
         .exclusively();
   }
@@ -1269,7 +1272,7 @@ final class RefreshAfterWriteTest {
       for (var key : context.firstMiddleLastKeys()) {
         var future = requireNonNull(cache.policy().refreshes().get(key));
         future.complete(key);
-        replaced.put(key, context.original().get(key));
+        replaced.put(key, requireNonNull(context.original().get(key)));
       }
       assertThat(context).removalNotifications().withCause(REPLACED)
           .contains(replaced).exclusively();

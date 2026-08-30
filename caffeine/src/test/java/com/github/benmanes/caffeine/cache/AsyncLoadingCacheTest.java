@@ -30,6 +30,7 @@ import static com.github.benmanes.caffeine.testing.Nullness.nullCollection;
 import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
 import static com.github.benmanes.caffeine.testing.Nullness.nullFuture;
 import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
@@ -100,7 +101,7 @@ final class AsyncLoadingCacheTest {
       AsyncLoadingCache<Int, Int> cache) {
     // An in-flight future is logically absent for a query (getIfReady returns null), so the
     // synchronous view records a miss — consistent with getAllPresent — rather than a hit.
-    var future = new CompletableFuture<Int>();
+    var future = new CompletableFuture<@Nullable Int>();
     cache.put(Int.valueOf(1), future);
 
     assertThat(cache.synchronous().getIfPresent(Int.valueOf(1))).isNull();
@@ -631,7 +632,8 @@ final class AsyncLoadingCacheTest {
 
     var cache = context.buildAsync(loader);
     var bulk = cache.getAll(context.absentKeys());
-    var pending = context.absentKeys().stream().map(cache::getIfPresent).collect(toImmutableList());
+    var pending = context.absentKeys().stream()
+        .map(key -> requireNonNull(cache.getIfPresent(key))).collect(toImmutableList());
 
     bulk.cancel(true);
     ready.set(true);
@@ -701,7 +703,7 @@ final class AsyncLoadingCacheTest {
     for (Int key : context.firstMiddleLastKeys()) {
       cache.put(key, value);
       assertThat(cache.get(key)).succeedsWith(context.absentValue());
-      replaced.put(key, context.original().get(key));
+      replaced.put(key, requireNonNull(context.original().get(key)));
     }
     assertThat(cache).hasSize(context.initialSize());
     assertThat(context).removalNotifications().withCause(REPLACED)
@@ -907,7 +909,7 @@ final class AsyncLoadingCacheTest {
     await().untilTrue(started);
 
     cache.synchronous().put(context.absentKey(), context.absentKey().negate());
-    refreshFuture.complete(null);
+    refreshFuture.complete(nullRef());
 
     await().untilAsserted(() -> {
       assertThat(cache).containsEntry(context.absentKey(), context.absentKey().negate());

@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapaci
 import static com.github.benmanes.caffeine.cache.Caffeine.hasMethodOverride;
 import static com.github.benmanes.caffeine.cache.Caffeine.toUnchecked;
 import static com.github.benmanes.caffeine.cache.LocalAsyncCache.composeResult;
+import static com.github.benmanes.caffeine.cache.LocalCache.nullRef;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.System.Logger;
@@ -126,7 +127,9 @@ abstract class LocalAsyncLoadingCache<K, V>
       result.put(requireNonNull(key), null);
     }
     for (var entry : result.entrySet()) {
-      entry.setValue(requireNonNull(get(entry.getKey())));
+      @SuppressWarnings("NullAway")
+      CompletableFuture<@Nullable V> castedFuture = get(entry.getKey());
+      entry.setValue(castedFuture);
     }
 
     @SuppressWarnings("NullAway")
@@ -244,7 +247,7 @@ abstract class LocalAsyncLoadingCache<K, V>
         oldValueFuture[0] = asyncCache.cache().getIfPresentQuietly(key);
         V oldValue = Async.getIfReady(oldValueFuture[0]);
         if (oldValue == null) {
-          return null;
+          return nullRef();
         }
 
         refreshed[0] = true;

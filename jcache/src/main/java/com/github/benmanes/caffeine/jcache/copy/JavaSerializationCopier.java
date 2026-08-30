@@ -84,7 +84,7 @@ public class JavaSerializationCopier extends AbstractCopier<byte[]> {
   protected Object deserialize(byte[] data, ClassLoader classLoader) {
     try (var bytes = new ByteArrayInputStream(data);
          var input = newInputStream(bytes, classLoader)) {
-      return input.readObject();
+      return requireNonNull(input.readObject());
     } catch (IOException e) {
       throw new CacheException("Failed to deserialize", e);
     } catch (ClassNotFoundException e) {

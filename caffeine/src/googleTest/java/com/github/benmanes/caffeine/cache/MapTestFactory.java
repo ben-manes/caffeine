@@ -57,7 +57,7 @@ public final class MapTestFactory {
   }
 
   /** Returns a test suite. */
-  private static TestSuite newTestSuite(String name, TestMapGenerator<?, ?> generator) {
+  private static <K, V> TestSuite newTestSuite(String name, TestMapGenerator<K, V> generator) {
     return ConcurrentMapTestSuiteBuilder
         .using(generator)
         .named(name)

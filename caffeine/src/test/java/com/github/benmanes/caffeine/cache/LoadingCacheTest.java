@@ -732,7 +732,7 @@ final class LoadingCacheTest {
     for (Int key : context.firstMiddleLastKeys()) {
       var future = cache.refresh(key);
       assertThat(future).succeedsWithNull();
-      removed.put(key, context.original().get(key));
+      removed.put(key, requireNonNull(context.original().get(key)));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(context).stats().hits(0).misses(0).success(0).failures(count);
@@ -753,7 +753,7 @@ final class LoadingCacheTest {
     for (Int key : context.firstMiddleLastKeys()) {
       var future = cache.refresh(key);
       assertThat(future).succeedsWith(context.original().get(key));
-      replaced.put(key, context.original().get(key));
+      replaced.put(key, requireNonNull(context.original().get(key)));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
@@ -797,7 +797,7 @@ final class LoadingCacheTest {
       var future = cache.refresh(key);
       assertThat(future).succeedsWith(key);
       assertThat(cache).containsEntry(key, key);
-      replaced.put(key, context.original().get(key));
+      replaced.put(key, requireNonNull(context.original().get(key)));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache).hasSize(context.initialSize());
@@ -1160,7 +1160,7 @@ final class LoadingCacheTest {
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(
-            entry(context.firstKey(), context.original().get(context.firstKey())),
+            entry(context.firstKey(), requireNonNull(context.original().get(context.firstKey()))),
             entry(context.firstKey(), context.firstKey()))
         .exclusively();
     assertThat(context).stats().success(1);
@@ -1181,7 +1181,7 @@ final class LoadingCacheTest {
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(
-            entry(context.firstKey(), context.original().get(context.firstKey())),
+            entry(context.firstKey(), requireNonNull(context.original().get(context.firstKey()))),
             entry(context.firstKey(), context.firstKey()))
         .exclusively();
     assertThat(context).stats().success(1);
@@ -1204,7 +1204,7 @@ final class LoadingCacheTest {
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(
-            entry(context.firstKey(), context.original().get(context.firstKey())),
+            entry(context.firstKey(), requireNonNull(context.original().get(context.firstKey()))),
             entry(context.firstKey(), context.firstKey()))
         .exclusively();
     assertThat(context).stats().success(1);
@@ -1247,7 +1247,7 @@ final class LoadingCacheTest {
     assertThat(cache).doesNotContainKey(context.firstKey());
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(
-            entry(context.firstKey(), context.original().get(context.firstKey())),
+            entry(context.firstKey(), requireNonNull(context.original().get(context.firstKey()))),
             entry(context.firstKey(), context.firstKey()))
         .exclusively();
     assertThat(context).removalNotifications().hasSize(2);
@@ -1271,7 +1271,7 @@ final class LoadingCacheTest {
     assertThat(cache).doesNotContainKey(context.firstKey());
     assertThat(context).removalNotifications().withCause(EXPLICIT)
         .contains(
-            entry(context.firstKey(), context.original().get(context.firstKey())),
+            entry(context.firstKey(), requireNonNull(context.original().get(context.firstKey()))),
             entry(context.firstKey(), context.firstKey()))
         .exclusively();
     assertThat(context).removalNotifications().hasSize(2);
@@ -1293,7 +1293,7 @@ final class LoadingCacheTest {
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(
-            entry(context.firstKey(), context.original().get(context.firstKey())),
+            entry(context.firstKey(), requireNonNull(context.original().get(context.firstKey()))),
             entry(context.firstKey(), context.firstKey()))
         .exclusively();
     assertThat(context).stats().success(2);
@@ -1314,7 +1314,7 @@ final class LoadingCacheTest {
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(
-            entry(context.firstKey(), context.original().get(context.firstKey())),
+            entry(context.firstKey(), requireNonNull(context.original().get(context.firstKey()))),
             entry(context.firstKey(), context.firstKey()))
         .exclusively();
     assertThat(context).stats().success(2);
@@ -1336,7 +1336,7 @@ final class LoadingCacheTest {
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(
-            entry(context.firstKey(), context.original().get(context.firstKey())),
+            entry(context.firstKey(), requireNonNull(context.original().get(context.firstKey()))),
             entry(context.firstKey(), context.firstKey()))
         .exclusively();
     assertThat(context).stats().success(2);

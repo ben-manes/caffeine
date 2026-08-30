@@ -971,7 +971,8 @@ final class CacheProxyTest {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       var map = new HashMap<Integer, Integer>();
       map.put(KEY_1, VALUE_1);
-      map.put(KEY_2, null); // whole-map validation must reject before any entry is stored
+      // whole-map validation must reject before any entry is stored
+      map.put(KEY_2, nullRef());
 
       assertThrows(NullPointerException.class, () -> fixture.jcache().putAll(map));
       assertThat(fixture.jcache().containsKey(KEY_1)).isFalse();
@@ -1752,7 +1753,7 @@ final class CacheProxyTest {
       assertThrows(EntryProcessorException.class, () ->
           cache.invoke(KEY_1, (entry, args) -> {
             entry.setValue(VALUE_1);
-            return null;
+            return nullRef();
           }));
       verifyNoInteractions(writer);
       assertThat(cache.containsKey(KEY_1)).isFalse();
@@ -1785,7 +1786,7 @@ final class CacheProxyTest {
       assertThrows(EntryProcessorException.class, () ->
           cache.invoke(KEY_1, (entry, args) -> {
             entry.setValue(VALUE_2);
-            return null;
+            return nullRef();
           }));
       verify(writer, never()).write(any());
     }

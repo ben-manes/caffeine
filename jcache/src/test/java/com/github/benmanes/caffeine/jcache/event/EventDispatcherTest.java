@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.await;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 import static javax.cache.event.EventType.CREATED;
@@ -541,7 +542,7 @@ final class EventDispatcherTest {
     // read the captured snapshot, not the now-cleared (and possibly repopulated) ThreadLocal list
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     var thrown = new CacheEntryListenerException("listener");
-    var future = new CompletableFuture<CacheEntryListenerException>();
+    var future = new CompletableFuture<@Nullable CacheEntryListenerException>();
     dispatcher.pending.get().add(future);
 
     var chain = dispatcher.chainSynchronous();
@@ -846,7 +847,7 @@ final class EventDispatcherTest {
       var e = assertThrows(CacheEntryListenerException.class, () ->
           cache.invoke(KEY_1, (entry, arguments) -> {
             entry.setValue(VALUE_1);
-            return null;
+            return nullRef();
           }));
       assertThat(e).hasCauseThat().isSameInstanceAs(failure);
       assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);

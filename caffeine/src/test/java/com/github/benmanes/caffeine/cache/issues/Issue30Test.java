@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.future;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import java.time.Duration;
@@ -159,7 +160,7 @@ final class Issue30Test {
     @Override
     public CompletableFuture<String> asyncLoad(String key, Executor executor) {
       reportCacheMiss(key);
-      return CompletableFuture.completedFuture(source.get(key));
+      return CompletableFuture.completedFuture(requireNonNull(source.get(key)));
     }
 
     @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE")

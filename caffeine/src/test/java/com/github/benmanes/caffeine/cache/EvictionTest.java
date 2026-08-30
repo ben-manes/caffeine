@@ -631,7 +631,8 @@ final class EvictionTest {
     when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
     assertThrows(IllegalStateException.class, () ->
       cache.asMap().replace(context.firstKey(),
-          context.original().get(context.firstKey()), context.absentValue()));
+          requireNonNull(context.original().get(context.firstKey())),
+          context.absentValue()));
     assertThat(cache).containsExactlyEntriesIn(context.original());
     assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
   }

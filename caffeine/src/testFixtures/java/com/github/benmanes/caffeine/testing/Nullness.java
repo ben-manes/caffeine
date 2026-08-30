@@ -20,12 +20,15 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -65,7 +68,7 @@ public final class Nullness {
     return nullRef();
   }
 
-  public static <E> CompletableFuture<E> nullFuture() {
+  public static <E extends @Nullable Object> CompletableFuture<E> nullFuture() {
     return nullRef();
   }
 
@@ -73,19 +76,30 @@ public final class Nullness {
     return nullRef();
   }
 
-  public static <E> Supplier<E> nullSupplier() {
+  public static <E extends @Nullable Object> Supplier<E> nullSupplier() {
     return nullRef();
   }
 
-  public static <E> Predicate<E> nullPredicate() {
+  public static <E extends @Nullable Object> Predicate<E> nullPredicate() {
     return nullRef();
   }
 
-  public static <T, R> Function<T, R> nullFunction() {
+  public static <T extends @Nullable Object, R extends @Nullable Object>
+      Function<T, R> nullFunction() {
     return nullRef();
   }
 
-  public static <T, U, R> BiFunction<T, U, R> nullBiFunction() {
+  public static <T extends @Nullable Object> Consumer<T> nullConsumer() {
+    return nullRef();
+  }
+
+  public static <T extends @Nullable Object, U extends @Nullable Object>
+      BiConsumer<T, U> nullBiConsumer() {
+    return nullRef();
+  }
+
+  public static <T extends @Nullable Object, U extends @Nullable Object,
+      R extends @Nullable Object> BiFunction<T, U, R> nullBiFunction() {
     return nullRef();
   }
 
@@ -94,5 +108,11 @@ public final class Nullness {
       "NullAway", "TypeParameterUnusedInFormals"})
   public static <T> @NonNull T nullRef() {
     return null;
+  }
+
+  /** Returns {@code null} for use when testing null checks while satisfying null analysis tools. */
+  @SuppressWarnings({"DataFlowIssue", "NullableProblems", "NullAway"})
+  public static <T> @NonNull T castNonNull(@Nullable T value) {
+    return value;
   }
 }

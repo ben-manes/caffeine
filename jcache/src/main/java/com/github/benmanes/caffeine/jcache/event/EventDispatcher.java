@@ -307,7 +307,7 @@ public final class EventDispatcher<K, V> {
     CompletableFuture<@Nullable CacheEntryListenerException> future =
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
             .thenApply(new Function<@Nullable Void, @Nullable CacheEntryListenerException>() {
-              @Override @SuppressWarnings("UnnamedVariable")
+              @Override @SuppressWarnings({"NullAway", "UnnamedVariable"})
               public @Nullable CacheEntryListenerException apply(@Nullable Void unused) {
                 return futures.stream()
                     .map(CompletableFuture::join)
@@ -325,7 +325,7 @@ public final class EventDispatcher<K, V> {
   }
 
   /** Broadcasts the event to the interested listener's dispatch queues. */
-  @SuppressWarnings("FutureReturnValueIgnored")
+  @SuppressWarnings({"FutureReturnValueIgnored", "NullAway"})
   private void publish(Cache<K, V> cache, EventType eventType, K key,
       boolean hasOldValue, @Nullable V oldValue, @Nullable V newValue, boolean quiet) {
     if (dispatchQueues.isEmpty()) {

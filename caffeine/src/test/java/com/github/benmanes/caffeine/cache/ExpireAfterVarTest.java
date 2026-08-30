@@ -558,7 +558,8 @@ final class ExpireAfterVarTest {
   void replaceConditionally_updated(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.ticker().advance(Duration.ofSeconds(30));
-    assertThat(map.replace(key, context.original().get(key), context.absentValue())).isTrue();
+    assertThat(map.replace(key,
+        requireNonNull(context.original().get(key)), context.absentValue())).isTrue();
     context.ticker().advance(Duration.ofSeconds(45));
 
     context.cleanUp();
@@ -596,7 +597,7 @@ final class ExpireAfterVarTest {
   void replaceConditionally_expiryFails(Map<Int, Int> map, CacheContext context) {
     when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
         .thenThrow(ExpirationException.class);
-    Int oldValue = context.original().get(context.firstKey());
+    Int oldValue = requireNonNull(context.original().get(context.firstKey()));
     assertThrows(ExpirationException.class, () ->
         map.replace(context.firstKey(), oldValue, context.absentValue()));
     assertThat(map).containsExactlyEntriesIn(context.original());
@@ -929,6 +930,7 @@ final class ExpireAfterVarTest {
   }
 
   @ParameterizedTest
+  @SuppressWarnings("NullAway")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   void computeIfAbsent_nullValue(Map<Int, Int> map, CacheContext context) {
     map.computeIfAbsent(context.absentKey(), key -> null);
@@ -1899,10 +1901,10 @@ final class ExpireAfterVarTest {
 
       var compute = CompletableFuture.supplyAsync(() -> {
         computeThread.set(Thread.currentThread());
-        return cache.asMap().computeIfPresent(context.absentKey(), (k, f) -> {
+        return requireNonNull(cache.asMap().computeIfPresent(context.absentKey(), (k, f) -> {
           f.join();
           return future2;
-        }).join();
+        })).join();
       }, executor);
       await().until(() -> {
         var thread = computeThread.get();
@@ -2103,7 +2105,7 @@ final class ExpireAfterVarTest {
         assertThat(v).isNotNull();
         return null;
       }, Duration.ofDays(1))).isNull();
-      removed.put(key, context.original().get(key));
+      removed.put(key, requireNonNull(context.original().get(key)));
     }
 
     verifyNoInteractions(context.expiry());
@@ -2118,8 +2120,8 @@ final class ExpireAfterVarTest {
   @SuppressWarnings("CheckReturnValue")
   @CacheSpec(expiry = CacheExpiry.ACCESS)
   void compute_recursive(CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
-    var mappingFunction = new BiFunction<Int, Int, @Nullable Int>() {
-      @Override public @Nullable Int apply(Int key, Int value) {
+    var mappingFunction = new BiFunction<Int, @Nullable Int, @Nullable Int>() {
+      @Override public @Nullable Int apply(Int key, @Nullable Int value) {
         return expireAfterVar.compute(key, this, Duration.ofDays(1));
       }
     };
@@ -2134,8 +2136,8 @@ final class ExpireAfterVarTest {
   void compute_pingpong(VarExpiration<Int, Int> expireAfterVar) {
     var key1 = Int.valueOf(1);
     var key2 = Int.valueOf(2);
-    var mappingFunction = new BiFunction<Int, Int, @Nullable Int>() {
-      @Override public @Nullable Int apply(Int key, Int value) {
+    var mappingFunction = new BiFunction<Int, @Nullable Int, @Nullable Int>() {
+      @Override public @Nullable Int apply(Int key, @Nullable Int value) {
         return expireAfterVar.compute(key.equals(key1) ? key2 : key1, this, Duration.ofDays(1));
       }
     };
@@ -2280,7 +2282,7 @@ final class ExpireAfterVarTest {
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var duration = context.expiryTime().duration().dividedBy(2);
     for (Int key : context.firstMiddleLastKeys()) {
-      Int value = context.original().get(key);
+      Int value = requireNonNull(context.original().get(key));
       Int result = expireAfterVar.compute(key, (k, v) -> value, duration);
 
       assertThat(result).isSameInstanceAs(value);
@@ -2291,7 +2293,7 @@ final class ExpireAfterVarTest {
     assertThat(context).stats().hits(0).misses(0).success(count).failures(0);
 
     for (Int key : context.firstMiddleLastKeys()) {
-      Int value = context.original().get(key);
+      Int value = requireNonNull(context.original().get(key));
       assertThat(cache).containsEntry(key, value);
     }
     assertThat(cache).hasSize(context.initialSize());

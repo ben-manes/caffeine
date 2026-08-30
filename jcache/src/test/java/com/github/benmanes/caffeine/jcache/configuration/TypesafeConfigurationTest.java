@@ -91,7 +91,7 @@ final class TypesafeConfigurationTest {
 
   @Test
   void configSource_null() {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     assertThrows(NullPointerException.class, () -> configSource().get(nullRef(), nullRef()));
     assertThrows(NullPointerException.class, () -> configSource().get(nullRef(), classloader));
     assertThrows(NullPointerException.class, () -> configSource().get(URI.create(""), nullRef()));
@@ -99,7 +99,7 @@ final class TypesafeConfigurationTest {
 
   @Test
   void configSource_load() {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     assertThat(configSource().get(URI.create(getClass().getSimpleName()), classloader))
         .isSameInstanceAs(ConfigFactory.load());
     assertThat(configSource().get(URI.create(getClass().getName()), classloader))
@@ -112,7 +112,7 @@ final class TypesafeConfigurationTest {
 
   @Test
   void configSource_jar_present() {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     var inferred = configSource().get(URI.create("extra.properties"), classloader);
     assertThat(inferred.getInt("caffeine.jcache.jar.policy.maximum.size")).isEqualTo(500);
     assertThat(inferred.hasPath("caffeine.jcache.default.key-type")).isTrue();
@@ -126,7 +126,7 @@ final class TypesafeConfigurationTest {
 
   @Test
   void configSource_jar_absent() {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     assertThrows(ConfigException.IO.class, () ->
         configSource().get(URI.create("extra-absent.conf"), classloader));
 
@@ -138,7 +138,7 @@ final class TypesafeConfigurationTest {
 
   @Test
   void configSource_jar_invalid() {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     assertThrows(ConfigException.Parse.class, () ->
         configSource().get(URI.create("extra-invalid.conf"), classloader));
 
@@ -151,7 +151,7 @@ final class TypesafeConfigurationTest {
 
   @Test
   void configSource_classpath_present() {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     var inferred = configSource().get(URI.create("custom.properties"), classloader);
     assertThat(inferred.getInt("caffeine.jcache.classpath.policy.maximum.size")).isEqualTo(500);
     assertThat(inferred.hasPath("caffeine.jcache.default.key-type")).isTrue();
@@ -165,7 +165,7 @@ final class TypesafeConfigurationTest {
 
   @Test
   void configSource_classpath_absent() {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     assertThrows(ConfigException.IO.class, () ->
         configSource().get(URI.create("absent.conf"), classloader));
     assertThrows(ConfigException.IO.class, () ->
@@ -176,7 +176,7 @@ final class TypesafeConfigurationTest {
 
   @Test
   void configSource_classpath_invalid() {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     assertThrows(ConfigException.Parse.class, () ->
         configSource().get(URI.create("invalid.conf"), classloader));
     assertThrows(ConfigException.Parse.class, () ->
@@ -185,7 +185,7 @@ final class TypesafeConfigurationTest {
 
   @Test
   void configSource_file() throws URISyntaxException {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     var resource = requireNonNull(getClass().getResource("/custom.properties"));
     var config = configSource().get(resource.toURI(), classloader);
     assertThat(config.getInt("caffeine.jcache.classpath.policy.maximum.size")).isEqualTo(500);
@@ -195,7 +195,7 @@ final class TypesafeConfigurationTest {
 
   @Test
   void configSource_substitution() throws URISyntaxException {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     var classpath = configSource().get(
         URI.create("classpath:custom-substitution.conf"), classloader);
     assertThat(classpath.getInt("caffeine.jcache.substitution.policy.maximum.size"))
@@ -208,14 +208,14 @@ final class TypesafeConfigurationTest {
 
   @Test
   void configSource_file_absent() {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     assertThrows(ConfigException.IO.class, () ->
         configSource().get(URI.create("file:/absent.conf"), classloader));
   }
 
   @Test
   void configSource_file_invalid() {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     assertThrows(ConfigException.IO.class, () ->
         configSource().get(URI.create("file:/invalid.conf"), classloader));
   }
@@ -284,7 +284,7 @@ final class TypesafeConfigurationTest {
   @Test
   void resolvesTypesViaContextClassLoader() {
     Config config = ConfigFactory.load();
-    var original = Thread.currentThread().getContextClassLoader();
+    var original = requireNonNull(Thread.currentThread().getContextClassLoader());
     var recording = new RecordingClassLoader(original);
     Thread.currentThread().setContextClassLoader(recording);
     try {
@@ -301,7 +301,7 @@ final class TypesafeConfigurationTest {
     // A null thread-context classloader (e.g. under the bootstrap loader) falls back to the loader
     // that defined the configurator, so the key and value types still resolve.
     Config config = ConfigFactory.load();
-    var original = Thread.currentThread().getContextClassLoader();
+    var original = requireNonNull(Thread.currentThread().getContextClassLoader());
     Thread.currentThread().setContextClassLoader(null);
     try {
       var configuration = TypesafeConfigurator.from(config, "test-cache").orElseThrow();
@@ -410,7 +410,7 @@ final class TypesafeConfigurationTest {
   }
 
   private static URI getJarResource(String resourceName) {
-    var classloader = Thread.currentThread().getContextClassLoader();
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     var url = classloader.getResource(resourceName);
     assertThat(url).isNotNull();
 

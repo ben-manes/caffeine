@@ -122,8 +122,7 @@ public enum TraceFormat {
 
     if (readers.stream().allMatch(KeyOnlyTraceReader.class::isInstance)) {
       return (KeyOnlyTraceReader) () -> readers.stream()
-          .map(KeyOnlyTraceReader.class::cast)
-          .flatMapToLong(KeyOnlyTraceReader::keys);
+          .flatMapToLong(reader -> ((KeyOnlyTraceReader) reader).keys());
     }
     return new TraceReader() {
       @Override public ImmutableSet<Characteristic> characteristics() {

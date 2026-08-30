@@ -27,6 +27,7 @@ import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -993,14 +994,14 @@ final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void put_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var f1 = new CompletableFuture<@Nullable Int>();
-    var f2 = new CompletableFuture<@Nullable Int>();
-    var f3 = new CompletableFuture<@Nullable Int>();
+    var f1 = new CompletableFuture<Int>();
+    var f2 = new CompletableFuture<Int>();
+    var f3 = new CompletableFuture<Int>();
     cache.put(context.absentKey(), f1);
     assertThat(cache.asMap().put(context.absentKey(), f2)).isSameInstanceAs(f1);
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().put(context.absentKey(), f3)).isSameInstanceAs(f2);
-    f3.complete(null);
+    f3.complete(nullRef());
   }
 
   @ParameterizedTest
@@ -1046,14 +1047,14 @@ final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void replace_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var f1 = new CompletableFuture<@Nullable Int>();
-    var f2 = new CompletableFuture<@Nullable Int>();
-    var f3 = new CompletableFuture<@Nullable Int>();
+    var f1 = new CompletableFuture<Int>();
+    var f2 = new CompletableFuture<Int>();
+    var f3 = new CompletableFuture<Int>();
     cache.put(context.absentKey(), f1);
     assertThat(cache.asMap().replace(context.absentKey(), f2)).isSameInstanceAs(f1);
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().replace(context.absentKey(), f3)).isSameInstanceAs(f2);
-    f3.complete(null);
+    f3.complete(nullRef());
   }
 
   @ParameterizedTest
@@ -1066,7 +1067,8 @@ final class ExpirationTest {
   void replaceConditionally(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.ticker().advance(Duration.ofMinutes(2));
-    assertThat(map.replace(key, context.original().get(key), context.absentValue())).isFalse();
+    assertThat(map.replace(key,
+        requireNonNull(context.original().get(key)), context.absentValue())).isFalse();
 
     if (!map.isEmpty()) {
       context.cleanUp();
@@ -1087,7 +1089,8 @@ final class ExpirationTest {
   void replaceConditionally_expired_maintenance(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.ticker().advance(Duration.ofMinutes(2));
-    assertThat(map.replace(key, context.original().get(key), context.absentValue())).isFalse();
+    assertThat(map.replace(key,
+        requireNonNull(context.original().get(key)), context.absentValue())).isFalse();
 
     assertWithMessage("an expired entry did not schedule the maintenance cycle")
         .that(map).isEmpty();
@@ -1103,7 +1106,8 @@ final class ExpirationTest {
   void replaceConditionally_updated(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
     context.ticker().advance(Duration.ofSeconds(30));
-    assertThat(map.replace(key, context.original().get(key), context.absentValue())).isTrue();
+    assertThat(map.replace(key,
+        requireNonNull(context.original().get(key)), context.absentValue())).isTrue();
     context.ticker().advance(Duration.ofSeconds(45));
 
     context.cleanUp();
@@ -1118,14 +1122,14 @@ final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void replaceConditionally_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var f1 = new CompletableFuture<@Nullable Int>();
-    var f2 = new CompletableFuture<@Nullable Int>();
-    var f3 = new CompletableFuture<@Nullable Int>();
+    var f1 = new CompletableFuture<Int>();
+    var f2 = new CompletableFuture<Int>();
+    var f3 = new CompletableFuture<Int>();
     cache.put(context.absentKey(), f1);
     assertThat(cache.asMap().replace(context.absentKey(), f1, f2)).isTrue();
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().replace(context.absentKey(), f2, f3)).isTrue();
-    f3.complete(null);
+    f3.complete(nullRef());
   }
 
   @ParameterizedTest
@@ -1220,6 +1224,7 @@ final class ExpirationTest {
   }
 
   @ParameterizedTest
+  @SuppressWarnings("NullAway")
   @CacheSpec(population = Population.FULL, maximumSize = Maximum.FULL,
       expiryTime = Expire.ONE_MINUTE, mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
       expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
@@ -1310,20 +1315,21 @@ final class ExpirationTest {
   }
 
   @ParameterizedTest
+  @SuppressWarnings("NullAway")
   @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.MOCKITO },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   void computeIfAbsent_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
-    var f1 = new CompletableFuture<@Nullable Int>();
+    var f1 = new CompletableFuture<Int>();
     cache.put(context.absentKey(), f1);
     assertThat(cache.asMap().computeIfAbsent(
         context.absentKey(), key -> null)).isSameInstanceAs(f1);
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().computeIfAbsent(
         context.absentKey(), key -> null)).isSameInstanceAs(f1);
-    f1.complete(null);
+    f1.complete(nullRef());
 
     if (context.expiryType() == CacheExpiry.MOCKITO) {
       verifyNoInteractions(context.expiry());
@@ -1440,7 +1446,7 @@ final class ExpirationTest {
       assertThat(f).isSameInstanceAs(f2);
       return f3;
     });
-    f3.complete(null);
+    f3.complete(nullRef());
 
     if (context.expiryType() == CacheExpiry.MOCKITO) {
       verifyNoInteractions(context.expiry());
@@ -1623,7 +1629,7 @@ final class ExpirationTest {
       assertThat(f).isSameInstanceAs(f2);
       return f3;
     });
-    f3.complete(null);
+    f3.complete(nullRef());
 
     if (context.expiryType() == CacheExpiry.MOCKITO) {
       verifyNoInteractions(context.expiry());

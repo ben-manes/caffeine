@@ -208,11 +208,11 @@ final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   void getAll(Cache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
-    List<Map.Entry<Int, Int>> collected = getExpectedAfterGc(context,
+    List<Map.Entry<@Nullable Int, @Nullable Int>> collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(keys::contains)));
     if (!context.isStrongValues()) {
       for (var key : keys) {
-        collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+        collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
       }
     }
 
@@ -236,7 +236,7 @@ final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+      collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -312,7 +312,7 @@ final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   void invalidateAll_iterable(Cache<Int, Int> cache, CacheContext context) {
     Map<Int, Int> retained;
-    List<Map.Entry<Int, Int>> collected;
+    List<Map.Entry<@Nullable Int, @Nullable Int>> collected;
     var keys = context.firstMiddleLastKeys();
     if (context.isStrongValues()) {
       retained = Maps.toMap(context.firstMiddleLastKeys(),
@@ -349,7 +349,7 @@ final class ReferenceTest {
   void invalidateAll_full(Cache<Int, Int> cache, CacheContext context) {
     Map<Int, Int> retained;
     var keys = context.firstMiddleLastKeys();
-    List<Map.Entry<Int, Int>> collected = getExpectedAfterGc(context,
+    List<Map.Entry<@Nullable Int, @Nullable Int>> collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(keys::contains)));
     if (context.isStrongValues()) {
       retained = Maps.toMap(context.firstMiddleLastKeys(),
@@ -357,7 +357,7 @@ final class ReferenceTest {
     } else {
       retained = Map.of();
       for (var key : keys) {
-        collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+        collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
       }
     }
 
@@ -482,7 +482,7 @@ final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   void get_loading(LoadingCache<Int, Int> cache, CacheContext context) {
     Int key = context.firstKey();
-    Int value = context.original().get(key);
+    Int value = requireNonNull(context.original().get(key));
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
 
@@ -517,11 +517,11 @@ final class ReferenceTest {
       loader = {Loader.NEGATIVE, Loader.BULK_NEGATIVE})
   void getAll_loading(LoadingCache<Int, Int> cache, CacheContext context) {
     var keys = context.firstMiddleLastKeys();
-    List<Map.Entry<Int, Int>> collected = getExpectedAfterGc(context,
+    List<Map.Entry<@Nullable Int, @Nullable Int>> collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(keys::contains)));
     if (!context.isStrongValues()) {
       for (var key : keys) {
-        collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+        collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
       }
     }
 
@@ -541,7 +541,7 @@ final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING, loader = Loader.IDENTITY)
   void refresh(LoadingCache<Int, Int> cache, CacheContext context) {
     Int key = context.firstKey();
-    Int value = context.original().get(key);
+    Int value = requireNonNull(context.original().get(key));
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
 
@@ -567,7 +567,7 @@ final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   void getIfPresent_async(AsyncCache<Int, Int> cache, CacheContext context) {
     Int key = context.firstKey();
-    Int value = context.original().get(key);
+    Int value = requireNonNull(context.original().get(key));
     context.clear();
 
     awaitFullGc();
@@ -722,7 +722,7 @@ final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   void containsValue(Map<Int, Int> map, CacheContext context) {
     @Var var key = context.firstKey();
-    Int value = context.original().get(key);
+    Int value = requireNonNull(context.original().get(key));
     context.clear();
     awaitFullGc();
     assertThat(map.containsValue(value)).isTrue();
@@ -767,7 +767,7 @@ final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+      collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -829,7 +829,7 @@ final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+      collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -895,7 +895,7 @@ final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   void replaceConditionally_found(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
-    Int value = context.original().get(key);
+    Int value = requireNonNull(context.original().get(key));
 
     context.clear();
     awaitFullGc();
@@ -925,7 +925,7 @@ final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+      collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -958,7 +958,7 @@ final class ReferenceTest {
       stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   void removeConditionally_found(Map<Int, Int> map, CacheContext context) {
     Int key = context.firstKey();
-    Int value = context.original().get(key);
+    Int value = requireNonNull(context.original().get(key));
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
 
@@ -984,7 +984,7 @@ final class ReferenceTest {
     Int key = context.firstKey();
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
-    collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+    collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
 
     context.clear();
     awaitFullGc();
@@ -1004,7 +1004,7 @@ final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+      collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -1022,6 +1022,7 @@ final class ReferenceTest {
 
   @ParameterizedTest
   @CheckMaxLogLevel(WARN)
+  @SuppressWarnings("NullAway")
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
@@ -1031,7 +1032,7 @@ final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isGuava()) {
-      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+      collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -1092,7 +1093,7 @@ final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues() && !context.isGuava()) {
-      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+      collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -1137,7 +1138,7 @@ final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+      collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -1195,7 +1196,7 @@ final class ReferenceTest {
           .hasSizeLessThan(2);
     } else {
       assertThat(logEvents()).isEmpty();
-      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+      collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
       assertThat(context).notifications().withCause(COLLECTED)
           .contains(collected).exclusively();
     }
@@ -1241,7 +1242,7 @@ final class ReferenceTest {
     var collected = getExpectedAfterGc(context,
         Maps.filterKeys(context.original(), not(equalTo(key))));
     if (!context.isStrongValues()) {
-      collected.add(new SimpleEntry<Int, @Nullable Int>(key, null));
+      collected.add(new SimpleEntry<@Nullable Int, @Nullable Int>(key, null));
     }
 
     context.clear();
@@ -1712,9 +1713,9 @@ final class ReferenceTest {
   }
 
   @SuppressWarnings("MapEntry")
-  private static List<Map.Entry<Int, Int>> getExpectedAfterGc(
+  private static List<Map.Entry<@Nullable Int, @Nullable Int>> getExpectedAfterGc(
       CacheContext context, Map<Int, Int> original) {
-    var expected = new ArrayList<Map.Entry<Int, Int>>();
+    var expected = new ArrayList<Map.Entry<@Nullable Int, @Nullable Int>>();
     original.forEach((@Var var key, @Var var value) -> {
       key = context.isStrongKeys() ? new Int(key) : null;
       value = context.isStrongValues() ? new Int(value) : null;

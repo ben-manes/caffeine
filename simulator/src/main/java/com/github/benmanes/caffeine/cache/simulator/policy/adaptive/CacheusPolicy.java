@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.adaptive;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import java.util.LinkedHashMap;
 import java.util.NavigableSet;
@@ -272,7 +273,7 @@ public final class CacheusPolicy implements KeyOnlyPolicy {
    * chosen expert's history (or in neither, if the experts agreed).
    */
   private void evict() {
-    Node lruCandidate = q.firstEntry().getValue();
+    Node lruCandidate = requireNonNull(q.firstEntry()).getValue();
     Node lfuCandidate = lfu.first();
 
     // Consume the random draw unconditionally so the RNG sequence matches the reference,
@@ -321,7 +322,7 @@ public final class CacheusPolicy implements KeyOnlyPolicy {
     }
 
     if (hist.size() == historySize) {
-      Node oldest = hist.pollFirstEntry().getValue();
+      Node oldest = requireNonNull(hist.pollFirstEntry()).getValue();
       if (isLruHist && oldest.isNew) {
         norCount--;
       }
@@ -431,7 +432,7 @@ public final class CacheusPolicy implements KeyOnlyPolicy {
   }
 
   private static Node pollLru(SequencedMap<Long, Node> deque) {
-    return deque.pollFirstEntry().getValue();
+    return requireNonNull(deque.pollFirstEntry()).getValue();
   }
 
   private static void moveToMru(SequencedMap<Long, Node> deque, Node node) {

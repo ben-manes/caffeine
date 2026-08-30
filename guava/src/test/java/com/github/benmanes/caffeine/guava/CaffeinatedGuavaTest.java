@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.guava;
 
 import static com.github.benmanes.caffeine.guava.CaffeinatedGuava.caffeinate;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static java.util.Spliterator.CONCURRENT;
 import static java.util.Spliterator.DISTINCT;
 import static java.util.Spliterator.NONNULL;
@@ -36,6 +37,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -115,7 +117,7 @@ final class CaffeinatedGuavaTest {
     assertThat(cache.asMap().remove(null)).isNull();
     assertThat(cache.asMap().remove(null, 2)).isFalse();
     assertThat(cache.asMap().remove(1, null)).isFalse();
-    assertThat(cache.asMap().replace(1, null, 3)).isFalse();
+    assertThat(cache.asMap().replace(1, nullRef(), 3)).isFalse();
     assertThat(cache.asMap().keySet().contains(null)).isFalse();
     assertThat(cache.asMap().values().contains(null)).isFalse();
     assertThat(cache.asMap()).containsExactly(1, 2);
@@ -128,8 +130,8 @@ final class CaffeinatedGuavaTest {
 
     // Guava checks the key and new value for null before the old-value guard, so a null key or
     // new value throws rather than silently returning false
-    assertThrows(NullPointerException.class, () -> cache.asMap().replace(null, null, 3));
-    assertThrows(NullPointerException.class, () -> cache.asMap().replace(1, null, null));
+    assertThrows(NullPointerException.class, () -> cache.asMap().replace(nullRef(), nullRef(), 3));
+    assertThrows(NullPointerException.class, () -> cache.asMap().replace(1, nullRef(), nullRef()));
   }
 
   @ParameterizedTest
@@ -167,7 +169,7 @@ final class CaffeinatedGuavaTest {
   void getAllPresent_nullKey(Cache<Integer, Integer> cache) {
     cache.put(1, 2);
 
-    assertThat(cache.getAllPresent(Arrays.asList(1, null, 3))).containsExactly(1, 2);
+    assertThat(cache.getAllPresent(Arrays.asList(1, nullRef(), 3))).containsExactly(1, 2);
   }
 
   @ParameterizedTest
@@ -177,7 +179,7 @@ final class CaffeinatedGuavaTest {
     cache.put(3, 4);
 
     // A null element is skipped (as in Guava), not an NPE that leaves a partial removal
-    cache.invalidateAll(Arrays.asList(1, null, 3));
+    cache.invalidateAll(Arrays.asList(1, nullRef(), 3));
     assertThat(cache.asMap()).isEmpty();
   }
 
@@ -215,7 +217,7 @@ final class CaffeinatedGuavaTest {
       @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
         var result = new HashMap<Integer, Integer>();
         for (var key : keys) {
-          result.put(null, -key);
+          result.put(nullRef(), -key);
         }
         return result;
       }
@@ -235,7 +237,7 @@ final class CaffeinatedGuavaTest {
       @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
         var result = new HashMap<Integer, Integer>();
         for (var key : keys) {
-          result.put(key, null);
+          result.put(key, nullRef());
         }
         return result;
       }
@@ -277,7 +279,7 @@ final class CaffeinatedGuavaTest {
         var loaded = new HashMap<Integer, Integer>();
         loaded.put(1, -1);
         loaded.put(3, -3);
-        loaded.put(null, -2);
+        loaded.put(nullRef(), -2);
         return loaded;
       }
     };
@@ -342,7 +344,7 @@ final class CaffeinatedGuavaTest {
       throws NoSuchFieldException, IllegalAccessException {
     var field = cache.getClass().getDeclaredField("nullBulkLoad");
     field.setAccessible(true);
-    return (ThreadLocal<?>) field.get(cache);
+    return (ThreadLocal<?>) requireNonNull(field.get(cache));
   }
 
   @Test
@@ -427,7 +429,7 @@ final class CaffeinatedGuavaTest {
         @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
           var result = new HashMap<Integer, Integer>();
           for (var key : keys) {
-            result.put(nullKey ? null : key, nullKey ? key : null);
+            result.put(nullKey ? nullRef() : key, nullKey ? key : nullRef());
           }
           return result;
         }
@@ -623,7 +625,7 @@ final class CaffeinatedGuavaTest {
       @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
         var result = new HashMap<Integer, Integer>();
         for (var key : keys) {
-          result.put(key, null);
+          result.put(key, nullRef());
         }
         return result;
       }
@@ -740,7 +742,7 @@ final class CaffeinatedGuavaTest {
     Key(String name) {
       this.name = name;
     }
-    @Override public boolean equals(Object o) {
+    @Override public boolean equals(@Nullable Object o) {
       return (o instanceof Key) && name.equals(((Key) o).name);
     }
     @Override public int hashCode() {

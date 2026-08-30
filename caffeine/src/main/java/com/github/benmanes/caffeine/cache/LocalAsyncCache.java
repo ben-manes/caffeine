@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static com.github.benmanes.caffeine.cache.Caffeine.toUnchecked;
+import static com.github.benmanes.caffeine.cache.LocalCache.castNonNull;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
@@ -151,7 +152,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           proxies.put(key, proxy);
         }
       }
-      entry.setValue(future);
+      @SuppressWarnings("NullAway")
+      CompletableFuture<@Nullable V> castedFuture = future;
+      entry.setValue(castedFuture);
     }
     cache().statsCounter().recordMisses(proxies.size());
     cache().statsCounter().recordHits(futures.size() - proxies.size());
@@ -492,7 +495,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override public boolean remove(@Nullable Object key, @Nullable Object value) {
       return asyncCache.cache().remove(key, value);
     }
-    @Override public @Nullable CompletableFuture<V> computeIfAbsent(K key,
+    @Override public CompletableFuture<V> computeIfAbsent(K key,
         Function<? super K, ? extends @Nullable CompletableFuture<V>> mappingFunction) {
       requireNonNull(mappingFunction);
       var deferred = new boolean[1];
@@ -509,7 +512,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       if (result[0] != null) {
         asyncCache.handleCompletion(key, result[0], startTime, deferred[0], /* computed= */ true);
       }
-      return future;
+      return castNonNull(future);
     }
     @Override public @Nullable CompletableFuture<V> computeIfPresent(K key,
         BiFunction<? super K, ? super CompletableFuture<V>,
@@ -544,7 +547,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
     @Override public @Nullable CompletableFuture<V> merge(K key, CompletableFuture<V> value,
         BiFunction<? super CompletableFuture<V>, ? super CompletableFuture<V>,
-            ? extends CompletableFuture<V>> remappingFunction) {
+            ? extends @Nullable CompletableFuture<V>> remappingFunction) {
       requireNonNull(value);
       requireNonNull(remappingFunction);
       return compute(key, (k, oldValue) ->
@@ -1029,7 +1032,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+    public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
       requireNonNull(mappingFunction);
 
       @Var CompletableFuture<V> priorFuture = null;
@@ -1071,7 +1074,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
         V result = Async.getWhenSuccessful(computed);
         if ((computed == future[0]) || (result != null)) {
-          return result;
+          return castNonNull(result);
         }
       }
     }

@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
@@ -172,7 +173,7 @@ final class ClairvoyantPolicyTest {
   }
 
   private static int oracleFiles() throws IOException {
-    var directory = Path.of(System.getProperty("java.io.tmpdir"));
+    var directory = Path.of(requireNonNull(System.getProperty("java.io.tmpdir")));
     try (var stream = Files.newDirectoryStream(directory, "clairvoyant*.oracle")) {
       return Iterables.size(stream);
     }

@@ -141,7 +141,7 @@ public final class Registry {
   /** Registers the policy based on the annotated name. */
   private void registerMany(Class<? extends Policy> policyClass,
       Function<Config, Set<Policy>> creator) {
-    PolicySpec policySpec = policyClass.getAnnotation(PolicySpec.class);
+    PolicySpec policySpec = requireNonNull(policyClass.getAnnotation(PolicySpec.class));
     checkState(isNotBlank(policySpec.name()), "The name must be specified on %s", policyClass);
     registerMany(policySpec.name(), policyClass, creator);
   }

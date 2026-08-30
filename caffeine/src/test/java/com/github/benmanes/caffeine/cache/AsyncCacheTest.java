@@ -717,7 +717,8 @@ final class AsyncCacheTest {
       await().untilTrue(ready);
       return Maps.toMap(keysToLoad, Int::negate);
     });
-    var pending = context.absentKeys().stream().map(cache::getIfPresent).collect(toImmutableList());
+    var pending = context.absentKeys().stream()
+        .map(key -> requireNonNull(cache.getIfPresent(key))).collect(toImmutableList());
 
     bulk.cancel(true);
     ready.set(true);
@@ -819,7 +820,7 @@ final class AsyncCacheTest {
   @ParameterizedTest
   @CheckMaxLogLevel(WARN)
   void getAllBifunction_absent_null(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = CompletableFuture.completedFuture((Map<Int, Int>) null);
+    var future = CompletableFuture.completedFuture(nullMap());
     assertThat(cache.getAll(context.absentKeys(), (keys, executor) -> future))
         .failsWith(NullMapCompletionException.class);
   }
@@ -1159,7 +1160,8 @@ final class AsyncCacheTest {
         return Maps.toMap(keysToLoad, Int::negate);
       }, executor);
     });
-    var pending = context.absentKeys().stream().map(cache::getIfPresent).collect(toImmutableList());
+    var pending = context.absentKeys().stream()
+        .map(key -> requireNonNull(cache.getIfPresent(key))).collect(toImmutableList());
     bulk.cancel(true);
     ready.set(true);
 
@@ -1320,7 +1322,7 @@ final class AsyncCacheTest {
   @ParameterizedTest
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void put_insert_null(AsyncCache<Int, Int> cache, CacheContext context) {
-    var future = CompletableFuture.completedFuture((Int) null);
+    var future = CompletableFuture.completedFuture(nullValue());
 
     cache.put(context.absentKey(), future);
     assertThat(cache).hasSize(context.initialSize());
@@ -1416,7 +1418,7 @@ final class AsyncCacheTest {
   @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.FULL })
   void put_replace_failure_before(AsyncCache<Int, Int> cache, CacheContext context) {
-    var failedFuture = CompletableFuture.completedFuture((Int) null);
+    var failedFuture = CompletableFuture.completedFuture(nullValue());
     failedFuture.completeExceptionally(new IllegalStateException());
 
     cache.put(context.middleKey(), failedFuture);
@@ -1428,7 +1430,7 @@ final class AsyncCacheTest {
   @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.FULL })
   void put_replace_failure_after(AsyncCache<Int, Int> cache, CacheContext context) {
-    var failedFuture = CompletableFuture.completedFuture((Int) null);
+    var failedFuture = CompletableFuture.completedFuture(nullValue());
 
     cache.put(context.middleKey(), failedFuture);
     failedFuture.completeExceptionally(new IllegalStateException());
@@ -1441,11 +1443,11 @@ final class AsyncCacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   void put_replace_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     var removed = new HashMap<Int, Int>();
-    var value = CompletableFuture.completedFuture((Int) null);
+    var value = CompletableFuture.completedFuture(nullValue());
     for (Int key : context.firstMiddleLastKeys()) {
       cache.put(key, value);
       assertThat(cache).doesNotContainKey(key);
-      removed.put(key, context.original().get(key));
+      removed.put(key, requireNonNull(context.original().get(key)));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache).hasSize(context.initialSize() - count);
@@ -1461,7 +1463,7 @@ final class AsyncCacheTest {
       var newValue = context.absentValue().toFuture();
       cache.put(key, newValue);
       assertThat(cache).containsEntry(key, newValue);
-      replaced.put(key, context.original().get(key));
+      replaced.put(key, requireNonNull(context.original().get(key)));
     }
 
     assertThat(cache).hasSize(context.initialSize());
@@ -1481,7 +1483,7 @@ final class AsyncCacheTest {
       var newValue = context.absentValue().toFuture();
       cache.put(key, newValue);
       assertThat(cache).containsEntry(key, newValue);
-      replaced.put(key, context.original().get(key));
+      replaced.put(key, requireNonNull(context.original().get(key)));
     }
 
     assertThat(cache).hasSize(context.initialSize());
@@ -1591,7 +1593,8 @@ final class AsyncCacheTest {
   void handleCompletion_brokenFuture_inFlight(
       AsyncCache<Int, Int> cache, CacheContext context) {
     CompletableFuture<Int> future = Mockito.spy();
-    ArgumentCaptor<BiConsumer<Int, @Nullable Throwable>> captor = ArgumentCaptor.captor();
+    ArgumentCaptor<BiConsumer<@Nullable Int, @Nullable Throwable>> captor =
+        ArgumentCaptor.captor();
     doReturn(future).when(future).whenComplete(captor.capture());
     cache.put(context.absentKey(), future);
 
@@ -1621,7 +1624,8 @@ final class AsyncCacheTest {
   void handleCompletion_brokenFuture_cancel(
       AsyncCache<Int, Int> cache, CacheContext context) {
     CompletableFuture<Int> future = Mockito.spy();
-    ArgumentCaptor<BiConsumer<Int, @Nullable Throwable>> captor = ArgumentCaptor.captor();
+    ArgumentCaptor<BiConsumer<@Nullable Int, @Nullable Throwable>> captor =
+        ArgumentCaptor.captor();
     doReturn(future).when(future).whenComplete(captor.capture());
     cache.put(context.absentKey(), future);
 
@@ -1653,7 +1657,8 @@ final class AsyncCacheTest {
   void handleCompletion_brokenFuture_nullValue(
       AsyncCache<Int, Int> cache, CacheContext context) {
     CompletableFuture<@Nullable Int> future = Mockito.spy();
-    ArgumentCaptor<BiConsumer<Int, @Nullable Throwable>> captor = ArgumentCaptor.captor();
+    ArgumentCaptor<BiConsumer<@Nullable Int, @Nullable Throwable>> captor =
+        ArgumentCaptor.captor();
     doReturn(future).when(future).whenComplete(captor.capture());
     cache.put(context.absentKey(), future);
 

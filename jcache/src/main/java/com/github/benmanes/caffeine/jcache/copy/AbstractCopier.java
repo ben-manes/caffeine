@@ -136,7 +136,8 @@ public abstract class AbstractCopier<A> implements Copier {
   private static <T> T arrayCopy(T object) {
     int length = Array.getLength(object);
     @SuppressWarnings("unchecked")
-    var copy = (T) Array.newInstance(object.getClass().getComponentType(), length);
+    var copy = (T) Array.newInstance(
+        requireNonNull(object.getClass().getComponentType()), length);
     System.arraycopy(object, 0, copy, 0, length);
     return copy;
   }

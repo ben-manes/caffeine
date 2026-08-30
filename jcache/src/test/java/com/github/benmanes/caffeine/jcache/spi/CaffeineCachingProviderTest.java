@@ -501,7 +501,7 @@ final class CaffeineCachingProviderTest {
     Thread.currentThread().setContextClassLoader(new ClassLoader() {});
     try {
       assertDoesNotThrow(() ->
-          consumer.accept(Thread.currentThread().getContextClassLoader()));
+          consumer.accept(requireNonNull(Thread.currentThread().getContextClassLoader())));
     } finally {
       Thread.currentThread().setContextClassLoader(classLoader);
     }

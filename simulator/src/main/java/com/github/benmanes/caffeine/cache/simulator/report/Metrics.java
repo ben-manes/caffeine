@@ -113,7 +113,7 @@ public record Metrics(Function<@Nullable Object, String> objectFormatter,
         if (value1 instanceof Comparable<?>) {
           @SuppressWarnings("unchecked")
           var comparable = (Comparable<Object>) value1;
-          return comparable.compareTo(value2);
+          return comparable.compareTo(requireNonNull(value2));
         }
         return metrics.objectFormatter.apply(value1)
             .compareTo(metrics.objectFormatter.apply(value2));

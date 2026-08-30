@@ -75,7 +75,7 @@ public final class MapSubject extends com.google.common.truth.MapSubject {
 
   /** Fails if the map does not contain the given keys, where duplicate keys are ignored. */
   @CanIgnoreReturnValue
-  public Ordered containsExactlyKeys(Iterable<?> keys) {
+  public Ordered containsExactlyKeys(Iterable<? extends Object> keys) {
     requireNonNull(actual);
     return check("containsKeys").that(actual.keySet())
         .containsExactlyElementsIn(ImmutableSet.copyOf(keys));

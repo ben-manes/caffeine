@@ -158,7 +158,7 @@ public final class LoggingEvents extends ForwardingList<LoggingEvent> {
     try {
       if (ALL_LOGGING_EVENTS != null) {
         for (var logger : TestLoggerFactory.getAllTestLoggers().values()) {
-          var allLoggingEvents = (Collection<?>) ALL_LOGGING_EVENTS.get(logger);
+          var allLoggingEvents = (Collection<?>) requireNonNull(ALL_LOGGING_EVENTS.get(logger));
           allLoggingEvents.clear();
         }
       }

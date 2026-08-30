@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Comparator;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
@@ -50,8 +52,8 @@ public final class CaffeineMapTests extends TestCase {
       evictionListener = Listener.DISABLED, stats = Stats.ENABLED)
   private static CacheSpec cacheSpec() {
     try {
-      return CaffeineMapTests.class.getDeclaredMethod("cacheSpec")
-          .getAnnotation(CacheSpec.class);
+      return requireNonNull(CaffeineMapTests.class.getDeclaredMethod("cacheSpec")
+          .getAnnotation(CacheSpec.class));
     } catch (NoSuchMethodException | SecurityException e) {
       throw new AssertionError(e);
     }

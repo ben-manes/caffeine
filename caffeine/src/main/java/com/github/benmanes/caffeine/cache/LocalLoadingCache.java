@@ -179,7 +179,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
     @SuppressWarnings("unchecked")
     var castedFuture = (CompletableFuture<V>) future;
-    return castedFuture;
+    return requireNonNull(castedFuture);
   }
 
   @Override

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
@@ -201,12 +202,12 @@ final class MultiThreadedTest {
           key -> { asyncCache.asMap().isEmpty(); },
           key -> { checkState(asyncCache.asMap().size() >= 0); },
           key -> { asyncCache.asMap().get(key); },
-          key -> { asyncCache.asMap().put(key, completedFuture(null)); },
+          key -> { asyncCache.asMap().put(key, completedFuture(nullRef())); },
           key -> { asyncCache.asMap().putAll(Map.of(key, completedFuture(null))); },
-          key -> { asyncCache.asMap().putIfAbsent(key, completedFuture(null)); },
+          key -> { asyncCache.asMap().putIfAbsent(key, completedFuture(nullRef())); },
           key -> { asyncCache.asMap().remove(key); },
           key -> { asyncCache.asMap().remove(key, completedFuture(null)); },
-          key -> { asyncCache.asMap().replace(key, completedFuture(null)); },
+          key -> { asyncCache.asMap().replace(key, completedFuture(nullRef())); },
           key -> { asyncCache.asMap().computeIfAbsent(key, k -> completedFuture(null)); },
           key -> { asyncCache.asMap().computeIfPresent(key, (k, v) -> v); },
           key -> { asyncCache.asMap().compute(key, (k, v) -> v); },

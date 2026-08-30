@@ -99,7 +99,7 @@ public final class CacheSubject extends Subject {
 
   /** Fails if the cache does not contain the given keys, where duplicate keys are ignored. */
   @CanIgnoreReturnValue
-  public Ordered containsExactlyKeys(Iterable<?> keys) {
+  public Ordered containsExactlyKeys(Iterable<? extends Object> keys) {
     return check("containsKeys").about(map()).that(actual.asMap()).containsExactlyKeys(keys);
   }
 
@@ -130,7 +130,7 @@ public final class CacheSubject extends Subject {
   }
 
   /** Fails if the cache does not contain exactly the given set of entries in the given map. */
-  public void containsExactlyEntriesIn(Map<?, ?> expectedMap) {
+  public void containsExactlyEntriesIn(Map<?, ? extends Object> expectedMap) {
     check("cache").that(actual.asMap())
         .comparingValuesUsing(EQUALITY)
         .containsExactlyEntriesIn(expectedMap);

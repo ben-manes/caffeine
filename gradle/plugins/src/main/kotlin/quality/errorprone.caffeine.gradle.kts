@@ -82,6 +82,7 @@ tasks.withType<JavaCompile>().configureEach {
         jspecifyMode = true
         error()
       }
+      errorproneArgs.add("-XepOpt:NullAway:JSpecifyExperimental=true")
     }
   }
 }

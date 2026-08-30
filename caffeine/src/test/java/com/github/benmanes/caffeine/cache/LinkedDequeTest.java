@@ -1025,7 +1025,7 @@ final class LinkedDequeTest {
     @Override public void setNextInWriteOrder(@Nullable LinkedValue next) {
       this.next = next;
     }
-    @Override public boolean equals(Object o) {
+    @Override public boolean equals(@Nullable Object o) {
       return (o instanceof LinkedValue) && (value == ((LinkedValue) o).value);
     }
     @Override public int hashCode() {

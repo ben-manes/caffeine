@@ -22,6 +22,8 @@ import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static com.github.benmanes.caffeine.cache.Caffeine.toNanosSaturated;
 import static com.github.benmanes.caffeine.cache.Caffeine.toUnchecked;
+import static com.github.benmanes.caffeine.cache.LocalCache.castNonNull;
+import static com.github.benmanes.caffeine.cache.LocalCache.nullRef;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
 import static com.github.benmanes.caffeine.cache.Node.PROBATION;
@@ -1321,7 +1323,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       try {
         refreshes.computeIfAbsent(keyReference, k -> {
           if (!node.isAlive() || (node.getWriteTime() != refreshWriteTime)) {
-            return null;
+            return nullRef();
           }
           try {
             startTime[0] = statsTicker().read();
@@ -1334,21 +1336,21 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
                 refreshFuture[0] = requireNonNull(refresh, "Null future");
               } else {
                 // no-op if the future's completion state was modified (e.g. obtrude methods)
-                return null;
+                return nullRef();
               }
             } else {
               requireNonNull(cacheLoader);
               var refresh = cacheLoader.asyncReload(key, oldValue, executor);
               refreshFuture[0] = requireNonNull(refresh, "Null future");
             }
-            return refreshFuture[0];
+            return castNonNull(refreshFuture[0]);
           } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             logger.log(Level.WARNING, "Exception thrown when submitting refresh task", e);
-            return null;
+            return nullRef();
           } catch (Throwable e) {
             logger.log(Level.WARNING, "Exception thrown when submitting refresh task", e);
-            return null;
+            return nullRef();
           }
         });
       } finally {
@@ -2987,7 +2989,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   @Override
   public @Nullable V computeIfPresent(K key,
-      BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+      BiFunction<? super K, ? super V, ? extends @Nullable V> remappingFunction) {
     requireNonNull(key);
     requireNonNull(remappingFunction);
 
@@ -3021,26 +3023,23 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     requireNonNull(remappingFunction);
 
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
-    BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> statsAwareRemappingFunction =
-        statsAware(remappingFunction, recordLoad, recordLoadFailure);
     var ctx = new ComputeContext<K, V>(expirationTicker().read());
     ctx.hints = hints;
-    return remap(key, keyRef, statsAwareRemappingFunction,
+    return remap(key, keyRef, statsAware(remappingFunction, recordLoad, recordLoadFailure),
         expiry, ctx, /* computeIfAbsent= */ true);
   }
 
   @Override
   public @Nullable V merge(K key, V value,
-      BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+      BiFunction<? super V, ? super V, ? extends @Nullable V> remappingFunction) {
     requireNonNull(key);
     requireNonNull(value);
     requireNonNull(remappingFunction);
 
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     BiFunction<? super V, ? super V, ? extends @Nullable V> f = statsAware(remappingFunction);
-    BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> mergeFunction =
-        (k, oldValue) -> (oldValue == null) ? value : f.apply(oldValue, value);
-    return remap(key, keyRef, mergeFunction, expiry(),
+    return remap(key, keyRef,
+        (k, oldValue) -> (oldValue == null) ? value : f.apply(oldValue, value), expiry(),
         new ComputeContext<>(expirationTicker().read()), /* computeIfAbsent= */ true);
   }
 

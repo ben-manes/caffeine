@@ -64,7 +64,7 @@ final class LinkedDequeSubject extends CollectionSubject {
   }
 
   @CanIgnoreReturnValue
-  private Set<Object> checkIterator(Iterator<?> iterator) {
+  private Set<Object> checkIterator(Iterator<Object> iterator) {
     Set<Object> seen = Sets.newIdentityHashSet();
     while (iterator.hasNext()) {
       var element = iterator.next();

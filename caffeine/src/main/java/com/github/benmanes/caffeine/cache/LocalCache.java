@@ -139,9 +139,10 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
       boolean recordLoadFailure, @Nullable RemapHints hints);
 
   @Override
-  default @Nullable V computeIfAbsent(K key,
+  default V computeIfAbsent(K key,
       Function<? super K, ? extends @Nullable V> mappingFunction) {
-    return computeIfAbsent(key, mappingFunction, /* recordStats= */ true, /* recordLoad= */ true);
+    return castNonNull(
+        computeIfAbsent(key, mappingFunction, /* recordStats= */ true, /* recordLoad= */ true));
   }
 
   /**
@@ -250,6 +251,19 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
       }
       return result;
     };
+  }
+
+  /** Returns {@code null} to isolate workarounds due to JSpecify's lack of poly-null support. */
+  @SuppressWarnings({"DataFlowIssue", "NullableProblems", "NullAway"})
+  static <T> @NonNull T castNonNull(@Nullable T value) {
+    return value;
+  }
+
+  /** Returns {@code null} to isolate workarounds due to JSpecify's lack of poly-null support. */
+  @SuppressWarnings({"DataFlowIssue", "NullableProblems",
+      "NullAway", "TypeParameterUnusedInFormals"})
+  static <T> @NonNull T nullRef() {
+    return null;
   }
 
   /**

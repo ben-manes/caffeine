@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.jcache.copy.AbstractCopier.javaDeepCo
 import static com.github.benmanes.caffeine.jcache.copy.AbstractCopier.javaImmutableClasses;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
@@ -46,6 +47,7 @@ import java.util.stream.Stream;
 
 import javax.cache.CacheException;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -124,10 +126,11 @@ final class JavaSerializationCopierTest {
     private static final long serialVersionUID = 1L;
 
     @SuppressFBWarnings("URV_INHERITED_METHOD_WITH_RELATED_TYPES")
-    @Override public Object invoke(Object proxy, Method method, Object[] args) {
+    @Override public Object invoke(
+        Object proxy, Method method, @Nullable Object @Nullable [] args) {
       switch (method.getName()) {
         case "hashCode": return System.identityHashCode(proxy);
-        case "equals": return (proxy == args[0]);
+        case "equals": return (proxy == requireNonNull(args)[0]);
         case "toString": return "greeter";
         default: return "hello";
       }
@@ -137,7 +140,7 @@ final class JavaSerializationCopierTest {
   @ParameterizedTest @MethodSource("copiers")
   void deserializable_badData(JavaSerializationCopier copier) {
     assertThrows(CacheException.class, () ->
-        copier.deserialize(new byte[0], Thread.currentThread().getContextClassLoader()));
+        copier.deserialize(new byte[0], requireNonNull(Thread.currentThread().getContextClassLoader())));
   }
 
   @Test
@@ -146,7 +149,7 @@ final class JavaSerializationCopierTest {
     var copier = new JavaSerializationCopier(
         javaImmutableClasses(), javaDeepCopyStrategies(), rejectAll);
     assertThrows(CacheException.class, () ->
-        copier.roundtrip(100, Thread.currentThread().getContextClassLoader()));
+        copier.roundtrip(100, requireNonNull(Thread.currentThread().getContextClassLoader())));
   }
 
   @Test
@@ -162,7 +165,7 @@ final class JavaSerializationCopierTest {
     };
     var copier = new JavaSerializationCopier(
         javaImmutableClasses(), javaDeepCopyStrategies(), allowJavaLang);
-    assertThat(copier.roundtrip(100, Thread.currentThread().getContextClassLoader()))
+    assertThat(copier.roundtrip(100, requireNonNull(Thread.currentThread().getContextClassLoader())))
         .isEqualTo(100);
   }
 
@@ -180,7 +183,7 @@ final class JavaSerializationCopierTest {
       }
     };
     assertThrows(CacheException.class, () ->
-        copier.roundtrip(100, Thread.currentThread().getContextClassLoader()));
+        copier.roundtrip(100, requireNonNull(Thread.currentThread().getContextClassLoader())));
   }
 
   @ParameterizedTest @MethodSource("copiers")
@@ -253,7 +256,7 @@ final class JavaSerializationCopierTest {
   }
 
   private static <T> T copy(Copier copier, T object) {
-    return copier.copy(object, Thread.currentThread().getContextClassLoader());
+    return copier.copy(object, requireNonNull(Thread.currentThread().getContextClassLoader()));
   }
 
   static Stream<Copier> copiers() {

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.testing.Nullness.castNonNull;
 import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -323,7 +324,7 @@ public final class GuavaCacheFromContext {
         return delegate().replace(key, oldValue, newValue);
       }
       @Override
-      public @Nullable V computeIfAbsent(K key,
+      public V computeIfAbsent(K key,
           Function<? super K, ? extends @Nullable V> mappingFunction) {
         requireNonNull(mappingFunction);
         boolean[] present = { true };
@@ -336,7 +337,7 @@ public final class GuavaCacheFromContext {
             if (value == null) {
               statsCounter().recordLoadException(ticker.read() - now);
             }
-            return value;
+            return castNonNull(value);
           } catch (Throwable t) {
             statsCounter().recordLoadException(ticker.read() - now);
             throw t;
@@ -520,11 +521,11 @@ public final class GuavaCacheFromContext {
 
       var e = error.get();
       if (e == null) {
-        return CompletableFuture.completedFuture(cache.asMap().get(key));
+        return CompletableFuture.completedFuture(castNonNull(cache.asMap().get(key)));
       } else if (e instanceof InterruptedException) {
         throw new CompletionException(e);
       } else if (e instanceof CacheMissException) {
-        return CompletableFuture.completedFuture(null);
+        return CompletableFuture.completedFuture(nullRef());
       }
 
       error.remove();
@@ -533,11 +534,13 @@ public final class GuavaCacheFromContext {
 
     @Override
     public CompletableFuture<Map<K, V>> refreshAll(Iterable<? extends K> keys) {
-      var result = new LinkedHashMap<K, CompletableFuture<@Nullable V>>();
+      var result = new LinkedHashMap<K, CompletableFuture<V>>();
       for (K key : keys) {
         result.computeIfAbsent(key, this::refresh);
       }
-      return composeResult(result);
+      @SuppressWarnings("NullAway")
+      Map<K, CompletableFuture<@Nullable V>> futures = result;
+      return composeResult(futures);
     }
 
     @SuppressWarnings("RedundantUnmodifiable")

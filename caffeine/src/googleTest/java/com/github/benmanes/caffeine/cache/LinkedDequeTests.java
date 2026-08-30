@@ -171,7 +171,7 @@ public final class LinkedDequeTests extends TestCase {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
       return (o instanceof LinkedValue) && value.equals(((LinkedValue) o).value);
     }
 

@@ -786,11 +786,13 @@ final class TimerWheelTest {
     }).collect(toImmutableList());
 
     var ascending = Streams.stream(timerWheel.iterator())
-        .limit(input.size() + 1).map(Node::getKey).collect(toImmutableList());
+        .limit(input.size() + 1)
+        .map(node -> requireNonNull(node.getKey())).collect(toImmutableList());
     assertThat(ascending).containsExactlyElementsIn(input).inOrder();
 
     var descending = Streams.stream(timerWheel.descendingIterator())
-        .limit(input.size() + 1).map(Node::getKey).collect(toImmutableList());
+        .limit(input.size() + 1)
+        .map(node -> requireNonNull(node.getKey())).collect(toImmutableList());
     assertThat(descending).containsExactlyElementsIn(input.reverse()).inOrder();
   }
 
@@ -811,7 +813,7 @@ final class TimerWheelTest {
 
     var keys = timers.stream().map(Timer::getKey).collect(toImmutableList());
     var ascending = Streams.stream(timerWheel.iterator())
-        .limit(range + 1).map(Node::getKey).collect(toImmutableList());
+        .limit(range + 1).map(node -> requireNonNull(node.getKey())).collect(toImmutableList());
     assertThat(ascending).containsExactlyElementsIn(keys);
     @SuppressWarnings("null")
     var ascendingSnapshot = snapshot(timerWheel, /* ascending= */ true).stream()
@@ -819,7 +821,7 @@ final class TimerWheelTest {
     assertThat(ascending).containsExactlyElementsIn(ascendingSnapshot).inOrder();
 
     var descending = Streams.stream(timerWheel.descendingIterator())
-        .limit(range + 1).map(Node::getKey).collect(toImmutableList());
+        .limit(range + 1).map(node -> requireNonNull(node.getKey())).collect(toImmutableList());
     assertThat(descending).containsExactlyElementsIn(keys);
     @SuppressWarnings("null")
     var descendingSnapshot = snapshot(timerWheel, /* ascending= */ false).stream()
@@ -890,7 +892,7 @@ final class TimerWheelTest {
         var events = new ArrayList<>();
         for (var node = timerWheel.wheel[i][j].getNextInVariableOrder();
              node != timerWheel.wheel[i][j]; node = node.getNextInVariableOrder()) {
-          events.add(node.getKey());
+          events.add(requireNonNull(node.getKey()));
         }
         if (j == index) {
           buckets.put("*" + j, events);

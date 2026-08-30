@@ -310,7 +310,7 @@ final class CacheManagerTest {
   }
 
   @Test
-  @SuppressWarnings("PMD.CloseResource")
+  @SuppressWarnings({"NullAway", "PMD.CloseResource"})
   void close_throwingCacheClose_continuesAndMarksClosed() {
     try (var fixture = JCacheFixture.builder().build()) {
       var manager = (CacheManagerImpl) fixture.cachingProvider().getCacheManager(

@@ -84,6 +84,7 @@ public final class CacheContextSubject extends Subject {
     actual.cache().policy().eviction().ifPresentOrElse(policy -> {
       check("weightedSize()").that(policy.weightedSize()).hasValue(expectedSize);
     }, () -> {
+      @SuppressWarnings("NullAway")
       long weight = actual.cache().asMap().entrySet().stream()
           .mapToLong(entry -> actual.weigher().weigh(entry.getKey(), entry.getValue()))
           .sum();
@@ -98,6 +99,7 @@ public final class CacheContextSubject extends Subject {
       check("weightedSize()").that(policy.weightedSize()).isPresent();
       check("weightedSize()").that(policy.weightedSize().orElseThrow()).isLessThan(other);
     }, () -> {
+      @SuppressWarnings("NullAway")
       long weight = actual.cache().asMap().entrySet().stream()
           .mapToLong(entry -> actual.weigher().weigh(entry.getKey(), entry.getValue()))
           .sum();
@@ -400,7 +402,7 @@ public final class CacheContextSubject extends Subject {
       }
 
       @CanIgnoreReturnValue
-      public Exclusive contains(Collection<Entry<Int, Int>> entries) {
+      public Exclusive contains(Collection<? extends Entry<?, ?>> entries) {
         return contains(entries.toArray(Map.Entry[]::new));
       }
 
@@ -442,7 +444,8 @@ public final class CacheContextSubject extends Subject {
                 .allMatch(entry -> (entry.getKey() != null) && (entry.getValue() != null));
             if (canComputeWeight) {
               long expectedWeight = Arrays.stream(entries)
-                  .mapToLong(entry -> context.weigher().weigh(entry.getKey(), entry.getValue()))
+                  .mapToLong(entry -> context.weigher().weigh(
+                      requireNonNull(entry.getKey()), requireNonNull(entry.getValue())))
                   .sum();
               statsSubject().evictions(entries.length).evictionWeight(expectedWeight);
             }

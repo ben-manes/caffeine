@@ -118,7 +118,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   /** Evicts if the map exceeds the maximum capacity. */
   private void evict(Node candidate) {
     if (data.size() > maximumSize) {
-      @SuppressWarnings("NullableProblems")
+      @SuppressWarnings({"NullableProblems", "NullAway"})
       List<Node> sample = (policy == EvictionPolicy.RANDOM)
           ? Arrays.asList(table)
           : sampleStrategy.sample(table, candidate, sampleSize, random, policyStats);
@@ -185,7 +185,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       }
     },
     SHUFFLE {
-      @SuppressWarnings("NullableProblems")
+      @SuppressWarnings({"NullableProblems", "NullAway"})
       @Override <E> List<E> sample(@Nullable E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
         var sample = new ArrayList<>(Arrays.asList(elements));

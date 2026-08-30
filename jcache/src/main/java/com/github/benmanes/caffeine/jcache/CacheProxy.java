@@ -433,7 +433,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     V newValue = entry.copiedValue;
     var result = new PutResult<V>();
     BiFunction<K, @Nullable Expirable<V>, @Nullable Expirable<V>> remappingFunction =
-        (K k, @Var Expirable<V> expirable) -> {
+        (K k, @Var @Nullable Expirable<V> expirable) -> {
       if (publishToWriter) {
         publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, entry.value));
       }
@@ -566,7 +566,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private PutResult<V> putIfAbsentNoAwait(K key, V value, boolean publishToWriter) {
     var result = new PutResult<V>();
     BiFunction<K, @Nullable Expirable<V>, @Nullable Expirable<V>> remappingFunction =
-        (K k, Expirable<V> expirable) -> {
+        (K k, @Nullable Expirable<V> expirable) -> {
       if ((expirable != null)
           && (expirable.isEternal() || !expirable.hasExpired(currentTimeMillis()))) {
         result.oldValue = expirable.get();
@@ -633,7 +633,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     @SuppressWarnings("unchecked")
     var removed = (V[]) new Object[1];
     BiFunction<K, @Nullable Expirable<V>, @Nullable Expirable<V>> remappingFunction =
-        (K k, Expirable<V> expirable) -> {
+        (K k, @Nullable Expirable<V> expirable) -> {
       if (publishToWriter) {
         publishToCacheWriter(writer::delete, () -> key);
       }
@@ -963,11 +963,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     var result = new Object[1];
     var failure = new Throwable[1];
-    BiFunction<K, Expirable<V>, Expirable<V>> remappingFunction = (k, expirable) -> {
+    BiFunction<K, @Nullable Expirable<V>, @Nullable Expirable<V>> remappingFunction =
+        (k, expirable) -> {
       // Publish a lazily-expired prior's expiration before the processor observes it as absent,
       // so listeners see a linearizable sequence and the expiration is committed exactly once
       boolean expired;
-      Expirable<V> prior;
+      @Nullable Expirable<V> prior;
       if ((expirable != null) && !expirable.isEternal()
           && expirable.hasExpired(currentTimeMillis())) {
         dispatcher.publishExpired(this, key, expirable.get());
