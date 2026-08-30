@@ -51,7 +51,7 @@ final class WindowClimber {
    * an anchor, defended by the guard rail's veto and re-tested by scheduled audits.
    *
    * [1] The Adaptive Window, From the Ground Up
-   * https://htmlpreview.github.io/?https://github.com/ben-manes/caffeine/blob/master/.claude/docs/adaptive-window.html
+   * https://htmlpreview.github.io/?https://github.com/ben-manes/caffeine/blob/master/wiki/adaptive-window.html
    */
 
   /** The difference in hit rates that reads as a workload change; the climber restarts at it. */

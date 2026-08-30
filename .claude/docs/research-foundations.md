@@ -52,7 +52,7 @@ without manual configuration.
   shipped design has advanced beyond the paper: reactive below 4096, and above it a
   within-sample density signal with a starvation-guarded probe machine whose up-probe verdict
   prices capacity at main's probation margin (see `hill-climber.md` and
-  `adaptive-window.html`). The simulator deliberately carries no faithful reference of it —
+  `wiki/adaptive-window.html`). The simulator deliberately carries no faithful reference of it —
   `product.Caffeine` (the real cache) is the arbiter
 - Adjusts window percentage up/down based on observed hit rate changes
 

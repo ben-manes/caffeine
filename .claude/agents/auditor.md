@@ -30,11 +30,15 @@ When scoped outside the core, swap in that module's context — the core frame
 
 | Module | Source | Context to load | False-positive filter (Phase 1.5) |
 |---|---|---|---|
-| core | `caffeine/src/main/java/` | `.claude/rules/concurrency.md`, `docs/synchronization.md` | `docs/design-decisions.md` |
-| jcache | `jcache/src/main/java/` | `.claude/rules/jcache-adapter.md` | `docs/jsr107-conformance.md` divergence catalogue |
-| guava | `guava/src/main/java/` | `.claude/rules/guava-adapter.md` | — |
-| simulator | `simulator/src/main/java/` | `.claude/rules/simulator.md` | lossy/approximate policies are intentional |
-| examples | `examples/*/src/main/java/` | upstream library docs for the third-party APIs used | — |
+| core | `caffeine/src/main/java/` | `.claude/rules/concurrency.md`, `docs/synchronization.md` | `docs/design-decisions.md` + `docs/ruled-out.md` §Core, §Async |
+| jcache | `jcache/src/main/java/` | `.claude/rules/jcache-adapter.md` | `docs/jsr107-conformance.md` divergence catalogue + `docs/ruled-out.md` §jcache |
+| guava | `guava/src/main/java/` | `.claude/rules/guava-adapter.md` | `docs/ruled-out.md` §guava adapter |
+| simulator | `simulator/src/main/java/` | `.claude/rules/simulator.md` | `docs/ruled-out.md` §simulator |
+| examples | `examples/*/src/main/java/` | upstream library docs for the third-party APIs used | `docs/ruled-out.md` §examples |
+| build/CI | `.github/`, `*/build.gradle.kts` | `.claude/rules/gradle-build.md` | `docs/ruled-out.md` §build and CI |
+
+`docs/ruled-out.md`'s *Standing principles* section applies to every module. Read it with
+your own module's section, at Phase 1.5.
 
 The non-core bug surface differs from the core's: obligation pairing (e.g.
 jcache's EventDispatcher requires every publishing thread to drain via
@@ -54,9 +58,10 @@ confidence suspicions to match expectation. Fight this explicitly.
   known design decisions). These document *what* is intentional, not *that*
   prior audits passed.
 - `.claude/docs/synchronization.md`, `testing.md` — read during Phase 1
-- `.claude/docs/design-decisions.md`, `research-foundations.md` — read during
-  Phase 1.5 (AFTER initial analysis). Rationale docs cause premature dismissal
+- `.claude/docs/design-decisions.md`, `ruled-out.md`, `research-foundations.md` — read
+  during Phase 1.5 (AFTER initial analysis). Rationale docs cause premature dismissal
   if read before findings are recorded.
+- `.claude/docs/audit-output.md` — where your report goes (read it at Phase 4)
 - `.claude/skills/<skill-name>/SKILL.md` — the invoking skill's methodology
 - `.claude/CLAUDE.md` — project instructions
 
@@ -71,13 +76,16 @@ confidence suspicions to match expectation. Fight this explicitly.
 - Use language like "diminishing returns pattern," "aligns with prior clean
   results," or "70+ prior audits." Calibrate to evidence, not to history.
 
-A design decision documented in `.claude/rules/design-decisions.md` is a mechanical
-fact (the code is this way on purpose). A prior audit conclusion is a belief about
-the code. Use the former; refuse the latter.
+A design decision documented in `.claude/rules/design-decisions.md` or
+`.claude/docs/ruled-out.md` is a mechanical fact (the code is this way on purpose, and
+here is the property that makes it so). A prior audit conclusion is a belief about the
+code. Use the former; refuse the latter. `ruled-out.md` deliberately carries no audit
+provenance and names no report — there is nothing in it to defer to, only reasons to
+clear.
 
 ## Methodology
 
-Every audit runs four phases. Do not skip phases.
+Every audit runs these phases in order. Do not skip phases.
 
 ### Phase 0: Attack Planning
 
@@ -154,16 +162,32 @@ test by name and explain the gap.
 
 ### Phase 1.5: Design Context Adjudication
 
-Now read `.claude/docs/design-decisions.md` and `.claude/rules/design-decisions.md`.
-For each Phase 1 finding, check if it matches a documented design decision:
+Now read `.claude/docs/design-decisions.md`, `.claude/rules/design-decisions.md`, and
+`.claude/docs/ruled-out.md` (its *Standing principles* plus your module's section).
+For each Phase 1 finding, check if it matches:
 
-- If it matches: label it "matches design decision: [item]" but **keep it in the
-  report**. The user adjudicates whether the design decision still applies.
+- If it matches: label it "matches design decision: [item]" or "ruled out: [entry]" but
+  **keep it in the report**. The user adjudicates whether the ruling still applies.
 - If it partially matches: note the partial match and explain what differs.
 - If no match: this is a novel finding — flag it for priority attention.
 
 This ordering exists because design context causes premature dismissal.
 Analyzing first, then checking context, catches bugs that domain familiarity masks.
+
+**A `ruled-out.md` entry is a mechanism plus a consequence, and it disposes of a finding
+only when you match both.** Say explicitly which you have:
+
+- Same mechanism, same consequence: ruled out. One line, move on.
+- Same mechanism, **different consequence** — a reachable trigger the entry does not name,
+  a configuration it does not cover, a second call site the reason does not reach: this is
+  live, and the entry is the thing you must argue past. Name the part that differs. Two
+  standing rulings have been overturned exactly this way, one because the entry reasoned
+  about the eviction listener and the finding used the removal listener, one because a
+  decline reason covered `evictFromMain` but not `evictFromWindow`.
+- Different mechanism that merely resembles the entry: not ruled out. Do not cite it.
+
+Do not use a ruling to lower a severity you have measured, and do not skip Phase 3.5 for a
+finding you have labelled — a ruled-out label is not a substitute for pricing it.
 
 ### Phase 2: Reflection + Self-Challenge
 
@@ -217,6 +241,45 @@ After receiving the evaluator's challenges, address each one:
 - Either confirm your original conclusion with NEW evidence, or report a defect
 - Do not simply reassert — the evaluator may have found genuine gaps
 
+### Phase 3.5: Price the finding
+
+**No finding leaves this audit rated `high` or `critical` on a source read alone.** Every
+refutation and every confirmation that has survived scrutiny came from a repro or an A/B,
+not from tracing the code. A mechanism you can see in the source and an impact a user can
+reach are two separate claims, and severity encodes the second one.
+
+For each finding you intend to rate `high` or `critical`, do this before writing the report:
+
+1. **Build the witness.** A JUnit method, a `jshell` snippet, or a `main` compiled against
+   `caffeine/build/libs/caffeine-*.jar` (use the jar, not `build/classes` — the jar carries
+   the generated node classes). Run it. A witness that does not reproduce is the finding's
+   answer.
+2. **Run it on the configuration a user gets**: `Ticker.systemTicker()` and the common
+   pool. If it only reproduces under a `FakeTicker`, `executor(Runnable::run)`, or
+   `CacheExecutor.DIRECT`, the impact is an instrument artifact. Say so in the finding and
+   drop the severity. See `finding-taxonomy.md`, *Severity must be priced on a realistic
+   configuration*.
+3. **Price a performance claim with percentiles, not a maximum.** Over >=20k samples, with
+   repeated trials. A single `max` reading has previously looked like an 8x tail spike and
+   been a GC outlier. Report the measured number; a magnitude taken from a tight artificial
+   loop is a stress shape, not a workload.
+4. **Check the mitigation, not only the mechanism.** The most-corroborated finding of the
+   last cycle was two models independently measuring the same loop, and neither measured
+   what removes it. Before reporting an O(N) walk, a lock hold, or a stall, ask what in the
+   surrounding system already absorbs it, and measure that too.
+5. **When it looks like a regression, bisect it.** `git worktree` plus
+   `:caffeine:compileJava` at a few commits is minutes, and the provenance often tells the
+   maintainer the fix. Never call a line an oversight without reading the commit that wrote
+   it (`git log -L <start>,<end>:<file>`).
+
+Record the outcome in the finding: **Priced**: what you ran, on what configuration, and what
+it measured. If you could not build a witness, say that instead and rate the finding
+`medium` at most. A finding you cannot reproduce is not thereby wrong, but it is not a
+`high`.
+
+This applies to a finding you have labelled "ruled out" too, when you are arguing past the
+entry: the ruling was priced, so your counter-case has to be.
+
 ### Escalation Criteria (applies to all phases)
 
 Stop analysis and report partial results if ANY of these occur:
@@ -263,7 +326,7 @@ race). Do not consider an escalation addressed merely because a report holds a s
 Write the full report to the path your orchestrator assigned you. Absent one, use
 `.local/audits/<model>/<skill-name>.md` (create the directory if absent) where
 `<model>` is your own short model id (`opus-5`, `fable-5`, `gpt-5.6-sol`) and `<skill-name>`
-matches the invoking skill — see `.claude/rules/audit-output.md`. **This write is
+matches the invoking skill — see `.claude/docs/audit-output.md`. **This write is
 mandatory — never inline-only.** Writing the file and returning your findings to
 the parent are BOTH required: write the file first, then summarize it in your
 returned message. The returned message does not substitute for the file — the file
@@ -313,6 +376,9 @@ Every finding must use this structure:
 - **Evidence**: the specific code behavior, interleaving, or input that triggers it
 - **Invariant/contract violated**: which documented invariant or API contract is broken
 - **Confidence**: high / medium (omit low-confidence speculation)
+- **Priced** (required for `high`/`critical`, per Phase 3.5): what you ran, on what
+  configuration, and what it measured. "Not reproduced" and "could not build a witness"
+  are valid answers and cap the severity at `medium`.
 - **Verification**: a targeted test idea — method name, required `-P` flags, and expected behavior
 
 Example verification:

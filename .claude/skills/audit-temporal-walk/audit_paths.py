@@ -1,7 +1,7 @@
 """Where the temporal walk writes its artifacts.
 
 The project keeps audit output under `.local/audits/<model>/` so the tree can be retained
-long-term and compared across models and providers — see `.claude/rules/audit-output.md`. This
+long-term and compared across models and providers — see `.claude/docs/audit-output.md`. This
 module is the single place the three CLIs (walker.py, verify.py, run.py) derive that path, so
 they cannot disagree about it.
 

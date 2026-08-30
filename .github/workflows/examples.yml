@@ -112,13 +112,15 @@ jobs:
           arguments: >
             --project-dir examples/graal-native -Pagent -PSNAPSHOT run
             metadataCopy --task run --dir src/main/resources/META-INF/native-image
+      - name: Graal Native Image (Metadata)
+        run: git diff --exit-code -- examples/graal-native/src/main/resources/META-INF/native-image
       - name: Graal Native Image (Run)
         uses: ./.github/actions/run-gradle
         with:
           distribution: graalvm
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-          arguments: --project-dir examples/graal-native nativeRun nativeTest
+          arguments: --project-dir examples/graal-native -PSNAPSHOT nativeRun nativeTest
 
   simulator:
     name: Simulator

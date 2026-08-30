@@ -271,7 +271,7 @@ Tag each confirmed finding with the divergence axis:
   to match
 
 Write the full report to `.local/audits/<model>/audit-sibling-divergence.md`
-(see `.claude/rules/audit-output.md`).
+(see `.claude/docs/audit-output.md`).
 
 Format:
 

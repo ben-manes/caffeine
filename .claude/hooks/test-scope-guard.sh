@@ -24,12 +24,33 @@ command -v jq >/dev/null 2>&1 || exit 0
 cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // ""' 2>/dev/null) || exit 0
 [ -n "$cmd" ] || exit 0
 
+# Strip heredoc bodies before matching. A `./gradlew ... --tests ...` line inside a
+# heredoc is data being written to a file (documentation, a script, a report), not a
+# command this shell runs; matching it blocks legitimate edits to the very rules this
+# guard enforces. A real gradle invocation is never inside a heredoc body.
+scan=$(printf '%s\n' "$cmd" | awk '
+  BEGIN { delim = "" }
+  delim != "" { if ($0 == delim || $0 == delim"\r") { delim = "" } ; next }
+  {
+    line = $0
+    if (match(line, /<<-?[[:space:]]*'"'"'[^'"'"']+'"'"'/) \
+     || match(line, /<<-?[[:space:]]*"[^"]+"/) \
+     || match(line, /<<-?[[:space:]]*[A-Za-z_][A-Za-z0-9_]*/)) {
+      d = substr(line, RSTART, RLENGTH)
+      gsub(/^<<-?[[:space:]]*/, "", d)
+      gsub(/['"'"'"]/, "", d)
+      delim = d
+    }
+    print line
+  }')
+[ -n "$scan" ] || exit 0
+
 # A gradle invocation running the plain `test` task, in any module.
-printf '%s' "$cmd" | grep -qE 'gradlew' || exit 0
-printf '%s' "$cmd" | grep -qE '(^|[[:space:]])(:[A-Za-z0-9_.:-]+:)?test([[:space:]]|$)' || exit 0
+printf '%s' "$scan" | grep -qE 'gradlew' || exit 0
+printf '%s' "$scan" | grep -qE '(^|[[:space:]])(:[A-Za-z0-9_.:-]+:)?test([[:space:]]|$)' || exit 0
 
 # A -P filter is the sanctioned way to narrow a class-scoped run.
-printf '%s' "$cmd" | grep -qE '\-P(implementation|keys|values|compute|stats)=' && exit 0
+printf '%s' "$scan" | grep -qE '\-P(implementation|keys|values|compute|stats)=' && exit 0
 
 deny() {
   cat >&2 <<EOF
@@ -56,7 +77,7 @@ EOF
   exit 2
 }
 
-selectors=$(printf '%s' "$cmd" \
+selectors=$(printf '%s' "$scan" \
   | grep -oE "\-\-tests[[:space:]]+('[^']*'|\"[^\"]*\"|[^[:space:]]+)" \
   | sed -E "s/^--tests[[:space:]]+//; s/^['\"]//; s/['\"]\$//")
 

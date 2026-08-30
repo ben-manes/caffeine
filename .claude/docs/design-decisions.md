@@ -1181,7 +1181,7 @@ the executor would run the submission inline, and moving it into `PerformCleanup
 where a held eviction lock does identify a caller-runs execution after the fact, fails on
 the same ground: prompt eviction without a `Scheduler` is not a contract the cache offers.
 
-## Refresh
+## Refresh Internals
 
 **`refreshIfNeeded` is intentionally lock-free.** Reads of `writeTime`, `getKey`,
 `getValue`, `getKeyReference`, `isAlive`, and the CAS of `writeTime` happen
@@ -1676,8 +1676,8 @@ Before the `pending` sentinel the detached chain was reachable only from `expire
 its ends still pointed at the live bucket sentinel, so a nested `deschedule` of the successor the
 walk was carrying nulled that node's links and stranded the rest of the chain (permanently — those
 timers never fire again, and the walk NPE'd at the capture line *outside* the per-node restore
-catch). Reproduced as a real defect; latent since "Variable expiration support (fixes #70, #75,
-#141)" in 2017. Three properties keep it correct now, don't regress any of them:
+catch). Reproduced as a real defect; latent since "Variable expiration support (fixes #70, #75, #141)"
+in 2017. Three properties keep it correct now, don't regress any of them:
 - Detaching itself is **not** about recursion: it stops `schedule()` re-linking a not-yet-due entry
   into the list being drained and reprocessing it, which is unavoidable on the last wheel (a single
   bucket). Don't justify the detach by "hides entries from a recursive advance" — `advancing`

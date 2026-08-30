@@ -73,7 +73,7 @@ Google Java Style. Contributors must sign a CLA.
 - Stay focused on the specific task requested. Don't produce unsolicited broad recommendation plans or premature "ready for engineer follow-up" conclusions.
 - Lossy/best-effort semantics (read buffer drops, approximate frequency counts, eventual consistency) are intentional design trade-offs in the cache — not defects. Read `.claude/docs/design-decisions.md` before flagging these.
 - When fixing a bug or making a design change, update or create `.claude/` files (docs, rules, skills, agents) to keep them in sync with the change.
-- Work that will span sessions gets a `LEDGER.md` work queue (itemized rows, status updated in place) alongside its scripts and data under `.local/experiments/<topic>/`. Being gitignored, that workspace survives the branch resets and rebases that remove checked-in artifacts — a narrative report on its own is not a handoff. It is ephemeral and machine-local, though: checked-in files must not reference `.local/` paths (the tree may be purged, and other clones don't have it). Distill durable conclusions into `.claude/` docs; workspace pointers belong in other `.local` files or in memory.
+- Work that will span sessions gets a `LEDGER.md` work queue (itemized rows, status updated in place) alongside its scripts and data under `.local/experiments/<topic>/`. Being gitignored, that workspace survives the branch resets and rebases that remove checked-in artifacts — a narrative report on its own is not a handoff. It is ephemeral and machine-local, though: a checked-in file must not depend on `.local/` **contents** — never cite a specific workspace as where the evidence lives, or a `LEDGER.md` as the record, because the tree may be purged and other clones don't have it. Declaring a **destination** is fine and expected (`.local/audits/<model>/<skill>.md` is the audit convention). Distill durable conclusions into `.claude/` docs; workspace pointers belong in other `.local` files or in memory.
 - When parallel workstreams report conflicting values for the same measurement, re-measure it directly rather than averaging them or trusting the more confident one. The conflict is usually an instrumentation artifact in one of them, and it otherwise ships as a finding.
 - Don't blindly suggest committing after writing code. Actually run the tests and verify the output before proposing to commit.
 
@@ -119,20 +119,22 @@ simulator/   — Cache policy simulator
 For deep dives, read these on demand (not auto-loaded to save context):
 
 - `.claude/docs/design-decisions.md` — why non-obvious choices are intentional, not bugs
+- `.claude/docs/ruled-out.md` — adjudicated-and-rejected patterns, by module, with the reason each was rejected
 - `.claude/docs/synchronization.md` — lock hierarchy, access modes, callback invocation points
 - `.claude/docs/testing.md` — CacheSpec parameterization, Truth subjects, test utilities
 - `.claude/docs/research-foundations.md` — papers mapped to implementation (TinyLFU, BP-Wrapper, etc.)
 - `.claude/docs/hill-climber.md` — the adaptive window climber: goal, adversarial cases, the probe machine, and the graveyard of alternatives
-- `.claude/docs/adaptive-window.html` — THE climber document (problem → control theory → design space → the shipped machine → evidence → appendix); the retired research-record HTMLs are archived in the local climber-failure-modes workspace
+- `wiki/adaptive-window.html` — the climber's human-facing design document. **Don't read it**: it is a 470 KB rendered deliverable whose content is `hill-climber.md` §1-6 in prose. Edit it when the design changes; read `hill-climber.md` instead.
 - `.claude/docs/finding-taxonomy.md` — standard severity/category schema for audit and review findings
 - `.claude/docs/jsr107-conformance.md` — JSR-107 (JCache) conformance
 
 When to read which doc:
 - Concurrency or thread-safety work → `synchronization.md`
 - Auditing or reviewing code → `design-decisions.md` first (prevents false positives)
+- Adjudicating an audit row, or arguing one past a standing ruling → `ruled-out.md`
 - Writing or modifying tests → `testing.md`
 - Understanding algorithm choices → `research-foundations.md`
-- Touching the window climber / `determineAdjustment` → `hill-climber.md` (new to the area → `adaptive-window.html` first)
+- Touching the window climber / `determineAdjustment` → `hill-climber.md` (§1-4 first if new to the area)
 - Interpreting or writing audit findings → `finding-taxonomy.md`
 - Auditing JSR-107 conformance of the jcache adapter → `jsr107-conformance.md`
 
@@ -140,7 +142,7 @@ When to read which doc:
 
 - **Rules** (`.claude/rules/`): project conventions, loaded automatically when relevant
 - **Skills** (`/review-change`): multi-layer parallel code review with blind + design-aware + regression pattern matching
-- **Skills** (`/audit-*`): 25 snapshot-style deep analysis skills for concurrency, correctness, and performance. Scope is repository-wide — the auditor agent's module map covers core, guava, jcache, simulator, and examples (all hold the same quality bar); pass a module or path argument to focus a run
+- **Skills** (`/audit-*`): snapshot-style deep analysis skills for concurrency, correctness, and performance, enumerated in the Audit Selection Guide below. Scope is repository-wide — the auditor agent's module map covers core, guava, jcache, simulator, and examples (all hold the same quality bar); pass a module or path argument to focus a run
 - **Skills** (`/audit-adversarial`): hostile full-codebase review with NO design context — finds bugs domain familiarity masks
 - **Skills** (`/audit-temporal-walk`): heavyweight history-mining audit. Walks every commit oldest-first, forward-tracking issues across the project's full history. Catches bugs snapshot-style audits cannot — half-fixes invisible from current state, latent+trigger pairs across multi-commit interactions. Manually-invoked CLI tool (`walker.py` + `verify.py`), hours-long, rare-run (every several months or before a major release). Ships focused variants over the same engine — diff-shape lenses (deletion/sibling/intent), a fix-commit walk, a test-coverage-regression walk, and a forward-tracked invariant ledger — orchestrated as a battery by `run.py`; invoking the skill presents the variant menu so they aren't forgotten
 - **Skills** (`/audit-jcache-conformance`): JSR-107 1.1.1 spec-conformance verification for the jcache adapter.
@@ -179,9 +181,12 @@ When to read which doc:
 | JSR-107 (JCache) spec conformance of the adapter | `/audit-jcache-conformance` |
 | Third-party/JDK API contract misuse (adapters, simulator, examples) | `/audit-third-party-contracts` |
 
+**Running a batch round** (order, quota, what a second model buys, the survival ratio to
+expect): `.claude/docs/audit-rounds.md`. Read it when starting or triaging a round.
+
 **Audit output**: reports go to `.local/audits/<model>/<skill-name>.md` — one directory per
 producing model (`opus-5`, `gpt-5.6-sol`, …) plus `shared` for cross-model working documents like
-the consolidated backlog. Gitignored but kept long-term; see `.claude/rules/audit-output.md`.
+the consolidated backlog. Gitignored but kept long-term; see `.claude/docs/audit-output.md`.
 
 ### Eviction Quality (a workflow, not audits)
 
@@ -200,6 +205,6 @@ since its `structural` class routes to admission, the sketch, or the SLRU split.
 
 They compose: `/audit-regret` finds a family and promotes it to a `/climber-gate` row, the gate
 holds it against every later change, and `/climber-minimize` asks periodically whether the rule
-added to fix it is still paying for itself. Read `hill-climber.md` §8 before starting any of them.
+added to fix it is still paying for itself. Read `hill-climber.md` §3 and §5 before starting any of them.
 
 **Review vs Audit**: `/review-change` is for pre-commit code review — reads design docs and filters known-intentional patterns. `/audit-*` skills are for correctness doubts — independent, no design context filtering. Use review for routine changes, audit when you need fresh-eyes analysis. `/audit-temporal-walk` is a third category (heavyweight, rare-run history-mining) — see its `SKILL.md` for invocation.

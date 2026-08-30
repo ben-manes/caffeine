@@ -30,6 +30,17 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "auditor",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/audit-report-guard.sh"
+          }
+        ]
+      }
     ]
   }
 }

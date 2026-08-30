@@ -74,7 +74,7 @@ many is insurance, and insurance always looks bad on average. `ablate.py` report
 instead — total gain across the cells an arm helps, total cost across the cells it hurts, the
 worst single row, and how many cells the arm leaves bit-identical. The audit layer's own case is
 the worked example: +268pp across the rows it helps against −13pp across the rows it hurts, about
-21:1, on a mean of +4.91 that says much less (`hill-climber.md` §8 item 2).
+21:1, on a mean of +4.91 that says much less (`hill-climber.md` §5).
 
 The verdicts:
 

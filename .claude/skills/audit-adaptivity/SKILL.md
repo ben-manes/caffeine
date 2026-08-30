@@ -45,13 +45,13 @@ Ladder: PROBE_BACKOFF_INITIAL (16) doubling to _MAX (64). Invariants to audit:
 1 <= starvation.rung <= 64; 0 <= refractoryLeft <= starvation.rung, which both oracles assert
 directly — the walk budget is a separate field (`Walk.samples`, bounded by PROBE_WALK_BUDGET) on
 an object that exists only while walking, so the two can no longer alias; probe state fully reset
-by resized(); an undo returns exactly to `walk.baseWindow`; the below-floor lift cannot exceed the
+by resized; an undo returns exactly to `walk.baseWindow`; the below-floor lift cannot exceed the
 floor; `sample.probationHits <= sample.hits - sample.windowHits`;
 `walk.baseProbationDensity` is written ONLY in `armProbe` (each re-arm re-snapshots) and is
 non-negative and finite; the probation capacity denominator is
 `max(1, maximum - windowMaximum - mainProtectedMaximum)` — capacities, never occupancy.
 
-NOT bugs (adjudicated design; read `hill-climber.md` §4/§7 before flagging): the up/down verdict
+NOT bugs (adjudicated design; read `hill-climber.md` §4 before flagging): the up/down verdict
 asymmetry (the window has no marginal substructure to price against); the frozen — hence
 stale-looking — baseline (judging against the LIVE probation rate is an absorbing false-veto: the
 walk's own demotions enrich it — the demoflood gate row; a cold-start-transient baseline is
@@ -98,7 +98,7 @@ The 38 constants live with the mechanism each tunes, so a knob names its owner:
 ## Structural invariants to attack (violations are real bugs)
 
 1. **Region partition sum**: `windowMaximum + mainMaximum` (probation + protected)
-   must equal `maximum()` after every climb and every resize. Can any single transfer,
+   must equal `maximum` after every climb and every resize. Can any single transfer,
    or a sequence capped by `QUEUE_TRANSFER_THRESHOLD`, drift the sum?
 2. **Non-negative maxima**: can `windowMaximum` or `mainProtectedMaximum` go negative
    — a quota larger than the donor region, or repeated `decreaseWindow` at the floor?
@@ -128,7 +128,7 @@ The 38 constants live with the mechanism each tunes, so a knob names its owner:
      become NaN or 0 and **permanently stall** adaptation (a stuck-window *bug*, distinct from
      slow convergence)?
 5. **`setMaximumSize` at boundaries**: the step-sign flip at `max <= SLOW_ADAPT_THRESHOLD`
-   plus a *runtime* maximum change via `Policy.eviction().setMaximum` — when `maximum`
+   plus a *runtime* maximum change via `Policy.eviction.setMaximum` — when `maximum`
    crosses `SLOW_ADAPT_THRESHOLD` in either direction, do the window/main split, the
    `step.size` sign, and the sample state stay mutually consistent?
 6. **Stale `adjustment` consumption**: `climb` calls `determineAdjustment` then
@@ -148,12 +148,12 @@ The 38 constants live with the mechanism each tunes, so a knob names its owner:
    the **other** layer's streak, which disarmed that layer's escalation and its
    `AUDIT_CRASH_PERSISTENCE` tolerance — so an interleaved blind corner reached around the first
    fix. One cross-write is sanctioned, journaled: an audit confirm rewards the starvation
-   ladder (`starvation.reward()`) and zeroes its refractory. An audit's undo leaves the
+   ladder (`starvation.reward`) and zeroes its refractory. An audit's undo leaves the
    refractory alone (since 2026-08-16, pinned by
    `undoProbe_auditRetreat_leavesTheStarvationRefractoryAlone`). Anything else is a finding.
    Checkable products the oracles already
    assert, and which a new invariant should join: `anchor.freshLeft > 0 ⇒ anchor.held`,
-   `anchor.held ⇒ anchor.isPlanted()`, `walk != null ⇒ undoRemaining == 0`, and
+   `anchor.held ⇒ anchor.isPlanted`, `walk != null ⇒ undoRemaining == 0`, and
    `auditClock.waitSamples > PROBE_BACKOFF_MAX ⇒ audit.rung == PROBE_BACKOFF_MAX` (the ratchet as
    an invariant). Note the one *legitimate* coupling so it is not reported: the audit clock is a
    function of window position, so any layer that moves the window decays `stillSamples` — that

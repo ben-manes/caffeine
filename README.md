@@ -163,4 +163,4 @@ Snapshots of the development version are available in
 [aedile]: https://github.com/sksamuel/aedile
 [bootique]: https://bootique.io/
 [caffeine-coroutines]: https://github.com/be-hase/caffeine-coroutines
-[adaptive-window]: https://htmlpreview.github.io/?https://github.com/ben-manes/caffeine/blob/master/.claude/docs/adaptive-window.html
+[adaptive-window]: https://htmlpreview.github.io/?https://github.com/ben-manes/caffeine/blob/master/wiki/adaptive-window.html

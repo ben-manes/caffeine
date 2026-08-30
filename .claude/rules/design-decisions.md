@@ -27,12 +27,12 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   over `maximumSize`.** The immediate re-arm is `commonPool`-only because any other executor may
   run the submission on the calling thread; the deferred pacer arm is the custom-executor fallback
   and needs a `Scheduler`, which is the published way to ask for prompt eviction. The excess is
-  capped by the write buffer (`estimatedSize() <= maximum + WRITE_BUFFER_MAX`), since a full buffer
+  capped by the write buffer (`estimatedSize <= maximum + WRITE_BUFFER_MAX`), since a full buffer
   forces `afterWrite`'s inline assist. Same model as a garbage collector. Don't add a third arm and
   don't move the resubmission into `PerformCleanupTask`. Read the doc.
-- **`Pacer.schedule`'s reschedule arm must call `cancel()`, not `future.cancel(...)`.** The
+- **`Pacer.schedule`'s reschedule arm must call `cancel`, not `future.cancel(...)`.** The
   immediate-scheduler recursion guard is `future == null && nextFireTime != 0L`, and only
-  `cancel()` puts the pacer into that state; cancelling the future alone leaves the old one
+  `cancel` puts the pacer into that state; cancelling the future alone leaves the old one
   published and an inline scheduler then recurses without bound. Don't "simplify" it back.
 - **`MpscGrowableArrayQueue` is a shaded JCTools port and is not wrap-safe; that is accepted.**
   At `pIndex == cIndex == 2^63 - 256` the "is there room" sum overflows and a resize is selected on
@@ -54,33 +54,33 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   permanently move a colliding thread, are package-private to `java.util.concurrent`. Don't
   "restore" the convergence search; the only alternative is a `ThreadLocal` on the read hot path.
 - **Neither write-buffer consumer waits for a producer's publication.** `drainWriteBuffer` and
-  `clear` both use `relaxedPoll()`, so a producer descheduled between its index CAS and its
+  `clear` both use `relaxedPoll`, so a producer descheduled between its index CAS and its
   element store no longer spins the lock holder. The task is not stranded: `scheduleAfterWrite`
-  runs after `offer` returns and re-arms the drain. Don't restore the strong `poll()` in either
+  runs after `offer` returns and re-arms the drain. Don't restore the strong `poll` in either
   place; `clear` in particular does not need exhaustiveness, since it already abandons the buffer
   at `WRITE_BUFFER_MAX / 2`, `AddTask` links only when the node is alive, and `makeDead` reads the
   weight from the node so a late task telescopes back to zero.
 - **A hit probes the value future's readiness only where the answer is consumed** (`hasExpired`
   is timestamp-only, so the probe runs solely on an expired verdict; the read blocks test
-  `expiresAfterRead()`). Six acquire loads of `CompletableFuture.result` per `maximumSize`-only
+  `expiresAfterRead`). Six acquire loads of `CompletableFuture.result` per `maximumSize`-only
   async hit were dead; removing them is +53% on `AsyncGetPutBenchmark.read_only`. Don't cache one
   probe's answer for the other — a future can complete or be obtruded in between.
 - **The expiry read protocol: readers load timestamps before the value, writers store the value
   before the timestamps** (`hasExpired` ends in a `loadLoadFence`, the generated `setValue` in a
   `storeStoreFence`), so a fresh timestamp is never observed with a stale value and a read never
-  returns a value whose EXPIRED notification already fired. Don't move a reader's `getValue()`
+  returns a value whose EXPIRED notification already fired. Don't move a reader's `getValue`
   above its `hasExpired` call, don't store a timestamp before `setValue` in a rewrite, and check
   `isComputingAsync` on a value loaded after the expired verdict. Pinned by
   `ExpirationFrayTest.getIfPresent_expiringRewrite_neverReturnsExpiredValue` and the
   `ExpiredReadTear` jcstress test. Read the doc.
 - **accessTime uses opaque write (not CAS)** to avoid contention storms. Instead verify that stale reads cause only benign early expiration.
-- **Read-path expiry extension can briefly resurrect a just-expired entry** (`tryExpireAfterRead`'s `casVariableTime`, or `setAccessTime`) — accepted, not a bug. A reader that saw the entry live and then extends it can land the write just after the entry crossed its boundary, leaving it visible slightly later than expiry. Inherent to lock-free read-extension over lazy expiration (the CAS only checks the field is unchanged, so it can't reject an expired entry; a fresh-clock guard before the write still races a context switch — only a read-path lock, rejected, closes it). Wide window needs a slow `expireAfterRead` (callback misuse). "Never later" is best-effort here; over-stay is bounded by one duration and self-heals on maintenance. Don't add a *fresh-clock* re-check guard (distinct from the load-bearing `node.getValue() == value` value-identity check that blocks rebinding a read duration onto a replaced value — keep that one).
+- **Read-path expiry extension can briefly resurrect a just-expired entry** (`tryExpireAfterRead`'s `casVariableTime`, or `setAccessTime`) — accepted, not a bug. A reader that saw the entry live and then extends it can land the write just after the entry crossed its boundary, leaving it visible slightly later than expiry. Inherent to lock-free read-extension over lazy expiration (the CAS only checks the field is unchanged, so it can't reject an expired entry; a fresh-clock guard before the write still races a context switch — only a read-path lock, rejected, closes it). Wide window needs a slow `expireAfterRead` (callback misuse). "Never later" is best-effort here; over-stay is bounded by one duration and self-heals on maintenance. Don't add a *fresh-clock* re-check guard (distinct from the load-bearing `node.getValue == value` value-identity check that blocks rebinding a read duration onto a replaced value — keep that one).
 - **`maximum` and `weightedSize` have a plain reader and an acquire reader, and no public-facing
-  path may use the plain one.** `AddMaximum.addPlainAndAcquireField` emits `maximum()` as a
+  path may use the plain one.** `AddMaximum.addPlainAndAcquireField` emits `maximum` as a
   `VarHandle.get`, which guarantees bitwise atomicity only up to 32 bits, so a plain read of the
   64-bit field can tear against `setMaximum`'s release write on a 32-bit JVM. The plain reader is
   for callers already holding `evictionLock`; everything reachable from the public API takes
-  `maximumAcquire()`/`weightedSizeAcquire()`. There is no way to assert an access mode in a test,
+  `maximumAcquire`/`weightedSizeAcquire`. There is no way to assert an access mode in a test,
   so this is a review-time invariant: check the call site's lock state, not the accessor's name.
   The three duration fields need no such care, since `addAcquireReleaseField` emits only an
   acquire reader.
@@ -95,24 +95,24 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
 - **notifyEviction before user code** preserves linearizability. Instead verify catch-commit-rethrow handles exceptions after irrevocable notification.
 - **Catch-commit-rethrow** in doComputeIfAbsent/remap makes phantom evictions real on exception. Instead verify the committed state is consistent. This is the most commonly misunderstood pattern — read the doc before flagging exception handling in compute paths.
 - **Two weight fields** (weight + policyWeight) is intentional for the telescoping sum; verify
-  both converge rather than flagging transient negatives. `makeDead` subtracting `getWeight()` and
+  both converge rather than flagging transient negatives. `makeDead` subtracting `getWeight` and
   `UpdateTask.run` being dead-guard-free are a matched pair — don't change either alone. The same
   out-of-order drain can leave `policyWeight` transiently negative and over-shift the region caps;
   tolerated, not guarded (the caps are policy targets, eviction is driven by the telescoping
   `weightedSize`). Don't clamp the transfer quota against negative weights. Read the doc.
-- **The sketch's shrink retrack and `reset()`'s zero clamp are a matched pair** — don't change
+- **The sketch's shrink retrack and `reset`'s zero clamp are a matched pair** — don't change
   either alone. `ensureCapacity` re-points `sampleSize` at the new maximum while keeping the
-  grow-only table, which breaks the precondition `reset()`'s truncation correction relied on
+  grow-only table, which breaks the precondition `reset`'s truncation correction relied on
   (`count/4 < size` held only while the table matched the sample). Unclamped, `size` underflows
   deeply negative and aging stalls until it counts back, restoring the old size's cadence that the
   retrack exists to remove. The clamp is inert whenever the table matches the maximum. Read the
   doc. **The retained table's lock-hold cost is accepted, not a defect** (adjudicated 2026-08-09):
-  the table is grow-only while `sampleSize` re-points down, so after a large shrink `reset()`
+  the table is grow-only while `sampleSize` re-points down, so after a large shrink `reset`
   walks the old table at the new, much shorter cadence — 1.94 ms under `evictionLock` on a
   retained 8 MiB table after a 1M→1K shrink, ~194 ns/increment amortized against ~0.19 ns when
   the two match. The amortized cost scales with the peak-to-current ratio, so a 10x swing is free
   and only a ~1000x one is visible. Reachable on unweighted caches through
-  `policy().eviction().setMaximum()`, not only weighted ones. Don't add a hysteretic table shrink:
+  `policy.eviction.setMaximum`, not only weighted ones. Don't add a hysteretic table shrink:
   it would fight the per-addition retrack a weighted cache already performs, and the aging
   correctness the retrack buys is worth more than the tail cost.
 - **`scheduleAfterWrite`'s IDLE arm retries its failed swap** instead of scheduling on what it
@@ -120,7 +120,7 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   when a drain is in flight that already passed its task. Don't collapse it back. Read the doc.
 - **The keyReference in a weak/soft value reference is non-volatile but read and written
   opaquely** (published via setRelease + storeStoreFence; verify the fence is present in setValue).
-  A strong-key weak/soft-value node stores its key in that reference, so `getKey()` and `isAlive()`
+  A strong-key weak/soft-value node stores its key in that reference, so `getKey` and `isAlive`
   read the field independently and plain reads would permit observing the sentinel and then the
   older key, judging a retired node alive while handing out the sentinel. Opaque reads are coherent,
   which forbids it, and cost nothing at runtime. Don't demote them to plain, and don't promote the
@@ -130,7 +130,7 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   `AddTask`/`UpdateTask`. Testing `preserveTimestamps` there instead is a weaker restatement of
   the exit's four-part guard, and the two disagreeing skips the policy work after a committed
   write (permanent `weightedSize` skew, an unlinked node, and a negative credit when it dies).
-- **A refresh completion's commit branch tests `node.isAlive()`, not just the write time.** The
+- **A refresh completion's commit branch tests `node.isAlive`, not just the write time.** The
   captured node's `writeTime` is frozen once it dies, so a remove and reinsert of the same value
   instance is invisible to the write-time term and a stale reload commits into the new
   generation. The prescreen race in the doc is adjudicated benign on the strength of this guard.
@@ -150,7 +150,7 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   `preserveRefresh`, and a rejection that restarts the write clock fails the successor's own ABA
   guard, so its reload is dropped anyway. Don't make it conditional again, and don't reintroduce
   an unconditional by-key discard on a completion exit. All three registrations key `refreshes`
-  by `referenceKey(key)`, never by the node's own key reference: a weak key's `retire()` clears
+  by `referenceKey(key)`, never by the node's own key reference: a weak key's `retire` clears
   that reference, and a cleared one is equal to no later lookup, so a preserved token would be
   stranded with its future for the cache's lifetime. "Every exit" includes `remap`'s
   **exception** exit, which honors the hint too
@@ -171,14 +171,14 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   coalesces onto the superseded token and is discarded. Don't remove the prescreen to close it, and
   don't add a registration-side re-check for it.
 - **Async sync-view mutations are physical while queries are logical** — in-flight entries are
-  absent to queries but the key-based removals operate on the raw delegate; `size()`/`isEmpty()`
+  absent to queries but the key-based removals operate on the raw delegate; `size`/`isEmpty`
   are physical too. Blocking everywhere invites deadlock. The exception is **value-conditional CAS
   ops** and the `compute`/`merge` family, which block on the in-flight future, mirroring CHM's bin
   lock; bulk collection-view ops split the same way and it is CHM-faithful. The sync-view **read**
   is likewise non-linearizable, and the sync `get(k, func)`/`getAll` **coalesce** (Guava-family)
   rather than recompute. All by design — don't "fix" the asymmetry, don't add a double-collect
   re-check, and don't route `get(k, func)` through `computeIfAbsent`. Read the doc.
-- **`EntrySet.removeIf` hands the predicate an immutable snapshot** (`Map.entry(k,v)`), so `setValue` throws — matching ConcurrentHashMap and Guava (JDK-8078726: their inherited default `removeIf` removed *wrong* entries under concurrent updates, so they overrode it with a snapshot + conditional `replaceNode(k,null,v)`). The write-through entry is intentionally **only** for `iterator`/`spliterator`/`toArray`; the iterator-vs-`removeIf` asymmetry is deliberate, not a bug. All four views follow this (bounded, unbounded, async sync-view `AsMapView`, async raw view `AsyncEntrySet`), removing conditionally via `remove(k,v)`; the two async views delegate to the inner cache's `removeIf` (mirroring their `values().removeIf`), the raw view having previously inherited the *positional* `iterator.remove` default. Don't "restore" a write-through entry here or flag the asymmetry.
+- **`EntrySet.removeIf` hands the predicate an immutable snapshot** (`Map.entry(k,v)`), so `setValue` throws — matching ConcurrentHashMap and Guava (JDK-8078726: their inherited default `removeIf` removed *wrong* entries under concurrent updates, so they overrode it with a snapshot + conditional `replaceNode(k,null,v)`). The write-through entry is intentionally **only** for `iterator`/`spliterator`/`toArray`; the iterator-vs-`removeIf` asymmetry is deliberate, not a bug. All four views follow this (bounded, unbounded, async sync-view `AsMapView`, async raw view `AsyncEntrySet`), removing conditionally via `remove(k,v)`; the two async views delegate to the inner cache's `removeIf` (mirroring their `values.removeIf`), the raw view having previously inherited the *positional* `iterator.remove` default. Don't "restore" a write-through entry here or flag the asymmetry.
 - **A timing wheel's bucket width is its resolution; that is the data structure, not a Caffeine
   choice.** A hashed wheel advances in whole ticks, which is what buys the O(1) insert and delete
   (Varghese and Lauck; see `research-foundations.md`), so an entry due sooner than the next tick
@@ -197,7 +197,7 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   filters per node), and the read path does **not** reap, since `getIfPresent`/`containsKey`
   filter without removing and only `get(k, fn)` through `remap` evicts on access. Measured
   2026-08-28: a variable expiry of 1ns, 1ms or 500ms leaves the entry resident with no `EXPIRED`
-  event after `cleanUp()`; `setExpiresAfter(k, 0)` is reaped at exactly `2^30`, not `2^30 - 1`.
+  event after `cleanUp`; `setExpiresAfter(k, 0)` is reaped at exactly `2^30`, not `2^30 - 1`.
   The fixed policy is eager where the variable one is not, which is the deque-versus-wheel
   difference and not a decision. (The `-1 → 0` example is stale since "Fix the timer wheel wrap
   bias at Long.MIN_VALUE"; that crossing lands on a rebased tick boundary and yields delta=1, also
@@ -225,8 +225,8 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   generation.** `CompletableFuture` has no equality, so identity is the only way to map a
   registration onto a side structure (conditionally clearing `refreshes` when a load fails against
   concurrent updates), and the loader's future is returned and exposed rather than wrapped. A
-  per-generation `copy()` is therefore not available: it changes what `refresh(k)` and
-  `policy().refreshes()` hand back, and cancelling a copy no longer reaches the loader's future.
+  per-generation `copy` is therefore not available: it changes what `refresh(k)` and
+  `policy.refreshes` hand back, and cancelling a copy no longer reaches the loader's future.
   The exposure has known annoyances, the cache-updating `whenComplete` running after the user's
   future is already done, with no way to wait for the cache to be populated, since an expensive
   handler ahead of ours in the dependent stack is slow to pop. A loader that returns one
@@ -273,7 +273,7 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   recursion-guard short-circuit forever (measured 2026-08-28: the scheduler was never called
   again across four healthy retries, for a `RuntimeException` as well as an `Error`). It is
   unreachable from the cache. `Caffeine.scheduler(Scheduler)` always wraps in
-  `GuardedScheduler`, which catches `Throwable`, logs, and returns `DisabledFuture.instance()`,
+  `GuardedScheduler`, which catches `Throwable`, logs, and returns `DisabledFuture.instance`,
   never null, so the pacer always gets a future back. End to end with an injected
   `RejectedExecutionException` the behaviour is identical to the healthy run. Out of scope
   (Ben, 2026-08-28) and re-raised often, so close it on the wrapper rather than on the
@@ -349,7 +349,7 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   2026-08-09): the window transfer is bounded per maintenance cycle, so during a burst the window
   physically holds more than `windowMax` while `Reading.windowDensity` still divides by it, which
   inflates the window's density and biases the step upward. Both escalations were refuted —
-  `evictFromMain` pulls window candidates through `admit()` like anything else, so there is no
+  `evictFromMain` pulls window candidates through `admit` like anything else, so there is no
   admission bypass and no stable wrong fixed point, and `LocalCacheSubject` still asserts the bound
   at quiescence. Don't re-raise it as a defect, and don't switch the denominator to occupancy
   without measuring: the setpoint is what the controller commands and the transfer converges to.
@@ -409,8 +409,8 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   settled sample): it sits in the `isAt` branch and never reads the gate, so it re-syncs while a
   crash-abort's retreat is still draining; the contaminated blend rides the EMA either way and
   heals over later on-anchor samples, where a frozen-high claim never heals off-anchor
-  (adjudicated 2026-08-07). **Planting's gate does span that drain** (2026-08-09): `isProbing()`
-  is the walk *and* the capped retreat undoing it, because `hasPendingUndo()` outranks
+  (adjudicated 2026-08-07). **Planting's gate does span that drain** (2026-08-09): `isProbing`
+  is the walk *and* the capped retreat undoing it, because `hasPendingUndo` outranks
   `anchor.returning` in the router, so `returning` is false for the whole drain and both planting
   branches would otherwise claim a position the probe was charged a ladder escalation for
   rejecting. Don't narrow it back to `walk != null`.
@@ -458,7 +458,7 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   across the battery and corpus dumps, and rewarding it (rung → 1) restarted the ladder on every
   cycle of a dither that never reaches the band it is looking for (`bandtrap2` 4.4pp below LRU,
   `shallowmoat` absorbing). `Walk.isReversedBy` prices such a confirm as a completed experiment
-  (`escalate()`), keeping the handoff and the zero refractory; a kept confirm still rewards. Don't
+  (`escalate`), keeping the handoff and the zero refractory; a kept confirm still rewards. Don't
   restore the reward on the reversed branch, don't add a refractory to it (holding the floor lets
   the calibration audit misconfirm on the warmup trend: `wedgefail`/`wedgehold`, dead), and don't
   let the walk continue past it (the v9 family). Its accepted price is a deep walk armed in a
@@ -515,12 +515,12 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   adaptive SLRU split or a Merlin-style promotion threshold without new insight; read
   `hill-climber.md` §5.
 - **Before proposing any climber change, read `.claude/docs/hill-climber.md`** (§4 the shipped
-  machine, §5 the graveyard, §7 open threads) and `docs/design-decisions.md`'s Eviction section.
+  machine, §5 the graveyard, §6 the methodology) and `docs/design-decisions.md`'s Eviction section.
   Five probe-verdict forms, every audit-bar depth pricing, PID and its descendants, ghost/shadow
   state, steering blends, and settle-then-judge confirms are all **measured dead** with the
   families each one traded. Re-run `/climber-gate` after any change; its battery, sentinels and
   bars are the regression contract, and bimodal cells adjudicate seeded or at N=8.
 
-- **`BoundedLocalCache.equals` uses size + iterate-this + count==expectedSize**, not CHM-style two-sided iteration. AbstractMap-style is symmetric with the most common comparison target (HashMap), `BLC.size()` is reliable enough that the prescreen earns its keep, and O(n) beats O(n+m). The `count == expectedSize` postcondition catches a measured race shape ("bug fixes during coverage audit"): maintenance trimming dead entries between the size prescreen and iteration would otherwise yield a silent false-true on the surviving subset. Don't propose CHM's no-size two-sided iteration here. The same pattern is mirrored in `LocalAsyncCache.AsMapView.equals` (the future-typed view).
+- **`BoundedLocalCache.equals` uses size + iterate-this + count==expectedSize**, not CHM-style two-sided iteration. AbstractMap-style is symmetric with the most common comparison target (HashMap), `BLC.size` is reliable enough that the prescreen earns its keep, and O(n) beats O(n+m). The `count == expectedSize` postcondition catches a measured race shape ("bug fixes during coverage audit"): maintenance trimming dead entries between the size prescreen and iteration would otherwise yield a silent false-true on the surviving subset. Don't propose CHM's no-size two-sided iteration here. The same pattern is mirrored in `LocalAsyncCache.AsMapView.equals` (the future-typed view).
 
 For full rationale, see `.claude/docs/design-decisions.md`

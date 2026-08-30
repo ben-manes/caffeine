@@ -5,6 +5,7 @@ Varifier = "Varifier"
 
 [files]
 extend-exclude = [
+  "wiki/adaptive-window.html",
   "caffeine/src/jsr166Test/*",
   "caffeine/src/eclipseTest/*",
   "guava/src/compatibilityTest/*",

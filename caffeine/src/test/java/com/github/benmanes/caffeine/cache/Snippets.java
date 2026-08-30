@@ -159,7 +159,7 @@ final class Snippets {
   void expiry_accessing() {
     // @start region=expiry_accessing
     Expiry<Key, Graph> expiry = Expiry.accessing((key, graph) ->
-        graph.isDirected() ? Duration.ofHours(1) : Duration.ofHours(3));
+        Duration.ofHours(graph.isDirected() ? 1 : 3));
     // @end region=expiry_accessing
 
     LoadingCache<Key, Graph> cache = Caffeine.newBuilder()

@@ -416,7 +416,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
   /* --------------- Asynchronous view --------------- */
   final class AsyncAsMapView<K, V> implements ConcurrentMap<K, CompletableFuture<V>> {
-    final LocalAsyncCache<K, V> asyncCache;
+    private @Nullable Set<Entry<K, CompletableFuture<V>>> entrySet;
+    private final LocalAsyncCache<K, V> asyncCache;
 
     AsyncAsMapView(LocalAsyncCache<K, V> asyncCache) {
       this.asyncCache = requireNonNull(asyncCache);
@@ -563,7 +564,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return asyncCache.cache().values();
     }
     @Override public Set<Entry<K, CompletableFuture<V>>> entrySet() {
-      return new AsyncEntrySet();
+      var es = entrySet;
+      return (es == null) ? (entrySet = new AsyncEntrySet()) : es;
     }
     @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     @Override public boolean equals(@Nullable Object o) {

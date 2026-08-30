@@ -128,7 +128,7 @@ FLAGS = '''
   /** pricedshift: the stand-down's trigger priced off the rate's scatter, clamped to [1x, 3x]. */
   static final boolean PRICEDSHIFT = VARIANT.equals("pricedshift");
   /*
-   * The §8 item 4 latency-face candidate: a discarding stand-down restarts the audit schedule.
+   * The top-corner residual's latency-face candidate: a discarding stand-down restarts the audit schedule.
    * One site (the detected shift in densityClimb; rearmboth adds the retest's discard), gated
    * and shaped by the arm.
    */
@@ -433,7 +433,7 @@ EDITS = [
      "            || ((anchor.retestClaim >= 0) && !anchor.returning));\n  }\n"),
 
     # the discarding stand-down's site (the isWorkloadShift one; the retest's discard in
-    # retestReturn is deliberately not wired): the §8 item 4 latency-face candidate
+    # retestReturn is deliberately not wired): the top-corner residual's latency-face candidate
     ("rearm", W,
      "      rates.reset();\n    }\n    updateRateReferences(reading);\n",
      "      rates.reset();\n"

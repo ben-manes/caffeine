@@ -1149,15 +1149,12 @@ final class EventDispatcherTest {
   @Test
   void publish_listenerObservesTheCommittedMutation() {
     var onCreated = new AtomicReference<@Nullable Expirable<Integer>>();
-    var listener = new CacheEntryCreatedListener<Integer, Integer>() {
-      @Override public void onCreated(
-          Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {
-        // read through the native cache, since the JCache API is refused to a callback
-        @SuppressWarnings("unchecked")
-        var nativeCache = (com.github.benmanes.caffeine.cache.Cache<Integer, Expirable<Integer>>)
-            cacheRef.get().unwrap(com.github.benmanes.caffeine.cache.Cache.class);
-        onCreated.set(nativeCache.getIfPresent(KEY_1));
-      }
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      // read through the native cache, since the JCache API is refused to a callback
+      @SuppressWarnings("unchecked")
+      var nativeCache = (com.github.benmanes.caffeine.cache.Cache<Integer, Expirable<Integer>>)
+          cacheRef.get().unwrap(com.github.benmanes.caffeine.cache.Cache.class);
+      onCreated.set(nativeCache.getIfPresent(KEY_1));
     };
     try (var fixture = reentrantFixture(listener);
         var cache = fixture.jcache()) {

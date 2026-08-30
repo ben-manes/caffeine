@@ -160,7 +160,7 @@ one-active-script discipline keeps quota and logs sane.
 
 Mutable state, the snapshot worktree, and reports live under
 `.local/audits/<model>/audit-temporal-walk-<module>/` (see
-`.claude/rules/audit-output.md`; export `AUDIT_MODEL`) — the suffix is derived
+`.claude/docs/audit-output.md`; export `AUDIT_MODEL`) — the suffix is derived
 from the first segment of `WALKER_SCOPE`, plus a `-test` discriminator for a
 test-tree scope, so caffeine/jcache and main/test audits don't clobber each
 other. A `--run-name` variant suffixes its state/log/worktree within that dir.

@@ -199,7 +199,7 @@ already attached to each finding.
 ## Output
 
 The output directory is `.local/audits/<model>/audit-temporal-walk-<module>/` (see
-`.claude/rules/audit-output.md`) — **export `AUDIT_MODEL` with your own short model id** before
+`.claude/docs/audit-output.md`) — **export `AUDIT_MODEL` with your own short model id** before
 launching, since a shell-run walk cannot know it. `audit_paths.reports_dir` prefers an existing
 tree for the module, so a walk resumed the next day still finds its `state.json`.
 The `<module>` suffix is auto-derived from `WALKER_SCOPE`: the first path
@@ -230,11 +230,11 @@ being subtle design-intent matches that the priors don't quite cover.
 For each `still_exists` finding in `findings.md`:
 1. Read the lineage to understand why the bug exists
 2. Cross-check against `.claude/docs/design-decisions.md` and
-   `~/.claude/projects/-Users-ben-projects-caffeine/memory/cross_model_audit_results.md`
+   `.claude/docs/ruled-out.md` (the standing rulings, by module)
 3. Write a failing test that exposes the bug witness
 4. If the test confirms, fix and commit. If the test passes (false
-   positive), record the case in `cross_model_audit_results.md` so future
-   audits don't re-raise it.
+   positive), add the pattern to `ruled-out.md` so future audits don't
+   re-raise it.
 
 ## Design notes
 

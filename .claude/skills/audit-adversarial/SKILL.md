@@ -144,7 +144,7 @@ Additionally tag each confirmed finding:
 ## Step 7: Report
 
 Write the full report to `.local/audits/<model>/audit-adversarial.md`
-(see `.claude/rules/audit-output.md`).
+(see `.claude/docs/audit-output.md`).
 
 Format:
 ```
