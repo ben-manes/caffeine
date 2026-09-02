@@ -46,7 +46,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
     "UCPM_USE_CHARACTER_PARAMETERIZED_METHOD", "WMI_WRONG_MAP_ITERATOR"})
 @SuppressWarnings({"all", "AssertEqualsArgumentOrderChecker", "EffectivelyPrivate",
     "EqualsUnsafeCast", "FieldMissingNullable", "ForEachIterable", "FutureReturnValueIgnored",
-    "IdentifierName", "InconsistentOverloads", "JdkObsolete", "MethodCanBeStatic", 
+    "IdentifierName", "InconsistentOverloads", "JdkObsolete", "MethodCanBeStatic",
     "RedundantStringConversion", "SystemOut", "UnnecessaryFinal", "UnnecessaryTestMethodPrefix",
     "Var", "Varifier", "YodaCondition"})
 public class NBHM_Tester2 {
