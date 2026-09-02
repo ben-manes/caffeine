@@ -72,7 +72,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  */
 @SuppressWarnings({"all", "AlmostJavadoc", "BooleanParameter", "DirectReturn", "EmptyBlockTag",
     "EnumOrdinal", "IdentifierName", "IdentityConversion", "IsNull", "JdkObsolete",
-    "MethodCanBeStatic", "MultiVariableDeclaration", "NullAway", "PreferredInterfaceType",
+    "MethodCanBeStatic", "MultiVariableDeclaration", "PreferredInterfaceType",
     "PreferredInterfaceType", "PreferredInterfaceType", "PrivateConstructorForUtilityClass",
     "rawtypes", "RedundantStringConversion", "unchecked", "UnnecessaryFinal", "unused",
     "Var", "Varifier", "YodaCondition"})

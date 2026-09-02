@@ -49,7 +49,7 @@ import org.testng.annotations.Test;
  * @run testng/othervm -Dtest.map.collisions.shortrun=true InPlaceOpsCollisions
  * @summary Ensure overrides of in-place operations in Maps behave well with lots of collisions.
  */
-@SuppressWarnings({"all", "NullAway", "Var"})
+@SuppressWarnings({"all", "Var"})
 public class InPlaceOpsCollisions extends MapWithCollisionsProviders {
 
     @Test(dataProvider = "mapsWithObjectsAndStrings")

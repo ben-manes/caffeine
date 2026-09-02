@@ -47,7 +47,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  */
 @Test
 @SuppressWarnings({"all", "CollectorMutability",
-    "DirectReturn", "NullAway", "rawtypes", "Varifier"})
+    "DirectReturn", "rawtypes", "Varifier"})
 public class MapBinToFromTreeTest {
 
     // Initial capacity of map

@@ -55,7 +55,6 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   @Nullable Function<Set<? extends K>, Map<K, V>> bulkMappingFunction();
 
   @Override
-  @SuppressWarnings("NullAway")
   default V get(K key) {
     return cache().computeIfAbsent(key, mappingFunction());
   }

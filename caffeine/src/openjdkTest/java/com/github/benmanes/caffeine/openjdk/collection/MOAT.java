@@ -140,7 +140,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
     "IdentityHashMapBoxing", "InvalidParam", "IterableIsEmpty", "JdkObsolete",
     "JUnitClassModifiers", "JUnitMethodDeclaration", "ListRemoveFirst", "ListRemoveLast",
     "ModifyingCollectionWithItself", "MultiVariableDeclaration", "NonAtomicVolatileUpdate",
-    "NonFinalStaticField", "NonStaticImport", "NullAway", "ParameterMissingNullable", "rawtypes",
+    "NonFinalStaticField", "NonStaticImport", "ParameterMissingNullable", "rawtypes",
     "ReferenceEquality", "resource", "ReturnValueIgnored", "SelfEquals",
     "SequencedCollectionGetFirst", "SequencedCollectionGetLast", "SystemOut", "unchecked",
     "UndefinedEquals", "UnnecessaryFinal", "unused", "UnusedMethod", "Var", "Varifier"})
