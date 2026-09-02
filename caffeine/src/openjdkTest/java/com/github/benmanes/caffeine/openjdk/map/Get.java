@@ -54,7 +54,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  */
 @SuppressWarnings({"all", "AlmostJavadoc", "BooleanParameter", "EmptyCatch", "identity",
     "InconsistentOverloads", "JdkObsolete", "MultiVariableDeclaration", "NonAtomicVolatileUpdate",
-    "NonFinalStaticField", "NullAway", "ParameterMissingNullable", "SystemOut",
+    "NonFinalStaticField", "ParameterMissingNullable", "SystemOut",
     "UnnecessaryParentheses", "UnusedVariable"})
 @SuppressFBWarnings({"AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE",
     "BED_BOGUS_EXCEPTION_DECLARATION", "DCN_NULLPOINTER_EXCEPTION",

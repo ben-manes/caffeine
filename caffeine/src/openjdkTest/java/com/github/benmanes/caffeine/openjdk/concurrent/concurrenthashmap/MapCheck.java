@@ -64,7 +64,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * @run main/timeout=240 MapCheck
  * @summary Times and checks basic map operations
  */
-@SuppressWarnings({"all", "BooleanLiteral", "CatchingUnchecked", "NonFinalStaticField", "NullAway",
+@SuppressWarnings({"all", "BooleanLiteral", "CatchingUnchecked", "NonFinalStaticField",
     "rawtypes", "resource", "SystemOut", "unchecked", "UnnecessarilyFullyQualified",
     "UnnecessaryParentheses", "unused", "Var", "Varifier"})
 @SuppressFBWarnings({"AI_ANNOTATION_ISSUES_NEEDS_NULLABLE", "DLS_DEAD_LOCAL_STORE",

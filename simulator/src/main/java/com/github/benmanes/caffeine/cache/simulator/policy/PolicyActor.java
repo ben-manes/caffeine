@@ -72,7 +72,6 @@ public final class PolicyActor {
   }
 
   /** Submits the command to the mailbox and blocks until accepted. */
-  @SuppressWarnings("NullAway")
   private void submit(Command command) {
     try {
       semaphore.acquire();
