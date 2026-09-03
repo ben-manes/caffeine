@@ -194,7 +194,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     return CompletableFuture.allOf(array).thenApply(ignored -> {
       var result = new LinkedHashMap<K, V>(calculateHashMapCapacity(futures.size()));
       futures.forEach((key, future) -> {
-        @Nullable V value = future.getNow(null);
+        V value = future.getNow(null);
         if (value != null) {
           result.put(key, value);
         }
@@ -508,7 +508,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         deferred[0] = !Async.isReady(result[0]);
         return result[0];
       };
-      @Nullable CompletableFuture<V> future = asyncCache.cache().computeIfAbsent(
+      CompletableFuture<V> future = asyncCache.cache().computeIfAbsent(
           key, function, /* recordStats= */ true, /* recordLoad= */ false);
       if (result[0] != null) {
         asyncCache.handleCompletion(key, result[0], startTime, deferred[0], /* computed= */ true);
