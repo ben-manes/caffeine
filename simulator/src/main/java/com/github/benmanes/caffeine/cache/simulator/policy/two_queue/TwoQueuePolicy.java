@@ -93,7 +93,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
     //     add X to the head of Alin
     //   end if
 
-    @Var @Nullable Node node = data.get(key);
+    @Var var node = data.get(key);
     policyStats.recordOperation();
     if (node != null) {
       requireNonNull(node.type);

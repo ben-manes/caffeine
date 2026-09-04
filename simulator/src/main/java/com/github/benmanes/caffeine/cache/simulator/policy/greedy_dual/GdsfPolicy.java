@@ -73,7 +73,7 @@ public final class GdsfPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    @Nullable Node node = data.get(event.key());
+    var node = data.get(event.key());
     if (node == null) {
       policyStats.recordWeightedMiss(event.weight());
       onMiss(event);

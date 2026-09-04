@@ -142,7 +142,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
         try {
           var discard = new boolean[1];
           var hints = new LocalCache.RemapHints();
-          @Nullable V value = cache().compute(key, (K k, @Nullable V currentValue) -> {
+          var value = cache().compute(key, (K k, @Nullable V currentValue) -> {
             // Keep the refresh registered until the write clears it to avoid refreshAfterWrite
             // readers from prematurely scheduling another reload
             boolean owned = (cache().refreshes().get(keyReference) == reloading[0]);

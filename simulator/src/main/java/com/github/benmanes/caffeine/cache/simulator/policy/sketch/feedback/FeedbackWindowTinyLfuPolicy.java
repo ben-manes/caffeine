@@ -137,7 +137,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     admitter.record(key);
     policyStats.recordOperation();
-    @Nullable Node node = data.get(key);
+    var node = data.get(key);
     if (node == null) {
       onMiss(key);
       policyStats.recordMiss();

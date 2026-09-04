@@ -90,7 +90,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
-    @Nullable Node node = data.get(key);
+    var node = data.get(key);
     policyStats.recordOperation();
     admitter.record(key);
     if (node == null) {

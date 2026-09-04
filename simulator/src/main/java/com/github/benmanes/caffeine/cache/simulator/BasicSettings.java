@@ -118,7 +118,7 @@ public class BasicSettings {
       return getter.apply(path);
     } catch (ConfigException.Parse | ConfigException.WrongType e) {
       var matcher = NUMERIC_SEPARATOR.matcher(config().getString(path));
-      @Nullable T value = tryParse.apply(matcher.replaceAll(""));
+      var value = tryParse.apply(matcher.replaceAll(""));
       if (value == null) {
         throw e;
       }

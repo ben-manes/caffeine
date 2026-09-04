@@ -88,7 +88,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
   @Override
   public void record(long key) {
     policyStats.recordOperation();
-    @Nullable Node node = data.get(key);
+    var node = data.get(key);
     if (node == null) {
       onMiss(key);
     } else if (node.type == QueueType.B1) {

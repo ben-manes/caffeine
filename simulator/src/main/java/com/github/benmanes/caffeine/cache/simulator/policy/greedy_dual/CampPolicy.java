@@ -90,7 +90,7 @@ public final class CampPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    @Nullable Node node = data.get(event.key());
+    var node = data.get(event.key());
     maxSize = Math.max(maxSize, event.weight());
     if (node == null) {
       policyStats.recordWeightedMiss(event.weight());

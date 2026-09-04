@@ -79,7 +79,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
-    @Var @Nullable Node node = data.get(key);
+    @Var var node = data.get(key);
     policyStats.recordOperation();
     if (node == null) {
       node = new Node(key);

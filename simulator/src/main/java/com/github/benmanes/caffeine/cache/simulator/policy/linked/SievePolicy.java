@@ -66,7 +66,7 @@ public final class SievePolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    @Nullable Node node = data.get(event.key());
+    var node = data.get(event.key());
     policyStats.recordOperation();
     if (node == null) {
       onMiss(event);

@@ -339,7 +339,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     long mask = consumerMask;
 
     long offset = modifiedCalcElementOffset(index, mask);
-    @Var @Nullable Object e = lvElement(buffer, offset);// LoadLoad
+    @Var Object e = lvElement(buffer, offset);// LoadLoad
     if (e == null) {
       if (index != lvProducerIndex(this)) {
         // poll() == null iff queue is empty, null element is not strong enough indicator, so we
@@ -375,7 +375,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     long mask = consumerMask;
 
     long offset = modifiedCalcElementOffset(index, mask);
-    @Var @Nullable Object e = lvElement(buffer, offset);// LoadLoad
+    @Var Object e = lvElement(buffer, offset);// LoadLoad
     if (e == null && index != lvProducerIndex(this)) {
       // peek() == null iff queue is empty, null element is not strong enough indicator, so we must
       // check the producer index. If the queue is indeed not empty we spin until element is
@@ -405,7 +405,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
   private E newBufferPoll(@Nullable E[] nextBuffer, long index) {
     long offsetInNew = newBufferAndOffset(nextBuffer, index);
-    @Nullable E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
+    var n = lvElement(nextBuffer, offsetInNew);// LoadLoad
     requireNonNull(n, "new buffer must have at least one element");
     soElement(nextBuffer, offsetInNew, null);// StoreStore
     soConsumerIndex(this, index + 2);
@@ -414,7 +414,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
   private E newBufferPeek(@Nullable E[] nextBuffer, long index) {
     long offsetInNew = newBufferAndOffset(nextBuffer, index);
-    @Nullable E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
+    var n = lvElement(nextBuffer, offsetInNew);// LoadLoad
     requireNonNull(n, "new buffer must have at least one element");
     return n;
   }
@@ -485,7 +485,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     long mask = consumerMask;
 
     long offset = modifiedCalcElementOffset(index, mask);
-    @Nullable Object e = lvElement(buffer, offset);// LoadLoad
+    Object e = lvElement(buffer, offset);// LoadLoad
     if (e == null) {
       return null;
     }
@@ -505,7 +505,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     long mask = consumerMask;
 
     long offset = modifiedCalcElementOffset(index, mask);
-    @Nullable Object e = lvElement(buffer, offset);// LoadLoad
+    Object e = lvElement(buffer, offset);// LoadLoad
     if (e == JUMP) {
       return newBufferPeek(getNextBuffer(buffer, mask), index);
     }
