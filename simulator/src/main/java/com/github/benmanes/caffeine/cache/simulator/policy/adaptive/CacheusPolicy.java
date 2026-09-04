@@ -24,8 +24,6 @@ import java.util.Random;
 import java.util.SequencedMap;
 import java.util.TreeSet;
 
-import org.jspecify.annotations.Nullable;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
@@ -148,7 +146,7 @@ public final class CacheusPolicy implements KeyOnlyPolicy {
     time++;
     updateLearningRate();
 
-    @Var @Nullable Node node;
+    @Var Node node;
     if ((node = s.get(key)) != null) {
       hitInS(node);
       policyStats.recordHit();

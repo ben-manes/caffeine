@@ -137,7 +137,7 @@ public final class WindowTinyLfuPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    @Nullable Node node = data.get(event.key());
+    var node = data.get(event.key());
     int weight = weighted ? event.weight() : 1;
     policyStats.recordOperation();
     if (node == null) {
@@ -255,7 +255,7 @@ public final class WindowTinyLfuPolicy implements Policy {
    * returning the first demoted candidate.
    */
   private @Nullable Node evictFromWindow() {
-    @Var @Nullable Node first = null;
+    @Var Node first = null;
     while (sizeWindow > maxWindow) {
       Node candidate = requireNonNull(headWindow.next);
       candidate.remove();
@@ -280,7 +280,7 @@ public final class WindowTinyLfuPolicy implements Policy {
   private void evictFromMain(@Var @Nullable Node candidate) {
     @Var boolean searchedWindow = false;
     @Var Node victimHead = headProbation;
-    @Var @Nullable Node victim = first(headProbation);
+    @Var var victim = first(headProbation);
     while (sizeData > maximumSize) {
       // search the admission window for additional candidates
       if ((candidate == null) && !searchedWindow) {

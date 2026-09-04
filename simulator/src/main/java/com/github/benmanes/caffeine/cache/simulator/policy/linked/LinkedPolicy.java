@@ -87,7 +87,7 @@ public final class LinkedPolicy implements Policy {
   public void record(AccessEvent event) {
     int weight = weighted ? event.weight() : 1;
     long key = event.key();
-    @Nullable Node old = data.get(key);
+    var old = data.get(key);
     admitter.record(key);
     if (old == null) {
       policyStats.recordWeightedMiss(weight);

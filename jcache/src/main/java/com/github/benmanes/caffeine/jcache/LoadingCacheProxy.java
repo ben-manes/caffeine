@@ -60,7 +60,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   @Override
   public @Nullable V get(K key) {
     requireOperable();
-    @Nullable V value;
+    V value;
     try {
       value = getOrLoad(key);
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {

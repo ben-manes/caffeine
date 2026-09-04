@@ -129,7 +129,7 @@ public final class Lirs2Policy implements KeyOnlyPolicy {
     lastKey = key;
     hasLastKey = true;
 
-    @Var @Nullable Block block = data.get(key);
+    @Var var block = data.get(key);
     policyStats.recordOperation();
     if (block == null) {
       block = new Block(key);

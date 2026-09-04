@@ -74,7 +74,7 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
     policyStats.recordOperation();
     adapt(key);
 
-    @Var @Nullable Node node = data.get(key);
+    @Var var node = data.get(key);
     if (node == null) {
       node = new Node(key);
       data.put(key, node);

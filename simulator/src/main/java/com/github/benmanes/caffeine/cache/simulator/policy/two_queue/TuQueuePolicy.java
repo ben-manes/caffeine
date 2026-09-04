@@ -86,7 +86,7 @@ public final class TuQueuePolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
-    @Nullable Node node = data.get(key);
+    var node = data.get(key);
     policyStats.recordOperation();
     if (node == null) {
       policyStats.recordMiss();

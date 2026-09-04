@@ -92,7 +92,7 @@ final class StrongInterner<E> implements Interner<E> {
       return canonical;
     }
 
-    @Nullable E value = map.putIfAbsent(sample, sample);
+    var value = map.putIfAbsent(sample, sample);
     return (value == null) ? sample : value;
   }
 }

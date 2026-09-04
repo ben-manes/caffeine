@@ -1377,7 +1377,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         @Nullable RemovalCause[] cause = new RemovalCause[1];
         var hints = new RemapHints();
         hints.quietly = true;
-        @Nullable V result;
+        V result;
         try {
           result = compute(key, (K k, @Nullable V currentValue) -> {
             // Keep the refresh registered until the write clears it to avoid readers from
@@ -2231,7 +2231,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     // Remove any stragglers if released early to more aggressively flush incoming writes
     @Var boolean cleanUp = false;
     for (var node : entries) {
-      @Nullable K key = node.getKey();
+      var key = node.getKey();
       if (key == null) {
         cleanUp = true;
       } else {
@@ -2869,7 +2869,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           tryExpireAfterRead(node, key, value, expiry(), now);
           setAccessTime(node, now);
         }
-        @Nullable V refreshed = afterRead(node, now, /* recordHit= */ recordStats);
+        var refreshed = afterRead(node, now, /* recordHit= */ recordStats);
         return (refreshed == null) ? value : refreshed;
       }
     }
@@ -2974,7 +2974,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         setAccessTime(node, ctx.now);
       }
 
-      @Nullable V refreshed = afterRead(node, ctx.now, /* recordHit= */ recordStats);
+      var refreshed = afterRead(node, ctx.now, /* recordHit= */ recordStats);
       return (refreshed == null) ? ctx.oldValue : refreshed;
     }
     if ((ctx.oldValue == null) && (ctx.cause == null)) {
@@ -2995,7 +2995,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     // An optimistic fast path to avoid unnecessary locking
     Object lookupKey = nodeFactory.newLookupKey(key);
-    @Nullable Node<K, V> node = data.get(lookupKey);
+    var node = data.get(lookupKey);
     long now;
     if (node == null) {
       return null;
@@ -4443,7 +4443,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         var inFlight = new IdentityHashMap<K, CompletableFuture<V>>(refreshes.size());
         for (var entry : refreshes.entrySet()) {
           @SuppressWarnings("unchecked")
-          @Nullable K key = ((InternalReference<K>) entry.getKey()).get();
+          var key = ((InternalReference<K>) entry.getKey()).get();
           @SuppressWarnings("unchecked")
           var future = (CompletableFuture<V>) entry.getValue();
           if (key != null) {

@@ -84,7 +84,7 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   @Override
   public void record(long key) {
-    @Var @Nullable Node node = data.get(key);
+    @Var var node = data.get(key);
     admitter.record(key);
     if (node == null) {
       node = new Node(key, windowSize);

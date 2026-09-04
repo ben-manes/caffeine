@@ -149,7 +149,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
     lastKey = key;
     hasLastKey = true;
     policyStats.recordOperation();
-    @Var @Nullable Node node = data.get(key);
+    @Var var node = data.get(key);
     if (node == null) {
       node = new Node(key);
       data.put(key, node);
@@ -464,7 +464,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
     @Var int resColdSize = 0;
     @Var int nonResColdSize = 0;
 
-    @Var @Nullable Node node = listHead;
+    @Var var node = listHead;
     do {
       if (node == null) {
         break;

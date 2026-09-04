@@ -799,7 +799,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
-    @Nullable V oldValue = replaceNoCopyOrAwait(key, value);
+    var oldValue = replaceNoCopyOrAwait(key, value);
     var listenerFailure = awaitSynchronousFailure();
     if (oldValue == null) {
       statistics.recordMisses(1L);
@@ -968,7 +968,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       // Publish a lazily-expired prior's expiration before the processor observes it as absent,
       // so listeners see a linearizable sequence and the expiration is committed exactly once
       boolean expired;
-      @Nullable Expirable<V> prior;
+      Expirable<V> prior;
       if ((expirable != null) && !expirable.isEternal()
           && expirable.hasExpired(currentTimeMillis())) {
         dispatcher.publishExpired(this, key, expirable.get());

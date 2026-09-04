@@ -76,7 +76,7 @@ public final class GDWheelPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    @Var @Nullable Node node = data.get(event.key());
+    @Var var node = data.get(event.key());
     policyStats.recordOperation();
     if (node == null) {
       policyStats.recordWeightedMiss(event.weight());
