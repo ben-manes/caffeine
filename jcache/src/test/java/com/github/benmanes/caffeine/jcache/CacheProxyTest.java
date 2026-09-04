@@ -117,6 +117,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.copy.Copier;
+import com.github.benmanes.caffeine.jcache.management.JmxRegistration;
 import com.github.benmanes.caffeine.jcache.processor.Action;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
 import com.google.common.collect.ImmutableMap;
@@ -1018,6 +1019,32 @@ final class CacheProxyTest {
       EntryProcessorEntry<Integer, Integer> entry = Mockito.mock();
       when(entry.getAction()).thenReturn(unknown);
       assertThrows(IllegalStateException.class, () -> fixture.jcache().postProcess(null, entry));
+    }
+  }
+
+  @Test @Tag("isolated")
+  void enableManagement_disabled_doesNotTouchJmx() {
+    // When management was never enabled, disabling it should not call unregisterMxBean,
+    // which would otherwise bootstrap the JMX MBean server (issue #2009)
+    try (var jmx = Mockito.mockStatic(JmxRegistration.class);
+        var fixture = JCacheFixture.builder()
+            .configure(config -> config.setManagementEnabled(false))
+            .build()) {
+      fixture.jcache().enableManagement(false);
+      jmx.verifyNoInteractions();
+    }
+  }
+
+  @Test @Tag("isolated")
+  void enableStatistics_disabled_doesNotTouchJmx() {
+    // When statistics was never enabled, disabling it should not call unregisterMxBean,
+    // which would otherwise bootstrap the JMX MBean server (issue #2009)
+    try (var jmx = Mockito.mockStatic(JmxRegistration.class);
+        var fixture = JCacheFixture.builder()
+            .configure(config -> config.setStatisticsEnabled(false))
+            .build()) {
+      fixture.jcache().enableStatistics(false);
+      jmx.verifyNoInteractions();
     }
   }
 

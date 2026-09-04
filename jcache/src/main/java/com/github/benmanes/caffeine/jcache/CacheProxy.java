@@ -1304,7 +1304,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       requireNotClosed();
       if (enabled) {
         JmxRegistration.registerMxBean(this, cacheMxBean, MBeanType.CONFIGURATION);
-      } else {
+      } else if (configuration.isManagementEnabled()) {
         JmxRegistration.unregisterMxBean(this, MBeanType.CONFIGURATION);
       }
       configuration.setManagementEnabled(enabled);
@@ -1317,7 +1317,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       requireNotClosed();
       if (enabled) {
         JmxRegistration.registerMxBean(this, statistics, MBeanType.STATISTICS);
-      } else {
+      } else if (configuration.isStatisticsEnabled()) {
         JmxRegistration.unregisterMxBean(this, MBeanType.STATISTICS);
       }
       statistics.enable(enabled);
