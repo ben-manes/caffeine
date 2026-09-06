@@ -54,8 +54,8 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   /** Returns the {@link CacheLoader#loadAll} as a mapping function, if implemented. */
   @Nullable Function<Set<? extends K>, Map<K, V>> bulkMappingFunction();
 
-  @SuppressWarnings("NullAway") // https://github.com/ben-manes/caffeine/issues/594
   @Override
+  @SuppressWarnings("NullAway") // https://github.com/ben-manes/caffeine/issues/594
   default V get(K key) {
     return cache().computeIfAbsent(key, mappingFunction());
   }

@@ -1,6 +1,7 @@
 ---
 paths:
   - "caffeine/src/**/Async*.java"
+  - "caffeine/src/**/LocalAsync*.java"
   - "caffeine/src/main/java/com/github/benmanes/caffeine/cache/LocalCache.java"
   - "caffeine/src/main/java/com/github/benmanes/caffeine/cache/BoundedLocalCache.java"
 ---
@@ -48,6 +49,13 @@ paths:
   is accepted: cancelling means downstream chained actions may be abandoned, not that the value is
   uncacheable, and the computation still materializes a value that a dropped entry could never hand
   to the removal listener. Don't add cancel-aware completion logic to the bulk path
+- **A completed future holding no value is a mapping on its way out, not a state to wait on.**
+  `handleCompletion` and `fillProxies` complete the future before removing the entry, and
+  `fillProxies` runs a caller's dependent action in between, so the removal has not been applied
+  when that action observes the cache. A path that finds such a mapping must treat it as absent.
+  `tryOptimisticRefresh` instead fell through to `tryComputeRefresh`, which cannot act on a
+  valueless entry, so `refresh` spun forever on a bulk proxy for a key the loader did not fulfill.
+  Pinned by `AsyncLoadingCacheTest.refresh_bulkAbsentKey`
 - Refresh failures preserve the old value (not removed)
 
 ## Removal Listener Timing

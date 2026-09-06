@@ -213,10 +213,11 @@ abstract class LocalAsyncLoadingCache<K, V>
         }
       }
 
-      // If the entry is absent then perform a new load, else if in-flight then return it
+      // If the entry is absent then perform a new load, else if in-flight then return it. A
+      // completed future holding no value is a mapping whose removal has not been applied yet and
+      // the slow path cannot act on it, so it is treated as absent.
       var oldValueFuture = asyncCache.cache().getIfPresentQuietly(key);
-      if ((oldValueFuture == null)
-          || (oldValueFuture.isDone() && oldValueFuture.isCompletedExceptionally())) {
+      if ((oldValueFuture == null) || (oldValueFuture.isDone() && !Async.isReady(oldValueFuture))) {
         if (oldValueFuture != null) {
           asyncCache.cache().remove(key, oldValueFuture);
         }

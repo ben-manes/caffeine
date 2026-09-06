@@ -1562,7 +1562,8 @@ final class WindowClimberTest {
     // a walk still improving when its streak completes has its best sample last, so the verdict is
     // the position it stands on, and a walk over a flat plateau has a best sample by noise alone,
     // which the verdict's margin refuses: both park where the walk ended and command no return
-    double[][] walks = {{0.72, 0.73, 0.74, 0.75, 0.76, 0.80}, {0.75, 0.755, 0.75, 0.752, 0.75, 0.753}};
+    double[][] walks =
+        {{0.72, 0.73, 0.74, 0.75, 0.76, 0.80}, {0.75, 0.755, 0.75, 0.752, 0.75, 0.753}};
     for (double[] rates : walks) {
       var climber = makeClimber();
       var density = (DensityClimber) climber.tier;
@@ -1574,7 +1575,7 @@ final class WindowClimberTest {
 
       @Var long confirmStep = 0;
       for (int i = 0; i < rates.length; i++) {
-        confirmStep = steadySample(climber, /* windowMax= */ 2200 + (200 * i), rates[i]);
+        confirmStep = steadySample(climber, /* windowMax= */ 2200 + (200L * i), rates[i]);
       }
 
       assertThat(density.walk).isNull();

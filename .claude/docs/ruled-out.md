@@ -187,7 +187,10 @@ These dispose of whole families. Check them first.
   throws synchronously. The promise is about the *future's result*; a throw while producing
   the future is a distinct, real caller bug.
 - The `refreshes` to `data` lock inversion deadlock.
-- `LocalAsyncLoadingCache.refresh(key)` retrying without bound or backoff.
+- `LocalAsyncLoadingCache.refresh(key)` retrying without bound or backoff. Each pass rereads,
+  so a retry needs the entry to change between the two probes. The exception was a completed
+  future holding no value, which satisfied both probes at once and could not terminate; the
+  optimistic path now treats such a mapping as absent.
 - Refresh eligibility using strict `>` while expiration uses `>=`.
 - Refresh discard notification using the discarded value; refresh commit failure not
   surfaced on the future; `discardRefresh`'s `containsKey` prescreen missing a CHM

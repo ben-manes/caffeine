@@ -661,7 +661,7 @@ final class BoundedLocalCacheTest {
         .that(tail).isSameInstanceAs(deque.peekLast());
   }
 
-  /** Asserts that every live entry is still linked into the queue that the expiration scan walks. */
+  /** Asserts that every live entry is still linked in the queue that the expiration scan walks. */
   private static <K, V> void assertNoOrphans(
       BoundedLocalCache<K, V> cache, LinkedDeque<Node<K, V>> deque) {
     @Var long linked = 0;
@@ -5540,13 +5540,12 @@ final class BoundedLocalCacheTest {
         cache.nodeFactory.newLookupKey(context.firstKey())));
     Int original = requireNonNull(node.getValue());
 
-    // No expiration policy is configured, so the locked hasExpired check inside
-    // data.compute returns false and the lambda takes the `return n` branch —
-    // the existing-entry-found path that mirrors the optimistic fast path.
-    // Advancing past refreshAfterWrite makes the entry refresh-eligible; with
-    // a DIRECT executor and Loader.IDENTITY the reload completes inline so
-    // afterRead returns the refreshed value (the key itself, distinct from
-    // the populated negation). The bug discarded that return; the fix uses it.
+    // No expiration policy is configured, so the locked hasExpired check inside data.compute
+    // returns false and the lambda takes the `return n` branch; the existing-entry-found path that
+    // mirrors the optimistic fast path. Advancing past refreshAfterWrite makes the entry refresh
+    // eligible; with a DIRECT executor and Loader.IDENTITY the reload completes inline so afterRead
+    // returns the refreshed value (the key itself, distinct from the populated negation). The bug
+    // discarded that return; the fix uses it.
     context.ticker().advance(Duration.ofMinutes(2));
     long now = context.ticker().read();
 
@@ -5579,8 +5578,9 @@ final class BoundedLocalCacheTest {
 
     var hints = new LocalCache.RemapHints();
     hints.preserveRefresh = true;
-    assertThrows(IllegalStateException.class, () -> cache.compute(key, (k, v) -> context.absentValue(),
-        expiry, /* recordLoad= */ false, /* recordLoadFailure= */ false, hints));
+    assertThrows(IllegalStateException.class,
+        () -> cache.compute(key, (k, v) -> context.absentValue(), expiry,
+            /* recordLoad= */ false, /* recordLoadFailure= */ false, hints));
     assertThat(cache.refreshes()).containsEntry(keyRef, successor);
     cache.refreshes().remove(keyRef);
   }
@@ -7193,9 +7193,9 @@ final class BoundedLocalCacheTest {
       implementation = Implementation.Caffeine, compute = Compute.SYNC)
   void remap_preserveTimestamps_newValueDiffers(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    // White-box: the L2961 no-op guard checks that newValue matches oldValue. A caller
-    // that pre-sets the preserveTimestamps hint but returns a different value must NOT
-    // take the short-circuit — covers the defensive mismatch branch.
+    // White-box: the L2961 no-op guard checks that newValue matches oldValue. A caller that
+    // pre-sets the preserveTimestamps hint but returns a different value must NOT take the
+    // short-circuit; covers the defensive mismatch branch.
     var key = context.firstKey();
     var hints = new LocalCache.RemapHints();
     hints.preserveTimestamps = true;
@@ -7211,9 +7211,9 @@ final class BoundedLocalCacheTest {
       mustExpireWithAnyOf = AFTER_WRITE)
   void remap_preserveTimestamps_causeSet(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    // White-box: pre-set hints.preserveTimestamps with a lambda that returns the
-    // captured old value. Expire the entry so remap sets ctx.cause=EXPIRED. The
-    // L2961 guard's cause==null check must prevent the no-op short-circuit.
+    // White-box: pre-set hints.preserveTimestamps with a lambda that returns the captured old
+    // value. Expire the entry so remap sets ctx.cause=EXPIRED. The guard's cause==null check must
+    // prevent the no-op short-circuit.
     var key = context.firstKey();
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));
     var originalValue = requireNonNull(node.getValue());
@@ -7278,12 +7278,10 @@ final class BoundedLocalCacheTest {
       compute = Compute.SYNC)
   void remap_preserveRefresh_leavesPendingRefreshIntact(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    // White-box for iss_2a0b20db: a query-style caller (e.g., putIfAbsentAsync)
-    // returns oldValue from compute's lambda to signal a no-op and sets BOTH
-    // hint flags. The L2961 no-op tail must skip discardRefresh so any
-    // in-flight refreshAfterWrite remains in cache.refreshes(). Without
-    // hints.preserveRefresh, the discardRefresh would cancel the pending
-    // reload silently.
+    // White-box for iss_2a0b20db: a query-style caller (e.g., putIfAbsentAsync) returns oldValue
+    // from compute's lambda to signal a no-op and sets BOTH hint flags. The L2961 no-op tail must
+    // skip discardRefresh so any in-flight refreshAfterWrite remains in cache.refreshes(). Without
+    // hints.preserveRefresh, the discardRefresh would cancel the pending reload silently.
     var key = context.firstKey();
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));
     var keyRef = node.getKeyReference();
@@ -7309,10 +7307,9 @@ final class BoundedLocalCacheTest {
       compute = Compute.SYNC)
   void remap_preserveTimestamps_withoutPreserveRefresh_discardsPendingRefresh(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    // The complement of the above: refresh-rejection callers (the existing
-    // refreshIfNeeded paths) set only preserveTimestamps and want the rejected
-    // refresh cleaned up — discardRefresh must still fire when preserveRefresh
-    // is left at its default false.
+    // The complement of the above: refresh-rejection callers (the existing refreshIfNeeded paths)
+    // set only preserveTimestamps and want the rejected refresh cleaned up — discardRefresh must
+    // still fire when preserveRefresh is left at its default false.
     var key = context.firstKey();
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));
     var keyRef = node.getKeyReference();

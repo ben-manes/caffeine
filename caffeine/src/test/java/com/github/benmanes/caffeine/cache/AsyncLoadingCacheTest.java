@@ -777,6 +777,36 @@ final class AsyncLoadingCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, compute = Compute.ASYNC)
+  void refresh_bulkAbsentKey(CacheContext context) {
+    var bulk = new CompletableFuture<Map<Int, Int>>();
+    var cache = context.buildAsync(new AsyncCacheLoader<Int, Int>() {
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
+        return CompletableFuture.completedFuture(context.absentValue());
+      }
+      @Override public CompletableFuture<Map<Int, Int>> asyncLoadAll(
+          Set<? extends Int> keys, Executor executor) {
+        return bulk;
+      }
+    });
+
+    // A bulk load that does not fulfill a requested key obtrudes the proxy with a null value and
+    // only then removes the mapping, so a dependent action observes an entry whose future is done,
+    // successful and null-valued. A refresh must not spin waiting for that state to change.
+    var refreshed = new AtomicReference<CompletableFuture<Int>>();
+    var getAll = cache.getAll(Set.of(context.absentKey()));
+    var proxy = requireNonNull(cache.getIfPresent(context.absentKey()))
+        .whenComplete((value, error) ->
+            refreshed.set(cache.synchronous().refresh(context.absentKey())));
+    executor.execute(() -> bulk.complete(Map.of()));
+
+    await().until(getAll::isDone);
+    assertThat(proxy).succeedsWithNull();
+    assertThat(getAll).succeedsWith(Map.of());
+    assertThat(requireNonNull(refreshed.get())).succeedsWith(context.absentValue());
+  }
+
+  @ParameterizedTest
   @CacheSpec(loader = Loader.REFRESH_EXCEPTIONAL)
   void refresh_throwsException(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var key = context.original().isEmpty() ? context.absentKey() : context.firstKey();

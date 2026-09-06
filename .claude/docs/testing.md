@@ -124,6 +124,19 @@ await().until(() -> cache.estimatedSize() == expected);
 await().until(() -> executor.submitted() == executor.completed());
 ```
 
+#### Pinning a non-termination bug
+
+`@Timeout` cannot catch one. Jupiter's default thread mode is the same thread and the project sets
+no `junit.jupiter.execution.timeout.thread.mode.default`, so the deadline is only checked after the
+method returns and a spinning test hangs the build instead of failing it. The suite's futures are
+also joined without a bound, so `FutureSubject.succeedsWith` blocks forever on its own.
+
+Drive the completion that triggers the spin from `ConcurrentTestHarness.executor` and gate the
+assertions behind a bounded `await()`, which fails with `ConditionTimeoutException` at Awaitility's
+default. `AsyncLoadingCacheTest.refresh_bulkAbsentKey` is the worked example: the `await()` before
+its `succeedsWith` calls is what makes a regression fail rather than hang, so do not remove it as
+redundant.
+
 ### GC testing
 
 ```java
