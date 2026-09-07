@@ -1979,7 +1979,8 @@ final class BoundedLocalCacheTest {
     cache.cleanUp();
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
-    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
+    var actual = listener.removed().stream()
+        .map(entry -> requireNonNull(entry.getKey())).collect(toImmutableList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
@@ -2004,7 +2005,8 @@ final class BoundedLocalCacheTest {
     cache.evictEntries(0L);
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
-    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
+    var actual = listener.removed().stream()
+        .map(entry -> requireNonNull(entry.getKey())).collect(toImmutableList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
@@ -2028,7 +2030,8 @@ final class BoundedLocalCacheTest {
     cache.evictEntries(0L);
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
-    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
+    var actual = listener.removed().stream()
+        .map(entry -> requireNonNull(entry.getKey())).collect(toImmutableList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
@@ -2064,7 +2067,8 @@ final class BoundedLocalCacheTest {
     cache.evictEntries(0L);
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
-    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
+    var actual = listener.removed().stream()
+        .map(entry -> requireNonNull(entry.getKey())).collect(toImmutableList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
@@ -2089,7 +2093,8 @@ final class BoundedLocalCacheTest {
     cache.evictEntries(0L);
 
     var listener = (ConsumingRemovalListener<Int, Int>) context.removalListener();
-    var actual = listener.removed().stream().map(Map.Entry::getKey).collect(toImmutableList());
+    var actual = listener.removed().stream()
+        .map(entry -> requireNonNull(entry.getKey())).collect(toImmutableList());
     assertThat(actual).containsExactlyElementsIn(expected).inOrder();
   }
 
