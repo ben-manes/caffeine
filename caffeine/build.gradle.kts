@@ -251,8 +251,7 @@ testing.suites {
           classpath = files(sourceSets.named("test").map { it.runtimeClasspath },
             sourceSets.named("codeGen").map { it.runtimeClasspath })
           testClassesDirs = files(sourceSets.named("test").map { it.output.classesDirs })
-          jvmArgs("-XX:+UseParallelGC", "-XX:+ParallelRefProcEnabled",
-            "--add-opens", "java.base/java.lang=ALL-UNNAMED")
+          jvmArgs("-XX:+UseParallelGC", "--add-opens", "java.base/java.lang=ALL-UNNAMED")
 
           val testOptions = listOf("implementation", "compute", "keys", "values", "stats")
             .associateWith { providers.gradleProperty(it) }

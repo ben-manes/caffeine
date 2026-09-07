@@ -1406,11 +1406,12 @@ final class AsyncCacheTest {
 
     // Re-inserting a previously registered instance re-registers its completion handler, as the
     // identity dedup only skips consecutive same-instance puts. A single completion then runs
-    // handleCompletion twice, so the finalization is replayed: the first evaluates the creation
-    // that the async sentinel routes it to and the second sees the settled duration as an update.
+    // handleCompletion twice, but the second finalizes nothing: the entry no longer carries the
+    // async sentinel, so the quiet replace preserves its expiration rather than charging the
+    // creation again as an update. The load is still counted once per handler.
     f1.complete(context.absentValue());
     verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
-    verify(context.expiry()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verify(context.expiry(), never()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
     assertThat(context).stats().hits(1).misses(0).success(2).failures(0);
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }

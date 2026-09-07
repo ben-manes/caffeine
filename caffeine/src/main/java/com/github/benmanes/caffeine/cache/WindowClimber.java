@@ -53,8 +53,6 @@ final class WindowClimber {
   static final double RESTART_THRESHOLD = 0.05d;
 
   final Sample sample;
-  final Step step;
-
   long adjustment;
   Climber tier;
 
@@ -62,15 +60,13 @@ final class WindowClimber {
   @SuppressWarnings("NullAway.Init")
   public WindowClimber() {
     sample = new Sample();
-    step = new Step();
   }
 
   /** Selects the tier and resets adaptation state for the new maximum size. */
   public void resized(long maximum) {
     tier = DensityClimber.appliesTo(maximum)
-        ? new DensityClimber(step)
-        : new ReactiveClimber(step);
-    step.reset(maximum);
+        ? new DensityClimber(maximum)
+        : new ReactiveClimber(maximum);
     sample.reset();
     adjustment = 0;
   }
@@ -110,13 +106,18 @@ final class WindowClimber {
   }
 
   /** A strategy for adjusting the admission window from sampled cache statistics. */
-  interface Climber {
+  abstract static class Climber {
+    final Step step;
+
+    Climber(long maximum, boolean grow) {
+      step = new Step(maximum, grow);
+    }
 
     /** Returns the number of requests in an adaptation sample. */
-    long samplePeriod(long maximum, int sketchSampleSize);
+    public abstract long samplePeriod(long maximum, int sketchSampleSize);
 
     /** Returns the amount to adapt the window by. */
-    long climb(Sample sample, long maximum, long windowMax, long mainProtectedMax);
+    public abstract long climb(Sample sample, long maximum, long windowMax, long mainProtectedMax);
   }
 
   /**
@@ -125,10 +126,10 @@ final class WindowClimber {
    * restore the initial step size so it can adapt to a new workload.
    * <p>
    * Small caches use this strategy because their per-region hit counts are too low for reliable
-   * density estimates. The smallest caches use longer samples and slower step decay to reduce
-   * sensitivity to noise.
+   * density estimates. The smallest caches start by growing because their initial window contains
+   * only a few entries. They use longer samples and slower step decay to reduce sensitivity to noise.
    */
-  static final class ReactiveClimber implements Climber {
+  static final class ReactiveClimber extends Climber {
     /** The maximum size at which adaptation uses longer samples and slower step decay. */
     static final long SLOW_ADAPT_THRESHOLD = 512L;
     /** Maximum factor by which the sample period may grow in the slow-adapt regime. */
@@ -136,10 +137,8 @@ final class WindowClimber {
     /** The slower decay rate used to preserve useful steps in very small caches. */
     static final double SLOW_ADAPT_DECAY_RATE = 0.995d;
 
-    final Step step;
-
-    ReactiveClimber(Step step) {
-      this.step = step;
+    ReactiveClimber(long maximum) {
+      super(maximum, isSlowAdapting(maximum));
     }
 
     @Override
@@ -188,7 +187,7 @@ final class WindowClimber {
    * the current split improves the hit rate. An anchor records a known good position for recovery
    * after an unproductive adjustment.
    */
-  static final class DensityClimber implements Climber {
+  static final class DensityClimber extends Climber {
     /** The cache size threshold between reactive and density feedback. */
     static final long DENSITY_THRESHOLD = 4096L;
     /** A longer sample period stabilize density estimates at the cost of slower adaptation. */
@@ -203,7 +202,6 @@ final class WindowClimber {
     final Anchor anchor;
     final Ladder audit;
     final Rates rates;
-    final Step step;
 
     @Nullable Walk walk;
 
@@ -211,13 +209,13 @@ final class WindowClimber {
     int refractoryLeft;
     int retreatLeft;
 
-    DensityClimber(Step step) {
+    DensityClimber(long maximum) {
+      super(maximum, /* grow= */ false);
       this.auditClock = new AuditClock();
       this.starvation = new Ladder();
       this.anchor = new Anchor();
       this.audit = new Ladder();
       this.rates = new Rates();
-      this.step = step;
     }
 
     /** Returns whether the cache is large enough to use density feedback. */
@@ -804,13 +802,10 @@ final class WindowClimber {
 
     double size;
 
-    /**
-     * Resets the step for the new maximum. Very small caches start by growing because their
-     * initial window contains only a few entries; larger caches start by shrinking.
-     */
-    void reset(long maximum) {
+    /** Creates a step with the initial magnitude and direction. */
+    Step(long maximum, boolean grow) {
       double magnitude = restartMagnitude(maximum);
-      size = ReactiveClimber.isSlowAdapting(maximum) ? magnitude : -magnitude;
+      size = grow ? magnitude : -magnitude;
     }
 
     /** Records and returns the step for this sample. */

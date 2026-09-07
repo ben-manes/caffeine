@@ -66,12 +66,11 @@ flight — "dead state while not probing" is the absent object, so there is noth
 Cache-side fields: `windowMaximum`, `mainProtectedMaximum`, `windowWeightedSize`,
 `mainProtectedWeightedSize`; `QUEUE_TRANSFER_THRESHOLD`.
 
-`WindowClimber`'s own fields are `adjustment`, `refractoryLeft`, `undoRemaining` plus nine small
-objects, each owning its state and the behavior that reads only it (2026-08-02 refactor — a name
-from an older flat-field layout means the note predates it): `sample` (`Sample`: `hits`, `misses`,
-`windowHits`, `probationHits`, `previousHitRate`), `step` (`Step`: `size`), `reactive` and
-`density` (a `ReactiveClimber`/`DensityClimber`, each holding that same `Step`), `walk` (`Walk`,
-null while none is in flight:
+`WindowClimber` owns `adjustment`, `sample` (`Sample`: `hits`, `misses`, `windowHits`,
+`probationHits`, `previousHitRate`), and `tier` (a `ReactiveClimber` or `DensityClimber`).
+The `Climber` base class owns `step` (`Step`: `size`), initialized from the maximum and the
+strategy's chosen direction at construction. `DensityClimber` owns `refractoryLeft`, `retreatLeft`,
+`undoRemaining`, and its helper objects: `walk` (`Walk`, null while none is in flight:
 `ladder`, `isAudit`, `down`, `baseWindow`, `baseHitRate`, `baseSmoothedRate`,
 `baseProbationDensity`, `samples`, `belowBarStreak`, `aboveStreak`, `beatBase`), `starvation` and
 `audit` (a `Ladder` each: `rung`, `crashStreak`), `auditClock` (`AuditClock`: `down`,

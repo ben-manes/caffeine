@@ -21,7 +21,9 @@ paths:
   replace rather than charging the creation again as an update. Its `deferred` argument must be
   read **before** the store at every call site, since a future observed as ready afterwards may
   have completed after the install evaluated it, and skipping then leaves the entry holding
-  weight 0 and the sentinel forever. Don't move the decision into `AsyncExpiry`, which cannot
+  weight 0 and the sentinel forever. The flag is therefore conservative rather than exact: a
+  future observed as unready may complete before the install reads it, so `replace` re-tests the
+  entry's own sentinel on a quiet write instead of trusting the flag. Don't move the decision into `AsyncExpiry`, which cannot
   tell a completion from a genuine update, and don't make `expireAfterCreate` defer every
   creation: the synchronous view's `asMap()` compute family installs completed futures with no
   completion handler and would strand them at the sentinel

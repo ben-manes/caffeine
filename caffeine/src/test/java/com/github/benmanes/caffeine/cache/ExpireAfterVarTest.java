@@ -70,6 +70,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -88,6 +89,7 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.CacheSpec.StartTime;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
 import com.github.benmanes.caffeine.testing.Int;
@@ -829,6 +831,27 @@ final class ExpireAfterVarTest {
     verify(context.expiry(), never()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
     assertThat(expireAfterVar.getExpiresAfter(context.absentKey(), TimeUnit.NANOSECONDS))
         .hasValue(context.expiryTime().timeNanos());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, compute = Compute.ASYNC,
+      keys = ReferenceType.STRONG, expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  void put_insert_racingFuture_isACreation(CacheContext context) {
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
+    AsyncCache<RacingKey, Int> cache = context.buildAsync(
+        (RacingKey key, Executor executor) -> key.future);
+
+    // The insertion reads the future's readiness before the store and evaluates the value's
+    // expiration after it, so a future that completes in between is created by the insertion and
+    // then updated again by the completion. The key's hashCode completes it inside that window.
+    var key = new RacingKey(context.absentValue());
+    cache.put(key, key.future);
+
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry(), never()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    assertThat(cache.synchronous().policy().expireVariably().orElseThrow()
+        .getExpiresAfter(key, TimeUnit.NANOSECONDS)).hasValue(context.expiryTime().timeNanos());
   }
 
   @ParameterizedTest
@@ -3048,6 +3071,24 @@ final class ExpireAfterVarTest {
         .isEqualTo(Duration.ofSeconds(3).toNanos());
     assertThat(reserialized.expireAfterRead(1, 2, 3, 99))
         .isEqualTo(Duration.ofSeconds(3).toNanos());
+  }
+
+  /** A key that completes its entry's future when the write looks the key up. */
+  private static final class RacingKey {
+    final CompletableFuture<Int> future;
+    final Int value;
+
+    RacingKey(Int value) {
+      this.value = value;
+      this.future = new CompletableFuture<>();
+    }
+    @Override public boolean equals(@Nullable Object o) {
+      return (o == this);
+    }
+    @Override public int hashCode() {
+      future.complete(value);
+      return value.hashCode();
+    }
   }
 
   @FunctionalInterface

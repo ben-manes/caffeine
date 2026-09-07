@@ -271,7 +271,7 @@ public final class LocalCacheSubject extends Subject {
       double initialStep = STEP_PERCENT * maximum;
       double magnitude = Math.max(
           initialStep / SLOW_ADAPT_RATIO_CAP,
-          Math.abs(bounded.climber().step.size));
+          Math.abs(bounded.climber().tier.step.size));
       double ratio = Math.max(1.0, Math.min(
           SLOW_ADAPT_RATIO_CAP, initialStep / magnitude));
       effectiveSampleSize = (long) (effectiveSampleSize * ratio);

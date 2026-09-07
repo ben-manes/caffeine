@@ -62,9 +62,9 @@ final class ClimberInvariants {
     assertWithMessage("the adjustment honors the maximum step")
         .that(Math.abs(climber.adjustment())).isAtMost(bound);
     assertWithMessage("the step size honors the maximum step")
-        .that(Math.abs(climber.step.size)).isAtMost((double) bound);
+        .that(Math.abs(climber.tier.step.size)).isAtMost((double) bound);
     assertWithMessage("the step size is finite")
-        .that(Double.isFinite(climber.step.size)).isTrue();
+        .that(Double.isFinite(climber.tier.step.size)).isTrue();
 
     var density = (climber.tier instanceof DensityClimber) ? (DensityClimber) climber.tier : null;
     assertWithMessage("the tier is the one bound for this maximum")

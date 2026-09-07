@@ -976,7 +976,7 @@ rather than expressions needing a comment to read. An ending is priced by the la
 `probeEnding` asks the crash question of every walk and then hands to `auditEnding` or
 `starvationEnding`. Reading order for the whole machine is the router first, then the branch it
 sends you to; sectional comments (`Exceptional Scenarios`, `Probe Walk`) carry that order inside
-the density tier, and the nested types read in dependency order: the `Climber` interface →
+the density tier, and the nested types read in dependency order: the `Climber` base class →
 `Sample` → `Reading` → `Step` → the two tiers → `Walk`/`Ladder` → `AuditClock` →
 `Anchor`/`Rates` → `ProbeEnding`. Behavior lives with the state it reads (Beck's tests, applied mechanically in the
 2026-08 refactor sweeps); repeated quantities have one definition each — `Ladder.stride` (the
@@ -988,9 +988,9 @@ and the stand-down's shift trigger all steer by) — because two spellings of on
 the room-rule drift happened.
 
 State: fields on the package-private `WindowClimber` (reached through the `climber` field that
-`AddMaximum` generates), eviction-locked, cold path only. The climber itself holds the shared
-observation and motion state (`Sample`, `Step`, the carry-over `adjustment`) plus the bound
-`tier`; everything density-only lives on the `DensityClimber` that tier names. The flat fields
+`AddMaximum` generates), eviction-locked, cold path only. The climber itself holds the
+observation state (`Sample`), the carry-over `adjustment`, and the bound `tier`. The tier owns
+its `Step`; everything density-only lives on the `DensityClimber` that tier names. The flat fields
 are grouped into small objects — `Sample`, `Step`, `ReactiveClimber`, `DensityClimber`, `Walk`,
 two `Ladder`s, `AuditClock`, `Anchor`, `Rates` — each carrying the behavior that reads only its
 own state. The
@@ -1004,16 +1004,17 @@ any one would misstate who owns it. Where a constant has one owner but a second 
 (`Rates.VETO_MARGIN_MIN` floors the audit confirm; the fresh-park shield is
 `AuditClock.AUDIT_WAIT_INITIAL` long), which keeps the sharing visible.
 
-**The tiers are types, and the density tier carries its own supervisor.** Both implement the
-`Climber` interface (`climb` over the open sample, and `samplePeriod`), and a (re)size constructs
+**The tiers are types, and the density tier carries its own supervisor.** Both extend the
+`Climber` base class (`climb` over the open sample, and `samplePeriod`), and a (re)size constructs
 the one its maximum falls in: `DensityClimber.appliesTo` is the tier boundary, written once in
 `resized`, and construction is the reset, so a reactive-tier cache never allocates the density
 machinery. `ReactiveClimber` holds the regime predicate, step rule, decay and period;
 `DensityClimber` holds the proportional step and its period, and with them the probe machine, the
 audit layer and the anchor, the exception machinery §2.1's supervisory switching arms when its
-law cannot be trusted. Each tier steers the one shared `Step` (two laws, never concurrent,
-re-seeded at every bind). The two laws keep different verbs on purpose (the reactive one
-*climbs*, the density one *steers*), and the two bold drivers (`ReactiveClimber.climb` and
+law cannot be trusted. Each strategy chooses its initial direction; `Climber` constructs its `Step`
+from that direction and the maximum, so replacing the tier also replaces and re-seeds the step.
+The two laws keep different verbs on purpose (the reactive one *climbs*, the density one *steers*),
+and the two bold drivers (`ReactiveClimber.climb` and
 `nextStride`) stay separate: same algorithm, but their bars, reversal conditions, and return
 conventions differ, and §4/§5 record each difference as load-bearing.
 
@@ -1035,7 +1036,7 @@ H4-C1/F2 repairs restored; keep new writes inside their owner:
 | Starvation retry | `starvation` (a `Ladder`: `rung`, `crashStreak`), `refractoryLeft` | moved by starvation endings only (an audit confirm cheapens `starvation.rung` and zeroes `refractoryLeft`, the one journaled bridge write, spelled out at its site rather than hidden behind `Ladder`'s methods; an audit's undo leaves the refractory alone) |
 | Audit retry + schedule | `audit` (a `Ladder`), `auditClock` (an `AuditClock`: `down`, `waitSamples`, `stillSamples`, `lastWindow`) | moved by audit endings and the position-stillness clock only. The clock owns `tick`/`isDue`/`restart`/`reset`, so the stillness rule (a moving sample **decays** the run, it does not zero it) lives with the counter it governs rather than in a climber method. `reset` deliberately leaves `down` standing — it alternates across audits for coverage and a resize has no opinion about which side to explore next, which is why a resize did not clear it before either. `AuditClock.reschedule` is handed the audit ladder's rung by the ending that prices it, so the clock never reads the other layer's ledger itself |
 | Goal guard | `anchor` (an `Anchor`: `window`, `rate`, `held`, `freshLeft`, `returning`, `returnLeft`, `shortfallStreak`), `rates` (a `Rates`: `smoothed`, `deviation`) | anchor/park/veto authority and the rate references. `Anchor` is the memory *and* its defense in one object because the layer's three invariants run between those parts, and it now holds them by construction rather than by assertion: a shield lives and dies with its park (`park`/`hold`/`release` are the only writers — an audit's confirm arms a shield, a rail veto holds without arming or spending one, since the shield's clock belongs to the confirm that armed it), a park defends only a planted anchor (`discard` takes the hold with it), and a return implies the park that follows it (`beginReturn` arms both). `isAt`/`isAwayFrom` give the band test one definition instead of three inline copies, and they are deliberately not each other's negation — an unplanted anchor is neither at nor away, and there is no claim to veto against. `Rates` owns the EMA pair and the two bars priced off it — `noiseBand` is the three-deviation width, `vetoMargin` is that floored at `VETO_MARGIN_MIN` — so the rail's margin and the starvation probe's walk-interior bar read one definition instead of recomputing `VETO_MARGIN_SCALE * deviation` apiece. The deviation is read LIVE, and the audit's confirming streak is deliberately not priced off it; both notes live on `noiseBand` itself. A stand-down that discards the claim re-seeds the pair (below): the event that invalidates a claim invalidates the reference the claim would be re-planted from, and the two are one layer's state |
-| Motion out | `step` (a `Step`: `size`), `tier` (the bound `Climber`, holding that same `Step`), `adjustment` | the single per-sample command. `step.size` and `adjustment` are NOT one object despite both being written once per completed sample: `adjustment` is drained by `BoundedLocalCache` across maintenance cycles as the transfer carry-over, so it changes at the cycle rate while the step changes at the sample rate. Both tiers write `step.size` — they are alternatives bound by the maximum, never concurrent, and `resized` re-seeds it — which is why each tier holds a reference to the shared `Step` rather than a copy of its own |
+| Motion out | `tier` (the bound `Climber`, owning a `Step`: `size`), `adjustment` | the single per-sample command. `step.size` and `adjustment` have different owners and lifetimes: `adjustment` belongs to `WindowClimber` and is drained by `BoundedLocalCache` across maintenance cycles as the transfer carry-over, so it changes at the cycle rate while the strategy's step changes at the sample rate. A resize constructs a new strategy with a freshly seeded `Step` |
 
 Deliberate cross-writes (measured, kept): an audit confirm resets the starvation ladder to one
 (cheap re-probing; neutral) *and* clears `starvation.crashStreak` with it, since a reset ladder

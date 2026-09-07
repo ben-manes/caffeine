@@ -62,6 +62,21 @@ These dispose of whole families. Check them first.
 
 **Eviction and maintenance**
 
+- A weight change replayed after the fact evicting the mapping that replaced it. A weighted
+  entry rewritten oversize and then rewritten small again can be removed as SIZE once the
+  buffered deltas drain, because `UpdateTask` decides from the accumulated `policyWeight`
+  while the node already carries the new weight. Deterministic with a discarding executor:
+  under `maximumWeight(100)`, three puts of weight 1, 1000 and 1 leave the cache empty, and
+  the notification carries the small value. `weight` and `policyWeight` are owned by
+  different locking protocols, so the replay is inherent, and the javadoc's "may evict an
+  entry before this limit is exceeded" covers the result. The price is an extra miss on a
+  self-healing transient. Deciding the per-node check from `node.getWeight()` closes only
+  that path: the same replay inflates the global `weightedSize` across drain cycles and
+  evicts through `evictEntries` instead, measured still losing the entry in 2 of 3
+  default-executor runs, so it is a special case rather than a repair. Resurrecting a victim
+  when size eviction no longer holds has the same gap, and does nothing for an update that
+  is not itself oversize and pushes other entries out. Weight-0 pinning is unaffected, which
+  is the case that would have made it more than premature eviction. Adjudicated 2026-09-06.
 - Size eviction is uncapped and drains the whole excess in one cycle under `evictionLock`.
   Eager shrink is the published `Policy.Eviction.setMaximum` contract, and the uncapped
   property is load-bearing for the `rescheduleCleanUpIfIncomplete` piggyback: size eviction
@@ -207,6 +222,22 @@ These dispose of whole families. Check them first.
 
 **Views, iteration, and the Map contract**
 
+- `ValuesView.remove(o)` testing the node's current value and conditionally removing the
+  iterator's captured value, so a writer alternating A and B can make `remove(B)` delete a
+  mapping holding A. Measured on the bounded cache, 8,254 of 710,733 explicit removals
+  against a B-only control of 0. Not a defect: the predicate established the node's value was
+  equivalent to what was passed, and a conditional removal against either operand means
+  "remove this entry if it still holds an equivalent value". The outcome is the ordinary
+  value-changed-mid-call one, and `ConcurrentHashMap` produces it too, more freely, since its
+  iterator removes by key unconditionally (`replaceNode(p.key, null, null)`) where ours is
+  conditional. Two consequences that look distinguishing are not: failing to remove a
+  stably-present B happens under CHM and under a matched-operand variant as well. The
+  per-node predicate is deliberate, from "Fix removal in identity views", which gave weak and
+  soft value caches `IdentityHashMap` equivalence; do not revert it to `o.equals(value)`. The
+  open direction, if this is ever revisited, is the opposite one: removing by key only, to
+  match what `AbstractCollection` does for non-concurrent usage, against which CHM's
+  conditional `removeIf` is the counterweight. Adjudicated 2026-09-06.
+
 - `getAllPresent` and `containsValue` using one scan-wide `now` for every element's expiry
   check. This covers bounded single calls whose staleness window is the call. It does **not**
   extend to a user-paced traversal (an iterator or spliterator), where a slow terminal
@@ -325,6 +356,20 @@ Read `jsr107-conformance.md`'s divergence catalogue with this section.
   `containsKey` and `remove` because native `contains(null)` throws NPE; it does not override
   `containsAll`, because native `containsAll` is null-lenient. `containsKey(null)` throwing
   NPE is deliberate null-hostility on a direct query.
+- A loader that loads another key, deadlocking two threads on the bin lock or failing with
+  CHM's `Recursive update`, where native Guava releases its segment lock before loading.
+  Guava refuses recursive loading too, just at a different granularity:
+  `LocalCache.waitForLoadingValue` guards with `checkState(!Thread.holdsLock(e), "Recursive
+  load of: %s", key)`, added by Ben after it used to deadlock. So the difference is per-entry
+  against per-bin, not permitted against forbidden, and "but Guava supports it" is not
+  available as a counter-argument.
+  `LoadingCache.get`'s own javadoc is the ruling: the computation "must not modify this cache
+  during the computation", and the documented `IllegalStateException` is scoped to a
+  **detectably** recursive update, which leaves the undetectable cases unpromised rather than
+  broken. Recursive loading is an implementation hole left undefined, not a contract, and
+  Guava never promised it either. Drop-in compatibility is about honoring their API contracts,
+  not reproducing their implementation: Guava is not linearizable and Caffeine does not give
+  that up to match. Migrating users do hit it. Adjudicated 2026-09-06.
 
 ---
 

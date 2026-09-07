@@ -119,7 +119,7 @@ simulator/   — Cache policy simulator
 For deep dives, read these on demand (not auto-loaded to save context):
 
 - `.claude/docs/design-decisions.md` — why non-obvious choices are intentional, not bugs
-- `.claude/docs/ruled-out.md` — adjudicated-and-rejected patterns, by module, with the reason each was rejected
+- `.claude/docs/ruled-out.md` — adjudicated-and-rejected patterns, by module, with the reason each was rejected. It is not the only place rulings live; the module rule files carry adjudications it does not repeat
 - `.claude/docs/synchronization.md` — lock hierarchy, access modes, callback invocation points
 - `.claude/docs/testing.md` — CacheSpec parameterization, Truth subjects, test utilities
 - `.claude/docs/research-foundations.md` — papers mapped to implementation (TinyLFU, BP-Wrapper, etc.)
@@ -131,7 +131,7 @@ For deep dives, read these on demand (not auto-loaded to save context):
 When to read which doc:
 - Concurrency or thread-safety work → `synchronization.md`
 - Auditing or reviewing code → `design-decisions.md` first (prevents false positives)
-- Adjudicating an audit row, or arguing one past a standing ruling → `ruled-out.md`
+- Adjudicating an audit row, or arguing one past a standing ruling → `ruled-out.md` **and the rule file for the row's module**. Checking only `ruled-out.md` misses rulings that live solely in the rule files
 - Writing or modifying tests → `testing.md`
 - Understanding algorithm choices → `research-foundations.md`
 - Touching the window climber / `determineAdjustment` → `hill-climber.md` (§1-4 first if new to the area)
@@ -140,7 +140,7 @@ When to read which doc:
 
 ## Claude Code Extensions
 
-- **Rules** (`.claude/rules/`): project conventions, loaded automatically when relevant
+- **Rules** (`.claude/rules/`): project conventions, loaded automatically when relevant. The module files also carry standing adjudications, so read the one for a module before raising a finding against it
 - **Skills** (`/review-change`): multi-layer parallel code review with blind + design-aware + regression pattern matching
 - **Skills** (`/audit-*`): snapshot-style deep analysis skills for concurrency, correctness, and performance, enumerated in the Audit Selection Guide below. Scope is repository-wide — the auditor agent's module map covers core, guava, jcache, simulator, and examples (all hold the same quality bar); pass a module or path argument to focus a run
 - **Skills** (`/audit-adversarial`): hostile full-codebase review with NO design context — finds bugs domain familiarity masks

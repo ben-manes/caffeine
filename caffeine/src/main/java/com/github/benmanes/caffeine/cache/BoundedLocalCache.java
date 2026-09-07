@@ -1553,6 +1553,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
+  /** Returns if the entry's expiration is still deferred to its value's completion. */
+  boolean isExpirationDeferred(Node<K, V> node, long now) {
+    return expiresVariable() && ((node.getVariableTime() - now) > MAXIMUM_EXPIRY);
+  }
+
   /** Returns if the entry's write time would exceed the minimum expiration reorder threshold. */
   boolean exceedsWriteTimeTolerance(Node<K, V> node, long varTime, long now) {
     long variableTime = node.getVariableTime();
@@ -2801,7 +2806,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           return n;
         }
 
-        long varTime = expireAfterUpdate(n, key, newValue, expiry(), ctx.now);
+        // A completion finalizes only what the insertion deferred. Its caller reads the future's
+        // readiness before the write, so a value that becomes available in between is evaluated by
+        // the insertion, and evaluating it again would charge that creation as an update.
+        long varTime = (quietly && !isExpirationDeferred(n, ctx.now))
+            ? n.getVariableTime()
+            : expireAfterUpdate(n, key, newValue, expiry(), ctx.now);
         n.setValue(newValue, valueReferenceQueue());
         n.setWeight(weight);
 

@@ -35,6 +35,13 @@ When a change touches an area, these are the test classes to run first. This is 
 living guide at the class level — update it when reorganizations happen, don't treat
 it as a static contract.
 
+**Pick the set from the surface you changed, not the contract you were reasoning about.**
+They are often different classes. A repair aimed at an `Expiry` defect still changes what
+`AsyncCache.put`'s completion does, so it owes `AsyncCacheTest` as much as `ExpireAfterVarTest`;
+choosing only the latter shipped a commit whose sole failure was 240 cells of the class that names
+the changed surface. Ask which public method's behaviour moved, then read this guide for that
+method.
+
 ### Public API surfaces
 - `Cache` — `CacheTest`
 - `LoadingCache` — `LoadingCacheTest`

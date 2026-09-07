@@ -84,12 +84,15 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   so this is a review-time invariant: check the call site's lock state, not the accessor's name.
   The three duration fields need no such care, since `addAcquireReleaseField` emits only an
   acquire reader.
-- **The async expiry sentinel is also the mark that a load has not been accounted for, so both
-  read-extension paths guard on it.** `AsyncExpiry.expireAfterUpdate` routes to the user's
-  `expireAfterCreate` while `currentDuration > MAXIMUM_EXPIRY`, which is how a completion's quiet
-  replace tells a first load from an update; `AsyncExpiry.expireAfterRead` keys off `getIfReady`
-  and cannot see it. So `tryExpireAfterRead` and `expireAfterRead` each return early on `isAsync &&
-  currentDuration > MAXIMUM_EXPIRY`, and the duplication is not redundant. The uncovered case is
+- **The async expiry sentinel is also the mark that a load has not been accounted for, so the
+  read-extension paths and the completion's own write all guard on it.**
+  `AsyncExpiry.expireAfterUpdate` routes to the user's `expireAfterCreate` while
+  `currentDuration > MAXIMUM_EXPIRY`, which is how a completion's quiet replace tells a first load
+  from an update; `AsyncExpiry.expireAfterRead` keys off `getIfReady` and cannot see it. So `tryExpireAfterRead` and `expireAfterRead` each return early on `isAsync &&
+  currentDuration > MAXIMUM_EXPIRY`, and the duplication is not redundant. `replace` carries the
+  same test for a quiet write, because the caller's readiness snapshot is conservative and can
+  report a deferral for an entry the insertion already accounted for; preserving the variable time
+  there is what keeps a creation from being charged again as an update. The uncovered case is
   not the in-flight one: it is the value arriving while the completion waits on the node lock a
   `putIfAbsent` holds. Read the doc.
 - **notifyEviction before user code** preserves linearizability. Instead verify catch-commit-rethrow handles exceptions after irrevocable notification.

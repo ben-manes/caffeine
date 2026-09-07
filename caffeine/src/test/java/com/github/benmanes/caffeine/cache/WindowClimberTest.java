@@ -69,11 +69,11 @@ final class WindowClimberTest {
   void resized_seedsByTier() {
     var climber = new WindowClimber();
     climber.resized(512);
-    assertThat(climber.step.size).isEqualTo(STEP_PERCENT * 512);
+    assertThat(climber.tier.step.size).isEqualTo(STEP_PERCENT * 512);
 
     climber.resized(MAXIMUM);
     var density = (DensityClimber) climber.tier;
-    assertThat(climber.step.size).isEqualTo(-STRIDE);
+    assertThat(climber.tier.step.size).isEqualTo(-STRIDE);
     assertThat(density.starvation.rung).isEqualTo(PROBE_BACKOFF_INITIAL);
     // every (re)size re-arms the cold-start calibration audit
     assertThat(density.auditClock.waitSamples).isEqualTo(AUDIT_WAIT_FIRST);
@@ -193,7 +193,7 @@ final class WindowClimberTest {
         protectedMax(512, 5), /* sketchSampleSize= */ 1000);
     assertThat(climber.sample.hits).isEqualTo(0);
 
-    climber.step.size = 8.0;
+    climber.tier.step.size = 8.0;
     climber.sample.hits += 2000;
     climber.sample.misses += 1999;
     climber.determineAdjustment(512, /* windowMaximum= */ 5,
@@ -207,7 +207,7 @@ final class WindowClimberTest {
 
     var empty = new WindowClimber();
     empty.resized(0);
-    empty.step.size = 0.0;
+    empty.tier.step.size = 0.0;
     empty.sample.misses += 1000;
     empty.determineAdjustment(0, /* windowMaximum= */ 0,
         /* mainProtectedMaximum= */ 0, /* sketchSampleSize= */ 1000);
@@ -219,17 +219,17 @@ final class WindowClimberTest {
     // 512 decays at the slow rate, 513 at the standard rate. The small-cache tuning's edge
     var slow = new WindowClimber();
     slow.resized(512);
-    double slowSeed = slow.step.size;
+    double slowSeed = slow.tier.step.size;
     reactiveSampleAt(slow, 512, /* hits= */ 500, /* misses= */ 501);
     reactiveSampleAt(slow, 512, /* hits= */ 505, /* misses= */ 496);
-    assertThat(slow.step.size).isWithin(1.0e-9).of(0.995 * slowSeed);
+    assertThat(slow.tier.step.size).isWithin(1.0e-9).of(0.995 * slowSeed);
 
     var stock = new WindowClimber();
     stock.resized(513);
-    double stockSeed = stock.step.size;
+    double stockSeed = stock.tier.step.size;
     reactiveSampleAt(stock, 513, /* hits= */ 500, /* misses= */ 501);
     reactiveSampleAt(stock, 513, /* hits= */ 505, /* misses= */ 496);
-    assertThat(stock.step.size).isWithin(1.0e-9).of(STEP_DECAY_RATE * stockSeed);
+    assertThat(stock.tier.step.size).isWithin(1.0e-9).of(STEP_DECAY_RATE * stockSeed);
   }
 
   @Test
@@ -238,15 +238,15 @@ final class WindowClimberTest {
     // exactly the restart threshold re-anneals the decayed step to its full magnitude
     var climber = new WindowClimber();
     climber.resized(2048);
-    double seed = climber.step.size;
+    double seed = climber.tier.step.size;
     reactiveSampleAt(climber, 2048, /* hits= */ 500, /* misses= */ 501);
     reactiveSampleAt(climber, 2048, /* hits= */ 500, /* misses= */ 501);
     assertThat(climber.adjustment()).isEqualTo((long) seed);
-    assertThat(climber.step.size).isWithin(1.0e-9).of(STEP_DECAY_RATE * seed);
+    assertThat(climber.tier.step.size).isWithin(1.0e-9).of(STEP_DECAY_RATE * seed);
 
     reactiveSampleAt(climber, 2048, /* hits= */ 560, /* misses= */ 441);
     assertThat(climber.adjustment()).isEqualTo((long) (STEP_DECAY_RATE * seed));
-    assertThat(climber.step.size).isEqualTo(seed);
+    assertThat(climber.tier.step.size).isEqualTo(seed);
   }
 
   /** Completes one full reactive-tier sample at the given maximum (sketch period 1001). */
@@ -1540,7 +1540,7 @@ final class WindowClimberTest {
         /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.40);
     density.rates.smoothed = 0.70;
     climber.sample.previousHitRate = 0.70;
-    climber.step.size = STRIDE;
+    climber.tier.step.size = STRIDE;
 
     double[] rates = {0.80, 0.78, 0.77, 0.76, 0.755, 0.75};
     @Var long confirmStep = 0;
@@ -1571,7 +1571,7 @@ final class WindowClimberTest {
           /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.40);
       density.rates.smoothed = 0.70;
       climber.sample.previousHitRate = 0.70;
-      climber.step.size = STRIDE;
+      climber.tier.step.size = STRIDE;
 
       @Var long confirmStep = 0;
       for (int i = 0; i < rates.length; i++) {
@@ -1738,7 +1738,7 @@ final class WindowClimberTest {
     walk.samples = PROBE_WALK_BUDGET - 10;
     density.rates.smoothed = 0.70;
     climber.sample.previousHitRate = 0.70;
-    climber.step.size = -STRIDE;
+    climber.tier.step.size = -STRIDE;
     long step = steadySample(climber, /* windowMax= */ 1800, /* hitRate= */ 0.55);
 
     assertThat(density.walk).isSameInstanceAs(walk);
@@ -1818,7 +1818,7 @@ final class WindowClimberTest {
         /* baseWindow= */ 2000, /* baseHitRate= */ 0.70, /* baseSmoothedRate= */ 0.40);
     density.rates.smoothed = 0.70;
     climber.sample.previousHitRate = 0.70;
-    climber.step.size = STRIDE;
+    climber.tier.step.size = STRIDE;
     steadySample(climber, /* windowMax= */ 2200, /* hitRate= */ 0.55);
     assertThat(density.walk).isSameInstanceAs(walk);
     steadySample(climber, /* windowMax= */ 2400, /* hitRate= */ 0.56);
@@ -1875,7 +1875,7 @@ final class WindowClimberTest {
       density.rates.smoothed = 0.70;
       density.rates.deviation = 0.001;
       climber.sample.previousHitRate = 0.70;
-      climber.step.size = -STRIDE;
+      climber.tier.step.size = -STRIDE;
       sample(climber, /* windowMax= */ 2000,
           /* windowHits= */ 10, /* mainHits= */ 690, /* misses= */ 300);
 
@@ -1900,7 +1900,7 @@ final class WindowClimberTest {
     density.rates.smoothed = 0.06;
     density.rates.deviation = 0.001;
     climber.sample.previousHitRate = 0.06;
-    climber.step.size = STRIDE;
+    climber.tier.step.size = STRIDE;
 
     // improving samples keep the bold driver's heading, a worsening one reverses it
     steadySample(climber, /* windowMax= */ 675, /* hitRate= */ 0.70);
@@ -2460,7 +2460,7 @@ final class WindowClimberTest {
 
     assertThat(density.walk).isNotNull();
     assertThat(adjustment).isEqualTo((long) (FLOOR - 400));
-    assertThat(climber.step.size).isEqualTo(FLOOR - 400);
+    assertThat(climber.tier.step.size).isEqualTo(FLOOR - 400);
   }
 
   @Test
@@ -2472,13 +2472,13 @@ final class WindowClimberTest {
     long landing = sample(climber, /* windowMax= */ 163,
         /* windowHits= */ 495, /* mainHits= */ 5, /* misses= */ 500);
     assertThat(landing).isEqualTo(0);
-    assertThat(climber.step.size).isEqualTo(-0.0);
+    assertThat(climber.tier.step.size).isEqualTo(-0.0);
 
     long jitter = sample(climber, /* windowMax= */ 163,
         /* windowHits= */ 555, /* mainHits= */ 5, /* misses= */ 440);
     assertThat(jitter).isEqualTo(0);
     assertThat(density.walk).isNotNull();
-    assertThat(climber.step.size).isEqualTo(-0.0);
+    assertThat(climber.tier.step.size).isEqualTo(-0.0);
   }
 
   @Test
@@ -2613,7 +2613,7 @@ final class WindowClimberTest {
     var walk = injectWalk(density, /* isAudit= */ true, /* down= */ false,
         /* baseWindow= */ 1024, /* baseHitRate= */ 0.60, /* baseSmoothedRate= */ 0.99);
     walk.samples = PROBE_WALK_BUDGET - 10;
-    climber.step.size = STRIDE;
+    climber.tier.step.size = STRIDE;
     density.rates.smoothed = 0.70;
     climber.sample.previousHitRate = 0.70;
     long adjustment = sample(climber, /* windowMax= */ 2560,
@@ -2636,7 +2636,7 @@ final class WindowClimberTest {
       var walk = injectWalk(density, /* isAudit= */ true, /* down= */ false,
           /* baseWindow= */ 1024, /* baseHitRate= */ 0.04, /* baseSmoothedRate= */ 0.99);
       walk.samples = PROBE_WALK_BUDGET - 10;
-      climber.step.size = STRIDE;
+      climber.tier.step.size = STRIDE;
       density.rates.smoothed = 0.05;
       density.rates.deviation = noisy ? 0.05 : 0.001;
       climber.sample.previousHitRate = 0.05;
@@ -2729,7 +2729,7 @@ final class WindowClimberTest {
     var walk = injectWalk(density, /* isAudit= */ false, /* down= */ true,
         /* baseWindow= */ 7000, /* baseHitRate= */ 0.5, /* baseSmoothedRate= */ 0.0);
     walk.samples = 1;
-    climber.step.size = -STRIDE;
+    climber.tier.step.size = -STRIDE;
     climber.sample.previousHitRate = 0.5;
     long second = sample(climber, /* windowMax= */ 5000,
         /* windowHits= */ 340, /* mainHits= */ 0, /* misses= */ 660);
@@ -3173,7 +3173,7 @@ final class WindowClimberTest {
   void mediumTier_usesSketchPeriodAndStandardDecay() {
     var climber = new WindowClimber();
     climber.resized(2048);
-    double seed = climber.step.size;
+    double seed = climber.tier.step.size;
 
     for (int i = 0; i < 500; i++) {
       climber.recordHit(/* inWindow= */ false, /* inProbation= */ false);
@@ -3199,7 +3199,7 @@ final class WindowClimberTest {
     climber.determineAdjustment(2048, /* windowMaximum= */ 200,
         protectedMax(2048, 200), /* sketchSampleSize= */ 1001);
     assertThat(climber.adjustment()).isEqualTo((long) seed);
-    assertThat(climber.step.size).isWithin(1.0e-9).of(STEP_DECAY_RATE * seed);
+    assertThat(climber.tier.step.size).isWithin(1.0e-9).of(STEP_DECAY_RATE * seed);
   }
 
   @Test
@@ -3208,7 +3208,7 @@ final class WindowClimberTest {
     // bold driver, and a crash-scale change re-anneals the decayed step to its full magnitude
     var climber = new WindowClimber();
     climber.resized(2048);
-    double seed = climber.step.size;
+    double seed = climber.tier.step.size;
     assertThat(seed).isEqualTo(-STEP_PERCENT * 2048);
 
     reactiveSample(climber, /* hits= */ 500, /* misses= */ 501);
@@ -3216,11 +3216,11 @@ final class WindowClimberTest {
 
     reactiveSample(climber, /* hits= */ 480, /* misses= */ 521);
     assertThat(climber.adjustment()).isEqualTo((long) -seed);
-    assertThat(climber.step.size).isWithin(1.0e-9).of(STEP_DECAY_RATE * -seed);
+    assertThat(climber.tier.step.size).isWithin(1.0e-9).of(STEP_DECAY_RATE * -seed);
 
     reactiveSample(climber, /* hits= */ 590, /* misses= */ 411);
     assertThat(climber.adjustment()).isEqualTo((long) (STEP_DECAY_RATE * -seed));
-    assertThat(climber.step.size).isEqualTo(-seed);
+    assertThat(climber.tier.step.size).isEqualTo(-seed);
   }
 
   /** Completes one full sample in the medium tier (sketch period 1001). */
@@ -3412,7 +3412,7 @@ final class WindowClimberTest {
     var walk = injectWalk(density, /* isAudit= */ false, down, baseWindow, baseHitRate,
         /* baseSmoothedRate= */ 0.0);
     walk.samples = 1;
-    climber.step.size = stepSize;
+    climber.tier.step.size = stepSize;
     climber.sample.previousHitRate = baseHitRate;
     density.refractoryLeft = 0;
     density.undoRemaining = 0;
@@ -3488,7 +3488,7 @@ final class WindowClimberTest {
     climber.sample.previousHitRate = 0.70;
     density.rates.deviation = 0.001;
     density.rates.smoothed = 0.70;
-    climber.step.size = -STRIDE;
+    climber.tier.step.size = -STRIDE;
     return climber;
   }
 
@@ -3501,7 +3501,7 @@ final class WindowClimberTest {
         baseProbationDensity);
     walk.samples = 1;
     density.walk = walk;
-    climber.step.size = stepSize;
+    climber.tier.step.size = stepSize;
     climber.sample.previousHitRate = baseHitRate;
     return climber;
   }

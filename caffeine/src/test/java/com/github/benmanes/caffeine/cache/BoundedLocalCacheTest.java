@@ -3660,7 +3660,7 @@ final class BoundedLocalCacheTest {
     injectWalk(density, /* down= */ false, /* baseWindow= */ floor,
         /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
         /* baseProbationDensity= */ 1_000_000.0).samples = 1;
-    cache.climber().step.size = STEP_PERCENT * cache.maximum();
+    cache.climber().tier.step.size = STEP_PERCENT * cache.maximum();
 
     cache.climber().sample.windowHits = (hits >>> 6);
     cache.climber().sample.previousHitRate = 0.50;
@@ -3693,7 +3693,7 @@ final class BoundedLocalCacheTest {
     injectWalk(density, /* down= */ false, /* baseWindow= */ floor,
         /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
         /* baseProbationDensity= */ 1_000_000.0).samples = PROBE_COMMITMENT_MID;
-    cache.climber().step.size = STEP_PERCENT * cache.maximum();
+    cache.climber().tier.step.size = STEP_PERCENT * cache.maximum();
     density.starvation.rung = PROBE_BACKOFF_MAX;
 
     cache.climber().sample.windowHits = (hits >>> 6);
@@ -3757,7 +3757,7 @@ final class BoundedLocalCacheTest {
     injectWalk(density, /* down= */ false, /* baseWindow= */ (floor + 100),
         /* baseRequestCount= */ 2 * hits, /* baseHitRate= */ 0.50,
         /* baseProbationDensity= */ 0.0).samples = 2;
-    cache.climber().step.size = STEP_PERCENT * cache.maximum();
+    cache.climber().tier.step.size = STEP_PERCENT * cache.maximum();
 
     // A starvation probe's reversal is priced against the workload's own scatter, so the bar
     // floors at the restart threshold only on a quiet workload; at the DEVIATION_SEED the bar is
@@ -3902,7 +3902,7 @@ final class BoundedLocalCacheTest {
 
     assertThat(density.walk).isNull();
     assertThat(cache.climber().adjustment()).isEqualTo(0);
-    assertThat(Double.isNaN(cache.climber().step.size)).isFalse();
+    assertThat(Double.isNaN(cache.climber().tier.step.size)).isFalse();
   }
 
   @ParameterizedTest
@@ -3935,7 +3935,7 @@ final class BoundedLocalCacheTest {
     // period. Filling the sample buffer to only the base sample size should not trigger an
     // adjustment because the climber is waiting for more requests.
     double initialStep = STEP_PERCENT * cache.maximum();
-    cache.climber().step.size = Math.copySign(initialStep / 2, cache.climber().step.size);
+    cache.climber().tier.step.size = Math.copySign(initialStep / 2, cache.climber().tier.step.size);
 
     int baseSampleSize = cache.frequencySketch().sampleSize;
     long windowMaximum = cache.windowMaximum();
@@ -3963,7 +3963,7 @@ final class BoundedLocalCacheTest {
     // With step decayed to half magnitude, the effective sample size is ratio=2 * base. A
     // sample size matching that grown threshold should trigger the climber.
     double initialStep = STEP_PERCENT * cache.maximum();
-    cache.climber().step.size = Math.copySign(initialStep / 2, cache.climber().step.size);
+    cache.climber().tier.step.size = Math.copySign(initialStep / 2, cache.climber().tier.step.size);
 
     int baseSampleSize = cache.frequencySketch().sampleSize;
     int grownSampleSize = 2 * baseSampleSize;
@@ -3989,7 +3989,8 @@ final class BoundedLocalCacheTest {
     // Force step to a value far below the cap: ratio would be > cap, so should be clamped.
     double initialStep = STEP_PERCENT * cache.maximum();
     double tinyStep = initialStep / (SLOW_ADAPT_RATIO_CAP * 10);
-    cache.climber().step.size = Math.copySign(Math.max(tinyStep, 0.001), cache.climber().step.size);
+    cache.climber().tier.step.size = Math.copySign(
+        Math.max(tinyStep, 0.001), cache.climber().tier.step.size);
 
     int baseSampleSize = cache.frequencySketch().sampleSize;
     @SuppressWarnings("Varifier")
@@ -4017,7 +4018,7 @@ final class BoundedLocalCacheTest {
     // in practice (the step never decays to exactly 0.0); it is forced here to lock in the guard.
     cache.setMaximumSize(0);
     cache.frequencySketch().ensureCapacity(1);
-    cache.climber().step.size = 0.0;
+    cache.climber().tier.step.size = 0.0;
     cache.climber().sample.hits = 0;
     cache.climber().sample.misses = 0;
     cache.climber().sample.previousHitRate = 0.80;
@@ -4152,7 +4153,8 @@ final class BoundedLocalCacheTest {
 
   private static void prepareForAdaption(BoundedLocalCache<Int, Int> cache,
       CacheContext context, boolean recencyBias) {
-    cache.climber().step.size = (recencyBias ? 1 : -1) * Math.abs(cache.climber().step.size);
+    cache.climber().tier.step.size =
+        (recencyBias ? 1 : -1) * Math.abs(cache.climber().tier.step.size);
     cache.setWindowMaximum((long) (0.5 * context.maximumWeightOrSize()));
     cache.setMainProtectedMaximum((long)
         (PERCENT_MAIN_PROTECTED * (context.maximumWeightOrSize() - cache.windowMaximum())));
@@ -7307,8 +7309,8 @@ final class BoundedLocalCacheTest {
       compute = Compute.SYNC)
   void remap_preserveTimestamps_withoutPreserveRefresh_discardsPendingRefresh(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    // The complement of the above: refresh-rejection callers (the existing refreshIfNeeded paths)
-    // set only preserveTimestamps and want the rejected refresh cleaned up — discardRefresh must
+    // The complement of the above: refresh-rejection callers (the existing refreshIfNeeded paths) 
+    // set only preserveTimestamps and want the rejected refresh cleaned up — discardRefresh must 
     // still fire when preserveRefresh is left at its default false.
     var key = context.firstKey();
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));

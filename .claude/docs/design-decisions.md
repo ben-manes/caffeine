@@ -477,6 +477,19 @@ with no completion handler at all, so deferring strands them at the sentinel and
 `expireAfterCreate` is never called (9,013 failures across the narrowed async matrix when
 tried).
 
+**The flag is conservative rather than exact, so the write re-tests the mark.** Reading
+before the store rules out one direction only. A future observed as ready was ready at the
+install, but one observed as unready may still complete before the install evaluates it, and
+the stale flag then charges as an update a creation the install already accounted for.
+Measured on the shipped defaults with an ordinary future and an `Integer` key, four to nine
+puts in every 200,000 take that path, and a key whose `hashCode` completes the future makes
+it deterministic, yielding a 59s entry for the 1h/1m `Expiry` above. No read point fixes it,
+since readiness is monotonic and neither side of the store is the observation the install
+used, and narrowing the window is not a repair. So `replace` asks the entry instead. A quiet
+write, which only a completion performs, preserves the variable time when the entry no
+longer carries the sentinel, and still finalizes the weight and the write time. Nothing else
+can have cleared the mark, because the two read-extension paths above return early on it.
+
 **MAXIMUM_EXPIRY = ~150 years** (`Long.MAX_VALUE >> 1`). User-provided expiration
 durations are clamped to prevent nanoTime arithmetic overflow. `now + ASYNC_EXPIRY`
 overflows to negative after ~73 years of JVM uptime, but this is within the
@@ -1576,14 +1589,16 @@ mapping differs by identity, so re-inserting an already-registered future
 double-fires `handleCompletion`.** The dedup in `LocalAsyncCache.put` only skips a
 *consecutive* same-instance put (`prior == castedFuture`), so `put(k, f1);
 put(k, f2); put(k, f1)` leaves two `whenComplete` handlers on `f1`. A single
-completion then replays `replace` + `recordLoadSuccess` (and re-invokes
-`Expiry.expireAfterUpdate`) once per handler. Accepted — there is no correct dedup:
-we cannot inspect a future's already-registered dependent actions, and tracking our
-own registration history would be wrong (unbounded, and stale the moment the entry
-is replaced). It is benign regardless — re-inserting a specific future instance
-after replacing it is unusual, and the second `replace(k, f1, f1)` is idempotent
-(no state corruption; `notifyOnReplace` suppresses on identity). Pinned by
-`AsyncCacheTest.put_reregisteredInstance_completionRecordedTwice`.
+completion then replays `replace` + `recordLoadSuccess` once per handler. Accepted,
+because there is no correct dedup: we cannot inspect a future's already-registered
+dependent actions, and tracking our own registration history would be wrong (unbounded,
+and stale the moment the entry is replaced). It is benign regardless. Re-inserting a
+specific future instance after replacing it is unusual, and the second
+`replace(k, f1, f1)` is idempotent: `notifyOnReplace` suppresses on identity, and the
+quiet write preserves the expiration because the first handler already cleared the async
+sentinel, so the user's `Expiry` sees one creation rather than a creation and an update.
+The load is still counted once per handler. Pinned by
+`AsyncCacheTest.put_reregisteredInstance_completionRegisteredTwice`.
 
 **A cancelled bulk proxy stays mapped, and the completer re-asserts its lifecycle.**
 `getAll` installs a proxy per absent key and gives its lifecycle to `AsyncBulkCompleter`
