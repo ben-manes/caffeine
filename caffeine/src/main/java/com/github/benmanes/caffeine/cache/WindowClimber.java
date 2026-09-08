@@ -33,7 +33,7 @@ final class WindowClimber {
   /*
    * W-TinyLFU divides capacity between an admission window, which favors recency, and a main
    * region, where TinyLFU filters new arrivals by frequency. The best split depends on the
-   * workload, so the climber adjusts it using the cache's hit statistics.
+   * workload, so the climber adjusts it using the cache's hit statistics [1].
    *
    * Small caches compare hit rates across samples to choose a direction. Larger caches have enough
    * hits to compare the regions' hit densities (hits per unit of capacity) within a single sample,
@@ -127,7 +127,8 @@ final class WindowClimber {
    * <p>
    * Small caches use this strategy because their per-region hit counts are too low for reliable
    * density estimates. The smallest caches start by growing because their initial window contains
-   * only a few entries. They use longer samples and slower step decay to reduce sensitivity to noise.
+   * only a few entries. They use longer samples and slower step decay to reduce sensitivity to
+   * noise.
    */
   static final class ReactiveClimber extends Climber {
     /** The maximum size at which adaptation uses longer samples and slower step decay. */
@@ -422,8 +423,8 @@ final class WindowClimber {
     /**
      * Records a confirmed position and returns whether the window should remain there. Audit
      * confirmations suspend density steering, which could undo the improvement. Starvation probes
-     * normally resume steering; {@link Walk#isAuditGrade} identifies those with enough evidence
-     * to park as well.
+     * normally resume steering; {@link Walk#isAuditGrade} identifies those with enough evidence to
+     * park as well.
      */
     private boolean keepConfirmedPosition(Walk walk, Reading reading) {
       boolean park = walk.isAudit || walk.isAuditGrade(reading);
@@ -766,8 +767,8 @@ final class WindowClimber {
     }
 
     /**
-     * Returns whether sparse hits require a starvation probe. A starved main beside a large
-     * window is left to equilibrium audits; probing it could shrink a productive window.
+     * Returns whether sparse hits require a starvation probe. A starved main beside a large window
+     * is left to equilibrium audits; probing it could shrink a productive window.
      */
     boolean hasBlindCorner() {
       return isDeadSample() || (windowStarved && (windowMax <= (maximum >>> 2)));

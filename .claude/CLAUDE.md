@@ -135,6 +135,8 @@ When to read which doc:
 - Writing or modifying tests → `testing.md`
 - Understanding algorithm choices → `research-foundations.md`
 - Touching the window climber / `determineAdjustment` → `hill-climber.md` (§1-4 first if new to the area)
+- Investigating audit or retention costs → `hill-climber.md` §5–6 and `/audit-regret`'s
+  targeted retention controls; reuse workload specs, not archived experiment runners
 - Interpreting or writing audit findings → `finding-taxonomy.md`
 - Auditing JSR-107 conformance of the jcache adapter → `jsr107-conformance.md`
 

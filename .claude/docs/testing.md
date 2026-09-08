@@ -407,6 +407,13 @@ fix is to delete the now-dead branch, not to test it.)
   **zero tests and still reports BUILD SUCCESSFUL**, so confirm the result XML's `tests=` count
   either way
 - Fuzz tests require `JAZZER_FUZZ=1` environment variable (set by the Gradle task)
+- The current `fuzzTest` JaCoCo compatibility guard checks the configured Java toolchain
+  language version, not a separately selected test launcher. With `-PjavaVersion=11
+  -PjavaTestVersion=25`, it leaves JaCoCo enabled despite running Jazzer on JDK 25. The frozen
+  retention study used a separate `-PjavaVersion=25 -PjavaTestVersion=25` fuzz build to follow
+  that guard, preserving its Java 11 compile/unit evidence before the rebuild.
+  Record each build's source identity and class-file version; a Java 25 fuzz pass is not
+  Java 11 bytecode evidence.
 
 ## PIT Mutation Testing
 

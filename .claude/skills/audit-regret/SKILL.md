@@ -261,6 +261,51 @@ All under this directory unless noted; the runners come from `climber-gate/` (`r
   from an agent shell (`rules/simulator.md`), so tell Ben when a round will run past an hour and
   needs an awake session on his side.
 
+### Targeted retention controls
+
+Use these existing-generator inputs when investigating an audit verdict, a delayed retention
+decision, or the later consequences of a park. The canonical `jumpslide` is already a gate row;
+these companions are targeted controls, not new mandatory bars or fresh holdouts.
+The S1 candidate was closed without adoption; these inputs remain useful for new investigations,
+not as a pending candidate-validation queue. Its findings are recorded in
+[the design record](../../docs/hill-climber.md#later-retention-useful-evidence-before-the-benefit-is-lost).
+
+| Input | Question it helps answer |
+|---|---|
+| `specs/jumpslide.json` and `specs/jumpslide_period26.json` | Can the proposed original decision distinguish two futures with the same first 425,984 requests at C=8192/seed7? The rotation period is the only difference |
+| `specs/jumpslide_260.json`, workload seeds 11/13 | Does a gain at an early fixed horizon survive the full continuation? This extends demand rather than looping/restarting the short trace |
+| `specs/lifecycle_fit_scan.json` | Under fixed write TTL=C, are misses already forced by expiry while all live entries fit? This is hot-set plus unique-scan demand; a real-cache TTL driver and independent lower bound are still required |
+| `specs/pure_scan.json` | Does the accounting correctly recognize an all-miss/no-reuse control where allocation cannot save demand misses? |
+
+These work with the normal `workload.py`/`regret.py` path. For example, from the repository root:
+
+```sh
+python3 .claude/skills/audit-regret/workload.py \
+  .claude/skills/audit-regret/specs/jumpslide_260.json --seed 13 --describe
+python3 .claude/skills/audit-regret/regret.py \
+  .claude/skills/audit-regret/specs/jumpslide_260.json --seed-override 13 --variants hybrid \
+  --traces-dir .local/experiments/retention-check/traces \
+  --dump-dir .local/experiments/retention-check/dumps
+```
+
+For misleading phase support, use the existing generator with `--phaselen 18` and `22`, each
+with `--phases 48 --max 8192 --dfrac 0.5`. For example:
+
+```sh
+mkdir -p .local/experiments/retention-check
+python3 .claude/skills/climber-gate/gen.py phases --max 8192 --dfrac 0.5 \
+  --phaselen 18 --phases 48 --out .local/experiments/retention-check/phases18.lirs
+```
+
+Here `phaselen` is in C requests; `workload.py` rotation periods/durations are in 4C nominal
+samples. `gen.py`'s phases/widepin ignore the seed argument, so seed aliases add no independent
+workload evidence. Use a verified harness for admission seeds, plants or trajectories, as above.
+The default regret run evaluates ordinary non-expiring cache behavior; it does not implement
+TTL/invalidation or paired decision interventions. The old PRF outcomes in `hill-climber.md`
+do not become expected seeded-stream results or gate thresholds. For cumulative decision
+attribution, build and validate current-source instrumentation in the new local workspace,
+following [the paired-replay protocol](../../docs/hill-climber.md#decision-attribution-and-later-retention).
+
 ## The round
 
 Workspace: `.local/experiments/audit-regret-<yyyy-mm-dd>/` with `LEDGER.md` (one row per
@@ -573,6 +618,15 @@ not read prior reports. Strike a line when it is done or dead.
 
 ## Rules of evidence
 
+- A claim about a particular decision needs a feasible paired continuation, not just a static
+  ceiling gap. Follow §6's
+  [decision-replay protocol](../../docs/hill-climber.md#decision-attribution-and-later-retention)
+  for attribution and retention studies. `regret.py`'s trajectory hints and the canonical
+  seeded-stream harness do not themselves establish equivalent decision state or request/contest
+  pairing. Implement the needed hooks against the current source in the local experiment,
+  verify prefix/randomness/observer controls, and retain useful workload specs and conclusions
+  in the existing skills/design record. Reports, raw runs, build snapshots and experiment-specific
+  runners belong in `.local`; preserving them is not integration into this workflow.
 - A gap under 2.5pp needs eight seeded, paired runs; a bimodal cell is read seed by seed and never
   from a mean; seeded arms pair by seed (`regret.py`), unseeded comparisons rotate arms inside
   each run (`gate.py`), and neither compares across sweeps.

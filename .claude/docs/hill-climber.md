@@ -744,14 +744,22 @@ shipped 1% start it settles at a 20–21% window, and from a planted 30% start i
 for **+4.65pp** on the same trace, landing 1.6pp off its ceiling where the shipped start lands 6.3pp
 off. The trajectories name the mechanism: from 1% the *first* command leaves the optimum, because at
 a 1% window the window is trivially the denser region, so the law commands a large upward step and
-the run then oscillates for the whole trace, with both of its audits crashing after a single walk
-sample on a low-traffic sample. From the 30% plant a down-audit instead runs four clean strides,
+the run then oscillates for the whole trace, with both of its audits aborting during low-rate
+portions of the trace. From the 30% plant a down-audit instead runs four clean strides,
 confirms at a 2% window and parks. The descent machinery is fine here; the ascent out of the shipped
 start is not, and the audit layer that should catch it crashes on the trace's own phase structure.
-One cell of ten, reproducible in both directions, not traced to a defect. The open question is
-whether a single-sample audit crash on a low-traffic sample is the general shape, since the bar is a
-fraction of the rate frozen at the arm and a sample with an order of magnitude fewer requests is not
-what that pricing was built for.
+One cell of ten, reproducible in both directions, not traced to a defect. The September 2026 replay
+does not support a short-exposure explanation: the first audit's launch and crash both contain
+492,152 observations, while the hit rate falls from 48.8% to 4.0%. Granting that first crash the
+existing bounded retry saves 1.50pp over the next 64·max requests and 0.99pp over 128·max on
+admission seeds 1–8, but the walk still aborts two samples later and returns to the same base.
+Suppressing the retry's two extra output strides retains 0.92pp at 128·max. The gain does not
+require those strides, but later observations and decisions also change; this does not isolate
+a timing-only effect or demonstrate a false rejection.
+The same delay loses on the `cp_w081` and planted `shallowmoat` controls. A pre-existing rate
+decline at arm does not distinguish the useful continuation from costly ones after invalidation;
+no production rule was established. These are finite-horizon, request-indexed replay comparisons,
+not a generalization to unseen workloads or a change to the crash policy.
 
 **Descent has to be measured deliberately, because no natural row exercises it.** Every gate row and
 every real-corpus cell starts the cache where the product starts it, at a 1% window, and on the
@@ -1970,8 +1978,181 @@ fix re-seeds the goal metric on a discarding stand-down instead.
   inflated deviation and the anchor reference is stale by construction on noisy traces (the 3·dev
   ratchet bar never fires at dev 0.03–0.07; measured 130-sample-stale on cp_w097_16384).
 - **Dwell-gated anchor ratchet** (`auditClock.stillSamples ≥ 2` before the anchor may move): no
-co-tenant
-  help; widepin re-destabilized.
+  co-tenant help; widepin re-destabilized.
+
+### Audit attribution: headroom without a deployable rule
+
+These findings constrain future audit and retention changes. Reusable demand inputs and commands
+are in `/audit-regret`'s [targeted controls](../skills/audit-regret/SKILL.md#targeted-retention-controls).
+Experiment reports, raw runs and controller-specific replay instrumentation are transient;
+the design conclusions and controls below are the lasting record.
+
+Paired replay at `0494074819b08f8c6076f40a544c882beeeac2d0` found material avoidable
+misses, but neither tested decision-time discriminator justified a production candidate. The
+selected real, trap and lifecycle panel used the real cache, fixed-probation geometry, admission
+seeds 1–8 and request/contest-indexed randomness; it does not establish corpus-wide saturation.
+For the comparisons below, C is capacity and the horizons are demand requests after the decision.
+
+- **Retention can repay an initial loss.** On `jumpslide` at C=8192 from the shipped start,
+  routing the first unparked starvation confirmation through the existing park path costs
+  4,176 additional misses over 16C (−3.19pp), then saves 93,460 over 128C (+8.91pp) and
+  193,000 over 256C (+9.20pp). Each sign holds on all eight seeds. These are paired means for
+  one intervention, not a rule for recognizing a persistent reuse band. The `cp_w050` case in
+  §3 likewise establishes a feasible gain without establishing a false rejection.
+- **A pre-existing decline does not justify tolerating the first audit crash.** The screen
+  snapshots whether the arm sample already fell by at least 5pp, then grants the existing
+  bounded three-sample retry at the first crash. At 128C it selects `cp_w050`'s +0.99pp and
+  also selects −0.73pp after whole-cache invalidation and −1.71pp after hot-key invalidation
+  on the 55% `mainsat` plant, each on eight of eight seeds. Weather preceding the walk is
+  evidence about cause, not sufficient evidence for continuing it.
+- **A raw shortfall does not establish an obsolete return claim.** Rejecting a passing retest
+  when its raw rate is below the frozen claim by 1pp and has just fallen by at least 5pp
+  costs `cp_w081` 0.23pp and `crashnoise_a12` 7.73pp at 128C, on all eight seeds. Both screens
+  were specified from baseline observations before their paired outcomes were disclosed;
+  neither was repaired by adding predicates to exclude its losing controls.
+- **Some hindsight verdicts require unseen future information.** `jumpslide` from a 60% plant,
+  with only its rotation period changed from 13 to 26 nominal samples, has 425,984 identical
+  initial requests. Every first audit crash occurs at request 262,152, with identical cache,
+  controller and admission history in the two futures. Tolerance at 256C averages −0.65pp
+  for period 13 and +5.61pp for period 26; five seeds require opposite actions. The latter
+  wins only 5/8 seeds, below the study's 7/8 consistency requirement. No history-only rule
+  can distinguish those futures at that decision. This does not rule out acting later, once
+  the unchanged cache has received distinguishing evidence.
+- **Lifecycle misses can be unavoidable.** At C=8192, empty caches with fixed write TTL covering
+  C requests on a request-based clock and loading only on demand misses matched an independent
+  TTL-only reference on `mainsat` and a 512-key hot-set/scan control. The reference's live entries
+  fit in C, and neither cache performed a size eviction.
+  Resizing cannot reduce those misses. This is a scoped lower bound, not an inference from
+  underfill or an expiry counter, and it does not price transfer CPU or cover other lifecycle rules.
+
+Keeping an allocation fixed for the whole suffix also suppresses later audits, so its gain
+cannot be charged solely to the first excursion. A short-horizon gain can reverse through later
+scheduling: first-crash tolerance on `cp_w100` reads +1.16pp at 16C and −1.88pp at 256C.
+No production candidate or full adoption-gate pass followed from this study.
+
+### Later retention: useful evidence before the benefit is lost
+
+The focused follow-up at the same commit used independent unchanged-baseline prefixes at
+1, 2, 4, 8 and 16 nominal samples after the first unparked starvation confirmation. A nominal
+sample is 4C requests. Each action uses the first eligible ordinary density-steering decision
+in its registered one-sample window, after higher-priority routes; no earlier alternative park
+supplies the later state or evidence. Endpoints remain fixed to the original episode.
+
+- **Waiting need not consume all the benefit.** At the common 128C endpoint on `jumpslide`,
+  current-position parking at delay 8 saves 67,242 misses (+6.41pp, 7/8 seeds), about 72% of
+  early parking's benefit. Delay 4 saves more than the early action, so remaining benefit is
+  not monotone. At delay 16, parking the current allocation saves only 0.36pp, while returning
+  through the real capped-transfer path to the earlier confirmed allocation still saves 6.46pp.
+- **A later signal can distinguish some harmful parks.** The two initially tested
+  earliest-trigger rules failed controls. A single timing hypothesis was then frozen from
+  discovery: evaluate persistent regional support only at delay 8. The signal, S1, required both
+  current and preceding baseline samples to stay within 0.02C of the confirmed window, with
+  window hits per sampled request no more than 1pp below the confirmation's contribution and raw
+  hit rate no more than 5pp below its raw rate. Only the current sample's ordinary integer density
+  command had to shrink. Confirmation used `jumpslide` workload seeds 11/13 and admission
+  seeds 9–16, held out until that rule was frozen. All ten selected actions saved misses at 64C,
+  128C and 256C. The complete seed-13 cohort has seven gains and one abstention: +7.46pp at 128C,
+  retaining 93% of early benefit.
+  Seed 11 has three triggers, four abstentions and one missing eligible window; it is not a
+  complete eight-seed pass. The signal rejects seed-11 actions that would lose 2.39 and 1.26pp.
+- **Missing eligibility is not discrimination.** Phase durations 20C/24C supplied no eligible
+  delay-8 windows. A separately registered 18C/22C extension supplied 13, all rejected by the
+  frozen signal; ten forced parks lose misses at 128C, eight by more than 0.5pp. Those individual
+  paired losses are valid controls even though missing seeds prevent an eight-seed group gate.
+  Across the 48 fresh registered cases, only 28 had eligible observed decisions: ten selected
+  gains, thirteen avoided losses, three missed gains and two neutral abstentions. The signal
+  recognizes a useful subset, not every retention opportunity.
+
+This establishes a useful tested later point, not a continuous safe interval, a general timing
+optimum or a production improvement. The 104-baseline, 403-pair study verifies feasible loss
+avoidance and baseline-only information; repeated candidate behavior and the existing adoption
+gates must be measured separately. The real `cp_w050` control has no qualifying episode on
+any seed, so it supplies no retention-effect or discrimination claim.
+
+The resulting isolated candidate kept the first pending confirmation's independent window,
+raw-rate and window-contribution references. Later confirmations did not replace them or postpone
+the eighth-completed-sample deadline. Assessment required final ordinary steering, no incoming
+transfer adjustment and no pending retest. Priority routes consumed the deadline without a retry;
+shifts, walks, parks and releases did not cancel it. `resetSample` canceled it, and an actual
+maximum change replaced the tier. A true S1 planted the current window/current smoothed rate,
+used the existing `park(32)` shift shield, and preserved the previous step rather than committing
+the unexecuted integer shrink. The episode then expired and a later confirmation could rearm.
+It preserved the existing router, audit, release and retest machinery. First-episode validation
+matched the diagnostic across 104 cases: 67 eligible decisions, 24 ineligible expirations and
+13 absent episodes. In the canonical seeded-stream battery, 92 of 94 cells had identical counters
+and trajectories. `jumpslide` gained 2.63pp (five gains, three ties), and `whisper_quarter` moved by
+less than 0.005pp per seed. These are separate admission
+schemes and cohorts; their deltas are not pooled. Three historical bars (`deadphase`,
+`sidecliff`'s `noaudit` control and `whisper` at 16384) failed identically on the study baseline
+and candidate. The paired comparison found no new behavioral regression; the literal historical
+bar results remain separately qualified.
+
+**Longer continuation still matters.** On the previously held-out `jumpslide` workload seed 13,
+admission seed 14 parks once, saves 25,085 misses at the original 128C endpoint and 8,926 at 256C, then
+ends the 260-sample trace 234,178 misses behind (−2.75pp over the whole trace). Its complete
+hit sequence matches the earlier one-action replay, so repeated rearming did not cause that
+reversal. All 120 registered TTL/invalidation cases were unchanged, but the matched no-expiry
+period-26 `jumpslide` control from a 60% plant lost 35,363 misses on one seed (−0.83pp; the
+other seven tie). Its initially beneficial park changed later audit/release behavior and ended
+at a ceiling park. A retention action includes those later consequences, not just the time it
+keeps the original allocation.
+
+Keep all known full-continuation costs visible, including losses allowed by the group screen:
+
+| Workload / admission seed | Retention parks | Whole-trace extra misses |
+|---|---:|---:|
+| `jumpslide`, workload seed 13 / admission 14, 260 samples | 1 | 234,178 |
+| `jumpslide`, workload seed 13 / admission 10, 260 samples | 1 | 64,698 |
+| `jumpslide`, workload seed 11 / admission 14, 260 samples | 1 | 104,524 |
+| `jumpslide`, workload seed 11 / admission 15, 260 samples | 2 | 13,505 |
+| period 26 `jumpslide`, 60% plant / admission 1, no expiry | 1 | 35,363 |
+
+These are request/contest-PRF, direct-executor results, not canonical seeded-stream or ordinary
+ThreadLocalRandom expectations. Both seed 13 losses match their earlier single-action continuations.
+The period 26 control's seven peers tie, for a group mean of −0.103769pp. The registered rejection
+requires at least 0.5pp mean loss, C/4 mean extra misses and 7/8 negative seeds; none of these groups
+meets that rule. That does not erase individual costs or create an any-negative-seed rejection rule.
+
+The candidate was not adopted. On the tested Temurin 25/macOS arm64 JVM, the Java
+11-compatible implementation added 32 retained bytes per density-tier cache and no additional
+retained object. Direct density-tier JMH measured about 5ns more per ordinary sample and 3ns per
+sample over the controlled retention cycle. Whole-cache throughput remained inconclusive: baseline
+fork variation and wide paired intervals did not resolve small costs.
+Neither those intervals nor a cold-path location establish zero cost or an unacceptable cost.
+This is a demonstrated later opportunity with unresolved adoption gates, not saturation or a
+production improvement.
+
+The bounded runtime follow-up also ended inconclusively. Its 32 source-identical baseline forks
+(four pairs in each of four whole-cache cases) resolved neither the registered ±2% sensitivity
+target nor a directional build effect. They were not candidate regression measurements. The
+archived 2% sensitivity floor, 5% noise ceiling and 0.01 B/op flag floor are diagnostic rules;
+no numeric engineering acceptance budget was found. That budget and a qualifying measurement
+setup are prerequisites to new candidate classification. No additional candidate timing or
+reserved-holdout outcome checks followed from this unresolved result.
+
+A later integration-only follow-up passed 1,499 unit/integration invocations and one
+five-minute fuzz campaign (2,228,167 executions), with no candidate defect found; specific retention
+branch exposure in fuzzing was unmeasured. One of two ordinary-admission/direct-executor observer
+runs naturally armed, parked at sample 72, audited at 99 and released at 109. Neither of two default-
+executor observer runs parked; clean counterpart action counts were unmeasured. Default mode had
+one demand producer and background common-pool maintenance, not concurrent demand producers.
+Source stripping and controlled observation checks do not establish exact concurrent histories
+or CPU neutrality. A same-maximum policy call still runs maintenance and may age a completed
+sample; tier preservation does not mean all controller state is unchanged. Likewise, quiet
+completion and lifecycle operations add no cancellation rule but may process prior observations.
+
+The 17 real/floor cells and their registered quarter, repeated and planted controls made 42
+paired cells at eight admission seeds each. All counters and trajectories matched, and the
+retention action never fired. The existing recovery bars held, but dormant behavior supplies
+neither a real-corpus gain nor evidence that an active retention decision is safe there.
+
+**S1 was closed without adoption on 2026-09-08.** Its source/test snapshot was discarded; the
+decision-time findings, known losses and reusable workload controls remain the lasting result.
+Runtime acceptance and final reserved checks were not established: ARC P3 was unspent and the
+referenced hash-pinned merge specification was not located. Closing the candidate does not turn
+those unknowns into a performance rejection or establish that no useful improvement remains.
+A future investigation can recreate an experiment against the current source using the targeted
+controls and §6's decision-replay protocol, with its own source binding and validation.
 
 ## 6. Methodology (the discipline that kept this honest)
 
@@ -2026,6 +2207,17 @@ co-tenant
   and even that is only a hypothesis until the exact product splice passes an order-balanced
   benchmark. Warm the exact root, actor, probe, and branch shape being measured, and make estimator
   work externally observable so dead-code elimination cannot manufacture a win.
+- **Establish benchmark repeatability before interpreting small costs.** Use ordered baseline
+  pairs before candidate pairs, preserve slow forks and report uncertainty. A stable slow fork is
+  not necessarily an unfinished warmup. If baseline variation exceeds the registered sensitivity,
+  additional measurements may diagnose it but cannot silently turn it into a permissive pass bar.
+  Separate cold ns/sample from whole-cache throughput and fixture allocation from new allocation
+  in an existing cache; state the sample exposure used for any per-request amortization.
+  Bind the entire cache implementation as well as the controller overlay: class origin proves
+  location, not that a supplied JAR contains the pinned baseline. Pin the resolved JDK and keep
+  different runtime cohorts separate even when their benchmark names and launcher strings match.
+  Check activation outside timing; an initialized sketch can process density samples in an
+  underfilled cache, while a six-reader/two-writer JMH group does not fix the request ratio.
 - **One clock owns each lifecycle boundary.** Host requests, sampled requests, warmup, measure,
   travel, and cooldown are different quantities. Express each transition as one absolute request
   deadline or one remaining count, not two counters that can both charge the same interval. Pin the
@@ -2080,3 +2272,81 @@ co-tenant
   the trace in a materializing reader (pass `-Dcaffeine.simulator.admission.0=Always` for LRU
   anchors, or run product-only); `simulator:simulate`'s chart renderer wedges headless (run one
   size per call); Twitter/IBM holdout projections live at `~/projects/merlin-traces/holdout/`.
+
+### Decision attribution and later retention
+
+**Establish the replay before interpreting a verdict.** Independently replay the same prefix
+into the real cache; compare full policy/controller state, queue order, sketch, node/lifecycle
+metadata and pending maintenance at the intervention. An A/A continuation must reproduce demand
+outcomes and state. Check observation neutrality separately against the same admission rule with
+diagnostic hooks disabled. Do not add cleanup or cache accesses to obtain a convenient snapshot.
+If local instrumentation keys admission by request, event phase, ordered candidate/victim and
+contest occurrence, verify shared identities and variates and count branch-only contests
+separately. The committed seeded-stream harness does not supply that stronger pairing by itself.
+Keep study-only hooks isolated; their logs and allocation costs are not production measurements.
+
+**Price the defined action.** Count cumulative misses from demand outcomes independently of
+controller samples. Record actual allocation and occupancy, transfer carry-over, sampled exposure,
+decision reason and reference values. Share external demand, ticker and lifecycle schedules on
+immutable request indices; regenerate each branch's loads, expirations and completions. Use
+several predeclared horizons spanning immediate
+damage, settling and repayment. Missing decisions, no-op interventions and censored horizons do
+not establish zero headroom. A static optimum or a large expiry count cannot label a false reject.
+
+**Later retention is a separate decision-time diagnostic.** Its question is whether substantial
+remaining savings and a cheap distinguishing signal coexist at a later baseline decision:
+
+1. Predeclare an original episode event, a small finite set of later offsets or eligible source
+   boundaries, skip rules, permissible actions, materiality and controls. Include cases where
+   retention is harmful. Select eligibility from the baseline prefix at the exact pre-action
+   boundary, without choosing times from subsequent loss, a future phase label or an alternative
+   branch's success.
+2. Replay the unchanged controller independently through each later point. No earlier forced
+   park, hold, tolerance or other intervention may supply its state or evidence. Waiting follows
+   ordinary adaptation, even if it loses the good position. A hold used to gather evidence is
+   already a treatment. Log which fields were available before the decision; post-route fields
+   overwritten by a plant, release or retest are not automatically valid inputs.
+3. From that common state, compare ordinary continuation with one specified bounded action.
+   Distinguish retaining the **current** allocation from returning to a previously observed one.
+   If the position has already been lost, charge real capped transfers, displaced residents and
+   settling; do not restore an earlier cache snapshot or assume an earlier park's occupancy.
+4. Compare later times at the **same predeclared episode endpoints**, anchored to the original
+   event. Keep the misses incurred while waiting and after acting in the accounting. Equal-length
+   postdecision horizons can additionally explain settling, but moving every endpoint later would
+   grant the delayed action extra regime time. Report absolute remaining savings first; compare
+   them with the early-intervention gain at the same endpoint only when that denominator is
+   materially positive. Such a ratio can be negative or exceed one and is not a probability.
+5. Construct discriminator inputs from baseline-prefix observations alone. Offline outcome labels
+   may guide fitting on discovery cases; freeze the cheap rule before testing held-out cases and
+   seeds with both helpful and harmful retention outcomes. Identical observed histories must
+   produce identical rule outputs until baseline-observable evidence diverges. A difference in
+   counters is not enough: it must distinguish the better action while substantial savings remain.
+   Future replay may label outcomes, never become a feature or choose a per-event trigger by its
+   realized savings.
+6. Report remaining savings and discriminator performance against decision delay, including
+   waiting, movement and recovery costs. For the tested actions and discriminator, a useful
+   interval exists only where both tests pass. Report no such interval if the signal arrives after
+   the residents or most of the benefit are lost.
+   Do not assume savings decline monotonically, select the best noisy time as recoverable regret,
+   or add overlapping event gains. An unexercised or underpowered interval remains inconclusive.
+
+Keep true abstentions separate from missing opportunities: a false signal at an observed eligible
+decision is exact baseline continuation, while an absent episode or eligibility window supplies
+no action label. Do not require an entire control group's mean to be negative before recognizing
+an individually paired harmful action that the signal rejects. Report both group gates and
+individual losses. A failed earliest-trigger rule also does not exhaust the registered later
+points; a timing hypothesis chosen from discovery needs its own frozen held-out confirmation.
+
+Price the smallest sufficient history. A conjunction of episode-relative support tests can retain
+the preceding sample's boolean verdict instead of all preceding measurements, provided it is
+updated on every complete sample and reseeded when the reference changes. Keep the current-only
+action predicate out of that history. A sampled clock may reproduce a request-indexed diagnostic
+on a fixed unit-weight panel without doing so under buffering, weights or lifecycle changes;
+verify the equivalence on the actual targets and state that boundary.
+
+Only a surviving discriminator justifies an end-to-end candidate. Freeze its first-trigger and
+subsequent behavior, then replay that candidate on its **own** evolving states: baseline event
+tables cannot estimate the reachability or gain after earlier interventions. The existing
+behavioral, corpus, holdout, invariant and runtime-cost gates still apply. A useful one-decision
+signal justifies measuring that candidate; it does not establish the repeated policy's gain or
+make unmeasured runtime cost either free or an obstruction.

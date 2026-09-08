@@ -1,0 +1,11 @@
+{
+  "max": 8192,
+  "seed": 7,
+  "repeat": 1,
+  "members": {
+    "cold": {"kind": "scan"}
+  },
+  "segments": [
+    {"samples": 80, "shares": {"cold": 1.0}}
+  ]
+}
