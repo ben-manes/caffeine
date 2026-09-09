@@ -323,7 +323,10 @@
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.WindowClimber"/>
-    <Method name="determineAdjustment"/>
+    <Or>
+      <Method name="discardSample"/>
+      <Method name="determineAdjustment"/>
+    </Or>
     <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
   </Match>
   <Match>

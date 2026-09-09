@@ -311,6 +311,15 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   (read-path) settle is quiet-capable but unreached in production, since `refreshAfterWrite` forces
   `exceedsWriteTimeTolerance` and routes every completion through the UpdateTask; the guard is not
   dead code, `replace`'s async-completion callers reach the same shape. Read the doc.
+- **The climber is held until the cache is half full.** `climb()` skips the adaptation while
+  `weightedSize() < (maximum() >>> 1)` and discards the sample only once it fills, since several
+  pins record into the sample on caches that never fill and an untouched sample grows without
+  bound. Read the doc. Below that line
+  nothing is evicting, so the sampled hit rate does not describe the region split, and the
+  sketch's `sampleSize` caps the sample period, so a sketch sized smaller than the maximum reads
+  that meaningless signal on a compressed cadence. Reached by `initialCapacity` below the maximum
+  and by growing `maximum`; measured at −11.8pp (`arc/S3@400k`, hint 1000) before the gate. Don't
+  narrow it back to the sketch's initialization, and don't latch it. Read the doc.
 - **The climber is tiered by size, and both tiers are measured, not tuned by taste.**
   `≤512` reactive with slow-adapt tuning (grow-first, stretched period, slow decay); `≤4096`
   reactive at standard period/decay; `>4096` the **goal-audited density climber** — a

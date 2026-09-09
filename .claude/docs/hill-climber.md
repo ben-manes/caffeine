@@ -967,10 +967,41 @@ Non-starved samples are the pure density step. The additions:
    restart magnitude), and the sample period is
    `min(saturated 4·maximum, sketch.sampleSize)` — the sketch's sample is entry-denominated, so
    weighted maxima cannot inflate the period by the mean entry weight (a weight-units period froze
-   weighted adaptation entirely), and a near-Long.MAX maximum cannot overflow it. After growing
-   the maximum, the sketch keeps its old sample until the lazy half-full `ensureCapacity`, so the
-   period transiently runs below 4·maximum while steps already scale to the new maximum —
-   accepted; it self-heals as the cache fills.
+   weighted adaptation entirely), and a near-Long.MAX maximum cannot overflow it. The sketch's
+   sample can sit far below the maximum whenever the sketch was sized for something smaller: an
+   `initialCapacity` hint sizes it at construction, and growing the maximum leaves the old sample
+   in place until the lazy half-full `ensureCapacity`. The period then runs well below 4·maximum
+   while the steps already scale to the new maximum.
+
+   That used to be accepted as a transient that heals when the cache fills. The period does heal;
+   the window it drove to does not. `climb()` therefore skips `determineAdjustment` until
+   `weightedSize() >= maximum() >>> 1`, the same half of the maximum that sizes the sketch,
+   instead of adapting the moment the sketch exists. A cold cache is not evicting, so its sampled
+   hit rate does not describe the region split; before the gate, the compressed cadence read that
+   signal often enough to walk the window across the partition. The cold branch discards a *full*
+   sample rather than resetting every cycle: resetting every cycle is not available, since several
+   pins record into the sample on caches that never fill, one of them
+   (`asyncBulkCompletion_doesNotRecordAccess`) on ten in-flight futures that weigh nothing until
+   they complete, so no maximum both opens the gate and holds the entries. Leaving the sample
+   untouched is not available either, because it then grows without bound and breaks
+   `LocalCacheSubject`'s mirror of the period gate (`HashClashTest` reached 233,364 requests
+   against a 2,572 period). `WindowClimber.discardSample` closes it on the same period
+   `determineAdjustment` uses, so the invariant holds unchanged and the cold prefix a first real
+   sample can inherit is bounded by one period. Pinned by
+   `BoundedLocalCacheTest.adapt_partiallyFilled_holdsWindow` and its `adapt_filled_climbsWindow`
+   pair.
+
+   Priced 2026-09-08 against `product.Caffeine`, hit rate %, `maximumSize` with an
+   `initialCapacity` of 1000 and of 10000 beside the un-hinted arm: `arc/S3@400k` 29.27 / 40.59
+   against 41.04, `arc/DS1@1M` 8.76 / 8.97 against 12.48, `arc/P3@100k` 33.50 / 39.63 against
+   40.43; `metaCDN@250k`, `wiki1190@250k`, `cs@8192` and `corda@8192` unmoved. The loss tracks the
+   compression ratio `0.4 × maximum / hint` rather than the hint, so 16× is free, 40× costs 3.4pp
+   and 160× costs 11.8pp, and no cell at `maximum` 8192 can show it because `MIN_SKETCH_SIZE`
+   floors the sample at 2560. With the gate every hint arm lands within 0.4pp of the un-hinted
+   one. A patched `samplePeriod` returning `4 × maximum` unclamped recovers the same loss and is
+   inert un-hinted, which is what separates the cadence from the sketch's own density; the two
+   share `sampleSize` in production, so no public API separates them. The `setMaximum` growth arm
+   measured the same −3.4pp before the gate and is closed by it.
 
 Shape of the code: `determineAdjustment` gates on the tier's sample period, dispatches to the
 bound tier, and closes the sample; the density tier's `route` is a **router** — handed one

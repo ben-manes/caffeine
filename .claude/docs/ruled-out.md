@@ -176,6 +176,15 @@ These dispose of whole families. Check them first.
 - `weakKeys()` spliterators advertising `Spliterator.DISTINCT`. `IdentityHashMap`, the class
   the `weakKeys` javadoc names as its model, does the same on key and entry and omits it on
   values. Removing it makes `distinct()` merge distinct live entries.
+- Bulk `Iterable` operations collapsing equal-but-distinct keys under `weakKeys()`. Measured
+  2026-09-08 on two live keys equal by `equals` but distinct by identity: `refreshAll` issues one
+  load and leaves the second entry stale, `getAll` issues one load and leaves the second key
+  absent, `getAllPresent` reports one of the two. None of these methods documents the type of the
+  map it returns, and a `Map<K, V>` cannot hold both keys, so the collapse is undefined behaviour
+  rather than a defect (Ben, 2026-09-08). A caller who needs both operates per key; `refresh(key)`
+  reaches each one. The equals-based dedup in `refreshAll` is not incidental either: dropping it
+  costs a second load for a key repeated in the input, on the default and direct executors alike.
+  `invalidateAll(Iterable)` returns void, has no such limit, and does reach both keys.
 - Weak-key lookups allocating a `LookupKeyReference` (24 B/op). A thread-local mutable
   wrapper pins the instance to the thread, rejected in #294 for virtual threads and
   classloader pinning. Young-gen allocation is the better trade.

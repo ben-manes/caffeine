@@ -105,6 +105,13 @@ final class WindowClimber {
     }
   }
 
+  /** Discards a full sample gathered while the cache was too empty to adapt from. */
+  public void discardSample(long maximum, int sketchSampleSize) {
+    if (sample.requestCount() >= tier.samplePeriod(maximum, sketchSampleSize)) {
+      sample.reset();
+    }
+  }
+
   /** A strategy for adjusting the admission window from sampled cache statistics. */
   abstract static class Climber {
     final Step step;

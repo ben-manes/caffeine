@@ -3423,13 +3423,19 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
-  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
   void adapt_largeCache_climbAppliesProbeEntryStride(BoundedLocalCache<Int, Int> cache) {
     // A starved window at a blind corner arms an up probe, and climb() must carry the entry
     // stride through the region transfer: the window and protected maxima shift by the stride
     // with their sum conserved
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
-    cache.frequencySketch().ensureCapacity(cache.maximum());
+    // enough weight to pass the half of the maximum that releases the climber
+    for (int i = 0; i < ((DENSITY_THRESHOLD / 10) + 10); i++) {
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(i))).isNull();
+    }
+    cache.cleanUp();
     cache.setWindowMaximum(cache.maximum() / 10);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
@@ -3457,13 +3463,19 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
-  @CacheSpec(compute = Compute.SYNC, population = Population.FULL, maximumSize = Maximum.FULL)
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
   void adapt_largeCache_climbAppliesDownProbeStride(BoundedLocalCache<Int, Int> cache) {
     // The mirror: a dead sample past the midpoint arms a down probe (the one down trigger left,
     // since a starved main beside a large window steers instead of probing), and climb() shrinks
     // the window by the entry stride through the transfer path
     cache.setMaximumSize(2 * DENSITY_THRESHOLD);
-    cache.frequencySketch().ensureCapacity(cache.maximum());
+    // enough weight to pass the half of the maximum that releases the climber
+    for (int i = 0; i < ((DENSITY_THRESHOLD / 10) + 10); i++) {
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(i))).isNull();
+    }
+    cache.cleanUp();
     cache.setWindowMaximum((cache.maximum() * 7) / 8);
     cache.setMainProtectedMaximum(
         (long) (PERCENT_MAIN_PROTECTED * (cache.maximum() - cache.windowMaximum())));
@@ -3919,6 +3931,58 @@ final class BoundedLocalCacheTest {
 
     assertThat(cache.climber().sample.windowHits).isEqualTo(0);
     assertThat(cache.climber().sample.hits).isEqualTo(0);
+  }
+
+  @Test
+  @SuppressWarnings("CheckReturnValue")
+  void adapt_partiallyFilled_holdsWindow() {
+    // An initialCapacity hint sizes the sketch at construction, so a hint below the maximum used
+    // to release the climber over a cache that had not begun to evict, on a sample period
+    // compressed to the hint. The window is not on the Policy surface, so the hold is pinned
+    // here; what a user loses to it is hit rate, which the /climber-gate battery measures.
+    Cache<Integer, Boolean> cache = Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .initialCapacity(256)
+        .maximumSize(8192)
+        .build();
+    var local = asBoundedLocalCache(cache);
+    long windowMaximum = local.windowMaximum();
+
+    int residents = (int) (local.maximum() / 2) - 1;
+    for (int i = 0; i < residents; i++) {
+      cache.put(i, Boolean.TRUE);
+      cache.getIfPresent(i);
+      cache.getIfPresent(i / 2);
+    }
+    cache.cleanUp();
+
+    assertThat(cache.estimatedSize()).isEqualTo(residents);
+    assertThat((long) local.frequencySketch().sampleSize).isLessThan(local.maximum());
+    assertThat(local.windowMaximum()).isEqualTo(windowMaximum);
+  }
+
+  @Test
+  @SuppressWarnings("CheckReturnValue")
+  void adapt_filled_climbsWindow() {
+    // The hold releases where the lazy sketch initialization already sat, so the same hinted
+    // cache adapts once it has filled.
+    Cache<Integer, Boolean> cache = Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .initialCapacity(256)
+        .maximumSize(8192)
+        .build();
+    var local = asBoundedLocalCache(cache);
+    long windowMaximum = local.windowMaximum();
+
+    for (int i = 0; i < (2 * local.maximum()); i++) {
+      cache.put(i, Boolean.TRUE);
+      cache.getIfPresent(i);
+      cache.getIfPresent(i / 2);
+    }
+    cache.cleanUp();
+
+    assertThat(cache.estimatedSize()).isEqualTo(local.maximum());
+    assertThat(local.windowMaximum()).isNotEqualTo(windowMaximum);
   }
 
   @ParameterizedTest

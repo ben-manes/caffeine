@@ -270,6 +270,24 @@ gains (corda's cliff, `OLTP`/`fiu_ikki`/`metaCDN`/`fiu_homes` converging to thei
 made dup-heavy/phasey traces jitter persistently and never lengthen, cratering `cs` worse than a fixed
 2×. Don't reintroduce it.
 
+**The climber is held until the cache is half full, and the gate is residency, not the sketch's
+existence.** `climb()` skips `determineAdjustment` while `weightedSize() < (maximum() >>> 1)`, discarding the
+sample through `WindowClimber.discardSample` once it fills, and still resets it outright when the
+sketch is uninitialized. A cache below that
+line is not evicting, so its sampled hit rate says nothing about the window/main split, and the
+sketch's `sampleSize` caps the sample period, so a sketch sized for less than the maximum reads
+that meaningless signal on a compressed cadence. `Caffeine.initialCapacity(n)` is one way in (the
+generated constructor calls `ensureCapacity(min(maximum, n))`) and growing `maximum` through
+`Policy.Eviction.setMaximum` is the other. Measured 2026-09-08 on `product.Caffeine`: a
+`maximumSize(400_000)` cache hinted at `initialCapacity(1000)` scored 29.27 on `arc/S3` against
+41.04 un-hinted, `arc/DS1@1M` 8.76 against 12.48, `arc/P3@100k` 33.50 against 40.43, and the
+window sat at 47–80% of the maximum forty million operations later where the un-hinted arm rested
+at 26%. The sketch reinflates on schedule at half fill; the window it drove to does not come back,
+which is why the old acceptance ("a transient that self-heals as the cache fills") was wrong. Don't
+weaken the gate back to the sketch's initialization alone, and don't latch it. The unlatched form
+is what closes the `setMaximum` growth case, and it is two field reads under `evictionLock`. Pinned
+by `BoundedLocalCacheTest.adapt_partiallyFilled_holdsWindow` / `adapt_filled_climbsWindow`.
+
 **Climber `adjustment` is a multi-cycle carry-over, not stale state.** `increaseWindow` /
 `decreaseWindow` transfer at most `QUEUE_TRANSFER_THRESHOLD` (e.g. 1000) nodes per maintenance
 cycle, then store the *unfulfilled* remainder back into the climber's `adjustment`

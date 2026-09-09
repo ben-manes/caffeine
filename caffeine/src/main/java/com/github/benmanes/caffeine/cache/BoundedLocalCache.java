@@ -1127,9 +1127,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     if (frequencySketch().isNotInitialized()) {
       climber().resetSample();
-    } else {
+    } else if (weightedSize() >= (maximum() >>> 1)) {
       climber().determineAdjustment(maximum(), windowMaximum(),
           mainProtectedMaximum(), frequencySketch().sampleSize);
+    } else {
+      climber().discardSample(maximum(), frequencySketch().sampleSize);
     }
 
     demoteFromMainProtected();
