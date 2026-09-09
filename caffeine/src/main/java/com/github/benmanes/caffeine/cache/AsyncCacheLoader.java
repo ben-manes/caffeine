@@ -167,13 +167,12 @@ public interface AsyncCacheLoader<K, V extends @Nullable Object> {
       @Override public CompletableFuture<@Nullable V> asyncLoad(K key, Executor executor) {
         return asyncLoadAll(Set.of(key), executor).thenApply(results -> results.get(key));
       }
-      @Override public CompletableFuture<Map<K, V>> asyncLoadAll(
+      @Override
+      public CompletableFuture<? extends Map<? extends K, ? extends @NonNull V>> asyncLoadAll(
           Set<? extends K> keys, Executor executor) {
         requireNonNull(keys);
         requireNonNull(executor);
-        @SuppressWarnings("unchecked")
-        var future = (CompletableFuture<Map<K, V>>) mappingFunction.apply(keys, executor);
-        return future;
+        return mappingFunction.apply(keys, executor);
       }
     };
   }
