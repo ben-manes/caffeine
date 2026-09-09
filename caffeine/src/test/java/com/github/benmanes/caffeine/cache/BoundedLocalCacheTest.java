@@ -863,6 +863,62 @@ final class BoundedLocalCacheTest {
   }
 
   @Test
+  void put_reorderedUpdates_leaveNoRegionResidue() {
+    // A node accumulates its update deltas into an int policyWeight while the region totals take
+    // the same deltas as longs. The value is written under the node's monitor but the update task
+    // is queued after it is released, so a second writer can queue its task first and the
+    // intermediate sum then leaves the int range. A removal listener on a direct executor runs in
+    // exactly that gap, which is what orders the two writers here.
+    int big = Integer.MAX_VALUE - 1;
+    var arrived = new AtomicBoolean();
+    var release = new AtomicBoolean();
+    var park = new AtomicBoolean();
+
+    var cache = asBoundedLocalCache(Caffeine.newBuilder()
+        .weigher((Int key, Int value) -> value.intValue())
+        .removalListener((@Nullable Int key, @Nullable Int value, RemovalCause cause) -> {
+          if (park.compareAndSet(true, false)) {
+            arrived.set(true);
+            await().untilTrue(release);
+          }
+        })
+        .maximumWeight(10_000_000_000L)
+        .executor(Runnable::run)
+        .build());
+    var key = Int.valueOf(1);
+    assertThat(cache.put(key, Int.valueOf(big))).isNull();
+
+    park.set(true);
+    var writer = new Thread(() -> assertThat(cache.put(key, Int.valueOf(1))).isNotNull());
+    writer.start();
+    await().untilTrue(arrived);
+
+    // the second write's task is queued and applied while the first writer is still parked
+    assertThat(cache.put(key, Int.valueOf(big))).isNotNull();
+
+    release.set(true);
+    Uninterruptibles.joinUninterruptibly(writer);
+    cache.cleanUp();
+
+    cache.evictionLock.lock();
+    try {
+      var node = cache.data.values().iterator().next();
+
+      // the node itself settles once both tasks have been applied
+      assertThat(node.getPolicyWeight()).isEqualTo(big);
+      assertThat(cache.weightedSize()).isEqualTo(big);
+
+      // the regions it moved through must settle with it
+      assertThat(cache.windowWeightedSize()).isEqualTo(
+          cache.accessOrderWindowDeque().stream().mapToLong(Node::getPolicyWeight).sum());
+      assertThat(cache.mainProtectedWeightedSize()).isEqualTo(
+          cache.accessOrderProtectedDeque().stream().mapToLong(Node::getPolicyWeight).sum());
+    } finally {
+      cache.evictionLock.unlock();
+    }
+  }
+
+  @Test
   void evictFromWindow_cappedByTransfers() {
     var cache = asBoundedLocalCache(Caffeine.newBuilder()
         .weigher((Int key, Int value) -> value.intValue())
@@ -1662,7 +1718,7 @@ final class BoundedLocalCacheTest {
       } else {
         node.die();
       }
-      assertThat(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight())).isNull();
+      assertThat(cache.nodeToCacheEntry(node, v -> v, (int) node.getPolicyWeight())).isNull();
     }
     // reset due to intentionally corrupting the internal state
     requireNonNull(context.build(key -> key));
@@ -1674,7 +1730,7 @@ final class BoundedLocalCacheTest {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var weakKey = (Reference<?>) node.getKeyReference();
     weakKey.clear();
-    assertThat(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight())).isNull();
+    assertThat(cache.nodeToCacheEntry(node, v -> v, (int) node.getPolicyWeight())).isNull();
   }
 
   @ParameterizedTest
@@ -1683,7 +1739,7 @@ final class BoundedLocalCacheTest {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.firstKey())));
     var weakValue = (Reference<?>) node.getValueReference();
     weakValue.clear();
-    assertThat(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight())).isNull();
+    assertThat(cache.nodeToCacheEntry(node, v -> v, (int) node.getPolicyWeight())).isNull();
   }
 
   @ParameterizedTest
@@ -1719,19 +1775,19 @@ final class BoundedLocalCacheTest {
       expiryTime = Expire.ONE_MINUTE, population = Population.FULL)
   void nodeToCacheEntry_expiration(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (var node : cache.data.values()) {
-      var entry = requireNonNull(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight()));
+      var entry = requireNonNull(cache.nodeToCacheEntry(node, v -> v, (int) node.getPolicyWeight()));
       assertThat(entry.expiresAfter()).isEqualTo(Duration.ofMinutes(1));
     }
 
     context.ticker().advance(Duration.ofSeconds(30));
     for (var node : cache.data.values()) {
-      var entry = requireNonNull(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight()));
+      var entry = requireNonNull(cache.nodeToCacheEntry(node, v -> v, (int) node.getPolicyWeight()));
       assertThat(entry.expiresAfter()).isEqualTo(Duration.ofSeconds(30));
     }
 
     context.ticker().advance(Duration.ofMinutes(1));
     for (var node : cache.data.values()) {
-      assertThat(cache.nodeToCacheEntry(node, v -> v, node.getPolicyWeight())).isNull();
+      assertThat(cache.nodeToCacheEntry(node, v -> v, (int) node.getPolicyWeight())).isNull();
     }
   }
 
@@ -3974,7 +4030,7 @@ final class BoundedLocalCacheTest {
     var local = asBoundedLocalCache(cache);
     long windowMaximum = local.windowMaximum();
 
-    for (int i = 0; i < (2 * local.maximum()); i++) {
+    for (int i = 0; i < (int) (2 * local.maximum()); i++) {
       cache.put(i, Boolean.TRUE);
       cache.getIfPresent(i);
       cache.getIfPresent(i / 2);
@@ -7373,8 +7429,8 @@ final class BoundedLocalCacheTest {
       compute = Compute.SYNC)
   void remap_preserveTimestamps_withoutPreserveRefresh_discardsPendingRefresh(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    // The complement of the above: refresh-rejection callers (the existing refreshIfNeeded paths) 
-    // set only preserveTimestamps and want the rejected refresh cleaned up — discardRefresh must 
+    // The complement of the above: refresh-rejection callers (the existing refreshIfNeeded paths)
+    // set only preserveTimestamps and want the rejected refresh cleaned up — discardRefresh must
     // still fire when preserveRefresh is left at its default false.
     var key = context.firstKey();
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));

@@ -97,7 +97,7 @@ jobs:
             distribution: temurin
           - java: 26
             distribution: temurin
-          - java: 27-ea
+          - java: 28-ea
             distribution: temurin
           - java: 25
             distribution: graalvm

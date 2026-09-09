@@ -712,7 +712,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
 
       Node<K, V> next = node.getNextInAccessOrder();
-      int weight = node.getPolicyWeight();
+      long weight = node.getPolicyWeight();
       if (weight != 0) {
         transfer(node, weight, WINDOW, PROBATION);
         if (first == null) {
@@ -1175,7 +1175,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         break;
       }
 
-      int weight = candidate.getPolicyWeight();
+      long weight = candidate.getPolicyWeight();
       if (quota < weight) {
         break;
       }
@@ -1207,7 +1207,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         break;
       }
 
-      int weight = candidate.getPolicyWeight();
+      long weight = candidate.getPolicyWeight();
       if (quota < weight) {
         break;
       }
@@ -1245,7 +1245,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * region that tracks its own.
    */
   @GuardedBy("evictionLock")
-  void transfer(Node<K, V> node, int weight, int from, int to) {
+  void transfer(Node<K, V> node, long weight, int from, int to) {
     if (from == WINDOW) {
       setWindowWeightedSize(windowWeightedSize() - weight);
       accessOrderWindowDeque().remove(node);
@@ -2110,7 +2110,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if (access.recordsMiss()) {
           climber().recordMiss();
         }
-        int oldWeightedSize = node.getPolicyWeight();
+        long oldWeightedSize = node.getPolicyWeight();
         node.setPolicyWeight(oldWeightedSize + weightDifference);
         if (node.inWindow()) {
           setWindowWeightedSize(windowWeightedSize() + weightDifference);
@@ -3485,7 +3485,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         boolean[] open = { true };
         return mappingFunction.apply(stream.onClose(() -> open[0] = false)
             .peek(ignored -> requireState(open[0], "stream has already been closed"))
-            .map(node -> nodeToCacheEntry(node, transformer, node.getPolicyWeight()))
+            .map(node -> nodeToCacheEntry(node, transformer, (int) node.getPolicyWeight()))
             .filter(Objects::nonNull));
       }
     } finally {

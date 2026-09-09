@@ -97,6 +97,12 @@ Before reporting a bug or suggesting a "fix," check this list. These are intenti
   `putIfAbsent` holds. Read the doc.
 - **notifyEviction before user code** preserves linearizability. Instead verify catch-commit-rethrow handles exceptions after irrevocable notification.
 - **Catch-commit-rethrow** in doComputeIfAbsent/remap makes phantom evictions real on exception. Instead verify the committed state is consistent. This is the most commonly misunderstood pattern — read the doc before flagging exception handling in compute paths.
+- **The policy weight is 64 bits, split between `policyWeight` and the node's `metadata` word.**
+  Update tasks for one key can be queued out of order, so the field walks past the true value and
+  back. Truncating it is what breaks: a `transfer` copies the truncated value into the long region
+  totals and nothing replays that copy, leaving a permanent 2^32 residue that kills the admission
+  window. Present in 3.2.4. A sign test on the transfer misses half the cases, since the wrap can
+  land positive. The packing is free in layout where a `long` field is not. Read the doc.
 - **Two weight fields** (weight + policyWeight) is intentional for the telescoping sum; verify
   both converge rather than flagging transient negatives. `makeDead` subtracting `getWeight` and
   `UpdateTask.run` being dead-guard-free are a matched pair — don't change either alone. The same

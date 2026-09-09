@@ -9,7 +9,10 @@ paths:
 
 # Concurrency Conventions
 
-- Most node field access uses VarHandle access modes (key, value, accessTime, writeTime) — check acquire/release/opaque carefully. weight, policyWeight, and queueType are plain non-volatile fields, read and written directly.
+- Most node field access uses VarHandle access modes (key, value, accessTime, writeTime) — check acquire/release/opaque carefully. weight, policyWeight, and metadata are plain non-volatile fields, read and written directly.
+  `metadata` is a bag of bits the eviction policy owns: the low `QUEUE_BITS` are the queue type
+  and a weighted node spends the rest on the high half of its 64-bit policy weight, so
+  `getPolicyWeight`/`setQueueType` both touch it and neither may be called without the lock.
 - synchronized(node) is used for node-level mutations; evictionLock for policy state
 - Lock ordering must be: evictionLock → CHM bin lock → synchronized(node)
 - Read buffer drops are benign (affects eviction quality, not correctness)

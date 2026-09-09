@@ -80,13 +80,13 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
 
   /** Returns the weight of this entry from the policy's perspective. */
   // @GuardedBy("evictionLock")
-  public int getPolicyWeight() {
-    return 1;
+  public long getPolicyWeight() {
+    return 1L;
   }
 
   /** Sets the weight from the policy's perspective. */
   // @GuardedBy("evictionLock")
-  public void setPolicyWeight(int weight) {}
+  public void setPolicyWeight(long weight) {}
 
   /* --------------- Health --------------- */
 
@@ -159,6 +159,8 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   public static final int WINDOW = 0;
   public static final int PROBATION = 1;
   public static final int PROTECTED = 2;
+  public static final int QUEUE_BITS = 2;
+  public static final int QUEUE_MASK = (1 << QUEUE_BITS) - 1;
 
   /** Returns if the entry is in the Window or Main space. */
   public boolean inWindow() {

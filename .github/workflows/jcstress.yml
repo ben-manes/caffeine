@@ -36,7 +36,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        java: [ 11, 26, 27-ea ]
+        java: [ 11, 26, 28-ea ]
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
     env:
       JAVA_VERSION: ${{ matrix.java }}

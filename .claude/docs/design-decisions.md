@@ -58,6 +58,26 @@ rejected in issue #294 over virtual threads, where an instance per virtual threa
 and over classloader pinning. A young-generation allocation is the better trade. Rejected again on
 2026-08-29 (row 21.3).
 
+**The policy weight is 64 bits, packed into the node's `metadata` word.** Reordered update tasks
+are normal: the value is written under the node monitor but the task is queued after it is
+released, so a second writer can queue first. The node's own field then walks past the true value
+and back, which the design tolerates. What it cannot tolerate is truncation. Once the intermediate
+sum leaves the int range, a `transfer` copies the truncated value into the long region totals, and
+nothing replays that copy: the node settles at its real weight while `windowWeightedSize` or
+`mainProtectedWeightedSize` keeps a permanent 2^32 residue. Measured 2026-09-08 with weights near
+`Integer.MAX_VALUE`, the window then reads as permanently over its maximum, `evictFromWindow`
+drains it every cycle, and every later arrival goes straight to probation, so the admission window
+is dead for the life of the cache. The released 3.2.4 and 3.2.5 reproduce it, so it is not new.
+A sign test on the transfer does not close it: half the wraps land positive, where the value is a
+plausible weight. The excursion is bounded by the buffered tasks for one node, so about
+`WRITE_BUFFER_MAX x Integer.MAX_VALUE`, or 2^45; 34 bits was the most a witness reached.
+`policyWeight` therefore holds the low half and `metadata`'s spare bits the high half, which costs
+nothing in layout (JOL over all 147 node classes is unchanged, where a plain `long` field grows the
+16 strong-value weighted classes by 8 bytes). Pinned by
+`BoundedLocalCacheTest.put_reorderedUpdates_leaveNoRegionResidue`, which orders two writers through
+a removal listener on a direct executor. Don't re-narrow the field, and don't guard the transfer
+on the sign instead.
+
 **Two notions of "weighted", and the internal one gates on both.** The `isWeighted` field is
 whether the caller configured a weigher, and it is what `Policy.Eviction.isWeighted()` reports.
 `BoundedLocalCache.isWeighted()` answers a different question, whether entries may be assigned

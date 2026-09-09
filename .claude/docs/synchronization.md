@@ -31,8 +31,8 @@ lambda — which holds only the bin lock, no node monitor — e.g.
 - Frequency sketch mutations
 - Weight counters (weightedSize, windowWeightedSize)
 - Drain status transitions (under lock)
-- policyWeight field on nodes
-- queueType field on nodes
+- policyWeight, split across its own field and the node's metadata word
+- metadata field on nodes (queue type, and a weighted node's policy weight high half)
 
 ### CHM bin lock (held implicitly during compute/computeIfPresent/merge)
 - Atomic read-modify-write on map entries
@@ -58,7 +58,12 @@ lambda — which holds only the bin lock, no node monitor — e.g.
 | variableTime | getOpaque | setOpaque, CAS | synchronized(node) for CAS |
 | weight | plain | plain | synchronized(node); unlocked reads accept staleness |
 | policyWeight | plain | plain | evictionLock; unlocked reads accept staleness |
-| queueType | plain | plain | evictionLock |
+| metadata | plain | plain | evictionLock |
+
+`getPolicyWeight` reads two plain fields, its own and `metadata`, so an unlocked reader can
+see them from different moments. Every caller holds `evictionLock`; the one exception is the
+`Policy` snapshot, which narrows the result to an `int` for `CacheEntry.weight` and accepts the
+staleness the surrounding rows already describe.
 
 Note: the expiry read protocol pairs these modes. A rewrite stores the value and then the
 timestamps, with `setValue`'s trailing `storeStoreFence` holding that order; a lock-free

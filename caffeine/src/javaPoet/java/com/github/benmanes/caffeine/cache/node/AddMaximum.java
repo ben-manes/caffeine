@@ -36,21 +36,24 @@ public final class AddMaximum implements Rule<NodeContext> {
 
   @Override
   public void execute(NodeContext context) {
-    addQueueFlag(context);
+    addMetadata(context);
     addWeight(context);
   }
 
-  private static void addQueueFlag(NodeContext context) {
-    context.classSpec.addField(int.class, "queueType");
+  private static void addMetadata(NodeContext context) {
+    boolean weighted = context.generateFeatures.contains(Feature.MAXIMUM_WEIGHT);
+    context.classSpec.addField(int.class, "metadata");
     context.classSpec.addMethod(MethodSpec.methodBuilder("getQueueType")
         .addModifiers(context.publicFinalModifiers())
         .returns(int.class)
-        .addStatement("return queueType")
+        .addStatement(weighted ? "return metadata & QUEUE_MASK" : "return metadata")
         .build());
     context.classSpec.addMethod(MethodSpec.methodBuilder("setQueueType")
         .addModifiers(context.publicFinalModifiers())
         .addParameter(int.class, "queueType")
-        .addStatement("this.queueType = queueType")
+        .addStatement(weighted
+            ? "this.metadata = (this.metadata & ~QUEUE_MASK) | queueType"
+            : "this.metadata = queueType")
         .build());
   }
 
@@ -64,9 +67,23 @@ public final class AddMaximum implements Rule<NodeContext> {
         .addMethod(context.newSetter(TypeName.INT, "weight", FieldAccess.DIRECT));
     context.constructorByKeyRef.addStatement("this.$N = $N", "weight", "weight");
 
-    context.classSpec.addField(int.class, "policyWeight")
-        .addMethod(context.newGetter(Strength.STRONG,
-            TypeName.INT, "policyWeight", FieldAccess.DIRECT))
-        .addMethod(context.newSetter(TypeName.INT, "policyWeight", FieldAccess.DIRECT));
+    // Reordered update tasks can drive the policy weight past the int range before the replay
+    // settles, and a transfer that copied a truncated value into the long region totals would
+    // leave a residue that no later task repairs. Its low half lives in its own field and its
+    // high half in the metadata bits the queue type does not use, so no node grows.
+    context.classSpec.addField(int.class, "policyWeight");
+    context.classSpec.addMethod(MethodSpec.methodBuilder("getPolicyWeight")
+        .addModifiers(context.publicFinalModifiers())
+        .returns(long.class)
+        .addStatement("return ((long) (metadata >> QUEUE_BITS) << Integer.SIZE)"
+            + " | Integer.toUnsignedLong(policyWeight)")
+        .build());
+    context.classSpec.addMethod(MethodSpec.methodBuilder("setPolicyWeight")
+        .addModifiers(context.publicFinalModifiers())
+        .addParameter(long.class, "policyWeight")
+        .addStatement("this.policyWeight = (int) policyWeight")
+        .addStatement("this.metadata = (this.metadata & QUEUE_MASK)"
+            + " | ((int) (policyWeight >> Integer.SIZE) << QUEUE_BITS)")
+        .build());
   }
 }

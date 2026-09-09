@@ -40,7 +40,8 @@ guice = "7.0.0"
 h2 = "2.5.250"
 hamcrest = "3.0"
 hazelcast = "5.7.0"
-httpclient = "4.5.14"
+httpclient4 = "4.5.14"
+httpclient5 = "5.6.4"
 idea = "1.4.1"
 infer-annotations = "0.18.0"
 jackrabbit = "2.6.0"
@@ -91,7 +92,7 @@ protobuf = "4.36.1"
 roseau = "0.6.0"
 slf4j = "2.0.19"
 slf4j-test = "3.0.3"
-sigstore = "2.2.0"
+sigstore = "2.3.0"
 sonarqube = "7.5.0.8588"
 spotbugs = "4.10.4"
 spotbugs-contrib = "7.7.4"
@@ -148,7 +149,8 @@ guice = { module = "com.google.inject:guice", version.ref = "guice" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
 hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
 hazelcast = { module = "com.hazelcast:hazelcast", version.ref = "hazelcast" }
-httpclient = { module = "org.apache.httpcomponents:httpclient", version.ref = "httpclient" }
+httpclient4 = { module = "org.apache.httpcomponents:httpclient", version.ref = "httpclient4" }
+httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version.ref = "httpclient5" }
 infer-annotations = { module = "com.facebook.infer.annotation:infer-annotation", version.ref = "infer-annotations" }
 jackrabbit = { module = "org.apache.jackrabbit:oak-core", version.ref = "jackrabbit" }
 jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
@@ -223,9 +225,8 @@ zstd = { module = "com.github.luben:zstd-jni", version.ref = "zstd" }
 [bundles]
 coherence = ["coherence", "json-bind"]
 constraints = ["bcel", "bouncycastle-jdk18on", "bouncycastle-pkix-jdk18on",
-  "bouncycastle-util-jdk18on", "commons-compress", "commons-lang3",
-  "h2", "httpclient", "jcommander", "jgit", "junit", "jsoup", "log4j",
-  "protobuf", "testng"]
+  "bouncycastle-util-jdk18on", "commons-compress", "commons-lang3", "h2", "httpclient4",
+  "httpclient5", "jcommander", "jgit", "junit", "jsoup", "log4j", "protobuf", "testng"]
 errorprone-support = ["errorprone-support", "errorprone-support-refaster"]
 osgi-test-compile = ["javax-inject", "pax-exam-junit4"]
 osgi-test-runtime = ["felix-framework", "felix-scr", "osgi-function", "osgi-promise",
