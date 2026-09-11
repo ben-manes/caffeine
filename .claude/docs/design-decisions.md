@@ -1,7 +1,7 @@
 # Design Decisions
 
-Non-obvious choices that are intentional, not bugs. If you're tempted to "fix" any of
-these, stop — they're load-bearing.
+Intentional behavior and review invariants, with their rationale and evidence. Read the
+relevant section before changing a mechanism; use [ruled-out](ruled-out.md) for adjudications.
 
 ## Eviction
 
@@ -46,8 +46,7 @@ entirely, and on a caller-runs executor the worst case is still cheaper than the
 prevents. The `count += Long.bitCount(table[i] & ONE_MASK)` odd-counter correction is a
 cross-iteration reduction and is what stops the loop auto-vectorizing; dropping it is much faster
 but loses the correction, and no argument has justified that. SIMD is the answer once it is
-available. It has produced no user reports and does not show in `GetPutBenchmark`. Rejected on
-2026-08-29 (row 21.4).
+available. It has produced no user reports and does not show in `GetPutBenchmark`.
 
 **A weak-key lookup allocates, and that is accepted.** The weak-key node factories build a
 `LookupKeyReference` per lookup (20.0 ns/op and 24 B/op against 2.6 ns/op and 0 B/op for strong
@@ -55,8 +54,7 @@ keys); it is handed to `ConcurrentHashMap.get`, so escape analysis cannot remove
 allocation means caching one wrapper in a thread-local and mutating it to set and unset the
 referent around each lookup, which pins that instance to the thread. That idea was raised and
 rejected in issue #294 over virtual threads, where an instance per virtual thread is unbounded,
-and over classloader pinning. A young-generation allocation is the better trade. Rejected again on
-2026-08-29 (row 21.3).
+and over classloader pinning. A young-generation allocation is the accepted trade.
 
 **The policy weight is 64 bits, packed into the node's `metadata` word.** Reordered update tasks
 are normal: the value is written under the node monitor but the task is queued after it is
@@ -94,165 +92,72 @@ maximum. The one case still answered wrongly is an async cache given an explicit
 `Weigher.singletonWeigher()`, which needs unwrapping `AsyncWeigher` to reach and costs only that
 same extra warmup allocation. Pinned by `BoundedLocalCacheTest.isWeighted_onlyWhenWeightsVary`.
 
-**Slow-adapt tuning of the hit-rate climber (at/below `SLOW_ADAPT_THRESHOLD`, 512
-entries).** At that size the window is only a few integer entries — the default 1%-of-max window is so
-tiny that the climber's initial shrink is a no-op, locking it into a direction that never flips — and the
-per-sample hit-rate signal is noisy. Three coordinated fixes: (1) positive initial step — grow the
-window first instead of shrinking; (2) slower step decay (`SLOW_ADAPT_DECAY_RATE`, 0.995
-vs 0.98) so the step stays large enough for HR shifts to trip the restart threshold on workload
-transitions; (3) min initial step floor (2 entries) so the integer window can still move. The
-sample-period growth (proportional to step decay, capped at `SLOW_ADAPT_RATIO_CAP`, 4×)
-reduces noise when fine-tuning near the optimum.
+**The climber has three size tiers, in the configured maximum's native units.** Weight units
+are deliberate: the weighted stress track included about 200 entries of 25–100MB in a 10GB
+cache and scored 14 wins / no losses. Many tiny entries under a small weight bound land on
+reactive, which remains safe there.
 
-**The climber has two algorithmic modes gated by two size thresholds.** `determineAdjustment` runs the
-**hit-rate climber** below `DENSITY_THRESHOLD` (4096) and the **density climber** above it;
-the hit-rate climber additionally switches to a **slow-adapt tuning** at/below
-`SLOW_ADAPT_THRESHOLD` (512). The two thresholds are distinct concerns — 512 is where the
-window shrinks to only a few integer entries and a single sample is too noisy to trust (the hit-rate
-climber then grows-first, stretches its period, and decays slowly), while 4096 is where the density climber's
-within-sample gains begin to exceed the hit-rate climber's. Density is scoped to large caches deliberately: it is **~neutral below ~2048 on
-real workloads** (mean Δ +0.12–0.24pp vs reactive) yet, being resident-only, it is *unreliable and
-prone to pinning at an extreme* when a region is small — so on the corda+loop phase-shift stress it
-regressed the reactive climber by up to −10pp at 513–1024 while adding nothing. Scoping keeps the
-reactive climber's small/medium robustness ("no worse than before") and adds density's large-cache wins
-(+~125pp across the >4096 cells of the 48-trace set). The gate compares the configured maximum in its
-**native units** — weight units when a weigher is present — deliberately: the risky direction (a cache
-holding few huge entries routed into density/probes) was attack-tested on the weighted track (wfew:
-~200 entries of 25–100MB in a 10GB capacity; the weighted battery scored 14W/0L), while the inverse
-misroute (many tiny entries under a small weight bound) lands on the reactive tier, which is safe
-everywhere. The entry-vs-weight comparison is not a unit bug. The density climber and its escapes (kickoff,
-regret, anneal, wide-start) could not be made robust at small sizes — every symptom-patch traded the
-corda trap for a frequency-trace regression, because the density signal is **biased and bistable**: it
-measures *average* density, not *marginal* value, so its equilibrium depends on the starting window
-(start small → under-value → floor trap; start wide → over-value → frequency traces stuck wide). Only a
-marginal/ghost signal removes that, and ghosts were rejected (heavy, don't pay off as caches grow, and
-critical caches are large). A size cutoff is the honest fix: minor accepted regressions on large
-frequency traces, big wins on large recency workloads, and the small/medium climbers untouched.
+| Maximum | Controller | Reason |
+|---|---|---|
+| ≤512 | Slow reactive: grow first, minimum initial step 2, decay 0.995 rather than 0.98, period stretch capped at 4× | Integer windows and noisy samples make an initial shrink a no-op and prevent later reversal. |
+| 513–4096 | Standard reactive | Density was near-neutral below ~2048 (+0.12–0.24pp), but lost up to 10pp on corda+loop at 513–1024. |
+| >4096 | Goal-audited density | Added about 125pp across the large cells of the 48-trace set while accepting small frequency-trace regressions. |
 
-Within the large tier, `determineAdjustment` reads the **within-sample hit density** of the two regions —
-`hitsInWindow / windowMaximum` versus `hitsInMain / (maximum − windowMaximum)`, where
-`sample.windowHits` is a counter incremented on window hits alongside `sample.hits`. The signed
-error is `ln(windowDensity / mainDensity)`: positive means the admission window earns more hits per
-entry, so capacity is more valuable there and the window grows; negative shrinks it. Two workloads
-motivated the switch: (1) a **flat hit-rate curve** — when HR barely changes with window size, the
-cross-sample HR gradient is buried under the ±10pp swings a phasey workload imposes, so the reactive
-climber churns; the density is computed *inside* one sample, so it is immune to those swings. (2) The
-**window→0 cliff** (the corda scan-plus-loop stress trace): the reactive climber could drive the
-window to zero and crash the hit rate. The step is **proportional** — `|error| × DENSITY_GAIN
-× maximum`, capped at `MAX_STEP_FRACTION × maximum` — so a tiny window on a recency-heavy
-workload takes a large step and reaches a large optimum in a few samples, while near the balance point
-the step shrinks to zero and the window settles.
+The gates are `SLOW_ADAPT_THRESHOLD` and `DENSITY_THRESHOLD`; slow tuning uses
+`SLOW_ADAPT_DECAY_RATE` and `SLOW_ADAPT_RATIO_CAP`.
 
-**The large tier is starvation-guarded ("the probe machine") — density is never trusted on a starved
-sample.** The density signal is resident-only, so a region earning ~nothing in a sample (fewer than
-`requestCount >> MIN_SIGNAL_SHIFT` hits, 0.1%) is the signal's blind state: it cannot see
-what a different split would earn, and holding a blind position can pin the window at an extreme
-forever. This is not hypothetical above the tier threshold — a steady-state mixture (Zipf hot-set
-defending the main region, twice-accessed items at a reuse distance between the floor and ~25% of the
-maximum) pins the pure density climber at the floor with ~28pp lost below LRU, at any cache size. The
-guard: a starved sample at a **blind corner** — the starved region is the *small* one (≤¼ of the
-maximum), or the whole sample is dead — launches a **probe**: a bold-driver walk seeded away from the
-blind bound at the restart magnitude and **scaled by the refractory rung** (×2 at rung 32, ×4 at
-64, capped at the 30% max step — deep rungs once bought committed depth but not reach, so stray
-walls calibrated wider than a flat stride were absorbing), reversing only on a
-hit-rate drop past the **walk-interior bar**, so plateau crossings persist through workload
-jitter. For a starvation probe that bar is priced against the workload's own scatter —
-`min(max(5pp, 3·rateDeviationEma), 15pp)` (adv3 2026-08-01: the fixed 5pp aborted blind-corner
-escapes inside real per-sample noise, crash-cycling the dosed mixture trap at the floor, healed
-+8.2 by the pricing; the 15pp cap re-aborts genuinely damaging walks, without which all-blind
-families let walks roam, metronome −0.6) — while an **audit's walk keeps the absolute 5pp in DEPTH**
-(pricing the depth lets audits survive to confirm and park more, the R4-F1 amplification dial —
-every depth-pricing form measured holdout- or mixnoise-fatal) **and prices persistence in
-TIME** (2026-08-02 crash-semantics study): a FIRST audit crash aborts on its first below-bar
-sample exactly like a starvation probe, while the RETRY of an equilibrium that already crashed
-one audit (`audit.crashStreak ≥ 1`) tolerates `AUDIT_CRASH_PERSISTENCE − 1` = 2 below-bar
-samples — holding its committed direction at a decayed stride while the dip is adjudicated,
-since letting the unbelieved dip drive the bold-driver reversal converted cheap crashes into
-rung-doubling completed failures — and aborts on the third. Two samples of tolerance cross
-the terrain valley that a one-sample abort made an absorbing horizon at every rung (the moat,
-F1-adv4: healed 41.97 → 44.3, constructed-only per a 0/22 real-corpus scan) and absorb
-single-sample exogenous pulses; a sustained collapse still aborts at 5pp, and first aborts
-stay cheap everywhere (every-walk tolerance failed `mixture_d025`/`mixmod`'s bars — short
-traces pay longer failed excursions). The probe ends four ways: a **crash-abort** (hit rate
-fell below the probe's start by the walk-interior bar → undone in full, and the refractory
-re-arms at its current length WITHOUT doubling —
-an exogenous workload shift is indistinguishable from probe damage here; consecutive crashes
-escalate like failures on the walk's OWN ladder — audit crashes on `audit.crashStreak`/
-`audit.rung`, starvation crashes on `starvation.crashStreak`/`starvation.rung`, never
-each other's: on the shared form three token-preserving pulses paired three lone audit
-crashes into rung 64 / clock wait 128, a 130-sample floor pin −6.0 below LRU — Terra H4-C1,
-and audit endings alone drove the shared ladder's stride/commitment to their deepest forms —
-F2-adv4; a crash, lone or escalated, NEVER takes the audit clock's failure doubling); a
-**reversal through the
-probe's own start** (a failed experiment: undone in full, ladder doubles); **budget expiry**
-(likewise undone in full, ladder doubles); or an **adjudication** once the watched region earns ≥4×
-the starvation bar and the walk has met its committed depth (**escalating commitment**: a
-first-round probe may adjudicate immediately — stray and transferred hits scale with a region's
-size and reach the bar on workloads whose small window is correct, so cheap early exits protect
-thin-signal floors — while each adjudicated failure lengthens the ladder, whose deeper rungs
-commit the next walk 2 then 10 samples past the stray zone, turning deep silent reuse bands from
-absorbing pins into bounded dips). Ledger ownership binds every ending, not just crashes: a
-non-crash ending retires only the crash streak of the layer that owns the walk. Both
-non-crash sites once cleared both streaks, which disarmed the other layer's escalation and —
-since `AUDIT_CRASH_PERSISTENCE` arms at a streak of one — its tolerance as well, so a
-starvation probe ending between two audit crashes restored the one-sample abort the moat and
-the H4-C1 train need it not to have; the crash-semantics fix was reachable around by an
-interleaved blind corner (fixed 2026-08-02, pinned by
-`audit_budgetExpiry_leavesTheStarvationLedger` and
-`walkStep_reversalThroughBase_leavesTheOtherLayersLedger`). The single sanctioned cross-write
-is the audit *confirm*, which clears `starvation.crashStreak` alongside the starvation-ladder reset
-it already performs, because a ladder reset to one carrying a live streak re-escalates on the
-very next crash. The verdict prices an up-probe at
-main's *margin*: it confirms iff the window's density beats the **probation density frozen when
-the probe armed** (`ln((windowDensity+ε)/(walk.baseProbationDensity+ε)) > 0`). Capacity claimed
-from main squeezes protected into probation and expels probation's coldest, so probation is what
-the grow actually taxes; main's *average* is protected-core-dominated and vetoed
-genuinely-winning positions (the trickle family sat 14–17pp below its own engine on the old
-average confirm). The baseline is frozen at arm because the walk's own demotions enrich live
-probation into an absorbing false-veto (demoflood: the live variant pins at the floor with zero
-confirms); each re-arm re-snapshots, so a cold-start-transient baseline self-heals. Down-probes
-keep the average-density sign test — the window has no marginal substructure to price against.
-Confirmation keeps the position (a reuse band was found) and resets the ladder to 1; anything
-else fails and is undone in full, ladder doubled. The one priced trade — lowmix, a low-hit-rate
-bistable family where the frozen baseline vetoes an LRU-ward escape the diluted average confirms
-by seed-luck — is a `/climber-gate` sentinel with no real-trace echo across the defended set.
-Until an ending fires, the walk keeps walking. Failed probes back
-off exponentially
-(`PROBE_BACKOFF_INITIAL` 16 → `_MAX` 64 samples), so workloads whose small window is
-genuinely correct (w50/S1-class thin-signal floors) pay one bounded exploration cost — about −1pp on a
-short benchmark trace, amortizing to ~0 in production — and then hold still. Three hard-won
-asymmetries: a starved *large* region must NOT probe (density can see it; probing "for" a scan-filled
-main destroys the one working region — corda); a probe's success must require the verdict to
-*confirm* (a merely-neutral verdict lets density walk the window home and the probe refire
-endlessly — S3); and the crash veto is evaluated *before* adjudication, so a walk that has
-destroyed the hit rate can never reach a confirming verdict (a destroyed region would otherwise
-"win" a density ratio by earning against ~nothing — the stress trace's window once collapsed to a
-single entry and the ratio called it success; there is deliberately NO separate absolute-HR check
-inside the adjudication branch — the crash-first ordering is that veto). Rejected probe-exit variants (a small entry step with absolute exits — stray hits
-scale linearly with window size and end probes just short of the band; density-competitive exits with
-travel budgets — deep walks damage healthy-main workloads like w50 by −2pp) are recorded with data in
-the hill-climber-fable workspace (local-only archive; the re-runnable trap
-generators are committed in the `/climber-gate` skill). Extending the guarded tier below 4096 was
-measured and rejected
-(it is trap-safe there but breaks the historically fragile `cs@563` by −1.3pp). `setMaximumSize`
-resets the probe state and the sample baseline (`sample.previousHitRate`), so the first sample of a
-new geometry is never judged against a hit rate the old one earned. The below-floor clamp **lifts** a sub-floor window up to the 2% floor — the
-initial window is 1% of the maximum, and without the lift it can wedge permanently below the
-"signal-capable" floor the design documents.
+**Density compares regions within one sample.** It uses
+`ln((windowHits / windowMaximum) / (mainHits / (maximum - windowMaximum)))`, with a step
+proportional to error (`DENSITY_GAIN = 0.03`), capped at `MAX_STEP_FRACTION` (30% of maximum).
+This avoids the cross-sample workload swings
+that obscure reactive gradients on a flat hit-rate curve, but it is average resident density,
+not marginal value. Its equilibrium depends on the starting window; ghosts would supply a
+different signal but were rejected for cost. Extending density below 4096, even with the probe
+machine, lost 1.3pp on `cs@563`. Kickoff, regret, anneal, and wide-start variants traded one
+small-cache trap for another rather than removing the bias.
 
-**The window floor is *signal-capable* (`WINDOW_FLOOR_FRACTION = 2%`, not 0.5%) — a
-secondary safeguard within the large tier.** The density signal is resident-only: a window collapsed
-too small catches ~no hits, reads `windowDensity ≈ 0`, and would pin at "shrink" forever, unable to
-recover when a recency phase arrives. This is the trap the `corda + 5×loop + corda` phase-shift stress
-exposes; it is *severe* at small/medium sizes (a 0.5% floor is 3 entries at size 600 → the recency phase
-collapsed to ~23% vs 44% optimal), which is the main reason density is scoped to large caches (the
-reactive climber owns those sizes and does not trap). At large sizes the same signal is far less
-fragile, but the 2% floor remains as a cheap safeguard — it keeps enough entries resident to estimate
-density, at ≤0.35pp cost to frequency-optimal workloads. Symptom-patch escapes (a non-density *kickoff*,
-an EWMA-*regret* trigger) were built and rejected — they false-fire on variable frequency traces (w50
-−8pp) or only transiently nudge before the EWMA catches up and density re-traps. Don't lower the floor
-below 2% without re-running the corda+loop stress at 4097–8192, and don't try to make density robust
-*below* `DENSITY_THRESHOLD` with escapes — that path was exhausted; the size cutoff is the fix.
+**Blind corners require experiments.** A region with fewer than `requestCount >>
+MIN_SIGNAL_SHIFT` hits (~0.1%) supplies too little evidence to hold position. Pure density
+can pin at the floor about 28pp below LRU at any size. Probe only when the starved region is
+small (≤¼ maximum), or the whole sample is dead; probing for a starved large main region
+destroys the functioning window on corda. Deep refractory rungs increase both reach and
+commitment, while cheap early adjudication protects thin-signal floors. Failures undo fully
+and back off (`PROBE_BACKOFF_INITIAL` 16 through 64 samples), costing about 1pp on short
+w50/S1 traces and amortizing toward
+zero with longer runs. Preserve the current router and ownership rules in
+[climber review constraints](#climber-review-constraints) and [hill-climber](hill-climber.md) §4.
+
+The evidence behind the asymmetric verdicts and crash prices remains relevant:
+
+- Starvation-walk interior noise pricing is `min(max(5pp, 3×rateDeviationEma), 15pp)`.
+  It recovered 8.2pp on the dosed-mixture trap; dropping the cap lost 0.6pp on `metronome`.
+- Audit crashes retain the depth bound and buy persistence in time. The first crash is cheap;
+  an already-crashed equilibrium's retry tolerates two below-bar samples and aborts on the
+  third. This raised the constructed moat from 41.97 to 44.3; a 22-cell real-corpus scan found
+  no echo. Giving every walk tolerance failed `mixture_d025` / `mixmod` on short traces.
+- Sharing crash state paired independent pulses into rung 64 / clock wait 128 and a
+  130-sample floor pin, 6pp below LRU. Non-crash endings retire only their owner's streak;
+  an audit confirm alone also clears starvation state when resetting that ladder. Pins:
+  `audit_budgetExpiry_leavesTheStarvationLedger` and
+  `walkStep_reversalThroughBase_leavesTheOtherLayersLedger`.
+- An up-probe prices the capacity it takes from probation, frozen at arm. Main's protected
+  average vetoed useful positions on `trickle` (14–17pp below its own engine); live probation
+  became enriched by the walk's demotions and vetoed every escape on `demoflood`. Down-probes
+  keep the average comparison. The low-hit-rate `lowmix` trade remains a gate sentinel, with
+  no real-trace echo across the defended corpus.
+- Crash veto precedes adjudication, so a destroyed region cannot win by a density ratio
+  against another region earning nothing. A neutral verdict is not a success (`S3`). The
+  current reversed-confirm rule is in the checklist below; older blanket reward rules no
+  longer describe the machine.
+
+**The density floor is 2% (`WINDOW_FLOOR_FRACTION`), with an upward clamp from below it.**
+The initial window is 1%, so
+a clamp that only blocks further shrink can wedge below the intended floor. At size 600 a
+0.5% floor held only three entries and the recency phase scored about 23% versus 44% optimum.
+The 2% large-cache safeguard cost at most 0.35pp on frequency-optimal workloads; kickoff and
+EWMA-regret escapes lost up to 8pp on w50 or only moved transiently before retrapping.
+Re-run corda+loop at 4097–8192 before lowering the floor. Resizing resets probe state and
+`sample.previousHitRate`, so the new geometry is not judged against an old sample.
 
 **The sketch's shrink retrack and `reset()`'s zero clamp are a matched pair.** `ensureCapacity`
 keeps the table (it is grow-only, since reallocating wipes the counts and blacks out admission)
@@ -273,6 +178,13 @@ matches the maximum, so it costs nothing on the normal path. Don't remove either
 `FrequencySketchTest.ensureCapacity_shrink_denseTable_agesOnSchedule` — note its neighbour
 `_shrink_resetReachable` exercises the same flow on an *empty* table, where the correction is 1,
 which is why the underflow shipped.
+
+The retained table's reset cost after a large shrink is accepted. After a 1M-to-1K
+shrink, an 8 MiB table took 1.94 ms under `evictionLock`, about 194 ns per increment amortized
+against 0.19 ns when table and maximum match. Cost scales with peak/current ratio: a 10× swing
+was negligible, while ~1000× was visible. This is reachable through unweighted
+`Policy.Eviction.setMaximum` as well as weighted retracking. Hysteretic shrinking was declined
+because it conflicts with per-addition weighted retracking and loses the admission history.
 
 The large-cache **sample period is `SAMPLE_MULTIPLIER × maximum` (4×), decoupled from the
 frequency sketch's own 10× reset** (they use separate counters — `sample.hits`/`sample.misses`
@@ -352,8 +264,7 @@ worth not flagging:
   that `policyWeight` *converges*, so a region's size keeps reflecting the entries inside it;
   how a mid-flight snapshot lands on the quota does not. Clamping the quota also would not
   restore a reservation — it just relocates the inaccuracy from the maxima to the transfer
-  volume. Re-derived five times (arithmetic F4 → adversarial-input F1 → adaptivity L1/F1 →
-  adaptivity M1, which priced the drain's duration); adjudicated NOT-A-BUG by Ben 2026-07-27.
+  volume. The duration of the excursion does not change this ruling.
 
 The hardening companion to this: `ReactiveClimber.samplePeriod` guards the small-cache
 `ratio` against a `0/0` NaN (when both the maximum and step size are zero). The NaN would
@@ -378,8 +289,7 @@ Don't make the floor or the predicate integral. **The one ledger that must close
 fractional capped stride. Charged with the fraction it closed short of the base by the cap's
 fraction per capped stride (8,192: 2,457 + 2,457 + 84 for a 5,000 return), and at a permanently
 starved corner, where every deep-rung probe fails and undoes, that re-based each cycle 1–2 entries
-toward the probed direction, a slow creep toward the corner boundary; the sweep audit's row 4.2
-(2026-08-15). Pinned by `probeEnding_adjudication_wrongSignFailsAndDoubles` (the commands sum to
+toward the probed direction, a slow creep toward the corner boundary. Pinned by `probeEnding_adjudication_wrongSignFailsAndDoubles` (the commands sum to
 the distance).
 
 **Async load completions replace quietly.** A completed future's `handleCompletion` (and the
@@ -388,7 +298,7 @@ expiration but skips `onAccess`'s sketch increment and climber hit counters. The
 paid its miss at insertion; counting the completion as an access doubled the key's per-load
 admission frequency and window-attributed one synthetic, write-buffer-lossless hit per miss —
 measured at up to −38.6pp (w50) on the density climber and −12.7pp (corda+loop stress @ 512) on
-the reactive climber (the async-completion-noise workspace report, local-only). A
+the reactive climber. A
 material quiet update (weight changed, or the write time moved beyond the 1s tolerance) routes
 through the UpdateTask and still reorders the deques; an immaterial one (same weight, within
 tolerance — the common fast completion) skips policy work entirely, which is sound because the
@@ -453,6 +363,81 @@ as well, since suppressing the access with `quietly` would drop the increment `A
 **~1% random admission of rejected candidates.** The TinyLFU admission filter
 randomly admits ~1% of candidates that would otherwise be rejected. This provides
 HashDoS protection by making frequency estimation attacks non-deterministic.
+
+## Climber review constraints
+
+The current machine and its rejected alternatives are described in [hill-climber](hill-climber.md)
+§4–6. Preserve these distinctions when changing related branches:
+
+- **Recovery takes samples.** A density sample is 4× maximum requests; typical log error of
+  1.5–2 yields steps of 4–6% of maximum. Descending from an 80% window takes 13–16 samples,
+  or 52–63× maximum requests. On ten frequency-optimal cells, 41 samples recovered 73% of
+  an 80% plant, two samples recovered 2%, and 4× replay cut the deficit 3–8×. Density recovered
+  roughly twice as much as reactive. Shortening the period needs a measurement of its jitter cost.
+- **Reactive reversal substitutes for a floor.** The reactive tier can reach a one-entry
+  window; `Reading.floor`'s 2% floor belongs only to density. A banded reactive law without a
+  floor drove corda from 30.96 to 1.13. Any change that sustains its runs must revisit the floor.
+- **Setpoint density has an accepted burst bias.** Budgeted transfers can leave actual window
+  occupancy above `windowMaximum`, inflating its density. Candidates still pass `admit` and
+  `LocalCacheSubject` checks the bound at quiescence. Do not substitute occupancy without measuring.
+- **References differ by purpose.** Up-probes freeze probation density and its sample length
+  at arm, scaling the baseline to the live sample length; down-probes compare one sample.
+  Starvation-walk deviation pricing stays live. Audits freeze their rate reference and use a
+  raw-sample streak plus one beat-base test. The rail's `3×deviation` price is separate.
+- **Each layer owns its state.** Crash streaks and ladders belong to their walk. Non-crash
+  endings clear only that layer's streak, so alternating crash/budget endings do not repeatedly
+  get tolerance. Crashes never double the audit clock. Stillness alone advances that clock;
+  moving samples decrement its run by one rather than reset it. Only interior-chosen directions
+  update the alternation bit; a due audit pre-empts a refractory hold.
+- **Walk exits use different bars.** Audit crash abort is a level test against the arm's frozen
+  rate, with 5pp depth capped at `AUDIT_BAR_FRACTION` of that rate. Reversal is a first-difference
+  test, priced by `AUDIT_BAR_FRACTION × max(baseHitRate, noiseBand)` under the same absolute cap.
+  That fraction is `0.15 × VETO_MARGIN_SCALE`; widening the bars failed the measured controls.
+  A floor-based walk can miss `crossesBase` through integer rounding; budget expiry gives the
+  same FAILED price and full undo, pinned by
+  `WindowClimberTest.walkStep_floorBasedWalk_endsAtBudgetWithAFullUndo`.
+- **Anchor discard and metric reset stay paired on crash-scale shifts.** The inherited EMA is
+  about 80% old regime. A distant crash keeps the claim and reference. On-anchor `resync` runs
+  even during return drain; planting waits for both a walk and its pending undo to finish.
+  Symmetric claim aging lost 11.9pp on the ramp control; one-sided aging disarmed the rail.
+- **An audit judges against the position it leaves.** `Walk.baseSmoothedRate`, not `Anchor.rate`,
+  is its baseline (`ghostclaim` 31.2 → 48.5; `cp_w100` +2.0). Discarding a claim on a still swing
+  loses retreat recovery (`moat_h3000`, −0.7 to −1.9 on all eight seeds); resetting the metric
+  while keeping the claim sends the rail to a dead anchor (`ghostclaim_p30` 41.2 vs 49.2).
+- **A return retests its frozen claim only at its original position.** `RETEST_SETTLE = 2`
+  avoided the seed losses of 1 and 3; `ghostclaim_p35/p40` improved 31.7 → 33.9 and 31.4 → 33.5.
+  Retest follows `anchor.returning`, rechecks `isAt`, and is cleared by both `discard` and `plant`.
+  Clearing only on stand-down misses budget-expired returns and confirmed-position replants
+  (#2002). Do not retest a claim after its anchor has moved onto a position the return never reached.
+- **A reversed starvation confirm is a completed experiment.** Escalate its ladder and hand
+  to density with zero refractory; rewarding it restarted a recurring dither (668/881 confirms,
+  `bandtrap2` −4.4pp and an absorbing `shallowmoat`). Accepted costs include `arc_DS1` −0.7,
+  `deadphase` −0.2, and `norank_rep_r6` seed 3 falling 41 → 20 while seven seeds were unchanged.
+  The unlanded `wedgeshift` guard needs a holdout. Only deepest-commitment, audit-grade confirms
+  park; other starvation confirms keep their density handoff.
+- **Park and refractory scopes remain narrow.** A parked audit covers its own walk's crash-scale
+  move, but an external shift and undo arrival still judge the park (`demoflood` −1.9 if widened).
+  Only a starvation undo arms the starvation refractory. Removing audit-undo rearming bought
+  `widepin` +5.1, `rep_r6` seed 3 +5.4, `shallowmoat` +1.1 for `metronome` −0.9,
+  `balloonflip` −0.3 and `cp_w050` −0.55.
+- **Repeat confirms deepen rather than reward.** Per-direction memory tracks the farthest
+  confirmed window; starvation failure/crash clears it, audit endings and anchor discard do not
+  (`absolve_p8` 27.95 → 46.3). A park's first audit follows its confirming direction only while
+  the park and smoothed-rate guard still hold. Consume that exception at arm; later audits
+  alternate. Raw-rate substitution fails `absolve_p12`; unguarded direction costs `moat_h5000`
+  1.75pp and fails `climbtrend_up` / `whisper_mod_p6`.
+- **Main-space experiments already priced the alternatives.** Across 276 cells, plain-LRU main
+  lost 93.1pp net (mean −0.337); SLRU won >1pp on 40 cells versus nine, 38/46 traces preferred it,
+  and N=3 had no sign flips. Partial promotion gates were worse than either extreme (−25.7/
+  −20.3pp tails), because sparse protected entries stay outside probation's victim pool.
+  The 80/20 split and one-hit promotion beat alternative constants; a perfect per-cell oracle
+  was only +0.21pp after the max-of-N noise floor, with winners changing across sizes on all
+  46 traces. Wrong constants cost −6.16pp to −25.72pp. Probation stays near 19.8%; the density
+  window borrows protected capacity over roughly [2%, 80.2%].
+
+Audit confirms park without a parting steering step; starvation confirms normally do neither.
+The room check and walk use `Ladder.stride`. Before changing floor-crossing arithmetic, use
+seeded admission comparisons to distinguish a repair from a shifted probabilistic outcome.
 
 ## Expiration
 
@@ -568,6 +553,24 @@ maintenance/access, and it's sub-millisecond (inside `EXPIRE_TOLERANCE`) unless 
 the ticker per element — it judges keys of the same call at different instants (a downgrade
 of the snapshot) and adds a `nanoTime` read per key on the hot path.
 
+**A removal's cause is attributed at the instant that removal is performed, and `clear()` is not
+an exception to that.** `clear()` reads the ticker once and passes that `now` to `removeNode`,
+which amortizes the read across the entries it removes under the eviction lock and calls a
+user-supplied `Ticker` once rather than once per entry while holding it. It is a cost decision,
+not a point-in-time guarantee, and it cannot become one: the sweep breaks out as soon as
+`writeBuffer.size()` reaches `WRITE_BUFFER_MAX / 2`, and every straggler goes through the public
+per-key `remove(key)`, which reads its own clock. Measured on 200,000 entries with the deadline
+crossed after the sweep began, one writer running: the prefix covered by the captured clock was 5
+and 18 entries in two of three trials, with the remaining ~199,990 attributed `EXPIRED` by their
+own reads. Uncontended, the same call reported all 200,000 `EXPLICIT`. Across methods the gap is
+the same thing from outside: with a ticker stepping 1 ms per read and the deadline set midway
+through, `invalidateAll()` reported 1,000 `EXPLICIT` where `invalidateAll(keys)`, a loop of
+independent `remove(key)` calls, reported 250 `EXPLICIT` and 750 `EXPIRED`. So cause counts are
+not comparable between the two bulk calls and are not stable within one `clear()`. The consequence
+is confined to the removal cause and `evictionCount`, both best-effort. Don't read the captured
+`now` as a snapshot: making it one needs an internal removal variant carrying it through the
+straggler path, and dropping it puts a per-entry ticker call back under the eviction lock.
+
 **A hit probes the value future's readiness only where the answer is consumed.** `hasExpired`
 is timestamp-only, so a reader probes `isComputingAsync` solely on an expired verdict, and the
 successful-read blocks in `getIfPresent` and `computeIfAbsent`'s optimistic hit test
@@ -651,6 +654,22 @@ deque. Pinned by `BoundedLocalCacheTest.maintenance_recursive_accessOrder` / `_w
 `expireAfterAccess_transferredDuringScan`. Don't reduce either scan back to a bare `moveToBack`,
 and don't drop the queue-type argument as redundant with `contains`.
 
+**The same cycle must also terminate, so each scan re-checks the entry it walks towards.** A walk
+ends on `node == last` or a null link and charges its budget only for an eviction, which makes a
+reorder free. When the nested cycle unlinks or transfers `last`, two reorderable entries rotate
+past each other forever while the thread holds `evictionLock`, writes continue only until the
+write buffer fills and then park in `afterWrite`'s lock acquisition, and the cache never expires
+or evicts again. `evictEntry` is the only call in either loop that runs user code, so each scan
+re-checks `last` after it returns, stops when it is no longer in the deque being walked, and
+reports a zero budget so the `PROCESSING_TO_REQUIRED` re-arm recaptures a live tail next cycle.
+The check is skipped once the walk has reached its end, since a scan that evicted its own tail has
+nothing left to re-arm for. The access check keeps both halves for the reason above, a nested
+transfer leaving `last` linked in a deque this walk cannot reach. The timer wheel needs none of
+this, its terminator being the `pending` sentinel on a field rather than a node in a local, with
+`advancing` refusing a nested advance. Pinned by `maintenance_recursive_accessOrder_removedTail`
+and `_writeOrder_removedTail`, which differ from the pins above only in which entry the nested
+cycle removes.
+
 The wheel budget counts **only evictions**, never the cascade (rescheduling a non-expired
 node to a finer level) — mirroring the deque caps, which count `evictEntry` but not the
 `moveToBack` reorder. Cascading a densely-populated coarse bucket is O(n) and *not* sliced,
@@ -714,6 +733,15 @@ describes costs a weight swing that telescopes back to zero. It ends with
 
 ## Exception Handling
 
+**Checked-exception conversion restores interruption.** Kotlin, Scala, and Groovy callbacks
+can throw `InterruptedException` through `Function`, `BiFunction`, or `CacheLoader`; checked
+exceptions are a javac rule, not a JVM constraint. `Caffeine.toUnchecked` rethrows `Error`,
+returns `RuntimeException` by identity, restores the interrupt for `InterruptedException`
+(JDK interruptible waits clear it when throwing), and otherwise wraps in `CompletionException`.
+Conversion is used by loader chains, catch-commit-rethrow for COLLECTED/EXPIRED recomputation, and
+`AsyncBulkCompleter`. Absent-key paths and `UnboundedLocalCache` propagate unchanged and
+need no conversion-side repair.
+
 **Catch-commit-rethrow pattern** in `doComputeIfAbsent` and `remap`. Both catch
 `Throwable`, not just RuntimeException. When user code
 (mapping function, weigher, expiry) throws after `notifyEviction` was called, the
@@ -756,65 +784,65 @@ the explicit `preserveTimestamps` path. A reader expecting
 surprised; the source does not call this out, so this entry is the canonical
 place the behavior is documented (preferred over a source comment).
 
-**A contract-violating user component is the user's problem — Caffeine breaks reasonably and
-pushes back, it does not add defensive ceremony.** This covers a throwing `Ticker`, `Weigher`,
-`Expiry`, or loader; a broken `equals`/`hashCode`; a hostile `CompletableFuture`; and `Error`/OOME.
-Repeatedly re-derived — it has been raised as a fresh finding in at least seven audit runs, so the
-reasoning is pinned here rather than re-argued:
-- **The guarded/unguarded split is deliberate, not an oversight.** `StatsCounter`
-  (`GuardedStatsCounter`), `Scheduler` (`GuardedScheduler`), and the removal/eviction listeners are
-  wrapped in catch-`Throwable` because they are *fire-and-forget* — there is a sensible default to
-  fall back to (do nothing, `CacheStats.empty()`, `DisabledFuture`). `Ticker`, `Weigher`, `Expiry`,
-  and the loader are **value-bearing**: they return something the cache must have, so there is no
-  default to recover from and propagating is correct. `Ticker` is not "the asymmetry" — it is on the
-  correct side of the line.
-- **The recurring finding shape** is that a value-bearing throw lands *after* a commit and leaves
-  skewed state: `AddTask.run`/`UpdateTask.run` advance `weightedSize`/`windowWeightedSize`/
-  `mainProtectedWeightedSize`/`policyWeight` before an `expirationTicker().read()` argument to
-  `evictEntry` (permanent telescoping-sum skew, node linked into no deque); completion prologues in
-  `refreshIfNeeded`/`handleCompletion`/`getAll` read `statsTicker()` before their cleanup (orphaned
-  `refreshes` token, stranded async proxies). The mechanisms are **real and present** — confirm them
-  and close, don't propose containment. Hoisting the reads or adding try/finally is ceremony against
-  a cache whose clock is already broken, and the containment op is usually throw-prone on the same
-  trigger.
-- **Ben's precedent:** Quarkus shipped a broken `CompletableFuture`; Caffeine pushed back and Quarkus
-  fixed it — a better outcome than defensive code would have produced. Don't add a must-not-throw
-  clause to `Ticker`'s javadoc either; that was considered and declined.
-- **The one containment taken in this family is that a concurrent obtrusion reads as not-ready.**
-  `Async.getIfReady` checks `isDone() && !isCompletedExceptionally()` and then joins, so a standard
-  `CompletableFuture.obtrudeException` landing between the two threw a `CompletionException` out of
-  whatever asked: `AsyncCache.getIfPresent`, the synchronous view, and every `isComputingAsync`
-  caller, `hasExpired` and eviction under `evictionLock` included. Measured with a plain future and
-  no subclass, a free-running obtruder produced 3.5M throws in 1.28B query rounds. The join is now
-  wrapped and returns null, which is the classification the method's own doc promises, and the
-  catch is narrow (`CancellationException`/`CompletionException`) so a hostile subclass throwing
-  anything else from `join` still propagates. It defends the readiness question only, not the
-  entry: the completion handler is one-shot, so obtruding onto an already-successful future leaves
-  the entry physically present while queries filter it, which is the documented physical-vs-logical
-  split and is accepted. Nothing better exists once a user completes a future the cache owns. The
-  cache's own use is safe by ordering, `AsyncBulkCompleter.failProxies` removing the mapping before
-  it obtrudes.
-- **A throw inside `maintenance` does not lose work.** The `finally` CASes `PROCESSING_TO_IDLE → IDLE`
-  on a clean exit *and* on a throw (only a racing writer's `PROCESSING_TO_REQUIRED` forces `REQUIRED`),
-  so the un-drained buffer entries are **deferred, not dropped**: they stay in the write buffer, the
-  next write's `scheduleAfterWrite` re-arms from `IDLE`, and a full buffer forces `afterWrite`'s
-  inline `maintenance` fallback. `performCleanUp` skipping `rescheduleCleanUpIfIncomplete` on the
-  throw path is the same benign deferral. Don't "fix" the exception path to force `REQUIRED`.
-  (The one leg here that *was* a real defect — the inline fallback skipping the write's own task —
-  is already fixed by the `try { drains } finally { task.run(); }` in `maintenance`; keep it.)
-- **`scheduleDrainBuffers`'s rejection fallback has no paired re-arm, deliberately.** It is the
-  only one of the five `maintenance` call sites without a following
-  `rescheduleCleanUpIfIncomplete()`, and unlike the throw path above its `maintenance` completes
-  **normally**, so it can end `REQUIRED` from any exhausted budget. Adding the epilogue there buys
-  nothing, because the catch only runs when `executor.execute` **rejected**: the common-pool arm
-  cannot apply (a rejecting executor is not the common pool), the pacer arm would schedule onto
-  that same rejecting executor whose fire-time rejection is swallowed in the JDK Delayer, and with
-  no scheduler there is no arm at all. The inline `maintenance(null)` in the catch is the
-  resilience, and recovery relies on later cache activity. The distinction that decides any
-  "missing drain epilogue" finding: **reject means futile, so skip; a lock bounce means the
-  executor is healthy, so reschedule** (that sibling case, the drain bouncing off `clear()`'s held
-  eviction lock, was a real defect and is fixed). A rejecting executor is a broken configuration,
-  and `executor(Executor)`'s javadoc already warns about one that discards or never runs tasks.
+**Value-bearing user callbacks propagate; fire-and-forget callbacks are guarded.**
+`Ticker`, `Weigher`, `Expiry`, and loaders return information the cache needs, with no safe
+default. Stats, scheduling, and listener wrappers can instead return an empty/default result.
+Do not add containment for broken equality, hostile futures, or JVM errors. The precedent is
+to fix the user component (as Quarkus did for its broken future), not add defensive code or a
+must-not-throw note to `Ticker`.
+
+A value-bearing throw can land after a commit. Examples include `AddTask` / `UpdateTask`
+updating policy totals before a ticker read, and refresh/async prologues reading `statsTicker`
+before cleanup. Such failures can skew accounting or strand tokens/proxies; those mechanisms
+are accepted under this boundary, not denied. Containment often invokes the same broken
+component. Preserve existing targeted cleanup, including refresh completion's own-token catch;
+the boundary is not a reason to remove it.
+
+**Concurrent standard-future obtrusion is the supported exception.** Between readiness checks
+and `join`, an `obtrudeException` can make `Async.getIfReady` throw. A plain-future stress run
+produced 3.5M throws in 1.28B query rounds. Its narrow `CancellationException` /
+`CompletionException` catch now returns null as the method promises, including to maintenance
+under `evictionLock`; other hostile-subclass exceptions propagate. Completion handlers are
+one-shot, so obtruding after success can leave a physical entry that queries filter. That is
+accepted. `AsyncBulkCompleter.failProxies` removes before obtruding.
+
+**A maintenance throw defers buffered work; it does not drop it.** The final CAS can settle
+`PROCESSING_TO_IDLE → IDLE` on a throw, leaving unprocessed tasks in the buffer. Later writes
+re-arm, and a full buffer forces inline assist. Do not force `REQUIRED` or add a re-arm to
+`performCleanUp`'s throw path. The inline fallback's own write task is different: it must run
+in `maintenance`'s `finally`, preserving the repair for that task's former loss.
+
+**Executor rejection and lock contention need different epilogues.**
+`scheduleDrainBuffers` deliberately does not follow rejection-fallback maintenance with
+`rescheduleCleanUpIfIncomplete`. The rejecting executor cannot use the common-pool arm; a
+pacer would submit to the same broken executor and its fire-time rejection is swallowed by
+the JDK Delayer. Recovery relies on later activity, as documented for discarded/never-run
+tasks. A drain that merely bounces off `clear`'s held lock still has a healthy executor and
+must reschedule. Do not generalize the rejection exception to that case.
+
+## Buffers
+
+**`MpscGrowableArrayQueue` is a shaded JCTools port and is not wrap-safe; that is accepted.** At
+`pIndex == cIndex == 2^63 - 256` the "is there room" sum overflows and a resize is selected on an
+empty maximum chunk, stranding the odd producer-index marker so every producer spins at 100% CPU. It
+needs 2^62 offers on one never-reset queue (millennia at a measured 10-20M put/sec), and upstream
+master is identical. Don't harden it: `(pIndex - cIndex) < bufferCapacity` does not suffice
+(`producerLimit` stores the same wrapping sum), and rolling the index back after `producerBuffer =
+newBuffer` strands the consumer, which is worse than the spin.
+
+**`StripedBuffer.offer` treats `FULL` as success and only expands on `FAILED`.** A failed CAS is
+evidence of real contention between threads, which striping fixes; a full buffer only means the
+drain is behind, which it does not. Routing `FULL` into `expandOrRetry` would let one thread's
+routinely-full buffer grow the table and allocate stripes nobody contends for. So a `FULL` home
+stripe returns `FULL` without probing a sibling, which is what makes a stalled stripe skip that
+thread's reads until it drains. Both are intended: the `FULL` return is the signal that tells
+`afterRead` to drain. Don't make `FULL` probe for another slot.
+
+**A thread's starting stripe never moves.** The probe is re-derived from the thread id on every
+`offer`, so the incremental hashing in `expandOrRetry` varies the slot only within one call. This is
+forced, not chosen: `ThreadLocalRandom.getProbe`/`advanceProbe`, which `Striped64` uses to
+permanently move a colliding thread, are package-private to `java.util.concurrent`. Don't "restore"
+the convergence search; the only alternative is a `ThreadLocal` on the read hot path.
 
 ## References
 
@@ -847,13 +875,23 @@ the publication, but does not constrain the subsequent `ref.clear()` against any
 racing reader (#1820, confirmed on aarch64 M3 Max via JCStress IntermittentNull test).
 
 In the constructor, a plain `VALUE.set` is used since the object itself is not yet
-published. Strong value caches use `setRelease` without the fence since there is
-no inner object to publish and no `ref.clear()` to order against.
+published. Strong-value setters also use a store-store fence, to order the value before
+subsequent timestamp stores as required by the [expiry read protocol](#expiration);
+they have no reference-clearing operation to order.
 
 **Weigher.boundedWeigher** wraps all user weighers and enforces `weight >= 0` at
 runtime via `requireArgument`.
 
 ## Concurrency
+
+**`maximum` and `weightedSize` have a plain reader and an acquire reader, and no public-facing path
+may use the plain one.** `AddMaximum.addPlainAndAcquireField` emits `maximum` as a `VarHandle.get`,
+which guarantees bitwise atomicity only up to 32 bits, so a plain read of the 64-bit field can tear
+against `setMaximum`'s release write on a 32-bit JVM. The plain reader is for callers already
+holding `evictionLock`; everything reachable from the public API takes
+`maximumAcquire`/`weightedSizeAcquire`. There is no way to assert an access mode in a test, so this
+is a review-time invariant: check the call site's lock state, not the accessor's name. The three
+duration fields need no such care, since `addAcquireReleaseField` emits only an acquire reader.
 
 **No debug-mode assertions.** Runtime invariant assertions are impractical for
 concurrent code — too hard to assert on a running system. Correctness relies on
@@ -920,8 +958,7 @@ orphan the key's `refreshes` token (suppressing its auto-refresh) only if `data.
 throws *before* `remap`'s lambda — a broken `hashCode` or a rare cross-bin ISE (same-key
 recursion silently re-enters a populated bin instead); in-lambda throws self-clean on the
 exits a completion can reach (the create-branch `finally` and the present-entry `catch`).
-The one exit that *preserves* — an absent-branch **user-function** throw (B1-1; both
-siblings, after ULC's catch was narrowed to `value != null`) — a refresh completion never
+The one exit that *preserves* — an absent-branch **user-function** throw (both siblings; ULC guards its catch with `value != null`) — a refresh completion never
 hits, because its own lambda cannot throw before materialization. Either way the orphan
 self-heals on the next write/removal. Don't add a catch-side `refreshes.remove` — it
 re-throws on the broken-`hashCode` sibling.
@@ -938,6 +975,21 @@ attempt to update any *other* mappings" (CHM's phrasing through JDK 13; JDK-8232
 wrongly implied a *same-key* mutation was safe. The `removalListener`, by contrast, runs outside the
 atomic operation (async/after the fact) and *may* modify the cache. Don't flag a same-key mutation
 from the eviction listener as a corruption bug — it's documented misuse.
+
+**CHM never hands back a stored key, so the unbounded cache notifies with the caller's
+instance.** `compute` and `computeIfPresent` pass the remapping function the key the caller
+supplied, and the table keeps the instance it already held; there is no API that returns the
+stored one. `UnboundedLocalCache` is a thin wrapper over that map, so its `Object`-accepting
+removals notify with the argument, where `BoundedLocalCache` reads `node.getKey()` and Guava's
+`LocalCache` reads `entry.getKey()`. A `RemovalListener` therefore receives an equal key, not a
+particular instance. The visible consequence is a cross-type equal key: with a stored `HashSet`
+and an equal `TreeSet` passed to `remove(Object)`, `remove(Object, Object)`,
+`keySet().remove(Object)` or `entrySet().remove(Object)`, all eight bounded and unbounded cells
+removed the entry, but a correctly typed listener ran on every bounded one and none of the
+unbounded ones, where the checkcast throws and `notifyRemoval` logs it as a listener exception.
+Recovering the canonical key there needs an O(n) scan or a per-entry node, which is the structure
+the unbounded cache deliberately does not have, so this is a boundary rather than a repair.
+Identity preference in cases that lose no notification is separately unspecified.
 
 **CHM bin blocking is not a Caffeine bug.** `compute()` locks the hash bin. If the
 mapping function (cache loader) is slow, all other operations on keys in the same
@@ -1032,14 +1084,26 @@ failures. Guava and early Caffeine did not hand the future back to the caller, w
 wording's origin; a loader that throws while merely constructing its future has a bug in the most
 basic step, and surfacing it is right. Do not "fix" `refresh`/`refreshAll` to swallow a
 synchronous throw from `asyncReload`/`asyncLoad`, and do not cite the declared `throws Exception`
-on those methods as evidence that it should be swallowed. Audits raise this repeatedly; it was
-rejected on 2026-08-29 (rows 9.1 and 7.6).
+on those methods as evidence that it should be swallowed.
 
 **`expireAfterAccess` + `expireAfterWrite` together is discouraged.** Inherited from
 Guava for compatibility. The two timestamps are independent; whichever has the
 shortest remaining duration wins. Prefer `expireAfter(Expiry)` for custom logic.
 
 ## Iteration
+
+**`EntrySet.removeIf` predicates receive immutable snapshots** (`Map.entry(k,v)`), so
+`setValue` throws. Like CHM and Guava's JDK-8078726 repair, removal is conditional on the
+captured value. This applies to bounded, unbounded, async synchronous `AsMapView`, and raw
+`AsyncEntrySet`; both async views delegate to the inner cache's `removeIf`, like their values
+views. Keep write-through entries for `iterator` / `spliterator` / `toArray`, and do not
+restore the positional `iterator.remove` default for predicate removal.
+
+**Map equality uses size, iteration over this map, and `count == expectedSize`.** The
+AbstractMap shape is symmetric with HashMap and costs O(n), versus CHM's O(n+m) two-sided
+scan. The final count catches maintenance trimming dead entries after the size prescreen;
+otherwise a surviving subset can incorrectly compare equal. Preserve it in
+`BoundedLocalCache.equals` and the future-typed `LocalAsyncCache.AsMapView.equals`.
 
 **`asMap()` iteration is not a cache read.** Iterators do not update access times or
 frequency counters. This prevents iteration from polluting the eviction policy.
@@ -1054,28 +1118,46 @@ anomaly: two keys that are `equals` but not `==` give `size() == 2`,
 on JDK 25). Removing the flag would not be a no-op, it would be wrong: `distinct()` would then run
 with `equals`, merging two genuinely distinct live entries so the stream reports fewer elements
 than the cache holds. Under identity semantics the keys *are* distinct, so the flag is the correct
-claim. Rejected on 2026-08-29 (row 6.9).
+claim.
 
-**The `keySet()`/`entrySet()` views inherit `AbstractSet.equals`/`hashCode`, so a formal
-contract breach in the dead-entry window is unavoidable and accepted.** `size()` is physical
-(counts an expired-but-unreaped or GC'd-weak-key entry) while iteration/`contains`/`hashCode`
-are logical (skip it). With a live `a` + a pending-dead `b`: `HashSet{a,b}.equals(keySet)` is
-*true* (size `2==2`, then `containsAll` over the logical iterator `{a}`) yet the hashCodes differ
-(`Object.hashCode` forbids equal-but-unequal-hash), and it's asymmetric — `keySet().equals(HashSet{a,b})`
-is false, and a view doesn't even equal a copy of itself. **No receiver-side fix exists:** the
-true-returning direction runs inside the *argument's* `HashSet.equals`, which calls
-`keySet.size()`+`iterator()`, so overriding the view's own equals/hashCode can't intercept it; only a
-*logical* `size()` would close it, and that's rejected (lock-free instantaneous physical size; a
-physical hashCode isn't even computable once a weak key is GC'd). This is inherent to
-`AbstractSet`/`AbstractMap` computing over `size()`: **no correct, compatible equals is writable for
-a collection whose contents change under an equality iteration — `WeakHashMap` has the identical
-property** (entries GC'd mid-comparison; even its own `size()` javadoc only notes the snapshot /
-changes-underneath behavior at the *impl* level, not on the `Map` interface). `values()` is clean
-(identity equals/hashCode, like CHM). Same best-effort window as "`size()` is an estimate"; call
-`cleanUp()` with no concurrent ops before comparing if exact equality is needed. Don't try to "fix"
-the view equals/hashCode, and don't add a `size()`-over-counts warning to the `asMap()` view javadoc
-(redundant — `asMap()` is a view of a cache whose `estimatedSize()` already says "approximate," and
-even `WeakHashMap` doesn't warn at the interface level).
+**Identity comparison applies to one-sided queries, never to `equals` or `hashCode`.** A
+one-sided query (`remove(k, v)`, `replace(k, old, new)`, `containsValue`, `values().remove`,
+`keySet().removeAll`) can be identity-based unilaterally, because the worst case is declining to
+act. A bilateral contract cannot: the other side is `AbstractMap` or `AbstractSet`, which compares
+with `equals` and never reciprocates, so identity there breaks `Object.equals` symmetry and buys
+nothing. Measured with the cache holding one value and a `HashMap` holding an equal-but-distinct
+one: at HEAD both directions of `equals` are true, while an identity-comparing `equals` gives false
+one way and true the other. This is the boundary of the `_byIdentity` convention, and every method
+that convention covers is one-sided. No implementation anywhere compares keys by equality and
+values by identity in `equals`: `IdentityHashMap` is reference-based on keys and values alike, and
+Guava's `LocalCache` extends `AbstractMap` and declares no `equals` at all.
+
+**So value identity is coherent with no map, and that is accepted.** Under `weakValues()` or
+`softValues()` the value-bearing queries compare by identity (`containsValue`, `remove(k, v)`,
+`replace(k, old, new)`, `values().contains`/`remove`, `entrySet().contains`, and through
+`AbstractSet` the entry view's `equals`, `removeAll` and `retainAll`), while `Map.equals`,
+`hashCode` and the `WriteThroughEntry` objects the views emit compare with `equals`. Probed against
+a `HashMap` holding an equal-but-distinct value: `equals` true both ways with matching hash codes,
+`entrySet().equals` false one way and true the other, `contains` and `containsValue` false, and the
+emitted entry equal to the probe entry. Guava's `weakValues()` cache reproduces that row element for
+element. Both coherent alternatives are worse. `IdentityHashMap` buys internal coherence and is
+still asymmetric against a `HashMap` (`equals` false one way, true the other, differing hash codes),
+which is the bilateral case above. Making the queries `equals`-based would contradict the value
+semantics `weakValues()` and `softValues()` document. Reference implementations do not agree with
+each other here, and the cache is biased toward size eviction rather than reference collection, so
+do not raise the disagreement as a defect or propose a consistency repair.
+
+**View equality has an accepted physical-size/logical-content gap.** Key and entry views
+inherit `AbstractSet.equals` / `hashCode`. `size()` includes expired or collected entries
+pending maintenance; iteration, containment, and hash code skip them. With live `a` and
+pending-dead `b`, `HashSet{a,b}.equals(keySet)` can return true while the reverse comparison
+is false and hash codes differ. The argument's `HashSet.equals` performs the true-returning
+comparison, so overriding the view's equality cannot repair it. A logical `size()` was
+rejected to preserve the lock-free physical estimate; a physical hash is unavailable once a
+weak key is collected. `WeakHashMap` has the same changes-during-comparison problem.
+Values views use identity equality like CHM. For exact comparisons, call `cleanUp()` with no
+concurrent operations. An additional `asMap()` size warning was declined as redundant with
+the cache's existing approximation contract.
 
 ## Maintenance nudges
 
@@ -1218,8 +1300,8 @@ self-healing transient).
 re-arm in `rescheduleCleanUpIfIncomplete` is restricted to `commonPool` because any other
 executor may run the submission on the calling thread, where the work is no longer
 amortized and the caller pays a whole cycle. The deferred pacer arm above is the fallback
-for a custom executor, and it needs a `Scheduler`; configuring one is the published way to
-ask for prompt eviction. With neither, a `REQUIRED` backlog waits for the next cache
+for a custom executor, and it needs a `Scheduler`. Configuring one requests prompt expiration;
+a size-only cache has no pacer. Without this arm, a `REQUIRED` backlog waits for the next cache
 operation, so a quiesced cache stays over `maximumSize` until then. The excess is capped,
 not unbounded: the backlog is write-buffer tasks, `MpscGrowableArrayQueue` is bounded at
 `WRITE_BUFFER_MAX`, and a full buffer forces `afterWrite`'s inline assist, so
@@ -1230,9 +1312,26 @@ of 10 runs stayed over maximum, and the largest residue over 20 runs was 1,987 a
 next operation rather than on a timer. Don't add a third arm. A caller cannot know whether
 the executor would run the submission inline, and moving it into `PerformCleanupTask`,
 where a held eviction lock does identify a caller-runs execution after the fact, fails on
-the same ground: prompt eviction without a `Scheduler` is not a contract the cache offers.
+the same ground: prompt size eviction in an idle cache is not a contract the cache offers.
 
 ## Refresh Internals
+
+**The loader's original future is both refresh token and public result.** Its identity
+represents the generation. Per-generation copies would change `refresh(k)` / `policy.refreshes`
+and stop cancellation reaching the loader's future. Completion also precedes dependent
+handlers, so awaiting that future cannot guarantee the cache-updating handler has run.
+
+Reusing one pending future for two generations of the same key is outside this model: the
+older handler can claim the successor's token and both can dispose of the produced value,
+affecting a non-idempotent listener. Ordinary LIFO dependent completion makes the window
+narrow; a coalescing loader can hand out copies itself. A write-time ownership condition
+repairs neither double disposal nor orphaning across preserved timestamp changes.
+
+Distinct future instances with custom equality are likewise unsupported. Map conditional
+`remove` / `replace` and `refreshes.remove` use equality, which matches identity for standard
+`CompletableFuture` but can remove a successor for a hostile subclass. Repair would require
+identity-conditional operations throughout both caches and the refresh registry, not a local
+ownership check.
 
 **A manual synchronous-cache refresh uses one `LocalLoadingCache.RefreshOperation` per call.**
 It carries the registration and completion state, while the loader's original future remains
@@ -1278,15 +1377,15 @@ snapshot, so killing it is correct for linearizability even if it happens to be
 a "newer" generation from a later reader.
 
 **The bounded cache's `containsKey` prescreen stays, and the race it leaves open is
-benign** (adjudicated 2026-08-15). `ConcurrentHashMap.remove` takes the bin lock
+benign** (accepted). `ConcurrentHashMap.remove` takes the bin lock
 whether or not the key is there, so the prescreen is what keeps an ordinary write
 off that lock. It was added to the bounded cache only; the unbounded cache still
 removes unconditionally. What the prescreen cannot see is an in-progress
 `computeIfAbsent` reservation, which reads as absent, so a write landing inside
-that window leaves a token launched from the generation it superseded. Nothing is
-committed wrongly: the completion's ABA guards reject the value, and the
-registration re-validates `node.getWriteTime()` inside the reservation, which
-rejects any write that lands earlier. That first clause is load-bearing and was
+that window leaves a token launched from the generation it superseded. On the
+automatic path nothing is committed wrongly: the completion's ABA guards reject
+the value, and the registration re-validates `node.getWriteTime()` inside the
+reservation, which rejects any write that lands earlier. That first clause is load-bearing and was
 only true by accident until 2026-08-24. The completion's write-time term reads
 the node captured when the reload started, and `retire()`/`die()` leave
 `writeTime` frozen, so a remove and reinsert of the **same value instance**
@@ -1295,14 +1394,38 @@ a reload launched from the dead generation. The commit branch now also requires
 `node.isAlive()`, which is exactly the generation test the other two terms cannot
 make; both remain necessary, since the write time still catches an in-place
 update of a node that never died. Pinned by
-`BoundedLocalCacheTest.refreshIfNeeded_reinsertedNode_rejectsStaleReload`. The residue is bounded by one load, and it
-is a delay rather than a loss — automatic refresh is suppressed for that key while
-the orphan is in flight (`refreshIfNeeded` gates on the same `containsKey`), and a
-`refresh(k)` issued after the write coalesces onto the superseded token and is
-discarded. Don't drop the prescreen to close it, and don't add a
-registration-side re-check: closing it there would fix only `refreshIfNeeded` and
-leave the manual `LocalLoadingCache` and `LocalAsyncLoadingCache` registrations,
-which carry no write-time marker to test, while implying all three were closed.
+`BoundedLocalCacheTest.refreshIfNeeded_reinsertedNode_rejectsStaleReload`. There the residue is
+bounded by one load and is a delay rather than a loss: automatic refresh is
+suppressed for that key while the orphan is in flight (`refreshIfNeeded` gates on
+the same `containsKey`), and a `refresh(k)` issued after the write coalesces onto
+the superseded token and is discarded. Don't drop the prescreen to close it, and
+don't add a registration-side re-check: closing it there would fix only
+`refreshIfNeeded` and leave the manual `LocalLoadingCache` and
+`LocalAsyncLoadingCache` registrations, which carry no write-time marker to test,
+while implying all three were closed.
+
+**A manual refresh that started absent can commit across the same window, and that is
+accepted.** `LocalLoadingCache.RefreshOperation` has no node and no write time, so its only
+ownership test is `currentValue == oldValue`, which is `null == null` when the key was absent
+at registration. A `put` followed by an `invalidate` inside the reservation window therefore
+leaves the token registered and lets the completion install its loaded value over both.
+Measured on the bounded cache with a loader parked inside the registration, 5/5 per arm: put
+then invalidate installs the load, put alone leaves the written value (so the guard works
+wherever it can tell the two apart), and a present-start refresh is discarded. The escape needs
+the loader to run inside `refreshes.compute`, which means a direct executor, a saturated pool
+with `CallerRunsPolicy`, or an `AsyncCacheLoader` returning a completed future; on
+`ForkJoinPool.commonPool()` the registration publishes first and the refresh is discarded 0/5.
+The resulting history is still a legal linearization (put, invalidate, then the refresh's
+install), and no public contract covers it: `Cache.invalidate` is undefined only for an entry
+being loaded and otherwise not present, which the put makes false. The asynchronous cache does
+not share the shape, since its absent case installs an in-flight future through
+`computeIfAbsent` on `data` and registers with `putIfAbsent`.
+
+**The unbounded cache keeps the unconditional `remove`, so a write there waits out an inline
+refresh load on the same key** (measured: a 2004 ms `put` against a 2 s load). Accepted.
+`UnboundedLocalCache` is a light `ConcurrentHashMap` wrapper, and CHM's `put` is pessimistic
+anyway, so there is no optimization proper to apply there. The bounded cache takes the
+complexity because it already coordinates a great deal of metadata for speed.
 
 **A cleared reference is equal only to itself.** `InternalReference`'s `equals` compares referents,
 so two distinct references that have both been cleared used to compare equal (`null == null`) and
@@ -1392,8 +1515,7 @@ over-aggressive-discard doctrine applies to it like any other write, and a compl
 installs on an absent key is by construction the owner (both manual paths create only in their
 owned branch), so its `finally` is clearing its own token. Every one of the twelve callers that
 sets `preserveRefresh` either returns null or returns the existing value of a present entry, so
-the exit is not reachable with the hint set. Read twice as a hint violation from the sentence
-above; pinned now by `BoundedLocalCacheTest.remap_absentCreate_discardsPendingRefresh`.
+the exit is not reachable with the hint set. Pinned by `BoundedLocalCacheTest.remap_absentCreate_discardsPendingRefresh`.
 
 The `!computeIfAbsent` evicted-retire exit is outside the rule for a second reason: it runs
 *before* the remapping function, and the remapping function is the only thing that ever assigns
@@ -1441,7 +1563,7 @@ query.** A `refresh(k)` on an absent key registers a reload in `refreshes` with 
 node** (sync `asyncLoad` only), so a `remove`/`clear` that reaches `discardRefresh` only through
 a present-node lambda leaves the registration alive; its completion then commits (`owned` still
 holds, `null == oldValue[0]`) and **resurrects the key past the purge** — sync-only, since an
-async refresh-of-absent inserts a physical in-flight entry that `remove` does see (audit A2-F1b).
+async refresh-of-absent inserts a physical in-flight entry that `remove` does see.
 The fix keeps `remove(Object)` on `data.compute` (not `computeIfPresent`) so an absent key still
 enters the lambda **under the bin lock** and discards there — deliberately, because the refresh
 *completion* commits under that same bin lock, so doing the discard outside it (after a
@@ -1454,7 +1576,7 @@ no-op that "raced nothing," so it preserves the refresh (like `remove(k, wrongVa
 present key). Don't move the absent-key discard back outside the bin lock.
 
 **A sync `refresh(k)` on an absent key is an isolated side-load; the async view makes it a
-first-class in-flight entry — a structurally-forced divergence, not a bug (A2-F1a).**
+first-class in-flight entry — a structurally-forced divergence, not a bug.**
 `LocalLoadingCache.refresh` on an absent key registers `asyncLoad` **only in `refreshes()`** and
 leaves the data map untouched until the completion `compute` inserts. So the pending reload is
 invisible to a concurrent `get(k)`, whose `computeIfAbsent` sees an absent map and loads **again**
@@ -1513,7 +1635,7 @@ absent-branch **user-function** throw precedes any materialization and no comple
 so both siblings *preserve* it. `UnboundedLocalCache.remap`'s catch used to discard on that path
 too (a blanket `catch (Throwable)` from the "unbounded compute throws" fix whose intent was the
 *present*-entry parity); it was narrowed to `if (value != null)` to match `BoundedLocalCache`,
-which never had an absent-branch catch (B1-1). `doComputeIfAbsent` is only ever a user load,
+which never had an absent-branch catch. `doComputeIfAbsent` is only ever a user load,
 so it can afford the correct behavior. Adding the `finally` here would make a *failed*
 `computeIfAbsent` also abort an unrelated legitimate refresh — the inverted direction. Pinned by
 `BoundedLocalCacheTest.computeIfAbsent_absent_weigherThrows_keepsRefresh` (extends the
@@ -1540,8 +1662,8 @@ async-view no-ops set `preserveRefresh` so a stale completion can't steal a succ
 (owner-scoping); `invalidate`/`clear` discard an absent key's refresh (a purge, not a query). The
 **only** intentional split is the last row — `remap` doubles as the completion path and self-cleans,
 `doComputeIfAbsent` is a user-load-only path (and ULC, having no weigher/expiry, has no such case at
-all). The absent *user-function* throw row was made uniform by B1-1 (ULC's `remap` catch narrowed to
-`value != null`).
+all). The unbounded `remap` catch is guarded by `value != null`, preserving an absent
+user-function throw like the bounded implementation.
 
 The **jcache adapter deliberately does not get this narrowing**: `RemapHints` does not cross the
 package boundary, so the adapter's query-style operations (a failed `putIfAbsent`, a NONE-action
@@ -1593,8 +1715,7 @@ have waited on the pending future, looped to `getIfPresentQuietly`, found the ke
 gone, and computed. Same adjudication: the value came from a future that was the
 mapping when it was read, an in-flight mapping counts as present for
 `computeIfAbsent` under the coalescing rule below, and `ConcurrentHashMap` promises
-nothing about a mapping surviving the return either. Three reports have re-derived
-this, each proposing the re-check guard.
+nothing about a mapping surviving the return either.
 
 **The compute variants adopt the found future too — `synchronous().get(k, func)` /
 `getAll` load-coalesce, they do not recompute.** The present-branch of
@@ -1611,14 +1732,9 @@ CHM does not), and the synchronous view cannot fully emulate the async view's
 linearizability regardless — it "reads the future it found" for computes as well as
 reads. Whether coalescing is better or worse is perspective-dependent; the point is only
 that it *differs*. Don't "fix" `get(k, func)` by routing it through
-`AsyncAsMapView.computeIfAbsent`'s retry loop. (Audit F-E4-1, adjudicated by-design.)
+`AsyncAsMapView.computeIfAbsent`'s retry loop.
 
-**`size()` and `isEmpty()` are physical**, delegating straight to the backing map
-(`AsMapView` → `delegate.size()` / `delegate.isEmpty()`). They count in-flight
-(still-loading) entries that `containsKey` / `get` / iteration treat as absent, so
-`size()` can disagree with what iteration yields. This is the same logical-query /
-physical-bookkeeping split and matches the documented "`size()` is an estimate" stance —
-they belong on the physical side alongside the mutations above.
+
 
 ## Async Put Re-registration
 
@@ -1664,82 +1780,48 @@ cancel-aware completion logic to the bulk path, and don't screen the cancelled f
 
 ## TimerWheel
 
-**Sub-tick advances correctly produce `delta = 0`.** Advancing `nanos` by less
-than `2^SHIFT[i]` nanoseconds within one tick (e.g., `0 → 1`) shifts to the same
-unsigned tick index, so no buckets are processed. This is correct: no tick
-boundary was crossed. (The former `-1 → 0` example is stale since "Fix the timer
-wheel wrap bias at Long.MIN_VALUE" — that crossing now lands on a rebased tick
-boundary and yields `delta = 1`, also correct.)
+**Wheel resolution is one level-0 tick: `2^30` ns (~1.074s).** An advance within a tick
+(for example `0 → 1`) yields `delta = 0`; crossing `-1 → 0` after the wrap-bias repair crosses
+a rebased boundary and yields 1. Hashed wheels process whole ticks to retain O(1) insertion
+and deletion; see [research foundations](research-foundations.md) on timing wheels.
 
-**Bucket width is the wheel's resolution. That is the data structure, not a
-decision this implementation made,** and it should not be re-raised as though it
-were a Caffeine quirk (it has been, repeatedly). A hashed wheel advances in whole
-ticks, which is what buys the O(1) insert and delete; an entry due sooner than the
-next tick waits for it. Varghese and Lauck, and every wheel built from them, work
-this way. See `research-foundations.md` §Hashed and Hierarchical Timing Wheels.
+Queries filter an expired entry immediately, but physical removal and its notification can
+wait until the next tick. On a fake ticker, expiries of 1ns, 1ms, and 500ms stayed resident
+after `cleanUp`; `setExpiresAfter(k, 0)` was reaped at `2^30`, not `2^30 - 1`.
+The bound is one tick, not a whole wheel revolution: `expire` scans `[start, start + delta]`
+inclusively (`steps = 1 + delta`) and checks each node's deadline. `getIfPresent` and
+`containsKey` filter without removing; the compute path (`get(k, fn)` through `remap`) reaps.
+Fixed expiration is more eager because its deque has no tick boundary to wait for.
 
-Here the level-0 tick is `SPANS[0] = ceilingPowerOfTwo(1s) = 2^30 ns`, or 1.074s.
-An entry due sooner is filtered by every query the moment it expires, but stays
-physically resident and unannounced until the clock crosses the next tick.
-Measured 2026-08-28 on a fake ticker: a variable expiry of 1ns, 1ms or 500ms
-leaves the entry resident with no `EXPIRED` event after `cleanUp()`, while one of
-`2^30` ns is reaped promptly, and a deadline set into the past by
-`Policy.VarExpiration.setExpiresAfter(k, 0, NANOSECONDS)` is reaped at exactly
-`2^30`, not at `2^30 - 1`.
+**That bound assumes a deadline that has not moved since the node was scheduled.** A
+variable-expiry read applies its new duration through `tryExpireAfterRead`'s CAS and leaves the
+matching `reschedule` to `onAccess`, which runs only when the read buffer accepted the node. A
+dropped offer leaves the node in the bucket its previous deadline chose, so a shortened deadline
+waits for that bucket's sweep. Measured with an `Expiry` of 1h on create and 2s on read, 400 keys
+read once each on the default executor and system ticker: 208 to 368 keys across five trials kept
+their original bucket and none were readable, and the deterministic fake-clock arm reaped them with
+`EXPIRED` at 3574s against the 3s they had asked for. A `Scheduler` does not shorten the window,
+because `getExpirationDelay` reads bucket occupancy rather than deadlines and reports the next flush
+3569s out. The delay ends at the sweep of the previous deadline's bucket, at or before that deadline,
+so a dropped read never makes an entry outlive the schedule it already had; a lengthened deadline
+self-heals the same way, its node sitting in an earlier bucket whose sweep pushes it forward.
+Accepted: the node reference is gone once the offer is dropped, routing the reschedule onto the write
+buffer would put most reads of such a configuration on the MPSC queue, and declining the CAS instead
+would leave the entry readable past the duration the user asked for.
 
-**A cache promises a maximum lifetime, not a scheduling resolution,** which is why
-the second is accepted here (Ben, 2026-08-28). The same delay in a system where
-milliseconds or microseconds carry meaning, network packet timers being the usual
-example, would deserve an argument; nothing in the cache context supplies one.
-Supporting facts rather than the reason: `EXPIRE_TOLERANCE` is already 1s, and
-`Pacer.TOLERANCE` is the same `ceilingPowerOfTwo(1s)` constant, so the wheel's
-granularity and the scheduler's minimum delay match by construction. Nothing
-accumulates without bound either, since on a real ticker the backlog is one tick's
-worth of expirations and a bounded cache reclaims them by size regardless.
+The resolution is accepted for a cache's maximum-lifetime contract. It aligns with the 1s
+expiration tolerance and pacer's minimum delay; a bounded cache can also reclaim by size.
+An eager current-bucket sweep remains a possible optimization, not an approved change.
+It costs O(bucket occupancy) per maintenance cycle: detach onto `pending`, deschedule, and
+reschedule every not-yet-due node, instead of paying once per tick. Measure that cost before
+removing `delta <= 0`; a nearest-bucket heap is another structure for stricter timer resolution.
 
-**The one mitigation, considered and not taken.** Sweeping the current level-0
-bucket eagerly rather than waiting for the tick would close it, at O(k) in that
-bucket's occupancy, and the machinery already exists because cascading sweeps it.
-Ben is not opposed to it; no argument has justified trying it. What would have to
-be measured first: `expire` detaches the whole bucket onto `pending` and calls
-`deschedule` then `schedule` on every node it does not evict, so an eager sweep
-pays an unlink and re-link for each not-yet-due entry on **every** maintenance
-cycle instead of once per tick, and maintenance runs far more often than the
-tick. Realtime systems that need this usually change the structure instead,
-making the nearest bucket a heap. Don't remove the `delta <= 0` break without
-that measurement.
+**`expire` detaches its bucket onto a field-backed, circular `pending` sentinel.** Detachment
+prevents a not-yet-due node from being rescheduled into the list being drained, especially on
+the last wheel's single bucket. It does not prevent a nested `RemovalTask` from descheduling
+an entry it already holds. A stack-local detached chain used to strand the remainder when
+that operation cleared the carried successor's links. Preserve all three protections:
 
-Two things the earlier wording got wrong, both re-derived incorrectly during the
-2026-08-28 sweep before being measured. The bound is one tick, **not** a full
-wheel cycle (~68s); the buckets swept are `[start, start + delta]` inclusive of
-the current one, since `expire` takes `steps = 1 + delta` and filters per node on
-`variableTime - nanos > 0`. And the read path does **not** reap: `getIfPresent`
-and `containsKey` leave the entry resident with no notification, filtering it
-without removing it. Only the compute path (`get(k, fn)` through `remap`) reaps
-an expired entry on access.
-
-The fixed and variable policies therefore differ in eagerness, which is a
-property of the data structures rather than a decision.
-`Policy.FixedExpiration.setExpiresAfter(Duration.ZERO)` on `expireAfterWrite`
-reaps immediately because the pass walks the write-order deque while `hasExpired`
-holds, with no tick to wait for.
-
-**`expire` detaches a bucket onto the `pending` sentinel, not into the stack frame.** The bucket
-being expired is moved off the wheel so that a recursive call cannot find those entries — that
-detachment is deliberate and load-bearing (a rescheduled node can otherwise land back in the bucket
-being drained, notably the catch-all `wheel[length][0]`, and be reprocessed). What it does *not*
-protect against is a nested operation that reaches an entry by a reference it **already holds**,
-e.g. a `RemovalTask` calling `deschedule`; hiding the bucket only defeats traversal-based access.
-Before the `pending` sentinel the detached chain was reachable only from `expire`'s stack frame, and
-its ends still pointed at the live bucket sentinel, so a nested `deschedule` of the successor the
-walk was carrying nulled that node's links and stranded the rest of the chain (permanently — those
-timers never fire again, and the walk NPE'd at the capture line *outside* the per-node restore
-catch). Reproduced as a real defect; latent since "Variable expiration support (fixes #70, #75, #141)"
-in 2017. Three properties keep it correct now, don't regress any of them:
-- Detaching itself is **not** about recursion: it stops `schedule()` re-linking a not-yet-due entry
-  into the list being drained and reprocessing it, which is unavoidable on the last wheel (a single
-  bucket). Don't justify the detach by "hides entries from a recursive advance" — `advancing`
-  covers that, and the reprocessing hazard is what the detach actually earns its keep on.
 - The chain lives on a **field** (`pending.next`), not a local, so a nested `unlink` of the head
   repairs the walk's anchor through the ordinary path with no special case. The loop must re-read
   `pending.getNextInVariableOrder()` each iteration rather than carry `next` across the callback.
@@ -1791,13 +1873,26 @@ asserts **exact equality** against an oracle scanning every bucket of every whee
 assertion was previously vacuous — it guarded the assert with its own condition and compared an
 absolute `variableTime` against a relative delay — which is why the defect survived the fuzzer.
 
-**Interner `drainKeyReferences` does not need a value-identity check.** Unlike
-`drainValueReferences`, which guards against the value being replaced on the
-same node, keys on Interned nodes never rebind. If two hash-colliding weak keys
-are both cleared and aliased via `WeakKeyEqualsReference.equals` (which becomes
-`null.equals(null) == true` post-clear), both queue polls still complete and
-both nodes still evict — only the attribution is swapped, which is unobservable
-(uniform `Boolean.TRUE` values, no listener on the interner).
+**Interner `drainKeyReferences` does not need a value-identity check.** Unlike values, keys on
+interned nodes never rebind. Cleared references now compare equal only to themselves. In the old
+implementation, hash-colliding cleared keys could alias, but both polls still evicted both nodes;
+only attribution swapped, unobservable with uniform `Boolean.TRUE` values and no listener.
+
+## Builder and bulk loading
+
+**`LoadingCache.getAll` is not atomic.** Valid entries may commit before failure and are not
+rolled back. Per-key null results omit that key; bulk maps must omit a key to mean no value.
+An explicit null value fails the bulk load in both sync and async paths, matching Guava.
+
+**`Caffeine`'s builder mirrors Guava's `CacheBuilder` validation shape, asymmetries included.**
+`refreshAfterWrite(long, TimeUnit)` checks the unit before state and requires `duration > 0`;
+`expireAfterWrite` / `expireAfterAccess` do not check the unit first and allow zero.
+Consequently `expireAfterWrite(-1, null)` throws `IllegalArgumentException` rather than NPE.
+Changing either order diverges from `CacheBuilder` and the adapter's compatibility suite.
+
+**`Caffeine.from(CaffeineSpec)` disables strict parsing**, matching `CacheBuilderSpec` and
+allowing programmatic overrides such as a weigher after `maximumSize`. The possibility of
+accidentally disabling eviction is accepted.
 
 ## Serialization
 
@@ -1826,5 +1921,4 @@ Two changes broke cross-version streams: the `loader` → `cacheLoader` rename
 debugging a bug report: streams from ≤ 3.2.3 carry literal `0` for unset
 durations, and a field *absent* from an old stream deserializes to the JVM
 default (`0`/`null`), because field initializers do not run during
-deserialization. Golden streams written by real released jars are kept with the
-serialization audit's local records (`audit-serialization-repro`).
+deserialization.

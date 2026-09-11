@@ -24,5 +24,8 @@ Claude frontmatter.
 Do not copy `.claude/rules/` into `.codex/rules/`; Codex reserves that directory for command
 permission rules written as `.rules` files.
 
-Whenever Opus or Fable models are requested, Codex should use Sol instead.
+Whenever Opus or Fable models are requested, Codex should use `gpt-6-astra` with `ultra`
+reasoning effort instead, or retain the current session model with `ultra` reasoning effort.
+Apply this to all delegated auditors, evaluators, witnesses, and CLI subprocesses. Set reasoning
+effort explicitly when overriding the model so it does not fall back to the model's default.
 """

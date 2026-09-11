@@ -417,25 +417,42 @@ final class BoundedLocalCacheTest {
 
   @Test
   void maintenance_recursive_accessOrder() {
-    var cache = scanWithReentrantRemoval(builder ->
+    var cache = scanWithReentrantRemoval(/* victim= */ 2, builder ->
         builder.expireAfterAccess(Duration.ofMinutes(1)));
     assertNoOrphans(cache, cache.accessOrderWindowDeque());
   }
 
   @Test
   void maintenance_recursive_writeOrder() {
-    var cache = scanWithReentrantRemoval(builder ->
+    var cache = scanWithReentrantRemoval(/* victim= */ 2, builder ->
+        builder.expireAfterWrite(Duration.ofMinutes(1)));
+    assertNoOrphans(cache, cache.writeOrderDeque());
+  }
+
+  @Test
+  void maintenance_recursive_accessOrder_removedTail() {
+    var cache = scanWithReentrantRemoval(/* victim= */ 6, builder ->
+        builder.expireAfterAccess(Duration.ofMinutes(1)));
+    assertNoOrphans(cache, cache.accessOrderWindowDeque());
+  }
+
+  @Test
+  void maintenance_recursive_writeOrder_removedTail() {
+    var cache = scanWithReentrantRemoval(/* victim= */ 6, builder ->
         builder.expireAfterWrite(Duration.ofMinutes(1)));
     assertNoOrphans(cache, cache.writeOrderDeque());
   }
 
   /**
    * Runs a maintenance cycle over an expiring async cache whose removal listener re-enters to
-   * invalidate the entry that the expiration scan is holding in a local. The nested cycle unlinks
-   * that node, so the scan resumes on an entry that is no longer in the queue it is walking.
+   * invalidate the victim. The nested cycle unlinks that node, so the scan either resumes on an
+   * entry that is no longer in the queue it is walking (the successor it holds in a local) or has
+   * lost the tail that it captured as its stopping point (the last entry). The cycle is run on
+   * another thread so that a scan which cannot terminate fails the bounded await instead of
+   * hanging the build.
    */
   private static BoundedLocalCache<Integer, CompletableFuture<Integer>> scanWithReentrantRemoval(
-      UnaryOperator<Caffeine<Object, Object>> expiry) {
+      int victim, UnaryOperator<Caffeine<Object, Object>> expiry) {
     var ticker = new FakeTicker();
     var reentrant = new AtomicBoolean();
     var self = new AtomicReference<AsyncCache<Integer, Integer>>();
@@ -444,9 +461,9 @@ final class BoundedLocalCacheTest {
         .apply(Caffeine.newBuilder().executor(Runnable::run).ticker(ticker::read))
         .removalListener((key, value, cause) -> {
           if (reentrant.compareAndSet(false, true)) {
-            var victim = requireNonNull(self.get()).synchronous();
-            victim.invalidate(2);
-            victim.cleanUp();
+            var nested = requireNonNull(self.get()).synchronous();
+            nested.invalidate(victim);
+            nested.cleanUp();
           }
         }).buildAsync();
     self.set(cache);
@@ -459,7 +476,12 @@ final class BoundedLocalCacheTest {
     }
 
     ticker.advance(Duration.ofMinutes(2));
-    cache.synchronous().cleanUp();
+    var completed = new AtomicBoolean();
+    ConcurrentTestHarness.execute(() -> {
+      cache.synchronous().cleanUp();
+      completed.set(true);
+    });
+    await().untilTrue(completed);
     return asBoundedLocalCache(cache);
   }
 

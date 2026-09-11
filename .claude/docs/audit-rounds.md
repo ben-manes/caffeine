@@ -1,22 +1,20 @@
 # Audit Rounds
 
-How a batch `/audit-*` round is run: order, quota, what a second model buys, and how to read
-the output. Referenced from `CLAUDE.md`; read it when starting or triaging a round, not
-otherwise.
+Read when starting or triaging a batch `/audit-*` round.
 
-The cycle is: run every audit back-to-back banking reports, consolidate into one tracker,
-fix one row at a time, verify nothing was dropped in consolidation, then close the coverage
-gaps the fixes opened. Fixing is not interleaved with running. A full cycle is 2-3 weeks and
-usually spans sessions, so the tracker is the handoff, not a summary.
+Bank the audit reports, consolidate them into an index with individual work items, verify that
+no claims or counterarguments were dropped, then work one item at a time and revisit coverage
+affected by the fixes. Keep the tracker current across sessions; use the
+[consolidated queue format](audit-output.md#consolidated-queue), including for `run-audits.sh --consolidate`.
+Complete the report batch before beginning repairs. A full cycle has typically taken 2–3 weeks.
 
 **Serialize the runs.** Quota exhaustion mid-run *breaks* an audit rather than pausing it, so
 never fire runs in parallel. `/audit-adversarial` is the single priciest skill (roughly half a
 weekly quota: 8 reviewers plus their evaluator challenges), so order the batch value-descending
 and an early cutoff still banks the most bugs.
 
-**Spend a second model on depth, not breadth.** Every skill that has had two models produced
-model-unique findings, and in each case the most severe finding came from exactly one of them.
-So a second model on an un-corroborated skill beats a third model on a corroborated one. Order:
+**Prefer a second model on a skill over a third model repeating it.** Prior paired runs produced
+model-unique findings, including their most severe claims. The preferred order is:
 `subsystem-safety`, `liveness`, `feature-interaction`, `jcache-conformance`,
 `sibling-divergence`. `build-ci` and `serialization` are the least worth it.
 
@@ -26,11 +24,12 @@ simulator periphery (a testing tool — its bugs mislead benchmarks, they do not
 and the formal-shape lenses (jmm, linearizability, arithmetic, correctness-proof,
 map-contract), which are cheap to run but have gone several passes without a core defect.
 
-**A report row is a claim, not a finding.** The last full sweep put 186 rows through source
-verification: 26 survived that, and 7 survived the standing rulings in `ruled-out.md`. Two rows
-rated **high** were refuted outright. Never quote a backlog length as a defect count — say "N
-unverified claims" and give the survival ratio. Verify by *running* the row: every finding and
-every refutation that held up came from a repro or an A/B, not a source read.
+**A report row is a claim, not a confirmed defect.** An earlier sweep reported 186 claims,
+26 after source review, and 7 after standing rulings; even high-rated claims were rejected.
+Those historical counts do not establish a rejection target or release confidence. Check the
+contract and matching module rulings first. Use a focused reproduction for a behavior repair;
+a source/contract proof can settle a documentation correction or no-code disposition. Preserve
+the trigger, controls, counterarguments, and evidence limits.
 
 **Use `general-purpose`, not `auditor`, for verification, triage, and consolidation passes**
 over existing reports. The auditor carries a mandatory-report-write gate (`SubagentStop`) that

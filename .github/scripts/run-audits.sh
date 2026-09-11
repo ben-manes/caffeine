@@ -553,47 +553,43 @@ consolidate() {
   # pick a canonical filename and overwrite a source report it was asked to read.
   local prompt
   prompt=$(cat <<'PROMPT'
-Consolidate every audit report under .local/audits/<model>/*.md into a single triaged work queue
-at .local/audits/shared/audit-consolidated.md. Read every report; do not sample.
+Consolidate every audit report under .local/audits/<model>/*.md into the shared queue.
+Read .claude/docs/audit-rounds.md and follow "Consolidated queue" in
+.claude/docs/audit-output.md for the layout, item fields, IDs, and status meanings.
 
-You are triaging CLAIMS, not findings. The last full sweep put 186 rows through verification and
-7 survived. Expect a similar ratio and prune hard.
+The output is .local/audits/shared/audit-consolidated.md as a compact index, with one item per
+.local/audits/shared/queue/<section>/<item-id>.md. Keep the index's workflow instructions and
+section grouping. Put detailed claims, sources, and evidence in item files, not index cells.
 
-For every claim, in this order:
-1. Deduplicate across models. The same defect is often reported by several skills under different
-   ids. Merge them into one row and list every reporting (model, skill, id) as its reference.
-2. Apply the standing rulings: .claude/docs/ruled-out.md (its Standing principles plus the row's
-   module section), .claude/docs/design-decisions.md, .claude/rules/design-decisions.md, and
-   .claude/docs/jsr107-conformance.md for jcache rows. Most rows die here. A ruling disposes of a
-   row only when the MECHANISM and the CONSEQUENCE both match; if the row has a reachable trigger
-   the ruling does not name, it survives, and you must say which part differs.
-3. Verify what survives against the source. Read the code. `git log -L <start>,<end>:<file>` before
-   calling any line an oversight.
-4. Reject anything whose trigger the report constructed (a Weigher that mutates the cache, a
-   throwing Ticker, a hostile CompletableFuture, a broken executor), anything reachable only via
-   Cache.unwrap, anything that is stats-only, and anything whose only impact needs a FakeTicker or
-   executor(Runnable::run).
-5. Price severity on a production configuration: system ticker, common pool. Say so when a
-   report's magnitude does not reproduce, and give the number you measured.
+Read every source report, including its corrections and evaluator follow-ups; do not sample.
+Exclude shared and logs from the source-report inventory.
+Use focused section workstreams if needed, then verify coverage across the whole report set.
+Read any existing index and update matching items before allocating new IDs. Preserve source
+reports, existing IDs, statuses, decisions, and counterarguments; do not recreate the queue.
 
-PRUNE every rejected row from the report. Do not carry them as a rejected section; a one-line
-note in a "Refuted, do not re-raise" appendix is enough, and only for rows a future audit is
-likely to re-report.
+For each claim:
+1. Deduplicate matching mechanisms and consequences, retaining every reporting (model, skill,
+   finding-id) and a relative link from the item file. Keep distinct triggers and subclaims visible.
+2. Check the contract, source, history, and applicable standing rulings: .claude/docs/ruled-out.md,
+   .claude/docs/design-decisions.md, the module's rule file, and jsr107-conformance.md for JCache.
+   A ruling settles only its stated mechanism, consequence, and scope; explain any difference.
+   Cite file:line for source-backed conclusions.
+   Link related history entries from each item's "Prior rulings and context" section. Match by
+   mechanism, not just ID mentions; record a dated no-match result only after reviewing the history.
+3. Distinguish historical report evidence, current source proof, controlled reproductions, and
+   ordinary-runtime results. Price severity on the stated configuration. A constructed schedule
+   or non-default configuration alone is not a refutation; neither is a different passing control.
+   State unverified reachability, contract, and impact questions instead of inventing certainty.
+4. Record the current decision and next step above the original claim and evidence history.
+   Retain rejected and disputed claims with their reasons; do not prune them or target a survival
+   ratio. Do not reset resolved/closed items when a report repeats them or silently change an
+   agreed disposition. New contrary evidence belongs in the item for maintainer review.
 
-Structure the output as:
-- A header: date, commit (`git rev-parse HEAD`), how many reports were read, how many raw claims
-  came in, how many survived, and the survival ratio.
-- Then one section per AREA, in this order: core, async, jcache, guava, simulator, examples,
-  build/CI, docs. Within a section, order rows by severity then by area.
-- Each row is a table entry with these columns, and every row gets a stable id `<area>.<n>`:
-  | # | Status | Severity | Claim | Reference | Verification |
-  where Status is `open` (verified, needs work) or `resolved` (already fixed in tree, with the
-  commit subject), Reference lists every (model, skill, finding-id) that reported it, and
-  Verification is the repro or A/B you ran and what it showed.
-- A final "Refuted, do not re-raise" appendix: one line each, with the reason.
-
-Rules: never overwrite a source report. Cite file:line. State plainly when you could not verify a
-row rather than guessing, and mark it `unverified` in Status.
+Refresh the index's links and status counts after updating the items. Verify that every source
+claim is accounted for, all existing items and counterarguments remain, and relative links work.
+Record the report inventory, date, working HEAD, and coverage limits in queue/history.md; keep
+the index focused on continuing work. Historical measurements are not new verification.
+Consolidation does not authorize production fixes or commits.
 PROMPT
 )
 

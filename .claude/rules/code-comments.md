@@ -38,16 +38,24 @@ before re-punctuating it.
 Excessive docs usually mean the code is too complex or poorly named, not that the docs need
 trimming. Verbosity is not communication; noise hides the content that matters.
 
-**The same voice governs the prose in `.claude/docs/`**, `wiki/adaptive-window.html` included. Editing
-into an existing document means matching the voice already there, not writing over it. The tells
-that get flagged: a dash before an explanatory clause, a colon setting up a punchline, a mechanism
-personified ("the retreat is the one that hides"), an aphorism where a fact belongs ("equal spans,
-or no ratio"), and a metaphor carried past its use ("leaves the window's whole journey home
-uncovered"). State what the thing does and stop.
+The same voice applies to `.claude/` prose and `wiki/adaptive-window.html`. Match the existing
+document's voice. State what the mechanism does; avoid personification, aphorisms, and extended
+metaphors.
+
+## Maintaining agent guidance
+
+Read the affected section before editing and re-read it afterwards. State the current rule, its
+scope, and the reason it matters. Replace superseded statements and merge repetition; do not append
+the conversation's sequence of discoveries. Keep rules concise and link to named doc sections for
+detail. Preserve counterarguments, rejected alternatives, and evidence needed to prevent repeated
+mistakes. A routine fix does not need a new guidance entry.
+
+Session chronology, raw runs, and audit-item progress belong in `.local/`. Checked-in guidance must
+be self-contained: use descriptive topics and source/test references, not opaque audit row IDs or
+local workspace contents.
 
 ## Where the evidence goes
 
-Measured deltas, trace or cell names, study nicknames, and "do not re-run X" notes belong in
-`.claude/` docs and rules, not in the source. Keep the rule and the warning in the code; put the
-numbers behind them in `.claude/docs/` and `.claude/rules/design-decisions.md`. Verify it is
-recorded there before removing it from a comment.
+Keep invariants and necessary warnings in source comments. Put supporting measurements and rejected
+alternatives in `.claude/docs/` when future decisions need them; keep raw study records in `.local/`.
+Verify that useful evidence is retained before removing it from a comment.

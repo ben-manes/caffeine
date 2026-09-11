@@ -5,275 +5,246 @@ paths:
 
 # Simulator Conventions
 
-- Configuration: HOCON in `simulator/src/main/resources/reference.conf`
-- Override config with `-Dcaffeine.simulator.*` system properties
-- Trace format specified in path: `format:filepath` (e.g., `lirs:trace.gz`)
-- 50+ policies across 9 categories (adaptive, greedy_dual, irr, linked, opt, product, sampled, sketch, two_queue)
-- Policy interface: `record(AccessEvent)`, `finished()`, `stats()`
-- New policies need `@PolicySpec` annotation and registration in `Registry`
-- Run single sim: `./gradlew simulator:run -q -Dcaffeine.simulator.*=...`
-- Laptop sleep kills background runs mid-sweep. `caffeinate -i` is best-effort from agent
-  shells — its IOKit assertion was observed failing in BOTH sandboxed and unsandboxed
-  sessions ("Failed to create PreventUserIdleSystemSleep assertion"; verify with
-  `pmset -g assertions`) — so for multi-hour sweeps keep a user-level awake session
-  (Amphetamine, or caffeinate in a user terminal), and ALWAYS make sweep outputs resumable
-  (append + skip-done rows) so an interruption costs nothing
-- Run multi-size with charts: `./gradlew simulator:simulate -q --maximumSize=... --metric=...`
-- Convert trace formats: `./gradlew simulator:rewrite -q --inputFormat=... --outputFormat=...`
-- `maximum-size` must be positive, rejected once in `Registry` before any policy is built. Zero was
-  accepted and not implemented: ARC nulls an empty sentinel's links and NPEs, `TinyCache` divides by
-  zero, MultiQueue reports a zero-capacity cache as if it were real, and `sampled.*` with `GUESS`
-  spins forever looking for a non-candidate to sample. The check is in `Registry` rather than
-  `BasicSettings` because `WindowTinyLfuPolicy` legitimately hands `maximum-size = 0` to its
-  weighted admitter (see Sketch sizing below)
-- `Simulate` and `Rewriter` exit with Picocli's status. Both discarded it until 2026-08-19, so a
-  missing required option printed the usage and the `JavaExec` task still reported success
+## Configuration and Runs
 
-## Trace Characteristics & Policy Matching
+- HOCON defaults: `simulator/src/main/resources/reference.conf`; override with
+  `-Dcaffeine.simulator.*`. Trace paths use `format:filepath`, e.g. `lirs:trace.gz`.
+- Policies implement `record(AccessEvent)`, `finished()`, and `stats()`; add `@PolicySpec`
+  and register new policies in `Registry`.
+- Single run: `./gradlew simulator:run -q -Dcaffeine.simulator.*=...`
+- Size sweep/charts: `./gradlew simulator:simulate -q --maximumSize=... --metric=...`
+- Trace conversion: `./gradlew simulator:rewrite -q --inputFormat=... --outputFormat=...`
+- Long sweeps must append results and skip completed rows on resume. Agent-shell
+  `caffeinate -i` has failed to acquire its IOKit assertion both with and without sandboxing;
+  verify with `pmset -g assertions` or keep a user-level awake session.
+- Validate positive `maximum-size` once in `Registry`, before building policies. Zero causes
+  failures or nontermination in several policies. Do not move this check to `BasicSettings`:
+  weighted `WindowTinyLfuPolicy` legitimately seeds its resizable admitter with zero.
+- `Simulate` and `Rewriter` must return Picocli's exit status, including usage errors.
 
-A trace declares `characteristics()` (only `WEIGHTED` today); a policy declares what it supports via
-`@PolicySpec(characteristics = {...})`. `Registry.policies()` keeps a policy iff it supports **every**
-characteristic the trace carries (`policy ⊇ trace`) — so a weighted trace runs only weight-aware policies
-and silently drops the rest (ARC/LIRS/Clairvoyant/most sketch.*/…; `sketch.WindowTinyLfu` declares
-WEIGHTED since 2026-08-02, budgeting regions by weight in BLC's candidate/victim loop, so the
-static-window ceiling anchor runs on weighted cells). **By-design, not a bug:** a trace's features
-are interpreted *uniformly* across the panel so a report is one metric; a weight-oblivious policy is
-excluded rather than run on a weighted trace where its object hit rate isn't comparable to the others'
-byte hit rate. There is deliberately **no "treat weighted as unit" mode** (libcachesim has one, printing
-object + byte columns together — that reintroduces the apples-to-oranges we exclude for). For the
-object-hit-rate view of a weighted trace, strip the weight with `simulator:rewrite` — an explicit metric
-switch that yields a reusable narrowed trace.
+## Trace Characteristics and Policy Matching
 
-**If downcasting is ever wanted**, add it as a trace-side projection (an adapter reader), never a Registry
-change: narrow the declared `characteristics()` *and* re-emit narrowed events (`AccessEvent.forKey(key)`,
-dropping weight) so `policy ⊇ trace` is unchanged and the whole panel stays one metric. Re-emitting the
-narrowed event is load-bearing — narrowing only the metadata would let a weight-aware policy keep reading
-the real weight and optimize byte hit rate amid an object-hit-rate panel. Not worth building until ≥2
-routinely-mixed characteristics make a cross-capability comparison genuinely useful (the enum has a single
-value — scaffolding that never expanded).
+`Registry.policies()` includes a policy only if its `@PolicySpec` supports every characteristic
+declared by the reader. The sole characteristic is currently `WEIGHTED`; weighted traces
+exclude weight-oblivious policies. `sketch.WindowTinyLfu` supports weights and budgets regions
+by weight, so it supplies a static-window ceiling on weighted cells.
 
-## Reporting Fidelity
+This exclusion keeps each panel's metric consistent. Do not add a Registry option that treats
+weighted events as unit weight; use `simulator:rewrite` to strip weights explicitly. If a
+trace-side projection becomes useful, it must narrow both `characteristics()` and the emitted
+events (`AccessEvent.forKey(key)`). Narrowing metadata alone lets weight-aware policies keep
+using real weights within an object-hit-rate panel. Such an adapter is deferred until at least
+two routinely mixed characteristics justify it.
 
-- **"Evictions" is each policy's own accounting, not a normalized framework counter.** For an entry
-  the policy never admits, `CAMP`/`GDWheel` count an eviction, `S3FIFO`/`Sieve` count nothing, and
-  `GDSF` reports a rejection. Don't reconcile them: how an *oversized* entry interacts with eviction
-  is part of the algorithm's design, and a policy that flushes its LRU to admit one is its designer's
-  choice. Classic LRU simply is not size-aware — the answer is to not run it on such a trace (see
-  Trace Characteristics), or to implement a size-aware variant as its own policy, not to retrofit
-  size-awareness into a published algorithm on its author's behalf.
-- **The rewriter's looseness is about the output, never the input.** It refuses to run when the
-  output path resolves to one of its inputs (`Files.isSameFile`, so an alias or a symlink is caught
-  too). `Files.newOutputStream` truncates before the lazily-opened reader has read a byte, so the
-  command used to destroy the trace it was given and report `Rewrote 0 events` with a zero status.
-  That is a different class from the output looseness below, and is not to be relaxed with it.
-- **The rewriter's output is best-effort for an external tool, and knowingly loose.** A `.gz`
-  output name writes an *uncompressed* file under that name (nothing gzips it), `LirsTraceWriter`
-  emits the full 64-bit key where the reference C readers parse one signed int per line, and
-  CloudPhysics folds keys into its 32-bit format so distinct keys can collide. None of this is
-  fixed: the rewriter exists to hand a trace to another tool, and that tool fails loudly on input
-  it cannot read, so the cost of the looseness is a confusing minute rather than a wrong result.
-  Don't add compression, range checks, or collision warnings here without a concrete need — it was
-  tried and reverted as more machinery than the export path deserves.
-- **A recognized container that cannot be decoded fails loudly.** The reader probes xz, then the
-  commons-compress compressors, then its archivers, rewinding after each miss and falling through
-  to the raw bytes. There is no rejecting outcome, because the raw binary readers accept any byte
-  sequence as keys, so a probe that swallowed the wrong exception replayed the container as
-  fabricated events and reported a hit rate over them: a corrupt xz header produced two corda
-  events, a valid 7z produced seventy-one. Each probe now swallows only what means "not this
-  format". `XZFormatException` and `EOFException` for xz, `StreamingNotSupportedException` set
-  aside for archives; anything else escapes. `EOFException` has to stay swallowed because xz reads
-  a twelve-byte header eagerly and a one-event binary trace is eight bytes, which leaves a file
-  holding nothing but the xz magic still read as raw.
-- **Text traces decode as ISO-8859-1 — key identity, not display.** Every byte maps to its own
-  char, so a dirty real-world trace (wikibench holds raw Latin-1 bytes) parses, and distinct
-  malformed byte sequences cannot alias onto a shared U+FFFD — the lenient-UTF-8 hazard, real for
-  readers whose key is derived from a text field (the MSR hostname, the Baleen shard). All field
-  parsing and filtering is ASCII, so clean traces are byte-for-byte unaffected. A strict REPORT
-  decoder was tried and reverted: it closed the aliasing hole by refusing real traces outright.
-- **Disclosed chart/sampling limitations** (not defects, don't "fix" silently): the JFreeChart size
-  axis is *categorical*, so an exponential size sweep renders equidistant rather than to scale; and
-  GUESS sampling is with-replacement, so a sample may draw the same entry twice.
+## Reporting and Trace Fidelity
 
-- **The combined report's rows are the union of its inputs.** `CombinedCsvReport` took its policy
-  list from whichever input sorted first, so a policy reported at one size and not another was
-  dropped from the chart without a warning. Missing cells are written empty. `tabulate` collects
-  policy order, metric cells, and per-input duplicate names in one pass. It checks the metric before
-  reporting duplicates, and completes validation before the output is opened so a rejected input
-  leaves any existing report intact.
+- **Evictions use each policy's accounting.** A never-admitted entry counts as an eviction in
+  CAMP/GDWheel, nothing in S3FIFO/Sieve, and a rejection in GDSF. Oversized-entry behavior belongs
+  to the algorithm. Do not normalize these counters or retrofit size-awareness into a published
+  LRU algorithm; exclude unsuitable policies or add a separately named size-aware variant.
+- **Never overwrite an input trace.** The rewriter uses `Files.isSameFile` to reject output
+  aliases and symlinks to its inputs before opening the output. Otherwise truncation precedes
+  lazy input reading and can destroy the trace while reporting success.
+- **Export limitations are accepted.** A `.gz` output name does not enable compression;
+  `LirsTraceWriter` emits 64-bit keys although reference C readers accept signed ints;
+  CloudPhysics folds keys to 32 bits and can collide. Compression, range checks, and collision
+  warnings were reverted as excessive export machinery. Revisit only for a concrete need.
+- **Recognized but undecodable containers must fail.** Probes try xz, commons-compress
+  compressors, then archivers, rewinding on format misses before falling back to raw bytes.
+  Swallow only format-miss exceptions: `XZFormatException` and `EOFException` for xz;
+  `StreamingNotSupportedException` is set aside for archive handling. Other failures escape.
+  Raw binary readers accept arbitrary bytes, so swallowing decode errors fabricates events
+  (previous witnesses: corrupt xz became two corda events; valid 7z became 71).
+  The xz EOF exception is necessary for eight-byte, one-event traces because probing reads a
+  twelve-byte header; an xz-magic-only file consequently still falls through to raw.
+- **Text decoding preserves byte identity.** ISO-8859-1 maps each byte to a distinct character,
+  preserving real Latin-1 traces and avoiding malformed-UTF-8 aliases through U+FFFD for keys
+  derived from fields such as MSR hostnames or Baleen shards. Parsing/filtering uses ASCII.
+  Strict REPORT decoding was rejected because it refused real traces such as wikibench.
+- JFreeChart's size axis is categorical: exponentially spaced sizes render equidistant.
+  GUESS sampling is with replacement. These are disclosed limitations, not defects.
+- `CombinedCsvReport` uses the union of input policies, with empty missing cells.
+  `tabulate` collects policy order, metrics, and duplicate names per input in one pass.
+  Check metric availability before reporting duplicates and finish validation before opening
+  output, so rejected inputs preserve an existing report.
 
-## Clairvoyant Look-Ahead (opt.Clairvoyant + admission.Clairvoyant)
+## Clairvoyant Look-Ahead
 
-Bélády's MIN (`opt.Clairvoyant`) and clairvoyant admission need each request's *next-access time* — an
-inherent look-ahead. When any clairvoyant usage is enabled (`isClairvoyant` in `Simulator`:
-`opt.Clairvoyant` in `policies` or `Clairvoyant` in `admission`), the Simulator wraps the underlying
-reader with `ClairvoyantTraceReader`, which materializes the trace once, up front, to a fixed-width
-temporary file. Key invariants:
+When `opt.Clairvoyant` or clairvoyant admission is enabled, `Simulator` wraps its reader in
+`ClairvoyantTraceReader`. This materializes the trace once into a fixed-width temporary file
+and supplies immediate next-access times for Bélády's MIN and the admitter.
 
-- **A record holds the weight or the penalties, never both.** The layout is chosen once from the
-  delegate's global `WEIGHTED` characteristic and the first event's penalty-awareness, so a
-  composite of a weighted trace and a penalty-aware one is rejected during materialization rather
-  than replayed with the penalties dropped.
-- **One pointer per request, not a per-key list.** Bélády only needs the *immediate* next use, so each
-  record is `[key, (weight | penalties), nextAccess]`. A forward pass appends the records; a backward pass
-  then fills each `nextAccess` from a `nextSeen: key→position` map — O(distinct keys) heap, released before
-  the policies run (memory isolated to the pre-pass). This replaces the old O(N) in-memory buffers on both
-  policies.
-- **The materialization *is* the trace.** `events()` replays it to every policy (reconstructing the
-  minimal `AccessEvent` for the sniffed characteristics), so a non-repeatable synthetic (`ThreadLocalRandom`)
-  is frozen once and all consumers walk the identical sequence — the old admitter re-read the trace and
-  *threw* on synthetic (`"cannot be predicted"`); it now works.
-- **Consumers walk a `Cursor`, in lockstep.** `opt` and `admission` each take a sequential `Cursor` over
-  the next-access column; both call it exactly once per access (`admitter.record` fires once per access —
-  verified in every host), so cursor position tracks the trace position. The reader owns cursor lifecycle
-  (closed on `TraceReader.close()`, which is a no-op default except here). A shared static holder hands out
-  cursors because policies/admitters are built deep in the Registry from `Config` only. **No
-  decorator forwards `close()`** — neither `ClairvoyantTraceReader` (it keeps no reference to the
-  delegate it consumed) nor `TraceFormat.readFiles`' composites (both are lambdas). That is inert
-  because the clairvoyant reader is the only one that materializes state and `getTraceReader`
-  always installs it *outermost*, so every possible delegate inherits the no-op default. A second
-  materializing reader must therefore not be nested beneath a wrapper without adding the
-  forwarding; don't add it speculatively.
-- **All I/O is sequential and buffered.** Reads are buffered sequential `DataInputStream`s; both the forward
-  append pass and the backward fill pass are block-sequential (the backward pass is what avoids the random
-  writes a forward back-fill would need, since its window can't span a long reuse distance). A key-only
-  delegate (`KeyOnlyTraceReader`, e.g. arc) is materialized straight from its `keys()` `LongStream` with no
-  per-event boxing; `TraceFormat.readFiles` preserves key-only-ness across its multi-file wrapper.
-  **Never drain the delegate via `Stream.iterator()`** — it buffers the *entire* stream before yielding
-  (internal chunking runs until the terminal op, contradicting the javadoc), silently reintroducing O(N);
-  use `forEachOrdered`. Bit-for-bit vs the prior in-memory impl (corda, DS1); on DS1 @ 4M it's ~2× faster
-  and fits ~4× less heap (512 MB vs 2 GB).
-- **`opt` records no penalties itself** — the `PolicyActor` attributes penalties from the hit/miss it
-  observes (it processes online now, unlike the old buffer-then-replay), so self-recording would
-  double-count. Unit tests drive it through the reader and mirror that attribution.
+- A record is `[key, (weight | penalties), nextAccess]`. Choose the layout once from the
+  delegate's global `WEIGHTED` characteristic and the first event's penalty-awareness.
+  Reject a composite needing both weights and penalties rather than silently dropping one.
+- Append records forward, then fill next-access positions backward using a
+  `nextSeen: key → position` map. Heap use is O(distinct keys), released before policy replay;
+  both passes and replay use sequential, buffered I/O. Forward back-filling would require
+  random writes across long reuse distances.
+- Replay this materialization to **all** policies. It freezes non-repeatable synthetic traces
+  such as `ThreadLocalRandom` so the policies and admitter see identical requests.
+- Each consumer's sequential `Cursor` advances exactly once per access, including
+  `admitter.record` in every host. Obtain cursors during policy construction, while the reader
+  is bound; late construction would fail or start a cursor midway through the trace.
+- The reader owns cursors and closes them on `TraceReader.close()`. Decorators do not forward
+  `close()`: `ClairvoyantTraceReader` retains no consumed delegate, and `TraceFormat.readFiles`
+  composites are lambdas. This is safe because the only materializing reader is installed
+  outermost and its delegates inherit no-op close. Add forwarding if a second materializing
+  reader must be nested, not speculatively.
+- Preserve `KeyOnlyTraceReader` through multi-file wrappers and materialize its `keys()`
+  `LongStream` without per-event boxing. Use `forEachOrdered` to drain delegates, not
+  `Stream.iterator()`, which has buffered the whole input before yielding in this path.
+  The disk-backed implementation matched corda/DS1 bit-for-bit and ran DS1@4M about twice as
+  fast with 512 MB instead of 2 GB heap.
+- `opt.Clairvoyant` does not record penalties itself. `PolicyActor` attributes them from the
+  observed hit/miss; recording them in both places doubles the result. Tests must mirror this
+  attribution and drive the policy through the reader.
 
 ## Policy Implementation
 
-- **CLOCK-Pro and CLOCK-Pro+ retain every distinct key, on purpose.** A node that leaves the clock
-  keeps its `data` entry, so the map grows with the trace's cardinality rather than with the
-  resident and ghost bounds. `clock-pro.c` does the same: `remove_from_clock` unlinks the
-  `page_struct` and leaves it in the hash table. Dropping the entry is not neutral — a later access
-  then builds a new node where the reference recycles the old one, which moved eight of
-  forty-eight canonical cells (`cs`, `multi1`, `2_pools`, `sprite` at 512 and 1024) by up to
-  0.5pp. The memory is the price of the bit-for-bit match.
+**Match reference behavior before introducing deliberate deviations.** Establish bit-for-bit
+hit/miss agreement on canonical traces before changing memory bounds, naming, or quality.
+For a published algorithm, the paper remains the specification when the authors' repository
+later diverges (e.g. post-publication S3-FIFO warmup/hit-rate changes in libCacheSim).
+Document that divergence rather than chasing it.
 
-- Consecutive-duplicate-access dedup is a per-policy decision in `record()`, not a trace-reader/framework concern. Song Jiang's reference C code (`lirs.c`) and Chen Zhong's C++ port (`replace_lirs_base.cc` / `replace_lirs2.cc`) both put `if (ref == last_ref) continue;` at the top of the run loop to avoid counting "correlated references" — rapid re-accesses to the same block from one logical event; the 2Q paper (VLDB '94) discusses the same concern. Not in the published LIRS / CLOCK-Pro papers (author intent, confirmed via direct correspondence). **Key subtlety:** the reference increments its hit-rate denominator *before* that `continue` (`warm_pg_refs++` in `lirs.c`; `mTraceLength` in Zhong's), so a duplicate stays in the denominator as a guaranteed non-miss (≡ a hit). The dedup removes the duplicate from the *algorithm*, not from the rate.
-  - **Where a per-access transition is non-idempotent** — `Lirs2Policy` (instance role-swap), `ClockProPolicy`/`ClockProPlusPolicy` (adaptive `coldTarget`) — the duplicate can't be replayed, so the guard scores it as a hit (`recordOperation()` + `recordHit()`) and returns, keeping it in the denominator as a non-miss. It must **not** bare-`return` before recording: that drops the dup from the denominator and diverges from the reference (verified — current matches `lirs.c`/Zhong/`clock-pro.c` misses bit-for-bit on `cs`, but an early `return` understated the rate ~1pp; fixed 2026-06-23). `ClockProSimplePolicy` keeps no guard (it regresses with one) and counts the dup as a hit via the normal path.
-  - **`LirsPolicy` deliberately omits the guard.** After any access the block sits at the top of stack S, so a consecutive re-access is a no-op on S/Q state; the policy already records that second access as a hit, which reproduces the reference's denominator accounting exactly. It matches `lirs.c` and Zhong's base bit-for-bit on the canonical set *including* `cs` (101 consecutive dups). Adding a top-of-`record()` guard would drop dups from the denominator and *break* that match — it diverges from the reference rather than matching it.
-- For ports from a reference implementation, achieve bit-for-bit hit/miss match against the reference on canonical traces before introducing quality deviations (memory bounds, paper-faithfulness, naming). The baseline proves the algorithm is correctly understood; deviations layer on top.
-- **For a *published* algorithm, the paper is the spec of record — not the authors' evolving repo.** The reference code validates that we understood the algorithm, but authors keep tuning their repo post-publication (e.g. S3-FIFO's libCacheSim added a warmup and hit-rate tweaks that drift from the SOSP'23 pseudo-code). Caffeine's own policies may be living; a policy named after a published algorithm tracks the paper, so we don't chase repo changes that alter the published hit rate. When the paper and the current repo disagree, prefer the paper and note the divergence. Corollary: when translating a paper's **real-valued** threshold to integer/`long`, don't let it floor to a value the real expression can't take — S3-FIFO's `evict()` routes on `S.size >= 0.1·C` (never true for an empty S since `0.1·C > 0`), but `(long)(maximumSize * percentSmall)` floored to 0 for a small cache and spun the insertion loop (fixed with `Math.max(1, …)`).
-- **Simulator policies are simple *reference* implementations — simpler by shedding *library* needs, not by being a *weaker algorithm*.** They omit the production complexity of the library (concurrency, VarHandle access modes, memory layout, industry-specific tuning) so a researcher/developer can read, port, and debug them — the reference is the *ideal* algorithm minus that machinery. But a *degraded* version under a named/published algorithm (a weaker LIRS, or a `simple` climber missing an algorithmic improvement BLC has) misrepresents it and is unfair to its authors. So **match algorithmic quality** with BLC / the reference (e.g. the sim's `simple` climber must keep BLC's small-cache grow-first direction and never-freeze restart — the commit was literally *"Improve hill climber adaptation at small cache sizes"*), and simplify *only* the library machinery. Don't over-engineer either — Ben disfavored LIRS/the Indicator partly for being hard to maintain. **`product.Caffeine` is the faithful shipped-behavior proxy in the simulator (it runs the real cache); `sketch…simple` is the readable reference — so a `simple`-vs-BLC gap is a quality bug to close only when it's an *algorithmic* gap, not a library-complexity one.** Verify with the `corda_large + 5×loop + corda_large` stress trace at 512 (phase-shift re-adaptation) plus a spread of bundled traces.
-  - **Sketch *sizing* is algorithmic quality, not library machinery.** A count-min sketch's reset period scales with its capacity (`period = 10 × table.length`), so a sketch sized once and never retracked is not merely coarser — it is the same algorithm aging at a different rate, which shifts the answer most at small windows, where nearly every admission is filtered. `WindowTinyLfuPolicy`'s admitter was frozen at the size the cache held when it first filled, while `BoundedLocalCache` re-calls `ensureCapacity(mappingCount())` on every addition; on a weighted trace, where the entry count keeps moving, that inverted `metaCDN_rprn@4G`'s static-window optimum from 80% to a reported 1% (2026-08-07). Retrack through `Frequency.ensureCapacity`, which is grow-only and retunes the period every call; sketches that cannot resize inherit a no-op default. Unweighted output is unaffected, and that is worth re-checking bit-for-bit on the bundled lirs cells after any change here.
-    - **A retrack must re-point the period without restarting the epoch** (2026-08-09). The weighted path calls `ensureCapacity` on *every* access, so rearming an epoch counter there outruns the per-increment decrement and the counter never reaches its test: `ClimberResetCountMin4` set `eventsToCount = period` unconditionally, making `reportMiss`'s `eventsToCount <= 0` unreachable, freezing `step` at 1 and silently degenerating `reset = climber` into a variant of `periodic` under the climber label. Reset the epoch (`eventsToCount`, `additions`) **only when the table was actually reallocated**, which is the one event that forgets the counts. Pinned by `ClimberResetCountMin4Test.ensureCapacity_retrackWithoutReallocation_keepsTheEpochRunning`.
-    - **The remaining cadence gap is WON'T DO** (2026-08-09). `FrequencySketch` ages on
-      `10 x maximum` while `CountMin4` ages on `10 x table.length`. Those are the *same number at
-      every power of two*, and 129-256 also coincide via the library's `MIN_SKETCH_SIZE` floor, so
-      at the gate's sizes (4096/8192/16384/32768) there is nothing to fix; the real difference is
-      the one the retrack already closed, that the library re-points downward and `CountMin4` is
-      grow-only. The residue is non-power-of-two sizes, where the simulator ages up to 2x staler
-      (`DS1@1051635` 1.99x, `strad_p8@4097` 2.00x, `arc/P3@152508` 1.72x) and, below 256, up to 32x
-      fresher (`loop@101` 2.00x fresher). It touches only `Admission.TINYLFU` — the static-window
-      ceiling anchor and the simulator-native policies — never `product.Caffeine`, which builds a
-      real cache and therefore already ages on the library's own schedule. So a recorded product
-      number is not affected; on a non-power-of-two cell the headroom figure beside it was measured
-      under a slower aging rate. Judged not worth re-basing the corpus for.
-    - **A wrapping sketch must forward the retrack.** `IndicatorResetCountMin4` wraps a fully resizable `ClimberResetCountMin4` but inherited the no-op default, so `reset = indicator` and `reset = periodic` rows of the same weighted report were aging at different rates and were not comparable. It forwards now; the four that genuinely cannot resize (`PerfectFrequency`, `RandomRemovalFrequencyTable`, `TinyCacheAdapter`, `CountMin64TinyLfu`) are what the javadoc's "cannot be resized" sentence refers to.
-    - **Build the admitter in the constructor, never lazily during replay.** A clairvoyant admitter takes its `Cursor` from `ClairvoyantTraceReader.currentCursor()`, and the reader is installed as a `ScopedValue` only for the scope of policy construction. `WindowTinyLfuPolicy` deferred the weighted admitter into `evict()`, so `-Dcaffeine.simulator.tiny-lfu.sketch=clairvoyant` on any weighted trace threw `IllegalStateException` at ~50% fill — and would have handed out a fresh mid-trace cursor even if bound, breaking the once-per-access lockstep. Seed the weighted sketch at `maximum-size = 0` in the constructor and let the retrack grow it; the table is reallocated (forgetting counts) at the first real retrack, so unweighted stays bit-for-bit and weighted keeps its half-fill sizing. A sketch that cannot resize would hold that seed forever — `count-min-64` derives `sampleSize = 0` and ages the whole table on every increment, so no frequency ever accumulates and admission collapses to ties — so `TinyLfu` rejects a zero maximum unless `Frequency.isResizable()`, which only the `CountMin4` family answers true.
+Simulator policies omit library machinery such as concurrency and field-access/layout
+optimizations, but must preserve algorithmic quality. `product.Caffeine` runs the shipped
+cache; `sketch…simple` is a readable reference. Close algorithmic gaps between them, not gaps
+caused by library complexity. In particular, the simple climber retains small-cache grow-first
+direction and never-freeze restart. Validate with bundled traces and
+`corda_large + 5×loop + corda_large` at 512.
+
+- **CLOCK-Pro/CLOCK-Pro+ retain all distinct keys.** Removed clock nodes remain in `data`,
+  as `clock-pro.c` keeps `page_struct` in its hash table after `remove_from_clock`.
+  Removing them changed 8/48 canonical cells (cs, multi1, 2_pools, sprite at 512/1024), by up
+  to 0.5pp. Cardinality-sized memory is the accepted price of reference fidelity.
+- **Consecutive duplicate handling belongs to each policy.** The LIRS references
+  (`lirs.c`, Zhong's `replace_lirs_base.cc`/`replace_lirs2.cc`) skip correlated references
+  after incrementing the hit-rate denominator (`warm_pg_refs++`/`mTraceLength`).
+  Thus the duplicate leaves algorithm state unchanged but still counts as a hit. This is
+  reference-author intent, confirmed by correspondence; it is not in the LIRS/CLOCK-Pro
+  papers, though the 2Q paper discusses correlated references.
+  `Lirs2Policy`, `ClockProPolicy`, and `ClockProPlusPolicy` need guards because their
+  role swaps/adaptive targets are not idempotent; record an operation and hit before returning.
+  A bare early return understates hit rate (about 1pp on cs).
+  `LirsPolicy` omits the guard because a repeated top-of-stack access already preserves S/Q
+  state and records a hit; it matches both references, including cs's 101 consecutive
+  duplicates. `ClockProSimplePolicy` also uses its normal hit path and regresses with a guard.
+- **Preserve real-valued threshold boundaries when converting to integers.** S3-FIFO routes
+  eviction on `S.size >= 0.1 * C`, which cannot hold for an empty S at positive capacity.
+  Flooring the threshold to zero caused an insertion loop; retain the `Math.max(1, …)` floor.
+
+## Sketch Sizing
+
+Sketch sizing affects admission quality because it controls aging cadence. Weighted
+`WindowTinyLfuPolicy` must retrack live entry count through `Frequency.ensureCapacity`,
+as BLC calls `ensureCapacity(mappingCount())` on additions. Freezing initial sizing inverted
+the reported static-window optimum on metaCDN_rprn@4G from 80% to 1%.
+Recheck bundled unweighted LIRS cells bit-for-bit after changes.
+
+- `CountMin4` grows its table and retunes its period on every capacity call. Retracking must
+  **not restart the epoch** unless reallocation forgets the counts. Resetting
+  `eventsToCount`/`additions` on every weighted access made `reportMiss`'s boundary
+  unreachable and froze the climber at step 1. Preserve
+  `ClimberResetCountMin4Test.ensureCapacity_retrackWithoutReallocation_keepsTheEpochRunning`.
+- `IndicatorResetCountMin4` must forward retracking to its resizable
+  `ClimberResetCountMin4`. `PerfectFrequency`, `RandomRemovalFrequencyTable`,
+  `TinyCacheAdapter`, and `CountMin64TinyLfu` genuinely cannot resize and keep the default no-op.
+- Construct admitters eagerly, even for weighted policies. Clairvoyant cursors are available
+  through `currentCursor()` only within the policy-construction `ScopedValue`.
+  Seed the weighted admitter with `maximum-size = 0` and let retracking allocate at half-fill,
+  preserving unweighted output. `TinyLfu` permits zero only for `Frequency.isResizable()`
+  (the CountMin4 family). A fixed count-min-64 zero seed gives `sampleSize = 0` and ages on
+  every increment, preventing frequency accumulation.
+- **The remaining native/product cadence difference is accepted.** `FrequencySketch` uses
+  `10 × maximum`; `CountMin4` uses `10 × table.length`. They coincide at power-of-two gate
+  sizes (4096/8192/16384/32768) and at sizes 129–256 due to the library's minimum.
+  Outside those ranges the simulator can age up to 2× staler (DS1@1051635: 1.99×;
+  strad_p8@4097: 2×; arc/P3@152508: 1.72×), or below 256 up to 32× fresher
+  (loop@101: 2× fresher). The library can repoint its period downward; CountMin4's table is
+  grow-only. Retracking fixed moving-count sizing; this residual rounding/cadence gap was not
+  worth rebasing the corpus. It affects `Admission.TINYLFU`, including static-window
+  ceiling estimates and native simulator policies, **not** `product.Caffeine` measurements.
 
 ## Hit-Rate Validation
 
-- **Screen a trace family by its first line, not its file size.** `all-trc` in the local research
-  corpus carries two unrelated formats under one `.trace.xz` suffix: ten plain one-key-per-line
-  LIRS reference streams (the ones its README names) and 27 files of `N <k>` / `I <id> <t>` /
-  `O <id> <t>` block records that **no `TraceFormat` reader parses**. The unreadable 27 are every
-  large file there, so a study sizing a holdout off `wc -l` selects cells that cannot run —
-  `LirsTraceReader` dies with `NumberFormatException` inside `Simulator.broadcast`. That failure
-  is loud; the sibling hazard is quiet — a mismatched-but-valid reader yields nothing and writes
-  blank rows (the ARC cells in the real-corpus runner were declared `lirs` until 2026-08-04, and
-  every ARC row it had ever written was empty).
+- **Validate trace format before sizing a study.** Inspect the first line, not the suffix or
+  file size. For example, the all-trc family mixes ten plain LIRS streams with 27 files of
+  `N <k>` / `I <id> <t>` / `O <id> <t>` records that no reader supports. A wrong reader may
+  throw, but a mismatched valid parser can silently emit no events; verify nonempty results.
+- **Use absolute percentage points and measured noise.** Product admission is randomized;
+  observed single-seed spread was about 0.1–0.8pp (loop@101: 0.12; multi3@2981: 0.49).
+  Treat sub-1pp single-seed deltas as unresolved, not wins. Run at least 3 seeds, preferably 5,
+  on low-hit-rate cells. Accept robust multi-seed wins around 2pp or larger with no collapse, judged
+  cell-by-cell; summing many sub-noise deltas into `net +Npp` is misleading.
+- Equal seeds make arms reproducible, but do not provide request-indexed common randomness
+  when admission contests consume draws on different requests. Exact pairing requires matching
+  draw counts and request-index digests. Interleaving arms limits temporal drift without
+  synchronizing their random draws.
+- **A shadow must model reachable host geometry.** The live climber exchanges window and
+  protected capacity while probation stays fixed. Static `WindowTinyLfuPolicy(percentMain)`
+  re-splits main, so it is not an exact counterfactual. Construct integral
+  `(window, protected, probation)` targets, apply host clamps, deduplicate aliases, then scale
+  those triples into miniatures. Compare request by request against an independent state model
+  and the real policy; final hit rate cannot expose geometry or queue-order errors.
+- **Sampled panels need explicit clocks and evidence.** Use `floorMod` for hash buckets;
+  signed `%` can admit every negative hash under `< 1`. Separate host requests, sampled
+  requests, and the first-full boundary. An empty epoch abstains instead of choosing the first
+  tied arm. Randomized admission arms receive one request-indexed variate from a domain
+  distinct from membership sampling; equal seeds with conditional draws do not suffice.
+- **Movement requires host acknowledgement.** Derive an integral delta from the live coordinate,
+  validate the applied sign/magnitude, and carry capped commands until the approved target is
+  reached. Test both directions, zero/partial clamps, changed targets, and requests immediately
+  before/at clock boundaries; nominal percentage assignment is insufficient.
+- **Gate estimator quality, safe movement, and production cost separately.** Measure retained
+  graph size, steady-request allocation, command/boundary allocation, and CPU. Low duty cycle
+  does not remove dormant callback/counter/branch cost. Benchmark the actual product integration,
+  warm the measured objects/branches, and make estimator work observable to the JIT.
+- **Distinguish recovery latency from a settled error.** Classify terminal state before
+  interpreting oracle regret; a trace ending during a walk/audit measures finite-horizon
+  recovery. A sequential treatment/control crossover on one drifting cache is not causal:
+  use matched states/requests, synchronized randomness, and simultaneous or replay-forked arms.
 
-- **Noise floor — never count a sub-noise delta as a win.** `product.Caffeine` has randomized
-  admission, giving a single-seed run-to-run hit-rate noise floor of **~0.1–0.8pp** (measured:
-  `loop@101` spread 0.12, `multi3@2981` spread 0.49). A delta under **~1pp is not resolvable from
-  noise** and must not be reported as a win — this is a *recurring* mistake (tiny wins overcounted
-  as achievements, e.g. "+0.14 over the ceiling" is noise, the climber merely *matched* it).
-  Report **absolute pp, not relative %** (relative exaggerates noise on low-HR cells);
-  **multi-seed (≥3, ideally 5) any low-HR cell** where a single seed is dominated by the hashing
-  seed. Equal seeds make each arm reproducible and support a seed-by-seed comparison; they are not
-  request-indexed common random numbers when the arms consume randomized admission contests on
-  different requests. Claim exact pairing only when both the draw count and request-index digest
-  match. Interleaving arms bounds temporal drift but does not make them share RNG state or draws.
-  The bar for a change is **robust wins (≥~2pp, multi-seed) with no collapse**, judged cell-by-cell
-  — never a `net +Npp` sum, which is inflated by the sea of sub-noise cells. The 2026-05
-  large-cache climber sweeps learned this the hard way (a "−68%" was 5,119→1,631 hits, both ~0%
-  HR — pure noise).
-- **A shadow policy must represent a reachable host state.** A window percentage is not enough.
-  The live W-TinyLFU climber transfers capacity between window and protected while probation stays
-  fixed; an ordinary static `WindowTinyLfuPolicy(percentMain)` re-splits protected and probation
-  and therefore is not an exact counterfactual arm. Construct full-cache integer
-  `(window, protected, probation)` targets first, apply the host's clamps, deduplicate aliases,
-  and only then scale those exact triples into a miniature. Compare the shadow against both an
-  independent state model and the real simulator policy request by request; final hit rate alone
-  cannot expose a geometry or queue-order mismatch.
-- **Sampled policy panels need explicit evidence semantics.** Use `floorMod` for hash-bucket
-  selection; Java's signed `%` admits every negative hash under a `< 1` predicate. Separate the
-  host-request clock, sampled-request count, and first-full boundary. An epoch with no sampled
-  evidence abstains rather than selecting arm zero by a tie. Where admission is randomized, all
-  arms must receive one request-indexed variate from a domain distinct from membership sampling;
-  identical seeds with conditional draw consumption do not establish common randomness.
-- **Adaptations are acknowledged commands, not percentage assignments.** Compute an integral
-  delta from the actual live coordinate, validate the host's applied sign and magnitude, and carry
-  a capped command until the acknowledged coordinate reaches its approved target. Do not update a
-  nominal percentage and assume a clamp or rounding step arrived. Pin both movement directions,
-  zero/partial clamps, target changes, and the request immediately before and at every clock edge.
-- **An informative estimator is not yet a viable controller.** Gate signal quality, safe live
-  movement, and production-host cost independently. Measure retained graph size, steady-request
-  allocation, command/boundary allocation, and CPU; none is a proxy for another. A low duty cycle
-  does not make an unconditional dormant callback, counter, or branch free. Benchmark the actual
-  product splice, warm the exact measured objects and branches, and make the estimator's work
-  observable so the JIT cannot erase it.
-- **Classify terminal state before interpreting oracle regret.** A trace ending during a walk or
-  audit demonstrates finite-horizon recovery latency, not a settled rest-point error. Likewise, a
-  temporal treatment/control crossover on one drifting cache is not causal evidence: workload
-  weather and movement shocks affect the two periods differently. Causal attribution requires
-  matched state and requests, synchronized randomness, and simultaneous or replay-forked arms.
-- Canonical trace set: bundled LIRS (`loop`, `multi1/2/3`, `2_pools`, `cpp`, `cs`, `scan` at sizes 500/1k/2k); ARC's `DS1` at 1M to 8M; `S3` at 100k to 800k; the corda_large + 5×loop + corda_large phase-shift stress.
-- **The corda+loop stress must be run across the climber tiers.** The climber is tiered by size (`.claude/docs/design-decisions.md`): reactive `≤ SLOW_ADAPT_THRESHOLD` (512, small-tuned) and `≤ DENSITY_THRESHOLD` (4096, standard), density `> 4096`. Run the stress at **512, 513, 1024, 4096, 4097, 8192** and confirm `product.Caffeine` stays near its static-window ceiling and above LRU at every size, with **no cliff at either threshold boundary** (the 512→513 cliff was the original symptom of density taking over too early; density is now scoped to >4096 where it doesn't trap). The density climber is fragile at small/medium sizes — a starved region reads zero density and pins at an extreme — which is why it's scoped to large caches; don't lower `DENSITY_THRESHOLD` without re-running this. A synthetic phase-shift does *not* reliably reproduce the trap — use the real bundled `corda:trace_vaultservice_large.gz` + `lirs:loop.trace.gz`.
-- For LIRS-family bit-for-bit matching: set `non-resident-multiplier` very high (e.g. 100) so the memory bound doesn't fire — published references don't bound shadows.
-- **The LIR/HIR split is rounded on the COLD side, with a per-policy floor.** Both references compute
-  `HIR = (int)(HIR_RATE/100 * mem_size)`, clamp it up to a floor, and give LIR the remainder;
-  rounding the hot side instead (`(int)(size * percentHot)`) moves the boundary by one block and
-  costs 1–4 misses out of thousands. The floors differ and are not interchangeable: `lirs.c` uses
-  **2** (`LOWEST_HG_NUM`) and Chen Zhong's `replace_lirs2.cc` uses **4**. Their stack bounds differ
-  too — `MAX_S_LEN` is `mem_size*2500` for LIRS and `mem_size*8` for LIRS2, which is why
-  `lirs2.stack-length-multiplier` defaults to 8. Verified 2026-08-13: with the cold-side rounding,
-  `LirsPolicy` reproduces `lirs.c`'s miss counts on **8/8** canonical cells
-  (`cs`@512/1024, `ps`@256/1024, `multi1`@1024, `gli`@512, `cpp`@1024, `2_pools`@1024) **at the
-  shipped default**, where it previously matched only when the split was hand-adjusted. Re-check
-  with `verify_reference.py` in the lirs-analysis workspace, which rebuilds `lirs.c` from the
-  simulator's own resources (`cc -std=gnu89`; it has implicit declarations modern C rejects).
-- **The LIRS2 stack bound is load-bearing, not inert.** `lirs2.stack-length-multiplier` looks like
-  a memory knob and is not one: `stackLength` tracks the depth of the admission bar, so `MAX_S_LEN`
-  clamps how permissive admission may become. Three independent measurements in 2026-08:
-  dropping 8 to 1 frees zero blocks while driving slot visits per request from 1.997 to 8,105;
-  multiplier 1 moves a constructed cell by 12.91 points by cutting promotions 92%; and at the
-  published 8 a working set can be locked out of promotion entirely, curing only at 12 or above.
-  Sweeping it as a fairness control and reporting "flat" is only valid over the range actually
-  swept, and 1 is outside what the published bound contemplates.
-- To run a C/C++ reference side-by-side: use `simulator:rewrite --outputFormat=LIRS` to produce one-int-per-line traces, strip `*` checkpoints with `grep -v '^\*$'` if the reference reader rejects them.
+Canonical comparisons use bundled LIRS loop, multi1/2/3, 2_pools, cpp, cs, and scan at
+500/1k/2k; ARC DS1 at 1M–8M; S3 at 100k–800k; and the corda+loop phase-shift stress.
 
-## Reader / Policy Test Scoping
+Run that stress at **512, 513, 1024, 4096, 4097, and 8192**. Product should remain near its
+static-window ceiling and above LRU without cliffs at either tier boundary. Reactive climbing
+uses small tuning through `SLOW_ADAPT_THRESHOLD` (512), standard tuning through
+`DENSITY_THRESHOLD` (4096), and density above 4096. Starved regions can pin density climbing
+at smaller sizes; do not lower its threshold without this check. Use real bundled
+`corda:trace_vaultservice_large.gz` + `lirs:loop.trace.gz`; synthetic phase shifts do not
+reliably reproduce the trap. See [design decisions](../docs/design-decisions.md).
 
-The simulator is an interpretation-heavy research tool: a trace reader encodes *our reading* of an
-often-undocumented format. A unit test asserting "parse == the keys I derived from the format" only
-locks that reading in — right or wrong. (The K5cloud reader keyed on the block alone until #1974 added
-the volume id; a parse-assertion test would have frozen the across-volumes aliasing.) So don't add
-blanket per-reader coverage.
+## LIRS Reference Validation
 
-Add a reader/policy test only against a **real oracle**, folded into the specific fidelity fix:
-- a documented byte layout (byte-order / alignment — e.g. the libCacheSim struct)
-- a paper-defined behavior or arithmetic property (CAMP's `roundedCost`)
-- a boundary / robustness property that needs no oracle (don't-NPE at size 1; don't-silently-truncate
-  a corrupt trace)
+- Use a high `non-resident-multiplier` (e.g. 100) when comparing with unbounded reference
+  shadows, so the simulator's memory bound does not affect results.
+- Round the **cold** allocation: `HIR = (int)(HIR_RATE/100 * mem_size)`, apply its floor, and
+  give LIR the remainder. Hot-side rounding shifts the boundary by a block and costs 1–4 misses.
+  `lirs.c` floors HIR at 2 (`LOWEST_HG_NUM`); Zhong's `replace_lirs2.cc` floors it at 4.
+  `MAX_S_LEN` is `mem_size*2500` for LIRS and `mem_size*8` for LIRS2, hence the latter's
+  default `stack-length-multiplier = 8`.
+- Cold-side rounding matched `lirs.c` on 8/8 cells at shipped defaults: cs@512/1024,
+  ps@256/1024, multi1@1024, gli@512, cpp@1024, and 2_pools@1024. Build the reference from
+  simulator resources with `cc -std=gnu89` for its legacy implicit declarations.
+- **LIRS2's stack bound controls admission, not just memory.** `stackLength` is the admission
+  bar's depth. Reducing its multiplier from 8 to 1 freed no blocks while raising slot visits
+  per request from 1.997 to 8,105; another witness moved hit rate by 12.91pp and reduced
+  promotions by 92%.
+  At the published 8, a working set can be locked out until the bound reaches 12.
+  A flat sweep proves only its tested range; multiplier 1 is outside the published bound.
+- Export with `simulator:rewrite --outputFormat=LIRS`; remove `*` checkpoints if the C/C++
+  reader rejects them.
 
-The real validation of an interpretation is a **hit-rate run vs a reference impl / paper**, not a unit
-test.
+## Reader and Policy Test Scoping
+
+Add tests as part of a specific fidelity fix, against a real oracle: a documented byte layout
+(e.g. libCacheSim alignment/byte order), paper-defined behavior/arithmetic (e.g. CAMP's
+`roundedCost`), or an independent robustness boundary (size 1, corrupt-trace rejection).
+
+Do not add blanket reader tests that merely restate our interpretation of an undocumented
+format. K5cloud's old block-only key omitted volume identity (#1974); such a test would have
+preserved the aliasing error. Validate interpretations through hit-rate comparisons with the
+reference implementation or paper.

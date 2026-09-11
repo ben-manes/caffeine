@@ -894,12 +894,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Var int remaining = EXPIRATION_THRESHOLD;
-    remaining = expireAfterAccessEntries(now, accessOrderWindowDeque(), WINDOW, remaining);
+    remaining = expireAfterAccessEntries(now, WINDOW, accessOrderWindowDeque(), remaining);
     if (evicts()) {
       remaining = expireAfterAccessEntries(
-          now, accessOrderProbationDeque(), PROBATION, remaining);
+          now, PROBATION, accessOrderProbationDeque(), remaining);
       remaining = expireAfterAccessEntries(
-          now, accessOrderProtectedDeque(), PROTECTED, remaining);
+          now, PROTECTED, accessOrderProtectedDeque(), remaining);
     }
     if (remaining == 0) {
       setDrainStatusOpaque(PROCESSING_TO_REQUIRED);
@@ -911,8 +911,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * unused budget. When exhausted the caller re-arms maintenance to process the backlog.
    */
   @GuardedBy("evictionLock")
-  int expireAfterAccessEntries(long now, AccessOrderDeque<Node<K, V>> accessOrderDeque,
-      int queueType, @Var int remaining) {
+  int expireAfterAccessEntries(long now, int queueType,
+      AccessOrderDeque<Node<K, V>> accessOrderDeque, @Var int remaining) {
     var head = accessOrderDeque.peekFirst();
     if (head == null) {
       return remaining;
@@ -933,6 +933,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       evictEntry(node, RemovalCause.EXPIRED, now);
       remaining--;
       node = next;
+
+      // The walk cannot end if a reentrant cycle removed the entry that it stops on
+      boolean bounded = (last.getQueueType() == queueType) && accessOrderDeque.contains(last);
+      if ((node != null) && !bounded) {
+        return 0;
+      }
     }
     return remaining;
   }
@@ -965,6 +971,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       evictEntry(node, RemovalCause.EXPIRED, now);
       remaining--;
       node = next;
+
+      // The walk cannot end if a reentrant cycle removed the entry that it stops on
+      if ((node != null) && !writeOrderDeque().contains(last)) {
+        remaining = 0;
+        break;
+      }
     }
     if (remaining == 0) {
       setDrainStatusOpaque(PROCESSING_TO_REQUIRED);

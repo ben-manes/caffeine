@@ -72,7 +72,9 @@ Google Java Style. Contributors must sign a CLA.
 - Before suggesting dependency versions, Semgrep rulesets, or tool integrations, verify they exist (check Maven Central, registries, JDK release notes). Never recommend unverified tools. Use latest versions.
 - Stay focused on the specific task requested. Don't produce unsolicited broad recommendation plans or premature "ready for engineer follow-up" conclusions.
 - Lossy/best-effort semantics (read buffer drops, approximate frequency counts, eventual consistency) are intentional design trade-offs in the cache — not defects. Read `.claude/docs/design-decisions.md` before flagging these.
-- When fixing a bug or making a design change, update or create `.claude/` files (docs, rules, skills, agents) to keep them in sync with the change.
+- Update `.claude/` guidance when a change alters a durable rule, boundary, or useful rationale.
+  Reconcile the existing section instead of appending a report for every fix; keep rules short and
+  link to detailed docs when needed. See `.claude/rules/code-comments.md` for editorial guidance.
 - Work that will span sessions gets a `LEDGER.md` work queue (itemized rows, status updated in place) alongside its scripts and data under `.local/experiments/<topic>/`. Being gitignored, that workspace survives the branch resets and rebases that remove checked-in artifacts — a narrative report on its own is not a handoff. It is ephemeral and machine-local, though: a checked-in file must not depend on `.local/` **contents** — never cite a specific workspace as where the evidence lives, or a `LEDGER.md` as the record, because the tree may be purged and other clones don't have it. Declaring a **destination** is fine and expected (`.local/audits/<model>/<skill>.md` is the audit convention). Distill durable conclusions into `.claude/` docs; workspace pointers belong in other `.local` files or in memory.
 - When parallel workstreams report conflicting values for the same measurement, re-measure it directly rather than averaging them or trusting the more confident one. The conflict is usually an instrumentation artifact in one of them, and it otherwise ships as a finding.
 - Don't blindly suggest committing after writing code. Actually run the tests and verify the output before proposing to commit.
@@ -138,6 +140,7 @@ When to read which doc:
 - Investigating audit or retention costs → `hill-climber.md` §5–6 and `/audit-regret`'s
   targeted retention controls; reuse workload specs, not archived experiment runners
 - Interpreting or writing audit findings → `finding-taxonomy.md`
+- Consolidating audit reports → `audit-rounds.md` and `audit-output.md` §Consolidated queue
 - Auditing JSR-107 conformance of the jcache adapter → `jsr107-conformance.md`
 
 ## Claude Code Extensions
@@ -183,8 +186,8 @@ When to read which doc:
 | JSR-107 (JCache) spec conformance of the adapter | `/audit-jcache-conformance` |
 | Third-party/JDK API contract misuse (adapters, simulator, examples) | `/audit-third-party-contracts` |
 
-**Running a batch round** (order, quota, what a second model buys, the survival ratio to
-expect): `.claude/docs/audit-rounds.md`. Read it when starting or triaging a round.
+**Running a batch round** (order, quota, model coverage, and consolidation):
+`.claude/docs/audit-rounds.md`. Read it when starting or triaging a round.
 
 **Audit output**: reports go to `.local/audits/<model>/<skill-name>.md` — one directory per
 producing model (`opus-5`, `gpt-5.6-sol`, …) plus `shared` for cross-model working documents like

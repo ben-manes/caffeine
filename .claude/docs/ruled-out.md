@@ -1,8 +1,8 @@
 # Ruled Out
 
-Patterns that have been adjudicated and rejected. Each entry states a mechanical fact about
-why the code is the way it is, not that some earlier review passed. Use the reason; there is
-no audit history here to defer to.
+Adjudicated mechanisms and their scope. Most are accepted behavior; entries that describe a
+repaired mechanism are marked as historical. Use the reason and current code, not an earlier
+review's outcome.
 
 **When to read this**: Phase 1.5, after your own findings are written down, alongside
 `design-decisions.md`. Never before Phase 1 analysis. Read your module's section plus
@@ -14,9 +14,8 @@ A ruling is about a mechanism and a consequence. If you have the same mechanism 
 does not cover, that is a new finding and the entry does not dispose of it. Say which part
 differs.
 
-Two of these were overturned by a finding that shared the mechanism and changed the
-consequence, so the label is not a stop sign. What it is is a bar: clear the entry's reason
-explicitly, or your row will be closed on it without being read.
+Rulings can be overturned. Address the stated reason when new evidence changes the consequence,
+trigger, or configuration.
 
 ---
 
@@ -76,19 +75,29 @@ These dispose of whole families. Check them first.
   default-executor runs, so it is a special case rather than a repair. Resurrecting a victim
   when size eviction no longer holds has the same gap, and does nothing for an update that
   is not itself oversize and pushes other entries out. Weight-0 pinning is unaffected, which
-  is the case that would have made it more than premature eviction. Adjudicated 2026-09-06.
+  is the case that would have made it more than premature eviction.
 - Size eviction is uncapped and drains the whole excess in one cycle under `evictionLock`.
   Eager shrink is the published `Policy.Eviction.setMaximum` contract, and the uncapped
   property is load-bearing for the `rescheduleCleanUpIfIncomplete` piggyback: size eviction
   never arms the pacer, so a capped drain would be the one backlog shape with no driver.
 - Without a `Scheduler`, maintenance is amortized onto callers and a quiesced cache stays
-  over `maximumSize`. The `Scheduler` is the published opt-in for prompt eviction. The
+  over `maximumSize`. A `Scheduler` requests prompt expiration; a size-only cache has no pacer. The
   excess is capped by the write buffer (`estimatedSize() <= maximum + WRITE_BUFFER_MAX`),
   because a full buffer forces `afterWrite`'s inline assist. Do not add a third re-arm and
   do not move the resubmission into `PerformCleanupTask`; both were built and declined.
 - `rescheduleCleanUpIfIncomplete`'s `!pacer.isScheduled()` gate deferring a REQUIRED backlog
   to the pacer's horizon is the same design. Same for the executor-reject catch in
   `scheduleDrainBuffers` not calling it.
+- `rescheduleCleanUpIfIncomplete` losing the last driver entirely. Its peek holds the eviction
+  lock without draining, which is what a concurrent writer's `scheduleDrainBuffers` needs for its
+  `tryLock`, so a write that flips the status to REQUIRED between the peek's read and its unlock is
+  left with nothing scheduled. This is accepted best-effort scheduling: buffered work remains
+  available to the next operation. A loss mid-burst heals on the next write, which finds REQUIRED
+  and re-arms; only a loss on the final write before quiescence
+  persists, and the debt is bounded by the write buffer. The controlled witness paused a generated
+  subclass after the status reads; 60 bursts on the real configuration produced none. A size-only
+  cache has **no pacer at all**, since the generated class carries one only when expiration is
+  configured, so a stuck size there is the accepted no-driver design rather than this claim.
 - The expiration and window scans are O(N) in the pending-async population. The walk is real
   and 100k pending entries cost ~410 us per `cleanUp`, but the reorder is self-correcting:
   pending entries migrate to the MRU end and one completed entry takes `cleanUp` from
@@ -135,8 +144,9 @@ These dispose of whole families. Check them first.
 **Timing and arithmetic**
 
 - `EXPIRE_TOLERANCE` (1s) inexactness. Expiration is a maximum lifetime, not a minimum hold
-  time; entries may expire up to 1s early, never late. Applies to `writeTime` reorder
-  decisions and to `accessTime` read-path updates.
+  time; entries may expire up to 1s early from timestamp tolerance. Applies to `writeTime` reorder
+  decisions and `accessTime` read-path updates. Read-extension's accepted over-stay is a
+  separate race described in [expiration](design-decisions.md#expiration).
 - Expiration eviction capped at `EXPIRATION_THRESHOLD` (1000) per cycle, re-armed via
   `PROCESSING_TO_REQUIRED`. The wheel rewinds `nanos` and re-links the remainder, so a
   `schedule` inside that window measures against a behind clock. The budget counts only
@@ -145,15 +155,30 @@ These dispose of whole families. Check them first.
   polls rather than evictions. The cap bounds the lock *hold*, not a waiter's *wait*; the
   lock is not fair, so a backlog still monopolizes it. That residual is not the cap failing.
 - `nanoTime` overflow at ~73 years.
-- `TimerWheel.advance` delta=0 at `nanos = -1 -> 0`, or any sub-tick negative-to-non-negative
-  crossing.
+- `TimerWheel.advance` returning delta=0 within a tick. The rebased `-1 -> 0` crossing is a
+  tick boundary and returns 1; see [TimerWheel](design-decisions.md#timerwheel).
+- A dropped read-buffer offer deferring a variable-expiry reschedule. A read that shortens the
+  duration CASes `variableTime` but leaves the node in its previous deadline's bucket, so the
+  entry stays resident and unreadable until that bucket is swept (measured: 3574s against a 3s
+  request, with a `Scheduler` arming 3569s out). Bounded by the previous deadline, so it never
+  extends an entry's life; see [TimerWheel](design-decisions.md#timerwheel).
 - `Pacer.calculateSchedule`'s 0L sentinel collision.
 - `Pacer.schedule`'s reschedule arm must call `cancel()`, not `future.cancel(...)`: the
   immediate-scheduler recursion guard is `future == null && nextFireTime != 0L` and only
   `cancel()` reaches it. Do not simplify it back.
+- `Pacer` skipping its own re-arm from inside the fire, so a cache with a `Scheduler` goes
+  dormant until the next operation. The scheduler measures its delay on its own clock while the
+  pacer compares against the cache's ticker, so a ticker that has not reached `nextFireTime` when
+  the fire arrives makes the still-running future look like a fire that is still to come. It needs
+  a ticker coarse enough to lag the fire's dispatch latency: a one-second-granularity ticker
+  reproduces on the default scheduler, while `systemTicker` and a one-millisecond cached clock did
+  not in 20 trials each. **A `Ticker` is expected to advance between reads.** A clock with a
+  resolution that repeats a value for a second is a test instrument, and a user who wants a cheap
+  clock can increment per `read()` and resynchronise periodically. The `fired` flag that
+  excludes an executing fire from pending work was declined for this trigger.
 - `Pacer` self-poison ordering (`nextFireTime` committed before `scheduler.schedule()`).
-  `GuardedScheduler`'s no-throw and no-null guarantee is load-bearing and Pacer always holds
-  one. Documented rather than guarded; the minimal catch was drafted and reverted.
+  User schedulers get `GuardedScheduler`'s no-throw/no-null guarantee; built-ins satisfy it
+  directly. Do not add a catch for an unreachable synchronous scheduler failure.
 - `TimerWheel.Traverser` detecting concurrent modification via `nanos` rather than a
   `modCount`, unlike the deque-backed `Policy` families. The "spins forever holding
   `evictionLock`" consequence is a frozen-ticker artifact: `advance()` sets
@@ -170,9 +195,9 @@ These dispose of whole families. Check them first.
 - Drain status terminal arms that skip the CAS, and a stale opaque read settling IDLE with a
   buffered task.
 - `scheduleAfterWrite`'s weak-memory IDLE strand.
-- Weak key identity semantics, and `WeakKeyEqualsReference.equals` returning true for two
-  cleared refs with different stored hashCodes.
-- `Interner.drainKeyReferences` aliasing on hash-colliding cleared weak keys.
+- Weak key identity semantics. Historical cleared-reference aliasing was harmless to the
+  interner's uniform values; cleared references now compare equal only to themselves. See
+  [refresh internals](design-decisions.md#refresh-internals).
 - `weakKeys()` spliterators advertising `Spliterator.DISTINCT`. `IdentityHashMap`, the class
   the `weakKeys` javadoc names as its model, does the same on key and entry and omits it on
   values. Removing it makes `distinct()` merge distinct live entries.
@@ -199,7 +224,7 @@ These dispose of whole families. Check them first.
   `tryExpireAfterRead`.
 - Read-path expiry extension resurrecting a just-expired entry.
 - A read that returns a value already reported EXPIRED, during a concurrent rewrite. Real and
-  deferred, and since addressed by the timestamps-before-value protocol; not new.
+  historically deferred, then repaired by the timestamps-before-value protocol.
 
 **Refresh**
 
@@ -219,6 +244,15 @@ These dispose of whole families. Check them first.
 - Refresh discard notification using the discarded value; refresh commit failure not
   surfaced on the future; `discardRefresh`'s `containsKey` prescreen missing a CHM
   `computeIfAbsent` reservation; `discardRefresh` invalidating a newer refresh generation.
+- A manual `refresh(k)` that started while the key was absent committing across a racing
+  `put` then `invalidate`. Its only ownership test is `currentValue == oldValue`, vacuous at
+  `null == null`, and the prescreen cannot see the registration reservation. Reproduced 5/5
+  with the loader running inside `refreshes.compute`, discarded 0/5 on a pool executor, and
+  the history is still a legal linearization; see [refresh internals](design-decisions.md#refresh-internals).
+- `UnboundedLocalCache.discardRefresh` removing unconditionally, so a write waits out an
+  inline refresh load on the same key (measured 2004 ms). It is a light `ConcurrentHashMap`
+  wrapper and CHM's `put` is pessimistic regardless, so the bounded cache's prescreen is not
+  a repair to port.
 - A same-instance refresh leaking the completed future in `refreshes`.
 - A user-initiated `LocalLoadingCache.refresh` lacking the `getWriteTime() == writeTime` ABA
   guard.
@@ -245,8 +279,21 @@ These dispose of whole families. Check them first.
   soft value caches `IdentityHashMap` equivalence; do not revert it to `o.equals(value)`. The
   open direction, if this is ever revisited, is the opposite one: removing by key only, to
   match what `AbstractCollection` does for non-concurrent usage, against which CHM's
-  conditional `removeIf` is the counterweight. Adjudicated 2026-09-06.
+  conditional `removeIf` is the counterweight.
 
+- Map, entry-set and entry-object equality disagreeing under `weakValues()`/`softValues()`.
+  The value-bearing queries are identity-based and `equals`/`hashCode`/emitted entries are
+  `equals`-based, so `entrySet().equals` is false one way and true the other while `equals` is
+  true both ways. Guava's `weakValues()` cache reproduces the row exactly, and `IdentityHashMap`
+  buys coherence only by being asymmetric against a `HashMap` instead. Identity belongs to
+  one-sided queries and never to a bilateral contract; see
+  [iteration](design-decisions.md#iteration).
+
+- `clear()` attributing `EXPLICIT` where `invalidateAll(keys)` attributes `EXPIRED` for an entry
+  crossing its deadline during the sweep. The captured clock amortizes the ticker call under the
+  eviction lock, and the straggler fallback reads per key anyway, so the same `clear()` reported 5
+  `EXPLICIT` then 199,995 `EXPIRED` under a concurrent writer; see
+  [expiration](design-decisions.md#expiration).
 - `getAllPresent` and `containsValue` using one scan-wide `now` for every element's expiry
   check. This covers bounded single calls whose staleness window is the call. It does **not**
   extend to a user-paced traversal (an iterator or spliterator), where a slow terminal
@@ -267,11 +314,15 @@ These dispose of whole families. Check them first.
 
 - `notifyEviction` to `discardRefresh` ordering, and an exception during user
   `equals`/`hashCode`.
+- The unbounded cache notifying with the caller's key instance, losing the notification when a
+  cross-type equal key reaches a typed listener. `ConcurrentHashMap` never returns a stored key,
+  and recovering it needs a scan or a per-entry node; see
+  [CHM constraints](design-decisions.md#concurrenthashmap-constraints).
 - `AsyncRemovalListener` notification on executor rejection.
 - `LocalCache.notifyOnReplace` dropped when both old and new are async futures and the old
   completed exceptionally.
-- `afterWrite`'s inline fallback dropping the write's policy task when a maintenance drain
-  throws.
+- Historical `afterWrite` inline-fallback loss when maintenance throws. The repair runs
+  the write's own task in `maintenance`'s `finally`; buffered work remains deferred.
 
 ---
 
@@ -309,14 +360,14 @@ These dispose of whole families. Check them first.
 
 ## jcache
 
-Read `jsr107-conformance.md`'s divergence catalogue with this section.
+Read `jsr107-conformance.md`'s topic sections with this section.
 
 - **The 1.0 PDF is not authoritative.** The 1.1 and 1.1.1 maintenance releases revised
   normative behaviour without regenerating the formal PDF. Cross-check the 1.1.1 Maintenance
   Release and its revision history before treating a 1.0 sentence as load-bearing. Confirmed
   relaxations: `getCacheNames` iterator IAE to UOE; `getCache(String)` typed-cache IAE
   removed; the `CacheLoader` exception-wrapping rule removed; the iterator EXPIRED firing
-  requirement removed. Four recurring findings die on this alone.
+  requirement removed.
 - Operations racing `close()`. The spec explicitly permits a closed cache to retain
   contents, governs only *future* use, and punts concurrent behaviour to implementation
   dependent. Local in-memory means no OS resource leaks.
@@ -378,7 +429,7 @@ Read `jsr107-conformance.md`'s divergence catalogue with this section.
   broken. Recursive loading is an implementation hole left undefined, not a contract, and
   Guava never promised it either. Drop-in compatibility is about honoring their API contracts,
   not reproducing their implementation: Guava is not linearizable and Caffeine does not give
-  that up to match. Migrating users do hit it. Adjudicated 2026-09-06.
+  that up to match. Migrating users do hit it.
 
 ---
 
