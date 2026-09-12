@@ -30,6 +30,7 @@ dependencies {
   implementation(libs.fast.filter)
   implementation(libs.ascii.table)
   implementation(libs.expiring.map)
+  implementation(libs.jackson.core)
   implementation(libs.commons.lang3)
   implementation(libs.commons.math3)
   implementation(libs.commons.compress)

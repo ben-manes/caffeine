@@ -17,7 +17,8 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
         val ignoredGroups = listOf("com.beust")
         val kotlinGroups = listOf("org.jetbrains", "org.jetbrains.kotlin")
         val stable = setOf("com.google.protobuf", "com.hazelcast", "javax.json.bind",
-          "org.jetbrains.kotlin", "org.apache.logging.log4j", "org.osgi", "org.slf4j")
+          "org.jetbrains.kotlin", "org.apache.httpcomponents.client5",
+          "org.apache.logging.log4j", "org.osgi", "org.slf4j")
         if ((candidate.group in stable) && isNonStable(candidate.version)) {
           reject("Release candidate")
         } else if ((candidate.group in ignoredGroups) && (candidate.version != currentVersion)) {

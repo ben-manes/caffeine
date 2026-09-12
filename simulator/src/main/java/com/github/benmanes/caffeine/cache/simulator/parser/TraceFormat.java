@@ -37,6 +37,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReade
 import com.github.benmanes.caffeine.cache.simulator.parser.glcache.GLCacheTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.kaggle.OutbrainTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.kvcache.AgentXTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.kvcache.MooncakeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.libcachesim.csv.LibCacheSimCsvTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.libcachesim.oracle.OracleGeneralTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.libcachesim.twitter.LibCacheSimTwitterTraceReader;
@@ -71,6 +73,7 @@ public enum TraceFormat {
   ADDRESS(AddressTraceReader::new),
   ADDRESS_PENALTIES(AddressPenaltiesTraceReader::new),
   ADAPT_SIZE(AdaptSizeTraceReader::new),
+  AGENTX(AgentXTraceReader::new),
   ARC(ArcTraceReader::new),
   BALEEN(BaleenTraceReader::new),
   CACHE2K(Cache2kTraceReader::new),
@@ -85,6 +88,7 @@ public enum TraceFormat {
   LCS_TWITTER(LibCacheSimTwitterTraceReader::new),
   LIRS(LirsTraceReader::new),
   LRB(LrbTraceReader::new),
+  MOONCAKE(MooncakeTraceReader::new),
   OUTBRAIN(OutbrainTraceReader::new),
   SCARAB(ScarabTraceReader::new),
   SNIA_CAMBRIDGE(CambridgeTraceReader::new),

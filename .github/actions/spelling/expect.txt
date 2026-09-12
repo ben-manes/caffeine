@@ -1,8 +1,10 @@
 actionlint
 Adoptium
+agentx
 Ams
 amsgrad
 appname
+astra
 asu
 Autobuild
 awaitility
@@ -72,6 +74,7 @@ gli
 gnubin
 Gnuplot
 GPG
+gpt
 graalnative
 graalvm
 gradlew
@@ -116,6 +119,7 @@ Kout
 ksh
 ktlint
 kts
+kvcache
 lcs
 lfu
 Lhirs
@@ -133,6 +137,7 @@ mfu
 minisim
 misattributes
 mockito
+mooncake
 msb
 multimap
 mxbean
@@ -162,6 +167,7 @@ rawtypes
 redefaults
 refault
 refaulting
+rescans
 reserializable
 reserialize
 reserialized

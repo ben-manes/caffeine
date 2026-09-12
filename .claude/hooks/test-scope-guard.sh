@@ -8,12 +8,17 @@
 # because a change with a wide blast radius reads as a licence to run wide instead of as
 # work to convert "wide" into named methods.
 #
-# Scope: only the plain `test` task. The named suites (frayTest, lincheckTest, fuzzTest,
-# jcstress, googleTest, apacheTest, ...) are meant to be run whole and are left alone.
+# Scope: only the caffeine module's plain `test` task, which is the @CacheSpec-parameterized
+# suite the rule is about, plus an unqualified `test` that runs every module's including it.
+# The other modules (guava, jcache, simulator) have no @CacheSpec tests and their suites are
+# small, so they are left alone. The named suites (frayTest, lincheckTest, fuzzTest, jcstress,
+# googleTest, apacheTest, ...) are meant to be run whole and are left alone.
 #
 # Escape hatches, both sanctioned by the rule: add a -P filter, or name the methods.
 #
-# Fails OPEN on any tooling/parse problem so it can never wedge a command.
+# Fails OPEN on any tooling/parse problem so it can never wedge a command. It does not parse
+# shell quoting, so a gradle command quoted inside another command (`echo './gradlew
+# :caffeine:test'`) is still matched; write such text in a heredoc, which is stripped below.
 #
 # stdin: PreToolUse hook JSON (tool_name, tool_input, ...).
 set -u
@@ -45,12 +50,22 @@ scan=$(printf '%s\n' "$cmd" | awk '
   }')
 [ -n "$scan" ] || exit 0
 
-# A gradle invocation running the plain `test` task, in any module.
-printf '%s' "$scan" | grep -qE 'gradlew' || exit 0
-printf '%s' "$scan" | grep -qE '(^|[[:space:]])(:[A-Za-z0-9_.:-]+:)?test([[:space:]]|$)' || exit 0
+# Reduce to the gradle invocations themselves: split the compound command on shell
+# separators, keep the segments that call gradlew, and drop each one's redirection tail.
+# A task name is an argument of that invocation, so an `echo`, a `find`, or a path
+# elsewhere on the line is not one. Matching those blocked legitimate commands, since the
+# bare `test` alternative below matches the word wherever it appears.
+invocation=$(printf '%s\n' "$scan" | tr ';|&' '\n' \
+  | grep -E '(^|[[:space:]]|/)gradlew([[:space:]]|$)' \
+  | sed -E 's/[0-9]*[<>].*$//')
+[ -n "$invocation" ] || exit 0
+
+# The caffeine module's `test` task, or an unqualified `test` that runs every module's.
+# Another module's `test` is not the parameterized suite.
+printf '%s' "$invocation" | grep -qE '(^|[[:space:]])(:?caffeine:)?test([[:space:]]|$)' || exit 0
 
 # A -P filter is the sanctioned way to narrow a class-scoped run.
-printf '%s' "$scan" | grep -qE '\-P(implementation|keys|values|compute|stats)=' && exit 0
+printf '%s' "$invocation" | grep -qE '\-P(implementation|keys|values|compute|stats)=' && exit 0
 
 deny() {
   cat >&2 <<EOF
@@ -77,7 +92,7 @@ EOF
   exit 2
 }
 
-selectors=$(printf '%s' "$scan" \
+selectors=$(printf '%s' "$invocation" \
   | grep -oE "\-\-tests[[:space:]]+('[^']*'|\"[^\"]*\"|[^[:space:]]+)" \
   | sed -E "s/^--tests[[:space:]]+//; s/^['\"]//; s/['\"]\$//")
 

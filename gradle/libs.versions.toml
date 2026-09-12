@@ -154,6 +154,7 @@ httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", versio
 infer-annotations = { module = "com.facebook.infer.annotation:infer-annotation", version.ref = "infer-annotations" }
 jackrabbit = { module = "org.apache.jackrabbit:oak-core", version.ref = "jackrabbit" }
 jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
+jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
 jacoco-agent = { module = "org.jacoco:org.jacoco.agent", version.ref = "jacoco" }
 jacoco-ant = { module = "org.jacoco:org.jacoco.ant", version.ref = "jacoco" }
 jakarta-inject = { module = "jakarta.inject:jakarta.inject-api", version.ref = "jakarta-inject" }
