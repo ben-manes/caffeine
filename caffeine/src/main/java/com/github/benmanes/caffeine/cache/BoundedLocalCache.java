@@ -3446,7 +3446,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     Iterable<Node<K, V>> iterable;
     if (evicts()) {
       iterable = () -> {
-        @Var Comparator<Node<K, V>> comparator = Comparator.comparingLong(Node::getAccessTime);
+        @Var Comparator<Node<K, V>> comparator = (n1, n2) ->
+            Long.signum(n1.getAccessTime() - n2.getAccessTime());
         PeekingIterator<Node<K, V>> first;
         PeekingIterator<Node<K, V>> second;
         PeekingIterator<Node<K, V>> third;

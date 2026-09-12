@@ -1030,10 +1030,12 @@ free and the walk continues past it. The default executor hides that, since main
 through the drain status and many writes share one cycle. `Runnable::run` removes the coalescing,
 so a burst of pending async loads pays a walk over the pending set on every write in the burst,
 which is quadratic across it. Fine for a test with a handful of entries; not a knob to reach for
-in a benchmark or a reproduction that holds thousands of loads in flight. The scan is
-self-correcting once any load completes (pending entries migrate to the MRU end and the walk stops
-at the first completed, unexpired node), so the cost needs a deque with no completed entry at all,
-not merely N loads outstanding.
+in a benchmark or a reproduction that holds thousands of loads in flight. The expiration scans are
+self-correcting once any load completes (they relink pending entries to the MRU end and stop at the
+first completed, unexpired node), so their cost needs a deque with no completed entry at all. The
+window scan relinks nothing, so its walk persists while pending entries sit at the window head; its
+price under the default executor is in the pending-async scan entry of
+[ruled-out](ruled-out.md#core).
 
 **Expiration and cleanup are amortized, not instant.** Caffeine performs maintenance
 during write operations and occasionally during reads. For idle caches, use
@@ -1285,15 +1287,21 @@ for a custom executor, and it needs a `Scheduler`. Configuring one requests prom
 a size-only cache has no pacer. Without this arm, a `REQUIRED` backlog waits for the next cache
 operation, so a quiesced cache stays over `maximumSize` until then. The excess is capped,
 not unbounded: the backlog is write-buffer tasks, `MpscGrowableArrayQueue` is bounded at
-`WRITE_BUFFER_MAX`, and a full buffer forces `afterWrite`'s inline assist, so
-`estimatedSize()` cannot exceed `maximum + WRITE_BUFFER_MAX`. Measured with
+`WRITE_BUFFER_MAX`, and a full buffer forces `afterWrite`'s inline assist, so a quiesced
+cache's `estimatedSize()` cannot exceed `maximum + WRITE_BUFFER_MAX`. Measured with
 `maximumSize(10)`, a single-thread executor and no scheduler, 200,000 writes then idle: 4
 of 10 runs stayed over maximum, and the largest residue over 20 runs was 1,987 against a
-2,058 bound. The model is a garbage collector's: the excess is capped and reclaimed on the
-next operation rather than on a timer. Don't add a third arm. A caller cannot know whether
-the executor would run the submission inline, and moving it into `PerformCleanupTask`,
-where a held eviction lock does identify a caller-runs execution after the fact, fails on
-the same ground: prompt size eviction in an idle cache is not a contract the cache offers.
+2,058 bound. The live peak while writers run is higher. A drain applies up to
+`WRITE_BUFFER_MAX + 1` insertions before `evictEntries` runs, producers refill the buffer
+meanwhile, and each writer blocked in the inline assist has already committed its mapping, so
+the peak is `maximum + 2 * WRITE_BUFFER_MAX + 1` plus the writers. With `WRITE_BUFFER_MAX` at
+2,048, 16 writers peaked 4,080-4,113 over maximums of 10 to 10,000 and 64 writers 4,161 over,
+converging to the maximum when they stopped. The model is a garbage collector's: the excess is
+capped and reclaimed on the next operation rather than on a timer. Don't add a third arm. A caller
+cannot know whether the executor would run the submission inline, and moving it into
+`PerformCleanupTask`, where a held eviction lock does identify a caller-runs execution after the
+fact, fails on the same ground: prompt size eviction in an idle cache is not a contract the cache
+offers.
 
 ## Refresh Internals
 

@@ -82,9 +82,11 @@ These dispose of whole families. Check them first.
   never arms the pacer, so a capped drain would be the one backlog shape with no driver.
 - Without a `Scheduler`, maintenance is amortized onto callers and a quiesced cache stays
   over `maximumSize`. A `Scheduler` requests prompt expiration; a size-only cache has no pacer. The
-  excess is capped by the write buffer (`estimatedSize() <= maximum + WRITE_BUFFER_MAX`),
-  because a full buffer forces `afterWrite`'s inline assist. Do not add a third re-arm and
-  do not move the resubmission into `PerformCleanupTask`; both were built and declined.
+  quiesced excess is capped by the write buffer (`estimatedSize() <= maximum + WRITE_BUFFER_MAX`),
+  because a full buffer forces `afterWrite`'s inline assist. The live peak under concurrent
+  writers is `maximum + 2 * WRITE_BUFFER_MAX + 1` plus the writers, since a drain applies its
+  whole batch before evicting. Do not add a third re-arm and do not move the resubmission into
+  `PerformCleanupTask`; both were built and declined.
 - `rescheduleCleanUpIfIncomplete`'s `!pacer.isScheduled()` gate deferring a REQUIRED backlog
   to the pacer's horizon is the same design. Same for the executor-reject catch in
   `scheduleDrainBuffers` not calling it.
@@ -94,11 +96,14 @@ These dispose of whole families. Check them first.
   write buffer. The controlled witness paused a generated subclass; 60 ordinary-runtime bursts
   did not reproduce it. Size-only caches have no pacer, as described above.
 - The expiration and window scans are O(N) in the pending-async population. The walk is real
-  and 100k pending entries cost ~410 us per `cleanUp`, but the reorder is self-correcting:
-  pending entries migrate to the MRU end and one completed entry takes `cleanUp` from
-  410,208 ns to 41 ns. Under the default executor p50/p99/p99.9 are unchanged. Both
-  candidate fixes measured worse. Residue that is real and documented: under
-  `executor(Runnable::run)` the cost is linear per pending entry, so a burst is quadratic.
+  (100k pending cost ~410 us per `cleanUp`). The expiration scans relink pending entries to the
+  MRU end, so one completed entry takes `cleanUp` from 410,208 ns to 41 ns. `evictFromWindow`
+  relinks nothing, so without `expireAfterAccess` a never-completing future or a weight-0 entry
+  is walked on every over-budget cycle. Callers are unaffected unless writes saturate the write
+  buffer (then 14-35x slower); the price is maintenance that never idles, a full core at 200k
+  such entries even at 1k writes/s (18-30% at 10k). Both candidate fixes measured worse, and a
+  pending-only relink would not reach weight-0 pinning. Residue that is real and documented:
+  under `executor(Runnable::run)` the cost is linear per pending entry, so a burst is quadratic.
 - Recursive and nested maintenance in `afterWrite`.
 - Expired entries persisting in an idle cache.
 - `FrequencySketch.reset()` sweeping under `evictionLock` (238 ms at 100M). Amortized to
@@ -481,6 +486,11 @@ Examples otherwise hold the full quality bar, including unhappy-path test covera
   disclosure of it was declined.
 - Serialization of an executor, scheduler, or non-serializable `BiFunction`.
 - The proxy's `asMap()` view not being `Serializable`.
+- A serializable component that refers back to its own cache. The component is read before
+  `readResolve` rebuilds the cache, so its field receives the proxy: a cache-typed field throws
+  `ClassCastException` and an untyped one keeps the stale proxy. It fails only when the stream
+  reaches the cache before the rest of the cycle. Guava's proxy extends `ForwardingCache` for
+  this case; both that shape and a javadoc qualifier were declined.
 
 ---
 

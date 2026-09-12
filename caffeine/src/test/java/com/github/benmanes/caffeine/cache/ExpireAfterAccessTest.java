@@ -51,6 +51,7 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.StartTime;
 import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
@@ -437,11 +438,14 @@ final class ExpireAfterAccessTest {
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, maximumSize = Maximum.FULL,
       removalListener = {Listener.DISABLED, Listener.REJECTING},
-      expireAfterAccess = Expire.ONE_MINUTE)
+      expireAfterAccess = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void oldest_order_withMaximumSize(Cache<Int, Int> cache, CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     // Insert with distinct access times so the merge across the W-TinyLFU
-    // window/probation/protected deques has a real total order to sort by.
+    // window/probation/protected deques has a real total order to sort by,
+    // straddling the signed wrap when the ticker starts a minute before it.
+    context.ticker().advance(Duration.ofSeconds(60 - (Maximum.FULL.max() / 2)));
     var keys = new ArrayList<Int>();
     for (int i = 0; i < Maximum.FULL.max(); i++) {
       var key = Int.valueOf(i);
