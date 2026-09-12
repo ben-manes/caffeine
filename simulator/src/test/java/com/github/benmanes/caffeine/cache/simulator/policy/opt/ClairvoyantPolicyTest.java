@@ -79,8 +79,8 @@ final class ClairvoyantPolicyTest {
     assertThat(stats.hitCount()).isEqualTo(4);
     assertThat(stats.missCount()).isEqualTo(4);
     assertThat(stats.evictionCount()).isEqualTo(0);
-    assertThat(stats.hitPenalty()).isGreaterThan(0.0);
-    assertThat(stats.missPenalty()).isGreaterThan(0.0);
+    assertThat(stats.hitPenalty()).isEqualTo(11.0);
+    assertThat(stats.missPenalty()).isEqualTo(50.0);
   }
 
   @Test

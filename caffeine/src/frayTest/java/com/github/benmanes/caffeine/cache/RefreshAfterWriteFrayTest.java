@@ -234,12 +234,11 @@ final class RefreshAfterWriteFrayTest {
     threadB.join();
     cache.cleanUp();
 
-    var value = cache.getIfPresent(1);
-    assertWithMessage("at most one refresh should run (no stampede), but loadCount=%s",
-        loadCount.get()).that(loadCount.get()).isAtMost(2);
-    assertWithMessage("a completed reload must be applied, not discarded (value=%s, loadCount=%s)",
-        value, loadCount.get()).that(value).isEqualTo(loadCount.get());
+    assertWithMessage("a completed reload must be applied, not discarded")
+        .that(cache.policy().getIfPresentQuietly(1)).isEqualTo(2);
     assertThat(cache.policy().refreshes()).isEmpty();
+    assertWithMessage("exactly one refresh should run (no stampede)")
+        .that(loadCount.get()).isEqualTo(2);
     assertThat(cache).isValid();
   }
 

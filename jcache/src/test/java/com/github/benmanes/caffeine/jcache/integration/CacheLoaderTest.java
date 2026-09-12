@@ -118,7 +118,7 @@ final class CacheLoaderTest {
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
     CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
     try (var fixture = jcacheFixture(expiry, cacheLoader)) {
-      // Simulate a slow loader by advancing the cache's ticker inside load().
+      // Simulate a slow loader by advancing the cache's ticker inside load()
       when(cacheLoader.load(any())).thenAnswer(invocation -> {
         fixture.ticker().advance(java.time.Duration.ofMillis(100));
         return nullRef();
@@ -126,12 +126,13 @@ final class CacheLoaderTest {
 
       assertThat(fixture.jcacheLoading().get(1)).isNull();
 
-      // recordGetTime is documented as excluding loader time. Pre-fix, the null-result
-      // early return skipped the subtraction; the 100ms loader stayed attributed to
-      // average get-time (~100_000 microseconds). Post-fix the loader's elapsed time
-      // is subtracted regardless of the loader's result.
-      assertThat(JCacheFixture.getStatistics(fixture.jcacheLoading())
-          .getAverageGetTime()).isLessThan(50_000f);
+      // recordGetTime is documented as excluding loader time. Pre-fix, the null-result early
+      // return skipped the subtraction and the loader's 100ms stayed attributed to the average
+      // get-time. The clock only advances inside load(), so the corrected time is zero.
+      var statistics = getStatistics(fixture.jcacheLoading());
+      assertThat(statistics.getCacheMisses()).isEqualTo(1L);
+      assertThat(statistics.getCacheHits()).isEqualTo(0L);
+      assertThat(statistics.getAverageGetTime()).isEqualTo(0f);
     }
   }
 
@@ -194,8 +195,8 @@ final class CacheLoaderTest {
       assertThrows(CacheLoaderException.class, () -> operation.accept(cache));
 
       assertThat(getStatistics(cache).getCacheMisses()).isEqualTo(keys.size());
-      assertThat(getStatistics(cache).getAverageGetTime()).isAtLeast(0f);
-      assertThat(getStatistics(cache).getAverageGetTime()).isLessThan(50_000f);
+      assertThat(getStatistics(cache).getCacheHits()).isEqualTo(0L);
+      assertThat(getStatistics(cache).getAverageGetTime()).isEqualTo(0f);
     }
   }
 
@@ -253,7 +254,9 @@ final class CacheLoaderTest {
       assertThat(getStatistics(cache).getCacheGets()).isEqualTo(0L);
 
       assertThat(cache.get(1)).isEqualTo(-1);
-      assertThat(getStatistics(cache).getAverageGetTime()).isAtLeast(0f);
+      assertThat(getStatistics(cache).getCacheHits()).isEqualTo(1L);
+      assertThat(getStatistics(cache).getCacheMisses()).isEqualTo(0L);
+      assertThat(getStatistics(cache).getAverageGetTime()).isEqualTo(0f);
     }
   }
 

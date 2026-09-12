@@ -44,11 +44,10 @@ metaphors.
 
 ## Maintaining agent guidance
 
-Read the affected section before editing and re-read it afterwards. State the current rule, its
-scope, and the reason it matters. Replace superseded statements and merge repetition; do not append
-the conversation's sequence of discoveries. Keep rules concise and link to named doc sections for
-detail. Preserve counterarguments, rejected alternatives, and evidence needed to prevent repeated
-mistakes. A routine fix does not need a new guidance entry.
+Read the affected section before and after editing. State the current rule, scope, and rationale;
+replace superseded text and merge repetition. Link to named doc sections for detail. Preserve
+counterarguments, rejected alternatives, and evidence needed to prevent repeated mistakes. Routine
+fixes need no new guidance entry.
 
 Session chronology, raw runs, and audit-item progress belong in `.local/`. Checked-in guidance must
 be self-contained: use descriptive topics and source/test references, not opaque audit row IDs or

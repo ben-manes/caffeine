@@ -88,16 +88,11 @@ These dispose of whole families. Check them first.
 - `rescheduleCleanUpIfIncomplete`'s `!pacer.isScheduled()` gate deferring a REQUIRED backlog
   to the pacer's horizon is the same design. Same for the executor-reject catch in
   `scheduleDrainBuffers` not calling it.
-- `rescheduleCleanUpIfIncomplete` losing the last driver entirely. Its peek holds the eviction
-  lock without draining, which is what a concurrent writer's `scheduleDrainBuffers` needs for its
-  `tryLock`, so a write that flips the status to REQUIRED between the peek's read and its unlock is
-  left with nothing scheduled. This is accepted best-effort scheduling: buffered work remains
-  available to the next operation. A loss mid-burst heals on the next write, which finds REQUIRED
-  and re-arms; only a loss on the final write before quiescence
-  persists, and the debt is bounded by the write buffer. The controlled witness paused a generated
-  subclass after the status reads; 60 bursts on the real configuration produced none. A size-only
-  cache has **no pacer at all**, since the generated class carries one only when expiration is
-  configured, so a stuck size there is the accepted no-driver design rather than this claim.
+- `rescheduleCleanUpIfIncomplete` missing a concurrent write's re-arm. Its inspection holds
+  `evictionLock`, so a writer that sets REQUIRED after the status read can fail to schedule a
+  drain. Accepted: the next write re-arms, and any debt left at quiescence is bounded by the
+  write buffer. The controlled witness paused a generated subclass; 60 ordinary-runtime bursts
+  did not reproduce it. Size-only caches have no pacer, as described above.
 - The expiration and window scans are O(N) in the pending-async population. The walk is real
   and 100k pending entries cost ~410 us per `cleanUp`, but the reorder is self-correcting:
   pending entries migrate to the MRU end and one completed entry takes `cleanUp` from
@@ -166,16 +161,12 @@ These dispose of whole families. Check them first.
 - `Pacer.schedule`'s reschedule arm must call `cancel()`, not `future.cancel(...)`: the
   immediate-scheduler recursion guard is `future == null && nextFireTime != 0L` and only
   `cancel()` reaches it. Do not simplify it back.
-- `Pacer` skipping its own re-arm from inside the fire, so a cache with a `Scheduler` goes
-  dormant until the next operation. The scheduler measures its delay on its own clock while the
-  pacer compares against the cache's ticker, so a ticker that has not reached `nextFireTime` when
-  the fire arrives makes the still-running future look like a fire that is still to come. It needs
-  a ticker coarse enough to lag the fire's dispatch latency: a one-second-granularity ticker
-  reproduces on the default scheduler, while `systemTicker` and a one-millisecond cached clock did
-  not in 20 trials each. **A `Ticker` is expected to advance between reads.** A clock with a
-  resolution that repeats a value for a second is a test instrument, and a user who wants a cheap
-  clock can increment per `read()` and resynchronise periodically. The `fired` flag that
-  excludes an executing fire from pending work was declined for this trigger.
+- `Pacer` skipping its re-arm when the scheduler fires before the cache ticker reaches
+  `nextFireTime`. The executing future still appears pending, so maintenance waits for the next
+  operation. A one-second-granularity ticker reproduces; `systemTicker` and a one-millisecond
+  cached clock did not in 20 trials each. Tickers are expected to advance between reads; a cheap
+  clock can increment per read and resynchronise periodically. The `fired` flag was declined
+  for this coarse-clock trigger.
 - `Pacer` self-poison ordering (`nextFireTime` committed before `scheduler.schedule()`).
   User schedulers get `GuardedScheduler`'s no-throw/no-null guarantee; built-ins satisfy it
   directly. Do not add a catch for an unreachable synchronous scheduler failure.

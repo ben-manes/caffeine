@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.google.common.truth.Truth.assertAbout;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -27,6 +28,7 @@ import com.github.benmanes.caffeine.testing.CollectionSubject;
 import com.google.common.collect.Sets;
 import com.google.common.truth.FailureMetadata;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.errorprone.annotations.Var;
 
 /**
  * Propositions for {@link LinkedDeque} subjects.
@@ -34,6 +36,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class LinkedDequeSubject extends CollectionSubject {
+  private static final int MAX_DESCRIBED = 100;
+
   private final LinkedDeque<Object> actual;
 
   @SuppressWarnings("unchecked")
@@ -48,6 +52,20 @@ final class LinkedDequeSubject extends CollectionSubject {
 
   public static LinkedDequeSubject assertThat(LinkedDeque<?> actual) {
     return assertAbout(deque()).that(actual);
+  }
+
+  /** Describes the deque without traversing potentially corrupt links. */
+  @Override protected String actualCustomStringRepresentation() {
+    var elements = new ArrayList<String>();
+    Set<Object> seen = Sets.newIdentityHashSet();
+    for (@Var var e = actual.peekFirst(); e != null; e = actual.getNext(e)) {
+      if (!seen.add(e) || (elements.size() == MAX_DESCRIBED)) {
+        elements.add("...");
+        break;
+      }
+      elements.add(String.valueOf(e));
+    }
+    return elements.toString();
   }
 
   public void isValid() {

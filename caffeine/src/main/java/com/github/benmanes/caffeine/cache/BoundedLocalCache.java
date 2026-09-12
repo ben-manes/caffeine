@@ -934,7 +934,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       remaining--;
       node = next;
 
-      // The walk cannot end if a reentrant cycle removed the entry that it stops on
+      // Reentrant maintenance can remove the captured tail, preventing termination
       boolean bounded = (last.getQueueType() == queueType) && accessOrderDeque.contains(last);
       if ((node != null) && !bounded) {
         return 0;
@@ -972,7 +972,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       remaining--;
       node = next;
 
-      // The walk cannot end if a reentrant cycle removed the entry that it stops on
+      // Reentrant maintenance can remove the captured tail, preventing termination
       if ((node != null) && !writeOrderDeque().contains(last)) {
         remaining = 0;
         break;
@@ -3234,16 +3234,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     } else {
       int weightedDifference = ctx.newWeight - ctx.oldWeight;
       boolean quietly = (ctx.hints != null) && ctx.hints.quietly;
-      if (ctx.exceedsTolerance || (weightedDifference != 0)) {
-        var access = quietly
-            ? Access.QUIET
-            : (ctx.cause != null) && ctx.cause.wasEvicted() ? Access.RELOAD : Access.HIT;
+      boolean reload = (ctx.cause != null) && ctx.cause.wasEvicted();
+      if (ctx.exceedsTolerance || (weightedDifference != 0) || (evicts() && !quietly && reload)) {
+        var access = quietly ? Access.QUIET : (reload ? Access.RELOAD : Access.HIT);
         afterWrite(new UpdateTask(node, weightedDifference, access));
       } else {
         if (!quietly) {
           afterRead(node, ctx.now, /* recordHit= */ false);
         }
-        if ((ctx.cause != null) && ctx.cause.wasEvicted()) {
+        if (reload) {
           scheduleDrainBuffers();
         }
       }

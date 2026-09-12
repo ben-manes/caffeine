@@ -325,40 +325,28 @@ is the same contract `replace` implements for the async completions, whose calle
 the `compute(..., hints)` seam by `BoundedLocalCacheTest.remap_quietly_doesNotRecordAccess` and its
 loud twin.
 
-**A reload that reuses a dead entry's node pays the insertion's miss.** When a `computeIfAbsent`
-or a `compute` finds the entry expired or its value collected, it loads into the node that is
-already linked, so the policy receives an `UpdateTask` where a reaped entry would have produced an
-`AddTask`. Crediting that as an ordinary access recorded a climber hit for an operation the
-application experienced as a miss, and left the sampled rate turning on whether maintenance
-reaped the entry before the reload arrived. The reload is credited `Access.RELOAD` instead: the admission
-filter observes the key exactly as an insertion would, and the task records the miss the
-reinsertion owed. `Access.QUIET` still wins over it, so a refresh completion that lands on an
-expired entry stays bookkeeping.
+**In-place reloads record a climber miss.** `computeIfAbsent`, `compute`, `put`, and `putIfAbsent`
+reuse a node when its entry has expired or its value was collected. Their `UpdateTask` uses
+`Access.RELOAD` to increment the sketch and record the miss an `AddTask` would record after
+physical removal. `replace` rejects dead entries. `Access.QUIET` takes precedence for internal
+refresh completions.
 
-The level error was not the reason to fix it. A contamination that is steady cancels in every
-difference the machine takes, the reactive law's `hitRateChange` and the walk, veto, and anchor
-comparisons alike, because all of them subtract one rate from another. What has nothing to
-subtract it against is the density tier's within-sample ratio: `error()` and `steeringError()`
-divide each region's hits by that region's capacity, so a hit credited to a region moves the log
-ratio outright. On a seeded synthetic reuse stream at a maximum of 512, with the reuse gap set to
-the expiration duration, the mislabel moved the converged window from 402 entries to 5 on every
-seed and at both maintenance lags. Nearly every phantom lands in main, since an entry that
-survives to expire is one the main space is holding, so the density law reads main as earning and
-steers capacity out of the window. The reload rate is itself a function of the window, so the
-error feeds itself: the collapsed window took 13.6% of requests as reloads against the corrected
-window's 4.2%. No workload measured here turns that into an end-user hit-rate loss, and finding
-one belongs to `/audit-regret` rather than to the repair.
+For caches with size eviction, a nonquiet reload must use `UpdateTask` even when the weight is
+unchanged and timestamps are within tolerance: the read buffer always records `Access.HIT`.
+Access expiration without write expiration exposed this missing case in `remap`;
+`expiredRemap_recordsClimberMiss` covers both expiration modes.
 
-A cache with neither expiration nor reference values cannot reach the branch, so the simulator's
-policies, whose `product.Caffeine` configures a maximum size and nothing else, are bit-identical
-under it and the gate battery cannot price it. `put` and `putIfAbsent` take the same in-place path
-when the entry they land on has expired or lost its value, and are credited the same way: no
-user-visible statistic contradicts a hit there, but the reap race that decides between `AddTask`
-and `UpdateTask` does not care which API arrived. `replace` needs no credit, since it refuses a
-dead entry outright. Pinned by `BoundedLocalCacheTest.expiredReload_recordsClimberMiss`,
-`expiredRemap_recordsClimberMiss`, and the `expiredPut_recordsClimberMiss` / `put_recordsClimberHit`
-pair, which bracket the write path's condition from both sides. Each asserts the sketch increment
-as well, since suppressing the access with `quietly` would drop the increment `AddTask` performs.
+Steady contamination can cancel in cross-sample rate differences, but it biases the density
+tier's within-sample regional ratio. In an earlier synthetic reuse study (maximum 512, reuse
+gap equal to expiry), misattribution moved the converged window from 402 entries to 5 across
+all seeds and both maintenance lags. Nearly all false hits were in main, and reloads rose from
+4.2% to 13.6%. Those measurements concern the earlier reload-accounting fix, not the
+same-weight `remap` case. No end-user hit-rate loss has been established for either case.
+
+The simulator's `product.Caffeine` uses neither expiration nor reference values, so its gate
+cannot exercise this path. Pins: `BoundedLocalCacheTest.expiredReload_recordsClimberMiss`,
+`expiredRemap_recordsClimberMiss`, `expiredPut_recordsClimberMiss`, and `put_recordsClimberHit`.
+They also check the sketch increment, which a quiet update would incorrectly suppress.
 
 **~1% random admission of rejected candidates.** The TinyLFU admission filter
 randomly admits ~1% of candidates that would otherwise be rejected. This provides
@@ -654,21 +642,14 @@ deque. Pinned by `BoundedLocalCacheTest.maintenance_recursive_accessOrder` / `_w
 `expireAfterAccess_transferredDuringScan`. Don't reduce either scan back to a bare `moveToBack`,
 and don't drop the queue-type argument as redundant with `contains`.
 
-**The same cycle must also terminate, so each scan re-checks the entry it walks towards.** A walk
-ends on `node == last` or a null link and charges its budget only for an eviction, which makes a
-reorder free. When the nested cycle unlinks or transfers `last`, two reorderable entries rotate
-past each other forever while the thread holds `evictionLock`, writes continue only until the
-write buffer fills and then park in `afterWrite`'s lock acquisition, and the cache never expires
-or evicts again. `evictEntry` is the only call in either loop that runs user code, so each scan
-re-checks `last` after it returns, stops when it is no longer in the deque being walked, and
-reports a zero budget so the `PROCESSING_TO_REQUIRED` re-arm recaptures a live tail next cycle.
-The check is skipped once the walk has reached its end, since a scan that evicted its own tail has
-nothing left to re-arm for. The access check keeps both halves for the reason above, a nested
-transfer leaving `last` linked in a deque this walk cannot reach. The timer wheel needs none of
-this, its terminator being the `pending` sentinel on a field rather than a node in a local, with
-`advancing` refusing a nested advance. Pinned by `maintenance_recursive_accessOrder_removedTail`
-and `_writeOrder_removedTail`, which differ from the pins above only in which entry the nested
-cycle removes.
+**Expiration scans re-check their captured tail after callbacks.** A nested cycle can remove or
+transfer `last`, leaving entries cycling indefinitely under `evictionLock` because reorders do
+not consume the eviction budget. After `evictEntry`, a scan with work remaining checks tail
+membership (including queue type for access order). If absent, it exhausts the budget so
+`PROCESSING_TO_REQUIRED` starts a fresh scan. A scan that reached its own tail needs no re-arm.
+The timer wheel instead uses its field-backed `pending` sentinel and rejects nested advances
+with `advancing`. Pins: `maintenance_recursive_accessOrder_removedTail` and
+`maintenance_recursive_writeOrder_removedTail`.
 
 The wheel budget counts **only evictions**, never the cascade (rescheduling a non-expired
 node to a finer level) — mirroring the deque caps, which count `evictEntry` but not the

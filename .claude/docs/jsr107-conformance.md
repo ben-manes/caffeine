@@ -124,9 +124,8 @@ Recorded zero-update comparison:
 | Store immediately expired | yes / yes | RI, Coherence, cache2k, Ehcache 3 |
 | Remove or suppress | no / no | Infinispan, Ehcache 2, Hazelcast |
 
-This records the existing comparison; verify provider source before relying on an attribution in
-a new finding. Caffeine follows the first behavior because the spec distinguishes creation from
-update and the RI agrees. All put/replace/invoke siblings gate suppression on creation only
+Caffeine follows the first behavior because the spec distinguishes creation from update and the
+RI agrees. All put/replace/invoke siblings gate suppression on creation only
 (`expirable == null`). `CacheExpiryTest.expire_whenModified` checks only absence afterward, so
 both behaviors pass. The parity tests above check the missing event/statistic distinction.
 
@@ -184,10 +183,9 @@ policies use the same access and creation duration. A custom access duration sho
 can cause early native eviction and EXPIRED for the replacement. This race is accepted; do not
 add a bin lock or identity guard to every access-expiry read.
 
-An earlier accepted report combined zero access expiry, an eternal entry, and a concurrent
-processor READ to produce a wrapped `EntryProcessorException` from a timestamp race. Its
-description predates moving lazy-expiry reconciliation before the processor. Retain the accepted
-lock-free boundary; that historical `postProcess` path is not a current reproducer.
+An accepted timestamp-race report combined zero access expiry, an eternal entry, and a concurrent
+processor READ to produce `EntryProcessorException`. Its `postProcess` path predates pre-processor
+expiry reconciliation and is not a current reproducer; the lock-free boundary remains intentional.
 
 The iterator stamps access expiry in `hasNext()` when staging the entry. Deferring to `next()`
 widens its expiry hole or makes `hasNext()` promise an unavailable entry; the iterator contract
@@ -212,12 +210,12 @@ A throwing extension `Weigher` (`setWeigherFactory` / `setMaximumWeight`) or nat
 function has written through and published the event, so it can abort storage after those
 effects. Standard `ExpiryPolicy` is different: its runtime exceptions are caught by the adapter.
 The extension case remains accepted misuse of callbacks whose core contract forbids throwing.
-Notifications/writer effects cannot be rolled back, and core has no post-metadata hook; the
-recorded rationale accepts notification of the attempted creation/update and relies on external
-reconciliation for a store/cache discrepancy. Do not move publication outside compute, which
-would lose per-key order. Unlike invoke, put/getAndPut do not blanket-clear synchronous futures
-after arbitrary extension failure; a pending notification reaching the next operation is also
-within this accepted boundary. A gate must still be released from `finally` so dispatch can drain.
+Notifications/writer effects cannot be rolled back, and core has no post-metadata hook. Attempted
+creation/update notifications are accepted; store/cache discrepancies need external reconciliation.
+Do not move publication outside compute, which would lose per-key order. Unlike invoke,
+put/getAndPut do not blanket-clear synchronous futures after arbitrary extension failure; a
+pending notification reaching the next operation is also within this accepted boundary. A gate
+must still be released from `finally` so dispatch can drain.
 
 ## Entry processors
 
@@ -415,18 +413,15 @@ The queue needs no extra lock: append is an atomic map compute, cleanup is condi
 `remove(key, future)`, and its preceding identity get is only a fast path. A successor installed
 before cleanup survives; cleanup before a successor permits a new chain only after the old one
 completed. Await/ignore pending synchronous futures on relevant exits and clear in finally.
-Bulk operations must drain already-published events even when the loop fails. The historical
-putAll mid-loop copier case was recorded with
-`EventDispatcherTest.putAll_copierFailsMidway_doesNotLeakPending`, which is no longer present in
-the current test tree. Copying now happens up front, covered by
-`EventDispatcherTest.putAll_copierFails_abortsBeforeAnyCommit`; retain the bulk-draining rule
-without describing the obsolete preparation order as current.
+Bulk operations must drain already-published events even when the loop fails. putAll copying
+now happens before any commit, covered by
+`EventDispatcherTest.putAll_copierFails_abortsBeforeAnyCommit`; the earlier mid-loop copier test
+was removed, but later failures still require draining.
 
-An older accepted report described duplicate EXPIRED after an already-submitted listener task
-ran and a reap aborted on executor rejection; it reported an exactly-once eviction count.
-That explanation predates dependent-stage publication. Preserve the accepted executor-failure
-boundary, but require a current throwing path before presenting that historical mechanism as
-reproducible; this documentation cleanup does not re-adjudicate it.
+An accepted report described duplicate EXPIRED, but exactly-once eviction counts, when a listener
+ran before executor rejection aborted a reap. It predates dependent-stage publication. Preserve
+the accepted executor-failure boundary, but require a current throwing path before claiming that
+mechanism remains reproducible.
 
 Native size/weight eviction publishes quiet REMOVED; native EXPIRED publishes quiet EXPIRED.
 Refresh reload publishes quiet UPDATED, EXPIRED for zero update expiry, or REMOVED on a miss.
@@ -485,8 +480,8 @@ cross-cache listener cycles and a synchronous listener dispatched on another thr
 on its own key, chains behind itself, then awaits itself. The latter was reproduced with the gate
 both enabled and disabled; moving execution outside compute did not create it. Do not extend the
 mark to dispatch threads. Pins: `EventDispatcherTest.publish_listenerUsesTheCache_isRejected`
-and `invoke_processorUsesTheCache_isRejected`. The original probe found no re-entry in the then
-493 TCK / 603 unit tests and included a positive control; those counts describe that run only.
+and `invoke_processorUsesTheCache_isRejected`. The probe included a positive control and found
+no re-entry in the then 493 TCK / 603 unit tests.
 
 ## Copying and listener configuration
 
@@ -675,11 +670,9 @@ a later owned-refresh commit; a refresh committed before the sweep is removed by
 refresh-specific guard does not imply all in-progress operations are canceled. In-flight user
 I/O remains the user's lifecycle responsibility.
 
-Executor rejection now stays in dependent dispatch futures and reaches synchronous callers after
-commit, as documented under dispatch. Await/ignore paths clear pending futures; bulk failure
-paths must also drain them. Arbitrary throwing native extensions retain their separately accepted
-pending-notification residual. Do not revive the superseded first-event synchronous-rejection
-explanation as a general close defect.
+Executor rejection reaches synchronous callers after commit; see [dispatch and commit](#dispatch-and-commit)
+for draining requirements and the superseded first-event rejection mechanism. Throwing
+[native extensions](#native-extensions) retain their accepted pending-notification residual.
 
 ### Destroy and iteration
 

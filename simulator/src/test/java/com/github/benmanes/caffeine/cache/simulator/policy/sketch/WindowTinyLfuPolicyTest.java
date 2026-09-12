@@ -140,19 +140,41 @@ final class WindowTinyLfuPolicyTest {
   }
 
   @Test
-  void explicitSegmentSizes() {
+  void explicitSegmentSizes_window() {
     var settings = settings(3, Map.of());
-    var policy = WindowTinyLfuPolicy.withSegmentSizes(1, 0, Set.of(), settings);
-    for (int key = 1; key <= 3; key++) {
-      policy.record(AccessEvent.forKey(key));
+    var smallWindow = WindowTinyLfuPolicy.withSegmentSizes(1, 0, Set.of(), settings);
+    var largeWindow = WindowTinyLfuPolicy.withSegmentSizes(3, 0, Set.of(), settings);
+    for (int key : new int[] {1, 2, 3, 4, 1}) {
+      smallWindow.record(AccessEvent.forKey(key));
+      largeWindow.record(AccessEvent.forKey(key));
     }
-    for (int key = 1; key <= 3; key++) {
-      policy.record(AccessEvent.forKey(key));
-    }
-    policy.finished();
+    smallWindow.finished();
+    largeWindow.finished();
 
-    assertThat(policy.stats().hitCount()).isEqualTo(3);
-    assertThat(policy.stats().missCount()).isEqualTo(3);
+    // The small window rejects the scan candidate and retains key 1
+    assertThat(smallWindow.stats().hitCount()).isEqualTo(1);
+    assertThat(smallWindow.stats().missCount()).isEqualTo(4);
+    assertThat(largeWindow.stats().hitCount()).isEqualTo(0);
+    assertThat(largeWindow.stats().missCount()).isEqualTo(5);
+  }
+
+  @Test
+  void explicitSegmentSizes_protected() {
+    var settings = settings(3, Map.of("tiny-lfu.sketch", "always"));
+    var withoutProtected = WindowTinyLfuPolicy.withSegmentSizes(1, 0, Set.of(), settings);
+    var withProtected = WindowTinyLfuPolicy.withSegmentSizes(1, 1, Set.of(), settings);
+    for (int key : new int[] {1, 2, 3, 1, 4, 5, 1}) {
+      withoutProtected.record(AccessEvent.forKey(key));
+      withProtected.record(AccessEvent.forKey(key));
+    }
+    withoutProtected.finished();
+    withProtected.finished();
+
+    // Key 1 survives the later insertions only when it can enter protected
+    assertThat(withoutProtected.stats().hitCount()).isEqualTo(1);
+    assertThat(withoutProtected.stats().missCount()).isEqualTo(6);
+    assertThat(withProtected.stats().hitCount()).isEqualTo(2);
+    assertThat(withProtected.stats().missCount()).isEqualTo(5);
   }
 
   @Test

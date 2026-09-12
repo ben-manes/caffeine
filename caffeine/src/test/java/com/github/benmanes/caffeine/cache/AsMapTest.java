@@ -1201,8 +1201,7 @@ final class AsMapTest {
   @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  void replaceAll_appliedOncePerKey(Map<Int, Int> map, CacheContext context)
-      throws InterruptedException {
+  void replaceAll_appliedOncePerKey(Map<Int, Int> map, CacheContext context) {
     var invocations = new AtomicInteger();
     var started = new AtomicBoolean();
 
@@ -1212,20 +1211,20 @@ final class AsMapTest {
       map.put(context.firstKey(), context.absentValue());
     });
     writer.setDaemon(true);
-    writer.start();
 
     map.replaceAll((key, value) -> {
-      invocations.incrementAndGet();
-      await().untilTrue(started);
-
-      // the writer either blocks behind this computation or has finished its write
-      await().until(() -> writer.getState() != RUNNABLE);
-
+      if (invocations.incrementAndGet() == 1) {
+        writer.start();
+        await().untilTrue(started);
+        // The writer either blocks behind this computation or completes before the CAS.
+        await().until(() -> writer.getState() != RUNNABLE);
+      }
       return value;
     });
 
-    writer.join();
+    await().until(() -> !writer.isAlive());
     assertThat(invocations.get()).isEqualTo(1);
+    assertThat(map).containsEntry(context.firstKey(), context.absentValue());
   }
 
   /* --------------- computeIfAbsent --------------- */

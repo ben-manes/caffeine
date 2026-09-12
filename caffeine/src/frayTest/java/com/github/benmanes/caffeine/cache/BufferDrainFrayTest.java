@@ -95,7 +95,7 @@ final class BufferDrainFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
-  void afterWrite_inlineFallback() throws InterruptedException {
+  void put_concurrentCleanup() throws InterruptedException {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)
         .maximumSize(5)

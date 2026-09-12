@@ -20,10 +20,12 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.await;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static java.lang.Thread.State.BLOCKED;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -44,7 +46,8 @@ import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -74,7 +77,6 @@ import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -633,15 +635,14 @@ final class CacheWriterTest {
 
   @ParameterizedTest
   @MethodSource("removeThroughOps")
-  void removeThrough_racingSameKeyPut_noStoreCacheDivergence(
-      Consumer<Cache<Integer, Integer>> op) throws InterruptedException, IOException {
+  void removeThrough_racingSameKeyPut_noStoreCacheDivergence(Consumer<Cache<Integer, Integer>> op)
+      throws InterruptedException, ExecutionException, IOException {
     // remove(K)/getAndRemove(K) must delete-through and remove from the cache atomically under the
     // per-key lock; otherwise a same-key put racing between the store delete and the cache removal
     // strands the store's newer value while the cache goes absent. With the writer's delete under
     // the bin lock, the racing put is serialized (blocks until the removal commits), so the store
     // and cache always agree; with the writer outside the lock (the bug) the put commits between
     // the two steps and the store keeps VALUE_2 while the cache is empty.
-    var deleting = new CountDownLatch(1);
     try (CloseableCacheWriter writer = Mockito.mock();
          var fixture = jcacheFixture(writer);
          var cache = fixture.jcache()) {
@@ -654,22 +655,23 @@ final class CacheWriterTest {
 
       cache.put(KEY_1, VALUE_1);
 
+      var put = new FutureTask<>(() -> cache.put(KEY_1, VALUE_2), /* result= */ null);
+      var racingPut = new Thread(put);
+      racingPut.setDaemon(true);
       doAnswer(invocation -> {
+        // The put must attempt to interleave before the deletion releases the per-key lock
         store.remove(KEY_1);
-        deleting.countDown();               // let the racing put attempt to interleave
-        TimeUnit.MILLISECONDS.sleep(100);   // window; the put blocks on the bin lock once fixed
+        racingPut.start();
+        await().until(() -> (racingPut.getState() == BLOCKED) || put.isDone());
         return null;
       }).when(writer).delete(KEY_1);
 
-      var racingPut = new Thread(() -> {
-        Uninterruptibles.awaitUninterruptibly(deleting);
-        cache.put(KEY_1, VALUE_2);
-      });
-      racingPut.start();
       op.accept(cache);
-      racingPut.join();
+      await().until(put::isDone);
+      put.get();
 
-      assertThat(cache.get(KEY_1)).isEqualTo(store.get(KEY_1));
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_2);
+      assertThat(store).containsExactly(KEY_1, VALUE_2);
     }
   }
 

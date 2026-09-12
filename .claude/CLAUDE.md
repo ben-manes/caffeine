@@ -72,9 +72,8 @@ Google Java Style. Contributors must sign a CLA.
 - Before suggesting dependency versions, Semgrep rulesets, or tool integrations, verify they exist (check Maven Central, registries, JDK release notes). Never recommend unverified tools. Use latest versions.
 - Stay focused on the specific task requested. Don't produce unsolicited broad recommendation plans or premature "ready for engineer follow-up" conclusions.
 - Lossy/best-effort semantics (read buffer drops, approximate frequency counts, eventual consistency) are intentional design trade-offs in the cache — not defects. Read `.claude/docs/design-decisions.md` before flagging these.
-- Update `.claude/` guidance when a change alters a durable rule, boundary, or useful rationale.
-  Reconcile the existing section instead of appending a report for every fix; keep rules short and
-  link to detailed docs when needed. See `.claude/rules/code-comments.md` for editorial guidance.
+- Update `.claude/` when a change alters a durable rule, boundary, or rationale. Revise existing
+  sections; follow `.claude/rules/code-comments.md`.
 - Work that will span sessions gets a `LEDGER.md` work queue (itemized rows, status updated in place) alongside its scripts and data under `.local/experiments/<topic>/`. Being gitignored, that workspace survives the branch resets and rebases that remove checked-in artifacts — a narrative report on its own is not a handoff. It is ephemeral and machine-local, though: a checked-in file must not depend on `.local/` **contents** — never cite a specific workspace as where the evidence lives, or a `LEDGER.md` as the record, because the tree may be purged and other clones don't have it. Declaring a **destination** is fine and expected (`.local/audits/<model>/<skill>.md` is the audit convention). Distill durable conclusions into `.claude/` docs; workspace pointers belong in other `.local` files or in memory.
 - When parallel workstreams report conflicting values for the same measurement, re-measure it directly rather than averaging them or trusting the more confident one. The conflict is usually an instrumentation artifact in one of them, and it otherwise ships as a finding.
 - Don't blindly suggest committing after writing code. Actually run the tests and verify the output before proposing to commit.

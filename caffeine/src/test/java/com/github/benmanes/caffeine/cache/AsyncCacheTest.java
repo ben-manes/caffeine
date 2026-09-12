@@ -1417,27 +1417,38 @@ final class AsyncCacheTest {
   }
 
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
   @CacheSpec(population = { Population.SINGLETON, Population.FULL })
   void put_replace_failure_before(AsyncCache<Int, Int> cache, CacheContext context) {
-    var failedFuture = CompletableFuture.completedFuture(nullValue());
-    failedFuture.completeExceptionally(new IllegalStateException());
+    var failedFuture = CompletableFuture.<Int>failedFuture(new IllegalStateException());
 
     cache.put(context.middleKey(), failedFuture);
     assertThat(cache).hasSize(context.initialSize() - 1);
-    assertThat(cache).doesNotContainKey(context.absentKey());
-    assertThat(logEvents()).isEmpty();
+    assertThat(cache).doesNotContainKey(context.middleKey());
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
   @CacheSpec(population = { Population.SINGLETON, Population.FULL })
   void put_replace_failure_after(AsyncCache<Int, Int> cache, CacheContext context) {
-    var failedFuture = CompletableFuture.completedFuture(nullValue());
+    var failedFuture = new CompletableFuture<Int>();
 
     cache.put(context.middleKey(), failedFuture);
     failedFuture.completeExceptionally(new IllegalStateException());
-    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(cache).doesNotContainKey(context.middleKey());
     assertThat(cache).hasSize(context.initialSize() - 1);
-    assertThat(logEvents()).isEmpty();
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(IllegalStateException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   @ParameterizedTest

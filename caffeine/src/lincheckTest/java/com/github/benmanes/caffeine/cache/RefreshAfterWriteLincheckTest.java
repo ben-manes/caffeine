@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.LincheckOptions.modelChecking;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.time.Duration;
@@ -88,15 +89,9 @@ final class RefreshAfterWriteLincheckTest {
       }
       cache.cleanUp();
 
-      var value = cache.getIfPresent(1);
-      int loads = loadCount.get();
-      if (loads > 2) {
-        fail("at most one refresh should run (no stampede), loadCount=" + loads);
-      }
-      if ((value == null) || (value.intValue() != loads)) {
-        fail("a completed reload must be applied, not discarded: "
-            + "value=" + value + " loads=" + loads);
-      }
+      assertEquals(2, cache.policy().getIfPresentQuietly(1),
+          "a completed reload must be applied, not discarded");
+      assertEquals(2, loadCount.get(), "exactly one refresh should run (no stampede)");
     });
   }
 }

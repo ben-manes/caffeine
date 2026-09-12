@@ -32,6 +32,7 @@ import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Nullness.nullFuture;
 import static com.google.common.truth.Truth.assertThat;
+import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -52,6 +53,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
@@ -874,16 +876,14 @@ final class RefreshAfterWriteTest {
   @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.EMPTY, executor = CacheExecutor.THREADED)
-  void refresh_absent_sideLoad_dupLoads(CacheContext context) throws InterruptedException {
+  void refresh_absent_sideLoad_dupLoads(CacheContext context) {
     // A refresh of an absent key is an isolated side-load on the sync cache (registered only in
     // refreshes(), invisible to a concurrent get, which loads again) but a first-class in-flight
-    // entry on the async view (a concurrent get joins it). Pins the intentional A2-F1a divergence.
+    // entry on the async view (a concurrent get joins it). The divergence is intentional.
     var loads = new AtomicInteger();
     var release = new CountDownLatch(1);
-    var loadStarted = new CountDownLatch(1);
     CacheLoader<Int, Int> loader = key -> {
       loads.incrementAndGet();
-      loadStarted.countDown();
       release.await();
       return intern(key.negate());
     };
@@ -892,23 +892,37 @@ final class RefreshAfterWriteTest {
         : context.build(loader);
     Int key = context.absentKey();
 
-    // Kick off the reload asynchronously (default asyncLoad = supplyAsync), then wait until it is
-    // registered and running so the concurrent get below races an in-flight reload
-    var refresh = cache.refresh(key);
-    loadStarted.await();
+    try {
+      // Kick off the reload asynchronously (default asyncLoad = supplyAsync), then wait until it
+      // is registered and running so the concurrent get below races an in-flight reload
+      var refresh = cache.refresh(key);
+      await().until(() -> loads.get() == 1);
+      var reader = new AtomicReference<@Nullable Thread>();
+      var get = CompletableFuture.supplyAsync(() -> {
+        reader.set(Thread.currentThread());
+        return cache.get(key);
+      }, executor);
+      if (context.isAsync()) {
+        // The async get joins the in-flight reload, so it parks instead of loading again
+        await().until(() -> {
+          var thread = reader.get();
+          return (thread != null) && (thread.getState() == WAITING);
+        });
+      } else {
+        // The sync get cannot see the invisible side-load, so it starts a second load
+        await().until(() -> loads.get() == 2);
+      }
+      release.countDown();
 
-    var get = CompletableFuture.supplyAsync(() -> cache.get(key), executor);
-    if (!context.isAsync()) {
-      // The sync get cannot see the invisible side-load, so it starts a second load
-      await().until(() -> loads.get() == 2);
+      await().until(() -> get.isDone() && refresh.isDone());
+      assertThat(get).succeedsWith(key.negate());
+      assertThat(refresh).succeedsWith(key.negate());
+      await().until(() -> cache.policy().refreshes().isEmpty());
+
+      assertThat(loads.get()).isEqualTo(context.isAsync() ? 1 : 2);
+    } finally {
+      release.countDown();
     }
-    release.countDown();
-
-    assertThat(get.join()).isEqualTo(key.negate());
-    refresh.join();
-    await().until(() -> cache.policy().refreshes().isEmpty());
-
-    assertThat(loads.get()).isEqualTo(context.isAsync() ? 1 : 2);
   }
 
   @CheckNoEvictions

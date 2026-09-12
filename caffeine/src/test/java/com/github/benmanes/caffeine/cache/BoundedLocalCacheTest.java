@@ -444,12 +444,9 @@ final class BoundedLocalCacheTest {
   }
 
   /**
-   * Runs a maintenance cycle over an expiring async cache whose removal listener re-enters to
-   * invalidate the victim. The nested cycle unlinks that node, so the scan either resumes on an
-   * entry that is no longer in the queue it is walking (the successor it holds in a local) or has
-   * lost the tail that it captured as its stopping point (the last entry). The cycle is run on
-   * another thread so that a scan which cannot terminate fails the bounded await instead of
-   * hanging the build.
+   * Runs an async cache's expiration scan while a reentrant removal listener unlinks the next
+   * node or captured tail. Cleanup runs on another thread so a nonterminating scan fails the
+   * bounded await instead of hanging the build.
    */
   private static BoundedLocalCache<Integer, CompletableFuture<Integer>> scanWithReentrantRemoval(
       int victim, UnaryOperator<Caffeine<Object, Object>> expiry) {
@@ -4580,7 +4577,9 @@ final class BoundedLocalCacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.SYNC,
       population = Population.SINGLETON, maximumSize = Maximum.FULL,
       weigher = CacheWeigher.DISABLED, keys = ReferenceType.STRONG,
-      values = ReferenceType.STRONG, expireAfterWrite = Expire.ONE_MINUTE)
+      values = ReferenceType.STRONG, mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   void expiredRemap_recordsClimberMiss(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     cache.frequencySketch().ensureCapacity(context.maximumSize());
     int frequency = cache.frequencySketch().frequency(context.firstKey());
@@ -7337,9 +7336,9 @@ final class BoundedLocalCacheTest {
       implementation = Implementation.Caffeine, compute = Compute.SYNC)
   void remap_preserveTimestamps_newValueDiffers(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    // White-box: the L2961 no-op guard checks that newValue matches oldValue. A caller that
-    // pre-sets the preserveTimestamps hint but returns a different value must NOT take the
-    // short-circuit; covers the defensive mismatch branch.
+    // White-box: the no-op guard checks that newValue matches oldValue. A caller that pre-sets the
+    // preserveTimestamps hint but returns a different value must NOT take the short-circuit; covers
+    // the defensive mismatch branch.
     var key = context.firstKey();
     var hints = new LocalCache.RemapHints();
     hints.preserveTimestamps = true;
@@ -7370,48 +7369,43 @@ final class BoundedLocalCacheTest {
         .isEqualTo(originalValue);
   }
 
-  @Test
-  @SuppressWarnings("resource")
-  void remap_preserveTimestamps_newValueDiffers_publishesTheUpdate() {
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.SINGLETON,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
+  void remap_preserveTimestamps_newValueDiffers_publishesTheUpdate(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
     // The hint signals a no-op only when the lambda returns the same instance, so a hinted call
     // that does mutate must still publish an UpdateTask. Otherwise the entry's new weight never
     // reaches the policy and weightedSize is permanently short by the delta.
-    var cache = asBoundedLocalCache(Caffeine.newBuilder()
-        .weigher((Integer key, Integer value) -> value)
-        .executor(Runnable::run)
-        .maximumWeight(1000)
-        .build());
-    var previous = cache.put(1, 1);
-    assertThat(previous).isNull();
-    assertThat(cache.weightedSize()).isEqualTo(1);
-
+    var key = context.firstKey();
     var hints = new LocalCache.RemapHints();
     hints.preserveTimestamps = true;
-    assertThat(cache.compute(1, (key, oldValue) -> 5, cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints)).isEqualTo(5);
-    assertThat(cache.weightedSize()).isEqualTo(5);
+    assertThat(cache.compute(key, (k, oldValue) -> context.absentValue(), cache.expiry(),
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints))
+        .isEqualTo(context.absentValue());
+    cache.cleanUp();
+    assertThat(cache.weightedSize()).isEqualTo(context.weigher().weigh(key, context.absentValue()));
   }
 
-  @Test
-  @SuppressWarnings("resource")
-  void remap_preserveTimestamps_absentCreate_publishesTheAddition() {
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
+  void remap_preserveTimestamps_absentCreate_publishesTheAddition(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
     // The absent branch has no no-op short-circuit at all, so a hinted create must still publish
     // an AddTask. An unlinked node is unevictable, and removing it later subtracts a weight that
     // was never added, which relaxes the bound by that much for the cache's lifetime.
-    var cache = asBoundedLocalCache(Caffeine.newBuilder()
-        .weigher((Integer key, Integer value) -> value)
-        .executor(Runnable::run)
-        .maximumWeight(1000)
-        .build());
-
+    var key = context.absentKey();
     var hints = new LocalCache.RemapHints();
     hints.preserveTimestamps = true;
-    assertThat(cache.compute(1, (key, oldValue) -> 300, cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints)).isEqualTo(300);
-    assertThat(cache.weightedSize()).isEqualTo(300);
+    assertThat(cache.compute(key, (k, oldValue) -> context.absentValue(), cache.expiry(),
+        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints))
+        .isEqualTo(context.absentValue());
+    cache.cleanUp();
+    assertThat(cache.weightedSize()).isEqualTo(context.weigher().weigh(key, context.absentValue()));
 
-    var removed = cache.remove(1);
-    assertThat(removed).isEqualTo(300);
+    assertThat(cache.remove(key)).isEqualTo(context.absentValue());
+    cache.cleanUp();
     assertThat(cache.weightedSize()).isEqualTo(0);
   }
 

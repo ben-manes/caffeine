@@ -1205,8 +1205,7 @@ final class AsyncAsMapTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.SINGLETON)
-  void replaceAll_appliedOncePerKey(AsyncCache<Int, Int> cache, CacheContext context)
-      throws InterruptedException {
+  void replaceAll_appliedOncePerKey(AsyncCache<Int, Int> cache, CacheContext context) {
     var invocations = new AtomicInteger();
     var started = new AtomicBoolean();
 
@@ -1216,20 +1215,20 @@ final class AsyncAsMapTest {
       cache.asMap().put(context.firstKey(), context.absentValue().toFuture());
     });
     writer.setDaemon(true);
-    writer.start();
 
     cache.asMap().replaceAll((key, value) -> {
-      invocations.incrementAndGet();
-      await().untilTrue(started);
-
-      // the writer either blocks behind this computation or has finished its write
-      await().until(() -> writer.getState() != RUNNABLE);
-
+      if (invocations.incrementAndGet() == 1) {
+        writer.start();
+        await().untilTrue(started);
+        // The writer either blocks behind this computation or completes before the CAS.
+        await().until(() -> writer.getState() != RUNNABLE);
+      }
       return value;
     });
 
-    writer.join();
+    await().until(() -> !writer.isAlive());
     assertThat(invocations.get()).isEqualTo(1);
+    assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
   }
 
   /* ---------------- computeIfAbsent -------------- */

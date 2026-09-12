@@ -2,11 +2,10 @@
 
 Read when starting or triaging a batch `/audit-*` round.
 
-Bank the audit reports, consolidate them into an index with individual work items, verify that
-no claims or counterarguments were dropped, then work one item at a time and revisit coverage
-affected by the fixes. Keep the tracker current across sessions; use the
-[consolidated queue format](audit-output.md#consolidated-queue), including for `run-audits.sh --consolidate`.
-Complete the report batch before beginning repairs. A full cycle has typically taken 2–3 weeks.
+Complete the audit batch before repairs. Use the
+[consolidated queue format](audit-output.md#consolidated-queue), verify no claims or counterarguments
+were dropped, then work one item at a time and revisit coverage affected by fixes. Keep the tracker
+current across sessions. A full cycle has typically taken 2–3 weeks.
 
 **Serialize the runs.** Quota exhaustion mid-run *breaks* an audit rather than pausing it, so
 never fire runs in parallel. `/audit-adversarial` is the single priciest skill (roughly half a

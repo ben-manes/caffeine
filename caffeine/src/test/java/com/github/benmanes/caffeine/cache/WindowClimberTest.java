@@ -3260,7 +3260,7 @@ final class WindowClimberTest {
 
     @Var int moving = 1;
     @Var int blocked = 0;
-    while (density.walk != null) {
+    for (int i = 0; (i < PROBE_WALK_BUDGET) && (density.walk != null); i++) {
       int hits = (blocked == 4) ? 540 : 500;  // an improving sub-crash jitter mid-wall
       long adjustment = bigSample(climber, maximum, windowMax, hits);
       if (density.walk != null) {
@@ -3278,13 +3278,15 @@ final class WindowClimberTest {
         double cap = MAX_STEP_FRACTION * maximum;
         assertThat(adjustment).isAtMost((long) cap);
         windowMax += adjustment;
-        while (density.undoRemaining != 0) {
+        for (int j = 0; (j < PROBE_WALK_BUDGET) && (density.undoRemaining != 0); j++) {
           long chunk = bigSample(climber, maximum, windowMax, /* hits= */ 500);
           assertThat(Math.abs(chunk)).isAtMost((long) cap);
           windowMax += chunk;
         }
+        assertThat(density.undoRemaining).isEqualTo(0);
       }
     }
+    assertThat(density.walk).isNull();
     assertThat((double) windowMax).isWithin(4.0).of(base);
     assertThat(moving).isAtMost(5);
     assertThat(blocked).isAtLeast(10);
@@ -3319,7 +3321,7 @@ final class WindowClimberTest {
 
     @Var long lowest = windowMax;
     @Var int blocked = 0;
-    while (density.walk != null) {
+    for (int i = 0; (i < PROBE_WALK_BUDGET) && (density.walk != null); i++) {
       long adjustment = sample(climber, windowMax,
           /* windowHits= */ 250, /* mainHits= */ 250, /* misses= */ 500);
       if ((density.walk != null) && (adjustment == 0)) {
@@ -3330,6 +3332,7 @@ final class WindowClimberTest {
     }
 
     // it reached the rail, stood there for most of its budget, and was charged a failure for it
+    assertThat(density.walk).isNull();
     assertThat(blocked).isAtLeast(PROBE_WALK_BUDGET / 2);
     assertThat(lowest).isAtMost((long) Math.ceil(FLOOR) + 1);
     assertThat(density.audit.rung).isEqualTo(PROBE_BACKOFF_MAX);
@@ -3371,10 +3374,10 @@ final class WindowClimberTest {
   }
 
   /**
-   * Re-freezes the live walk's confirm reference to a rate colder than its start, as an arm whose
-   * smoothed rate lags a warming sample carries. The bases are final by design, since the
-   * frozen-at-arm property is the one the verdict studies keep re-deriving, so this swaps in a
-   * copy, carrying the strides already taken.
+   * Copies the active walk with a colder smoothed-rate baseline, the state an arm carries when its
+   * rate lags a warming sample, preserving the strides already taken. The bases stay final because
+   * the verdict studies rely on the frozen-at-arm property, so this replaces the walk rather than
+   * mutating it.
    */
   @CanIgnoreReturnValue
   private static Walk rebaseReference(WindowClimber climber, double reference) {

@@ -248,8 +248,11 @@ final class CaffeinatedGuavaTest {
     assertThat(nullBulkLoad.get()).isNull();
   }
 
-  @Test
-  void bulkLoad_freshKeys() throws ExecutionException {
+  @ParameterizedTest
+  @MethodSource("bulkLoadingCaches")
+  void bulkLoad_freshKeys(
+      Function<CacheLoader<Key, Integer>, LoadingCache<Key, Integer>> factory)
+      throws ExecutionException {
     var loader = new CacheLoader<Key, Integer>() {
       @Override public Integer load(Key key) {
         throw new IllegalStateException();
@@ -262,11 +265,8 @@ final class CaffeinatedGuavaTest {
         return loaded;
       }
     };
-    LoadingCache<Key, Integer> guava = CacheBuilder.newBuilder().build(loader);
-    LoadingCache<Key, Integer> caffeine = CaffeinatedGuava.build(Caffeine.newBuilder(), loader);
-    for (var cache : ImmutableList.of(guava, caffeine)) {
-      assertThat(cache.getAll(ImmutableList.of(new Key("ab")))).containsExactly(new Key("ab"), 2);
-    }
+    var cache = factory.apply(loader);
+    assertThat(cache.getAll(ImmutableList.of(new Key("ab")))).containsExactly(new Key("ab"), 2);
   }
 
   @Test

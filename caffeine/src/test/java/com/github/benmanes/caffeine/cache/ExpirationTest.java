@@ -52,6 +52,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -62,6 +63,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
@@ -384,6 +386,28 @@ final class ExpirationTest {
   }
 
   /* --------------- Cache --------------- */
+
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.SYNC,
+      population = Population.SINGLETON, executor = CacheExecutor.DIRECT,
+      expireAfterWrite = Expire.ONE_MINUTE)
+  void get_expired_throwsInterruptedException(Cache<Int, Int> cache, CacheContext context) {
+    // Checked exceptions from non-Java callbacks must restore interruption on expired reloads.
+    context.ticker().advance(Duration.ofMinutes(2));
+    var failure = new InterruptedException();
+    try {
+      var error = assertThrows(CompletionException.class, () -> cache.get(context.firstKey(),
+          key -> { throw uncheckedThrow(failure); }));
+      assertThat(error).hasCauseThat().isSameInstanceAs(failure);
+      assertThat(Thread.currentThread().isInterrupted()).isTrue();
+    } finally {
+      Thread.interrupted();
+    }
+    assertThat(cache).isEmpty();
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
+  }
 
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
@@ -2244,6 +2268,11 @@ final class ExpirationTest {
     assertThat(cache.policy().getIfPresentQuietly(context.firstKey())).isNotNull();
     context.ticker().advance(Duration.ofMinutes(10));
     assertThat(cache.policy().getIfPresentQuietly(context.firstKey())).isNull();
+  }
+
+  @SuppressWarnings({"TypeParameterUnusedInFormals", "unchecked"})
+  private static <E extends Throwable> E uncheckedThrow(Throwable throwable) throws E {
+    throw (E) throwable;
   }
 
   /**

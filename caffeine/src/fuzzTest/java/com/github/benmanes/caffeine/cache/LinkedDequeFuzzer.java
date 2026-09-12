@@ -15,9 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth.assertWithMessage;
-import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -149,38 +148,12 @@ final class LinkedDequeFuzzer {
 
   /** Asserts that the deque agrees with the model and that its links are well formed. */
   private static void validate(LinkedDeque<LinkedValue> deque, List<LinkedValue> model) {
+    assertAbout(LinkedDequeSubject.deque()).that(deque).isValid();
     assertThat(deque.size()).isEqualTo(model.size());
     assertThat(deque.isEmpty()).isEqualTo(model.isEmpty());
     assertThat(ImmutableList.copyOf(deque)).containsExactlyElementsIn(model).inOrder();
     assertThat(ImmutableList.copyOf(deque.descendingIterator()))
         .containsExactlyElementsIn(Lists.reverse(model)).inOrder();
-
-    if (model.isEmpty()) {
-      assertThat(deque.peekFirst()).isNull();
-      assertThat(deque.peekLast()).isNull();
-      return;
-    }
-
-    // The documented invariant: a non-empty deque is anchored at both ends
-    var head = requireNonNull(deque.peekFirst());
-    var tail = requireNonNull(deque.peekLast());
-    assertThat(deque.getPrevious(head)).isNull();
-    assertThat(deque.getNext(tail)).isNull();
-
-    // Walking forward must reach the tail through consistent links, without revisiting a node
-    @Var
-    LinkedValue prior = null;
-    @Var
-    int count = 0;
-    for (@Var
-    var e = head; e != null; e = deque.getNext(e)) {
-      assertThat(deque.getPrevious(e)).isSameInstanceAs(prior);
-      prior = e;
-      count++;
-      assertWithMessage("cycle detected after %s links", count).that(count).isAtMost(model.size());
-    }
-    assertThat(count).isEqualTo(model.size());
-    assertThat(prior).isSameInstanceAs(tail);
   }
 
   enum Operation {

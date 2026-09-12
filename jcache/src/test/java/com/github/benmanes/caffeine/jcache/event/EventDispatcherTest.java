@@ -991,13 +991,13 @@ final class EventDispatcherTest {
     var primary = new EventDispatcher<Integer, Integer>(Runnable::run);
     var secondary = new EventDispatcher<Integer, Integer>(Runnable::run);
 
-    var pendingFutures = new ArrayList<>();
+    var pendingFutures = new AtomicReference<List<?>>();
     CacheEntryCreatedListener<Integer, Integer> listener = events ->
-        pendingFutures.addAll(secondary.pending.get());
+        pendingFutures.set(List.copyOf(secondary.pending.get()));
 
     var configuration = new MutableCacheEntryListenerConfiguration<>(
         () -> listener, /* filterFactory= */ null,
-        /* isOldValueRequired= */ false, /* isSynchronous= */ false);
+        /* isOldValueRequired= */ false, /* isSynchronous= */ true);
     primary.register(configuration);
     int key = 1;
 
@@ -1007,9 +1007,14 @@ final class EventDispatcherTest {
 
     try (Cache<Integer, Integer> cache = Mockito.mock()) {
       primary.publishCreated(cache, key, -key);
+      assertThat(primary.pending.get()).hasSize(1);
+      assertThat(pendingFutures.get()).isNull();
       queue.complete(null);
+      assertThat(pendingFutures.get()).isEmpty();
+    } finally {
+      queue.complete(null);
+      primary.ignoreSynchronous();
     }
-    assertThat(pendingFutures).isEmpty();
   }
 
   @Test
@@ -1156,7 +1161,7 @@ final class EventDispatcherTest {
           cacheRef.get().unwrap(com.github.benmanes.caffeine.cache.Cache.class);
       onCreated.set(nativeCache.getIfPresent(KEY_1));
     };
-    try (var fixture = reentrantFixture(listener);
+    try (var fixture = syncListenerFixture(listener).build();
         var cache = fixture.jcache()) {
       cacheRef.set(cache);
 
@@ -1178,7 +1183,7 @@ final class EventDispatcherTest {
             () -> cacheRef.get().put(KEY_2, VALUE_2)));
       }
     };
-    try (var fixture = reentrantFixture(listener);
+    try (var fixture = syncListenerFixture(listener).build();
         var cache = fixture.jcache()) {
       cacheRef.set(cache);
 
@@ -1192,8 +1197,9 @@ final class EventDispatcherTest {
 
   @Test
   void invoke_processorUsesTheCache_isRejected() {
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {};
     var failure = new AtomicReference<Throwable>();
-    try (var fixture = reentrantFixture(events -> {});
+    try (var fixture = syncListenerFixture(listener).build();
         var cache = fixture.jcache()) {
       cacheRef.set(cache);
 
@@ -1246,16 +1252,4 @@ final class EventDispatcherTest {
   }
 
   private final AtomicReference<CacheProxy<Integer, Integer>> cacheRef = new AtomicReference<>();
-
-  private static JCacheFixture reentrantFixture(CacheEntryCreatedListener<Integer, Integer> listener) {
-    var listenerConfig = new MutableCacheEntryListenerConfiguration<>(
-        /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
-        /* isOldValueRequired= */ false, /* isSynchronous= */ true);
-    return JCacheFixture.builder()
-        .configure(config -> {
-          config.setExecutorFactory(MoreExecutors::directExecutor);
-          config.addCacheEntryListenerConfiguration(listenerConfig);
-        }).build();
-  }
-
 }

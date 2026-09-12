@@ -70,6 +70,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1565,7 +1566,7 @@ final class CacheProxyTest {
 
   @Test
   @SuppressFBWarnings("HES_LOCAL_EXECUTOR_SERVICE")
-  void getAll_awaitsSynchronousListeners() throws InterruptedException {
+  void getAll_awaitsSynchronousListeners() throws InterruptedException, ExecutionException {
     @SuppressWarnings("PMD.CloseResource")
     var executor = Executors.newSingleThreadExecutor();
     try {
@@ -1583,25 +1584,30 @@ final class CacheProxyTest {
             config.setExecutorFactory(() -> executor);
             config.addCacheEntryListenerConfiguration(listenerConfig);
           }).build()) {
-        // Both publish and getAll must run on the same worker thread so they share the
-        // dispatcher's per-thread `pending` ThreadLocal. publish queues the listener on
-        // the executor (separate thread) where it parks, so the future stays incomplete;
-        // getAll(emptySet) is then expected to block in awaitSynchronous waiting on it.
-        var worker = new Thread(() -> {
+        // Both publish and getAll must run on the same worker thread so they share the dispatcher's
+        // per-thread `pending` ThreadLocal. publish queues the listener on the executor (separate
+        // thread) where it parks, so the future stays incomplete; getAll(emptySet) is then expected
+        // to block in awaitSynchronous waiting on it.
+        var task = new FutureTask<>(() -> {
           fixture.jcache().dispatcher.publishCreated(fixture.jcache(), KEY_1, VALUE_1);
           assertThat(fixture.jcache().getAll(Set.of())).isEmpty();
-        });
+        }, /* result= */ null);
+        var worker = new Thread(task);
+        worker.setDaemon(true);
         worker.start();
-        await().untilTrue(listenerEntered);
+        try {
+          await().untilTrue(listenerEntered);
 
-        // Pre-fix: getAll returns immediately and the worker terminates without joining
-        // the pending future. Post-fix: getAll blocks in awaitSynchronous.
-        var settled = EnumSet.of(BLOCKED, WAITING, TERMINATED);
-        await().until(() -> settled.contains(worker.getState()));
-        assertThat(worker.isAlive()).isTrue();
-
-        letProceed.set(true);
-        worker.join();
+          // Pre-fix: getAll returns immediately and the worker terminates without joining the
+          // pending future. Post-fix: getAll blocks in awaitSynchronous.
+          var settled = EnumSet.of(BLOCKED, WAITING, TERMINATED);
+          await().until(() -> settled.contains(worker.getState()));
+          assertThat(task.isDone()).isFalse();
+        } finally {
+          letProceed.set(true);
+        }
+        await().until(task::isDone);
+        task.get();
       }
     } finally {
       executor.shutdownNow();
@@ -1609,7 +1615,8 @@ final class CacheProxyTest {
   }
 
   @Test
-  void removeAll_awaitsSynchronousListenersWhenLoopThrows() throws InterruptedException {
+  void removeAll_awaitsSynchronousListenersWhenLoopThrows()
+      throws InterruptedException, ExecutionException {
     @SuppressWarnings("PMD.CloseResource")
     var delegate = Executors.newSingleThreadExecutor();
     try {
@@ -1643,26 +1650,34 @@ final class CacheProxyTest {
           var cache = fixture.jcache();) {
         cache.put(KEY_2, VALUE_2);
 
-        var worker = new Thread(() -> {
-          // Seed this thread's pending list with an in-flight synchronous future (a parked listener),
-          // then break the removal with a throwing Ticker: the loop aborts, and the finally must
-          // still await/clear the seeded future rather than leaking it.
+        var task = new FutureTask<>(() -> {
+          // Seed this thread's pending list with an in-flight synchronous future (a parked
+          // listener), then break the removal with a throwing Ticker: the loop aborts, and the
+          // finally must still await/clear the seeded future rather than leaking it.
           cache.dispatcher.publishRemoved(cache, KEY_1, VALUE_1);
           failTicker.set(true);
-          assertThrows(IllegalStateException.class, () -> cache.removeAll(Set.of(KEY_2)));
-        });
+          try {
+            assertThrows(IllegalStateException.class, () -> cache.removeAll(Set.of(KEY_2)));
+          } finally {
+            failTicker.set(false);
+          }
+        }, /* result= */ null);
+        var worker = new Thread(task);
+        worker.setDaemon(true);
         worker.start();
-        await().untilTrue(listenerEntered);
+        try {
+          await().untilTrue(listenerEntered);
 
-        // Pre-fix the throw skipped awaitSynchronous and the worker terminated with the seeded
-        // future stranded; post-fix the finally blocks in awaitSynchronous until it is released.
-        var settled = EnumSet.of(BLOCKED, WAITING, TERMINATED);
-        await().until(() -> settled.contains(worker.getState()));
-        assertThat(worker.isAlive()).isTrue();
-
-        letProceed.set(true);
-        worker.join();
-        failTicker.set(false);
+          // Pre-fix the throw skipped awaitSynchronous and the worker terminated with the seeded
+          // future stranded; post-fix the finally blocks in awaitSynchronous until it is released.
+          var settled = EnumSet.of(BLOCKED, WAITING, TERMINATED);
+          await().until(() -> settled.contains(worker.getState()));
+          assertThat(task.isDone()).isFalse();
+        } finally {
+          letProceed.set(true);
+        }
+        await().until(task::isDone);
+        task.get();
       }
     } finally {
       delegate.shutdownNow();

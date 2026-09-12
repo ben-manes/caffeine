@@ -17,9 +17,12 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.testing.CollectionSubject.assertThat;
 import static com.google.common.collect.Iterators.elementsEqual;
+import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -55,6 +58,22 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 @SuppressWarnings({"ClassEscapesDefinedScope", "PMD.LooseCoupling"})
 final class LinkedDequeTest {
   static final int SIZE = 100;
+
+  @ParameterizedTest @MethodSource("empty")
+  @SuppressFBWarnings("NPMC_NON_PRODUCTIVE_METHOD_CALL")
+  void isValid_corruptLinks(LinkedDeque<LinkedValue> deque) {
+    var observed = spy(deque);
+    var value = new LinkedValue(1);
+    observed.addLast(value);
+    observed.setPrevious(value, value);
+    observed.setNext(value, value);
+
+    // Fail promptly if assertion formatting tries to traverse the cycle
+    doThrow(new AssertionError("Unexpected deque traversal")).when(observed).toString();
+    var failure = assertThrows(AssertionError.class,
+        () -> assertAbout(LinkedDequeSubject.deque()).that(observed).isValid());
+    assertThat(failure).hasMessageThat().contains("getPrevious(e)");
+  }
 
   @ParameterizedTest @MethodSource("empty")
   void clear_whenEmpty(Deque<?> deque) {

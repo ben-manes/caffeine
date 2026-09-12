@@ -18,8 +18,7 @@ Write reports and transient analysis under `.local/`, grouped by producing model
   a verification pass adds `-verification`; the canonical unsuffixed name is the synthesis.
   **Never overwrite a report you were dispatched to verify, consolidate, or read.**
 
-There is no date or cycle level. A new run of the same audit under the same model intentionally
-replaces its previous report. Verification and consolidation must preserve their input reports.
+There is no date or cycle level. Rerunning an audit under the same model replaces its report.
 
 Examples:
 
@@ -39,9 +38,8 @@ machine-local; checked-in guidance must remain useful if that tree is absent.
 
 Cross-audit consolidation, including `run-audits.sh --consolidate`, uses this layout:
 
-- `.local/audits/shared/audit-consolidated.md`: the entry point for continuing work. Keep brief
-  workflow instructions, counts by status, and section tables containing linked ID, status, and
-  short subject. Detailed claims and evidence belong in the item files.
+- `.local/audits/shared/audit-consolidated.md`: brief workflow instructions, counts by status, and
+  section tables with linked ID, status, and short subject. Claims and evidence go in item files.
 - `.local/audits/shared/queue/<section>/<item-id>.md`: one item per file. Sections, in order, are
   `core`, `async`, `jcache`, `guava`, `simulator`, `examples`, `build-ci`, `docs`. ID prefixes match
   the section except `simulator` uses `sim`, `examples` uses `ex`, and `build-ci` uses `ci`.
@@ -55,10 +53,10 @@ evidence/counterarguments. Distinguish reported measurements from current checks
 Use `open` for pending work (including disputed claims), `unverified` for unresolved reachability,
 contract, or impact, `resolved` for an evidenced repair, and `closed` for an agreed no-fix outcome.
 
-Extend an existing queue in place. Reuse an item's ID for matching claims; allocate new numeric
-IDs above the section's existing maximum, never recycling or renumbering them. Separate distinct
-subclaims without dropping their parent ID. Preserve resolved/closed decisions when new reports
-repeat them, and retain contrary evidence for review. Never prune items to meet a survival ratio.
+Extend the queue in place. Reuse IDs for matching claims; assign new numeric IDs above the section's
+maximum, never recycling or renumbering them. Separate distinct subclaims without dropping their
+parent ID. Preserve resolved/closed decisions when claims recur, and retain contrary evidence.
+Never prune items to meet a survival ratio.
 
 Map history entries by mechanism and scope, including family members not named by ID. Label
 near-matches and historical counterarguments without treating them as current dispositions.
@@ -66,11 +64,10 @@ Give each history entry a stable named anchor. When adding or revising one, upda
 items' links. If a mechanism review finds no related entry, record that explicitly with the review
 date; a missing section means unreviewed. Neither case exempts an item from canonical module rules.
 
-Refresh index links and counts from the item files after each pass. Use an existing index helper
-if available; the format above is sufficient to create or maintain the queue without local tools.
-Verify report coverage, retained items/counterarguments, and relative links. For subsequent item
-work, read the selected item and relevant rulings, with a fresh context for unrelated items and
-a concise handoff. Per-skill synthesis reports remain in the producing model's directory.
+After each pass, refresh index links and counts from item files, using an existing helper if
+available. Verify report coverage, retained items/counterarguments, and relative links. Work from
+the selected item and relevant rulings; use a fresh context for unrelated items and leave a concise
+handoff. Per-skill synthesis reports remain in the producing model's directory.
 
 ## Rules for agents
 

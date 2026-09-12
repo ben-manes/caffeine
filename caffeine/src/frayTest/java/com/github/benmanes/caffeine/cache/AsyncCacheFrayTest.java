@@ -129,11 +129,7 @@ final class AsyncCacheFrayTest {
     threadB.join();
     cache.synchronous().cleanUp();
 
-    var value = cache.synchronous().getIfPresent(1);
-    assertThat(value).isNotNull();
-    assertWithMessage("Key 1 should be 42 or 99, but was %s", value)
-        .that(value).isAnyOf(42, 99);
-
+    assertThat(cache.synchronous().getIfPresent(1)).isEqualTo(99);
     assertThat(cache).isValid();
   }
 
