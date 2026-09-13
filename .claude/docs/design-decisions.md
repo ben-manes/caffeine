@@ -925,10 +925,24 @@ written in exactly one place, the value-checked `casDrainStatus(PROCESSING_TO_ID
 `REQUIRED` is ever swallowed. Don't collapse the arm back to an unconditional swap. Pinned by
 `BoundedLocalCacheTest.scheduleAfterWrite_staleIdle_retriesAgainstTheObservedStatus`.
 
-**skipReadBuffer optimization.** When the cache is less than half full with strong
-keys/values and no expiration, `skipReadBuffer()` returns true, avoiding read buffer
-overhead entirely. This means frequency tracking is disabled until the cache is
-sufficiently populated — the eviction policy bootstraps without frequency data.
+**Read recording starts with the frequency sketch.** A fastpath cache (bounded, strong keys and
+values, no access expiration) starts with the disabled read buffer, so its reads skip the eviction
+policy until the sketch is initialized: at half occupancy, when presized by `initialCapacity`, or
+when `setMaximum` makes the cache half full. Each of those sites calls `recordReads()`, which swaps
+in a `BoundedBuffer` under the eviction lock. Readers see the plain write racily, which is safe
+because a new buffer holds only default state. A test that initializes the sketch directly must call
+`recordReads()` as well; `BoundedLocalCacheTest.fastpath`, `fastpath_presized` and
+`fastpath_setMaximum` pin the three sites.
+
+The hit path offers to the buffer without testing the sketch. The `skipReadBuffer()` check it
+replaced loaded `sketch.table`, which shares a cache line with `size`, and the maintenance thread
+writes `size` for nearly every drained read. On a read-only JMH sweep of a presized 65,536-entry
+cache (Apple M3 Max), removing the check took a hit from 11.65 to 9.99 ns at one thread and from
+11.13 to 7.00 ns per thread at eight, and a cache under half full was no slower. Two alternatives
+were measured and rejected: padding `size` 128 bytes away from `table` recovered less (12.21 to
+10.35 and 10.28 to 9.02 ns/op) at 128 bytes per cache, and keeping the count in the table's
+trailing slot recovered a third of the gain at one thread and none at eight, for a reason not
+established.
 
 ## Node State
 

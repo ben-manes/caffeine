@@ -91,6 +91,7 @@ public final class AddMaximum implements Rule<LocalCacheContext> {
             .addStatement("long capacity = Math.min($L, $L)",
                 "builder.getMaximum()", "builder.getInitialCapacity()")
             .addStatement("this.sketch.ensureCapacity(capacity)")
+            .addStatement("recordReads()")
         .endControlFlow().build());
     context.classSpec.addMethod(MethodSpec.methodBuilder("frequencySketch")
         .addModifiers(context.protectedFinalModifiers())

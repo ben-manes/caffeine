@@ -281,7 +281,10 @@ value. This accepted choice treats the load as a fresh read of the system of rec
 notification for resource-tracking listeners. Do not align it with
 `loadAll(replaceExistingValues=false)`, whose explicit contract is to keep existing values.
 That separate API uses `loadAllAndKeepExisting` / putIfAbsent. Two CREATED events without an
-intervening UPDATED are an accepted concurrent-load outcome.
+intervening UPDATED are an accepted concurrent-load outcome. A key the loader returns outside the
+request is unspecified by `CacheLoader.loadAll` and the TCK, so it is stored and published as
+CREATED like any loaded value, even over an existing mapping; a presence check before core's `put`
+would be racy check-then-act.
 
 The listener contract does promise per-key event ordering for synchronous and asynchronous
 listeners, and says listeners fire after the cache mutation. The accepted read-through behavior

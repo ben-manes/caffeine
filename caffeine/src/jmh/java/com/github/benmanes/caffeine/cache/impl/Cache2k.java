@@ -31,6 +31,9 @@ public final class Cache2k<K, V> implements BasicCache<K, V> {
   public Cache2k(int maximumSize) {
     cache = Cache2kBuilder.of(new Cache2kConfig<K, V>())
         .entryCapacity(maximumSize)
+        .disableMonitoring(true)
+        .disableStatistics(true)
+        .boostConcurrency(true)
         .build();
   }
 

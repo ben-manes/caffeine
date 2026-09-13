@@ -253,7 +253,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   final ConcurrentHashMap<Object, Node<K, V>> data;
   final PerformCleanupTask drainBuffersTask;
   final Consumer<Node<K, V>> accessPolicy;
-  final Buffer<Node<K, V>> readBuffer;
   final NodeFactory<K, V> nodeFactory;
   final ReentrantLock evictionLock;
   final Weigher<K, V> weigher;
@@ -261,6 +260,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   final boolean isWeighted;
   final boolean isAsync;
+
+  Buffer<Node<K, V>> readBuffer;
 
   @Nullable Set<K> keySet;
   @Nullable Collection<V> values;
@@ -282,9 +283,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     evictionListener = builder.getEvictionListener(isAsync);
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     writeBuffer = new MpscGrowableArrayQueue<>(WRITE_BUFFER_MIN, WRITE_BUFFER_MAX);
-    readBuffer = evicts() || collectKeys() || collectValues() || expiresAfterAccess()
-        ? new BoundedBuffer<>()
-        : Buffer.disabled();
+    boolean tracksAccess = evicts() || collectKeys() || collectValues() || expiresAfterAccess();
+    readBuffer = (tracksAccess && !fastpath()) ? new BoundedBuffer<>() : Buffer.disabled();
     accessPolicy = (evicts() || expiresAfterAccess())
         ? node -> onAccess(node, Access.HIT)
         : node -> {};
@@ -675,6 +675,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     if ((frequencySketch() != null) && !isWeighted() && (weightedSize() >= (max >>> 1))) {
       // Lazily initialize when close to the maximum size
       frequencySketch().ensureCapacity(max);
+      recordReads();
     }
   }
 
@@ -1295,16 +1296,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       statsCounter().recordHits(1);
     }
 
-    boolean delayable = skipReadBuffer() || (readBuffer.offer(node) != Buffer.FULL);
+    boolean delayable = (readBuffer.offer(node) != Buffer.FULL);
     if (shouldDrainBuffers(delayable)) {
       scheduleDrainBuffers();
     }
     return refreshIfNeeded(node, now);
   }
 
-  /** Returns if the cache should bypass the read buffer. */
-  boolean skipReadBuffer() {
-    return fastpath() && frequencySketch().isNotInitialized();
+  /** Enables the read buffer (disabled if fastpath until the frequency sketch is initialized). */
+  @GuardedBy("evictionLock")
+  void recordReads() {
+    if (readBuffer == Buffer.<Node<K, V>>disabled()) {
+      // The replacement is published without a fence because a new buffer holds only default state
+      readBuffer = new BoundedBuffer<>();
+    }
   }
 
   /**
@@ -1871,9 +1876,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   /** Drains the read buffer. */
   @GuardedBy("evictionLock")
   void drainReadBuffer() {
-    if (!skipReadBuffer()) {
-      readBuffer.drainTo(accessPolicy);
-    }
+    readBuffer.drainTo(accessPolicy);
   }
 
   /**
@@ -2039,6 +2042,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             // Lazily initialize when close to the maximum
             long capacity = isWeighted() ? data.mappingCount() : maximum;
             frequencySketch().ensureCapacity(capacity);
+            recordReads();
           }
         }
 

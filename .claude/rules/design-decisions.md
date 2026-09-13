@@ -32,6 +32,10 @@ For adjudication, also read your module's section of [ruled-out](../docs/ruled-o
 - `StripedBuffer` expands on `FAILED` contention, not `FULL` backlog. A full home stripe
   returns `FULL` to request a drain; it does not search other stripes. A thread's starting
   stripe is fixed because the JDK's mutable thread probe is inaccessible.
+- A fastpath cache starts with the disabled read buffer, and `recordReads()` swaps in a real
+  one at every sketch-initialization site (`AddTask`, `setMaximumSize`, the presized generated
+  constructor). Do not restore a sketch check on the hit path: it loads the cache line that
+  `size` dirties. A test that initializes the sketch directly must call `recordReads()` too.
 - The shaded JCTools write queue's index overflow after 2^62 offers is accepted; a subtraction
   check alone does not fix the wrapping producer limit, and rollback can strand the consumer.
 

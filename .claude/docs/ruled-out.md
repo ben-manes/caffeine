@@ -145,6 +145,11 @@ These dispose of whole families. Check them first.
   task is not stranded: `scheduleAfterWrite` runs after `offer` returns and re-arms.
 - `clear()`'s write-buffer drain loop being unbounded under `evictionLock`.
 - The write buffer's backpressure is a capacity limit, not a CAS.
+- The constructor's read-buffer and access-policy conditions not naming `expiresVariable()`.
+  Variable expiry shares the `A` classes with access expiry, and their `expiresAfterAccess()`
+  (`timerWheel == null`) answers true inside the `BoundedLocalCache` constructor because the
+  subclass assigns `timerWheel` after `super`, so a variable-expiry cache gets both. Naming
+  `expiresVariable()` would not help: it reads false at that point.
 
 **Timing and arithmetic**
 
@@ -475,6 +480,9 @@ Examples otherwise hold the full quality bar, including unhappy-path test covera
 - jcstress and lincheck tasks being cacheable rather than `cacheIf { false }`.
 - `EclipseJavaCompile`'s `argumentProviders.add { lambda }` emitting absolute paths.
 - `ShardedTestFilter` running non-`MethodSource` descriptors in every shard.
+- `ShardedTestFilter` dropping every method without `@CacheSpec` when a `-P` filter is set. The
+  filters select local subsets of the parameterized matrix; CI shards without them, so the plain
+  tests run there.
 - `configureondemand` is intentional.
 - Dependency verification is not wanted; the egress allowances are intentional.
 

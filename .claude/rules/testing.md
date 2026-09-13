@@ -88,7 +88,9 @@ A single method runs as-is (`--tests 'Class.method'`) — sweeping its matrix is
 It's whole classes and the full suite that must be avoided, or narrowed with `-P`
 flags (e.g., `-Pcompute=sync -Pkeys=strong -Pvalues=strong -Pstats=disabled`) when
 you can't. Over-pinning can empty a method's matrix (JUnit `initializationError`) —
-e.g., `ReferenceTest` needs `values=weak/soft`.
+e.g., `ReferenceTest` needs `values=weak/soft`. A filter also drops every method without
+`@CacheSpec` and reports nothing skipped, so a narrowed `BoundedLocalCacheTest` run leaves out
+its plain tests; run those by name without a flag.
 
 ## Fuzz Testing and PIT
 

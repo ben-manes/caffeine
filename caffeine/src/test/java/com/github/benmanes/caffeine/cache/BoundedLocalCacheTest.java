@@ -3150,6 +3150,7 @@ final class BoundedLocalCacheTest {
     var dummy = cache.nodeFactory.newNode(new WeakKeyReference<>(
         nullKey(), nullReferenceQueue()), nullValue(), nullReferenceQueue(), 1, 0);
     cache.frequencySketch().ensureCapacity(1);
+    cache.recordReads();
 
     var buffer = cache.readBuffer;
     for (int i = 0; i < (BoundedBuffer.BUFFER_SIZE - 1); i++) {
@@ -3189,23 +3190,55 @@ final class BoundedLocalCacheTest {
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       expiry = CacheExpiry.DISABLED, keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   void fastpath(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    assertThat(cache.skipReadBuffer()).isTrue();
+    assertThat(cache.readBuffer).isSameInstanceAs(Buffer.disabled());
 
     for (int i = 0; i < Math.toIntExact(context.maximumSize() / 2) - 1; i++) {
       var oldValue = cache.put(Int.valueOf(i), Int.valueOf(-i));
       assertThat(oldValue).isNull();
     }
-    assertThat(cache.skipReadBuffer()).isTrue();
+    assertThat(cache.get(Int.valueOf(0))).isNotNull();
+    assertThat(cache.readBuffer).isSameInstanceAs(Buffer.disabled());
 
     var oldValue = cache.put(Int.valueOf(-1), Int.valueOf(-1));
     assertThat(oldValue).isNull();
 
-    assertThat(cache.skipReadBuffer()).isFalse();
+    assertThat(cache.readBuffer).isInstanceOf(BoundedBuffer.class);
     assertThat(cache.get(Int.valueOf(0))).isNotNull();
     assertThat(cache.readBuffer.writes()).isEqualTo(1);
 
     cache.cleanUp();
     assertThat(cache.readBuffer.reads()).isEqualTo(1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      initialCapacity = InitialCapacity.FULL, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.DISABLED, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, expiry = CacheExpiry.DISABLED,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  void fastpath_presized(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    assertThat(cache.readBuffer).isInstanceOf(BoundedBuffer.class);
+
+    var oldValue = cache.put(context.absentKey(), context.absentValue());
+    assertThat(oldValue).isNull();
+    assertThat(cache.get(context.absentKey())).isNotNull();
+    assertThat(cache.readBuffer.writes()).isEqualTo(1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      expiry = CacheExpiry.DISABLED, keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  void fastpath_setMaximum(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var oldValue = cache.put(context.absentKey(), context.absentValue());
+    assertThat(oldValue).isNull();
+    assertThat(cache.readBuffer).isSameInstanceAs(Buffer.disabled());
+
+    cache.setMaximumSize(2);
+    assertThat(cache.readBuffer).isInstanceOf(BoundedBuffer.class);
+    assertThat(cache.get(context.absentKey())).isNotNull();
+    assertThat(cache.readBuffer.writes()).isEqualTo(1);
   }
 
   @Test
@@ -4525,6 +4558,7 @@ final class BoundedLocalCacheTest {
       AsyncCache<Int, Int> cache, CacheContext context) {
     var localCache = asBoundedLocalCache(cache);
     localCache.frequencySketch().ensureCapacity(context.maximumSize());
+    localCache.recordReads();
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);
     cache.synchronous().cleanUp();
@@ -4649,6 +4683,7 @@ final class BoundedLocalCacheTest {
   void refreshCompletion_doesNotRecordAccess(LoadingCache<Int, Int> cache, CacheContext context) {
     var localCache = asBoundedLocalCache(cache);
     localCache.frequencySketch().ensureCapacity(context.maximumSize());
+    localCache.recordReads();
     int frequency = localCache.frequencySketch().frequency(context.firstKey());
     long misses = localCache.climber().sample.misses;
     long hits = localCache.climber().sample.hits;
