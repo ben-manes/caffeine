@@ -12,7 +12,9 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
 ## Expiry and entry processors
 
 - Values are `Expirable<V>` wrappers. `ExpiryPolicy` governs JCache expiry; native expiry is a
-  mirror for eager removal. Every value read checks the wrapper's deadline.
+  mirror for eager removal. Every value read checks the wrapper's deadline. A `get` or `getAll`
+  whose captured wrapper expired removes it by identity and continues with a live replacement,
+  since both are happen-before. See [access expiry](../docs/jsr107-conformance.md#access-expiry).
 - Access expiry writes the held wrapper's timestamp, then updates the native timer **only on
   read paths** (`get`, `getAll`, iterator). Reads remain lock-free; the by-key timer update can
   race a replacement, an accepted discrepancy. Inside `compute`, failed conditional operations

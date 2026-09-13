@@ -162,7 +162,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
-    Expirable<V> expirable = cache.getIfPresent(key);
+    @Var Expirable<V> expirable = cache.getIfPresent(key);
     if (expirable == null) {
       statistics.recordMisses(1L);
       if (statsEnabled) {
@@ -178,11 +178,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       long now = ticker.read();
       millis = nanosToMillis(now);
       if (expirable.hasExpired(millis)) {
+        Expirable<V> current;
+        var expired = expirable;
         dispatcher.beginComputation();
         try {
-          cache.asMap().computeIfPresent(key, (k, e) -> {
-            if (e == expirable) {
-              dispatcher.publishExpired(this, key, expirable.get());
+          current = cache.asMap().computeIfPresent(key, (k, e) -> {
+            if (e == expired) {
+              dispatcher.publishExpired(this, key, expired.get());
               statistics.recordEvictions(1L);
               return null;
             }
@@ -191,13 +193,16 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         } finally {
           dispatcher.endComputation();
         }
-        var listenerFailure = awaitSynchronousFailure();
-        statistics.recordMisses(1L);
-        if (statsEnabled) {
-          statistics.recordGetTime(ticker.read() - start);
+        if ((current == null) || current.hasExpired(millis)) {
+          var listenerFailure = awaitSynchronousFailure();
+          statistics.recordMisses(1L);
+          if (statsEnabled) {
+            statistics.recordGetTime(ticker.read() - start);
+          }
+          rethrowListenerFailure(listenerFailure);
+          return null;
         }
-        rethrowListenerFailure(listenerFailure);
-        return null;
+        expirable = current;
       }
     }
 
@@ -248,8 +253,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       }
       if (!entry.getValue().isEternal() && entry.getValue().hasExpired(millis[0])) {
         dispatcher.beginComputation();
+        Expirable<V> current;
         try {
-          cache.asMap().computeIfPresent(entry.getKey(), (k, expirable) -> {
+          current = cache.asMap().computeIfPresent(entry.getKey(), (k, expirable) -> {
             if (expirable == entry.getValue()) {
               dispatcher.publishExpired(this, entry.getKey(), entry.getValue().get());
               expired[0]++;
@@ -260,7 +266,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         } finally {
           dispatcher.endComputation();
         }
-        return true;
+        if ((current == null) || current.hasExpired(millis[0])) {
+          return true;
+        }
+        entry.setValue(current);
       }
       var duration = getAccessExpireTime();
       setVariableExpiration(entry.getKey(), duration);

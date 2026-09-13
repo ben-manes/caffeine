@@ -183,6 +183,12 @@ policies use the same access and creation duration. A custom access duration sho
 can cause early native eviction and EXPIRED for the replacement. This race is accepted; do not
 add a bin lock or identity guard to every access-expiry read.
 
+`get` and `getAll` are happen-before, so a read whose captured wrapper has expired removes it only
+by identity and continues with a live replacement that the removal kept: a key replaced before the
+captured deadline was never absent. `LoadingCacheProxy.getOrLoad` reaches the same answer by
+looking the key up again. `containsKey` and `EntryIterator.hasNext` are last-value and may still
+skip it. Pinned by `CacheProxyTest.get_replacedBeforeExpiry` and `getAll_replacedBeforeExpiry`.
+
 An accepted timestamp-race report combined zero access expiry, an eternal entry, and a concurrent
 processor READ to produce `EntryProcessorException`. Its `postProcess` path predates pre-processor
 expiry reconciliation and is not a current reproducer; the lock-free boundary remains intentional.

@@ -45,7 +45,8 @@ Details: [eviction](../docs/design-decisions.md#eviction),
 - The 1s tolerance can expire entries early and is bypassed for durations at or below it.
   Opaque access-time writes avoid read-path contention. Read-extension can briefly revive an
   expired entry; a fresh-clock check still races. Keep the value-identity guard, which prevents
-  applying a read duration to a replacement value.
+  applying a read duration to a replacement value, except one that keeps the exact deadline and
+  lands between the check and the CAS.
 - A removal's cause is attributed when that removal happens. `clear()`'s single ticker read
   amortizes the call across the entries it removes under the eviction lock, not a point-in-time
   snapshot; its straggler fallback uses the public per-key `remove`, so cause counts are neither

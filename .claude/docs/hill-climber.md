@@ -841,10 +841,11 @@ Non-starved samples are the pure density step. The additions:
    short when a new sample replaces an unfulfilled transfer; later walks use that landing as their
    base. This approximation is retained after [pricing reconciliation](#reconciling-failed-probe-returns).
 
-   - **Crash-abort** (hit rate ≤ probe-start − the walk-interior bar): undo to the probe's start
-     and re-arm the refractory WITHOUT doubling — an exogenous phase shift is indistinguishable
-     from probe damage here, and mispricing it as a failed experiment starves the re-exploration
-     the shift calls for. A **starvation probe's bar is priced** against the workload's own
+   - **Crash-abort** (hit rate ≤ probe-start − the walk-interior bar): undo to the probe's start.
+     Starvation probes re-arm their refractory; audits leave it unchanged. The first crash keeps
+     the owning ladder's rung unchanged because an exogenous phase shift can resemble probe
+     damage, and increasing backoff would delay re-exploration. Consecutive crashes escalate that
+     ladder at `PROBE_CRASH_ESCALATION`. A **starvation probe's bar is priced** against the workload's own
      scatter — `min(max(5pp, 3·rateDeviationEma), 15pp)`, the adv3 study: the fixed 5pp sat
      below real per-sample noise and severed the blind corner's only exit (the dosed mixture
      trap crash-cycled one stride off the floor for half its run, −3.4 below LRU, healed to
@@ -1064,7 +1065,7 @@ conventions differ, and §4/§5 record each difference as load-bearing.
 
 **Declined refactors, decided rather than deferred:** no `WalkMachine` and no method object for
 the router — the branches write `refractoryLeft`, `undoRemaining`, `walk`, the anchor, the audit
-schedule and the *other* layer's ladder (the documented bridge writes), so either extraction
+schedule and the *other* layer's ladder (the audit-confirmation exception), so either extraction
 needs a back-reference and would move the cross-layer writes out of the class that owns them.
 `refractoryLeft` cannot join `Ladder` (the shared type would give the audit's instance a
 permanently dead field), and `undoRemaining` deliberately *outlives* the walk, which is why it is
@@ -1078,23 +1079,22 @@ H4-C1/F2 repairs restored; keep new writes inside their owner:
 | Observation | `sample` (a `Sample`: `hits`, `misses`, `windowHits`, `probationHits`, `previousHitRate`) | the counters are zeroed at sample close; `previousHitRate` deliberately keeps a different lifetime, since it is the memory ACROSS samples that the reactive climber's direction and the walk's bold driver compare against — `close(hitRate)` carries it forward while zeroing the rest, and only `reset` (a resize) discards it. `WindowClimber` keeps thin `recordHit`/`recordMiss`/`resetSample` delegates because `BoundedLocalCache` calls them on the read and write paths |
 | The active walk | `walk` (a `Walk`, null while none is in flight: `ladder`, `isAudit`, `down`, `baseWindow`, `baseHitRate`, `baseSmoothedRate`, `baseProbationDensity`, `samples`, `belowBarStreak`, `aboveStreak`, `beatBase`), `undoRemaining` | one walk at a time. It is an object rather than eleven flat fields, so "dead state while not probing" is the absent object rather than a comment, and a reader must hold a walk to ask it anything — `armProbe` is the complete constructor, `endWalk` clears the field, and the router keeps the ended walk in a local because the undo that prices it still reads the bases. The bases are `final`: frozen-at-arm is the property the verdict studies keep re-deriving (§4's "why frozen"), so the compiler now holds it. `walk.ladder` is the arming layer's ledger, which makes "an ending may only deepen the machine that produced it" a reference rather than a lookup; `refractoryLeft` is the starvation refractory alone and belongs to the row below |
 | Starvation retry | `starvation` (a `Ladder`: `rung`, `crashStreak`), `refractoryLeft` | moved by starvation endings only (an audit confirm cheapens `starvation.rung` and zeroes `refractoryLeft`, the one journaled bridge write, spelled out at its site rather than hidden behind `Ladder`'s methods; an audit's undo leaves the refractory alone) |
-| Audit retry + schedule | `audit` (a `Ladder`), `auditClock` (an `AuditClock`: `down`, `waitSamples`, `stillSamples`, `lastWindow`) | moved by audit endings and the position-stillness clock only. The clock owns `tick`/`isDue`/`restart`/`reset`, so the stillness rule (a moving sample **decays** the run, it does not zero it) lives with the counter it governs rather than in a climber method. `reset` deliberately leaves `down` standing — it alternates across audits for coverage and a resize has no opinion about which side to explore next, which is why a resize did not clear it before either. `AuditClock.reschedule` is handed the audit ladder's rung by the ending that prices it, so the clock never reads the other layer's ledger itself |
+| Audit retry + schedule | `audit` (a `Ladder`), `auditClock` (an `AuditClock`: `down`, `waitSamples`, `stillSamples`, `lastWindow`) | moved by audit endings and the position-stillness clock only. The clock owns `tick`/`isDue`/`restart`/`reset`, so the stillness rule (a moving sample **decays** the run, it does not zero it) lives with the counter it governs rather than in a climber method. `reset` preserves the preferred direction, but a resize constructs a new clock with `down = true`; direction alternation does not survive the resize. `AuditClock.reschedule` is handed the audit ladder's rung by the ending that prices it, so the clock never reads the other layer's ledger itself |
 | Goal guard | `anchor` (an `Anchor`: `window`, `rate`, `held`, `freshLeft`, `returning`, `returnLeft`, `shortfallStreak`), `rates` (a `Rates`: `smoothed`, `deviation`) | anchor/park/veto authority and the rate references. `Anchor` is the memory *and* its defense in one object because the layer's three invariants run between those parts, and it now holds them by construction rather than by assertion: a shield lives and dies with its park (`park`/`hold`/`release` are the only writers — an audit's confirm arms a shield, a rail veto holds without arming or spending one, since the shield's clock belongs to the confirm that armed it), a park defends only a planted anchor (`discard` takes the hold with it), and a return implies the park that follows it (`beginReturn` arms both). `isAt`/`isAwayFrom` give the band test one definition instead of three inline copies, and they are deliberately not each other's negation — an unplanted anchor is neither at nor away, and there is no claim to veto against. `Rates` owns the EMA pair and the two bars priced off it — `noiseBand` is the three-deviation width, `vetoMargin` is that floored at `VETO_MARGIN_MIN` — so the rail's margin and the starvation probe's walk-interior bar read one definition instead of recomputing `VETO_MARGIN_SCALE * deviation` apiece. The deviation is read LIVE, and the audit's confirming streak is deliberately not priced off it; both notes live on `noiseBand` itself. A stand-down that discards the claim re-seeds the pair (below): the event that invalidates a claim invalidates the reference the claim would be re-planted from, and the two are one layer's state |
 | Motion out | `tier` (the bound `Climber`, owning a `Step`: `size`), `adjustment` | the single per-sample command. `step.size` and `adjustment` have different owners and lifetimes: `adjustment` belongs to `WindowClimber` and is drained by `BoundedLocalCache` across maintenance cycles as the transfer carry-over, so it changes at the cycle rate while the strategy's step changes at the sample rate. A resize constructs a new strategy with a freshly seeded `Step` |
 
-Deliberate cross-writes (measured, kept): an audit confirm resets the starvation ladder to one
-(cheap re-probing; neutral) *and* clears `starvation.crashStreak` with it, since a reset ladder
-carrying a live streak re-escalates on the next crash; and an audit undo re-imposes the
-starvation machine's own refractory (dropping it churned the blind-corner families). What an
-ending must never do is write the *other* layer's ladder, streak, or schedule: a starvation
-confirm leaves `auditClock` (with it the cold-start calibration) and `audit.rung` untouched, and
-audit endings never deepen `starvation.rung` — each direction is pinned in
-`WindowClimberTest` and range-bounded by the fuzzer/subject oracles.
+An audit confirmation is the exception to retry-state ownership: it sets `starvation.rung` to
+one, clears `starvation.crashStreak`, and clears `refractoryLeft` to allow cheap re-probing.
+A reset ladder carrying a live crash streak would re-escalate on the next crash. An audit undo
+preserves the starvation retry state, including its current refractory countdown. Re-arming
+that countdown would defer the next starvation probe for an audit's failure, as pinned by
+`WindowClimberTest.undoProbe_auditRetreat_leavesTheStarvationRefractoryAlone`.
+Starvation endings leave `auditClock`, `audit.rung`, and `audit.crashStreak` untouched;
+audit endings never deepen `starvation.rung`.
 
-Each layer's rung and crash streak live in a `Ladder` the layer owns, so a
-cross-layer write has to name the other layer's ledger to happen at all, and the two sanctioned
-bridge writes are the only places that do. That separation covers **every** ending, not just crashes. A *non-crash* ending retires only
-the crash streak of the layer that owns the walk: an audit's budget expiry leaves
+Each layer's rung and crash streak live in its own `Ladder`. Apart from the audit-confirmation
+exception, endings change only their own layer's retry state and schedule. This includes
+*non-crash* endings: an audit's budget expiry leaves
 `starvation.crashStreak`, and a reversal-through-base leaves whichever streak it does not own
 (pinned by `audit_budgetExpiry_leavesTheStarvationLedger` and
 `walkStep_reversalThroughBase_leavesTheOtherLayersLedger`). Both sites previously cleared
@@ -1148,9 +1148,9 @@ reference frozen at arm plus the one-shot `auditBeatBase` gate, because density 
 equilibrium under test and would veto every walk away from it. A confirm plants the **anchor**
 and **parks** without a parting density step, shielded from crash-scale weather for one initial
 audit wait; the **guard rail** vetoes a noise-cleared sustained shortfall back to the anchor.
-The margins are deliberately split (rail 3·dev; confirm run-length plus beat-base), each layer
-owns its ladder, crash streak and schedule with exactly two journaled bridge writes, and audit
-crashes price persistence in **time** (`AUDIT_CRASH_PERSISTENCE` on the retry) rather than bar
+The margins are deliberately split (rail 3·dev; confirm run-length plus beat-base). Each layer
+owns its ladder, crash streak and schedule, with the audit-confirmation exception described above.
+Audit crashes price persistence in **time** (`AUDIT_CRASH_PERSISTENCE` on the retry) rather than bar
 depth. A park's first audit follows the walk that confirmed it: the confirm ends a
 walk on evidence of improvement rather than its exhaustion, so the ground beyond is unexplored
 while the ground behind was just covered, and the alternation was sending that audit back through

@@ -858,8 +858,8 @@ final class CacheProxyTest {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       checkReadWhenUnexpired(fixture.jcache(),
           fixture.currentTime().plus(EXPIRY_DURATION).toMillis(),
-          key -> assertThat(fixture.jcache().get(key)).isNull());
-      assertThat(fixture.jcache().statistics.getCacheMisses()).isEqualTo(1);
+          key -> assertThat(fixture.jcache().get(key)).isEqualTo(VALUE_2));
+      assertThat(fixture.jcache().statistics.getCacheMisses()).isEqualTo(0);
     }
   }
 
@@ -874,12 +874,33 @@ final class CacheProxyTest {
   }
 
   @Test
+  void get_replacedBeforeExpiry() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      replaceWhenCheckedForExpiry(fixture.jcache(),
+          fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+      assertThat(fixture.jcache().get(KEY_1)).isEqualTo(VALUE_2);
+      assertThat(fixture.jcache().statistics.getCacheEvictions()).isEqualTo(0);
+    }
+  }
+
+  @Test
   void getAll_unexpired() {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       checkReadWhenUnexpired(fixture.jcache(),
           fixture.currentTime().plus(EXPIRY_DURATION).toMillis(),
-          key -> assertThat(fixture.jcache().getAll(Set.of(key))).isEqualTo(Map.of()));
-      assertThat(fixture.jcache().statistics.getCacheMisses()).isEqualTo(1);
+          key -> assertThat(fixture.jcache().getAll(Set.of(key)))
+              .isEqualTo(Map.of(key, VALUE_2)));
+      assertThat(fixture.jcache().statistics.getCacheMisses()).isEqualTo(0);
+    }
+  }
+
+  @Test
+  void getAll_replacedBeforeExpiry() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      replaceWhenCheckedForExpiry(fixture.jcache(),
+          fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+      assertThat(fixture.jcache().getAll(Set.of(KEY_1))).isEqualTo(Map.of(KEY_1, VALUE_2));
+      assertThat(fixture.jcache().statistics.getCacheEvictions()).isEqualTo(0);
     }
   }
 
@@ -958,6 +979,26 @@ final class CacheProxyTest {
     });
     await().untilTrue(done);
     assertThat(jcache.statistics.getCacheEvictions()).isEqualTo(0);
+  }
+
+  /**
+   * Installs an entry whose first expiry check replaces it before reporting it expired, as when a
+   * reader that captured the entry judges its deadline passed only after a writer replaced it.
+   */
+  private static void replaceWhenCheckedForExpiry(
+      CacheProxy<Integer, Integer> jcache, long expireTimeMillis) {
+    var replaced = new AtomicBoolean();
+    Expirable<Integer> expirable = Mockito.mock();
+    when(expirable.get()).thenReturn(VALUE_1);
+    when(expirable.getExpireTimeMillis()).thenReturn(expireTimeMillis);
+    when(expirable.hasExpired(anyLong())).thenAnswer(invocation -> {
+      if (replaced.compareAndSet(false, true)) {
+        jcache.put(KEY_1, VALUE_2);
+        return true;
+      }
+      return false;
+    });
+    jcache.cache.asMap().put(KEY_1, expirable);
   }
 
   @Test

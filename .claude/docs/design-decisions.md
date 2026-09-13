@@ -541,8 +541,12 @@ expiry" is best-effort for read-extension — the over-stay is bounded by one du
 self-heals on the next maintenance. Don't add a *fresh-clock* re-check guard for this
 over-stay — it still races a context switch and can't reject an already-expired entry.
 (Distinct from the `node.getValue() == value` value-identity check that `casVariableTime`
-*does* carry: that guards a separate, closable bug — a read duration rebinding onto a
-*replaced* value — and is load-bearing; keep it.)
+*does* carry: it stops a read duration rebinding onto a *replaced* value and is load-bearing;
+keep it. It covers a replacement during the `expireAfterRead` callback, not one in the few
+instructions between the check and the CAS: an update that keeps the exact deadline, as an
+`expireAfterUpdate` returning `currentDuration` does, leaves the timestamp the CAS compares
+unchanged, so that replacement takes the read's duration, a same-deadline rebind bounded by one
+duration like the over-stay above. The adapter accepts the same race for its native timer.)
 
 **Bulk reads evaluate expiry at a single scan-wide `now`, by design.** `getAllPresent`
 (and `containsValue`) read `expirationTicker()` once and reuse that `now` for every
@@ -599,8 +603,16 @@ stores the value before `setWriteTime` (the other rewrite sites already did). A 
 observes a fresh timestamp therefore observes the rewritten value, closing the LATE direction.
 The EARLY direction (stale timestamp with the fresh value) is one spurious miss that
 linearizes between the old value's expiry and the rewrite, a 64-bit timestamp read being
-atomic, so only the read-extension resurrection above and the bulk single-`now` scans remain
-non-linearizable. A caller acting on an expired verdict must exempt an in-flight async load by
+atomic, unless a reader already returned the fresh value: a writer preempted between its value
+and timestamp stores across the old deadline shows the value, a miss, then the value again. The
+other non-linearizable windows are the read-extension resurrection and same-deadline rebind
+above, the bulk single-`now` scans, a read preempted after its clock sample (it judges a value
+published later against that clock, so it can return a replacement past its deadline, even one
+created expired), and a compute whose function outlasts its input's remaining lifetime (a
+concurrent read reports the input expired before the result is stamped with a fresh clock).
+Each is bounded; closing them needs a read-path lock or a second ticker read per read, both
+rejected above, or applying the function twice, which the compute contract forbids. A caller
+acting on an expired verdict must exempt an in-flight async load by
 probing `isComputingAsync` against a value loaded after `hasExpired` returns. `writeTime`'s
 setter is opaque (it was plain, a formal tearing gap on 32-bit VMs), and the swap in `put`
 shifts a nanosecond `refreshIfNeeded` window from suppressing a refresh to launching one
