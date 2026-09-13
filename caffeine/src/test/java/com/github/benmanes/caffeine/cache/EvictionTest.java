@@ -73,6 +73,7 @@ import com.github.benmanes.caffeine.cache.RemovalListeners.RejectingRemovalListe
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.math.IntMath;
@@ -1362,6 +1363,21 @@ final class EvictionTest {
     for (var entry : entries) {
       assertThat(context).containsEntry(entry);
     }
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.ASYNC, population = Population.EMPTY,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED)
+  void coldestFunc_metadata_inFlightCompletion(AsyncCache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    var entries = eviction.coldest(stream -> {
+      // The completion's policy task waits for the eviction lock that the snapshot holds
+      CompletableFuture.runAsync(() -> future.complete(context.absentValue()), executor).join();
+      return stream.collect(toImmutableList());
+    });
+    assertThat(context).containsEntry(Iterables.getOnlyElement(entries));
   }
 
   @ParameterizedTest

@@ -36,8 +36,13 @@ These dispose of whole families. Check them first.
   throw propagates. Listeners and `StatsCounter` return nothing, so they are guarded. This
   asymmetry is deliberate; do not report it as inconsistency.
 - **A broken or misconfigured executor is user error.** Silent-discard, `AbortPolicy` on a
-  bounded pool, `shutdownNow()` dropping accepted tasks, a never-completing loader. The
-  executor is user-owned and its lifecycle is the user's choice.
+  bounded pool, `shutdownNow()` dropping accepted tasks, a never-completing loader, or an
+  `execute` that waits for its task or for queue room (one that joins the thread it dispatched
+  to, a bounded pool whose rejection handler blocks). The executor is user-owned and its
+  lifecycle is the user's choice. A waiting `execute` deadlocks because the drain task and
+  eviction's removal notifications are submitted under `evictionLock` (`synchronization.md`,
+  *notifyRemoval*). Submitting outside the lock would fix only the joining executor: maintenance
+  runs on the executor, so a lone worker still waits on its own full queue.
 - **Statistics are best-effort and lowest priority.** A counter that races, drifts, or
   double-counts is not a correctness defect.
 - **Anything reachable only through `Cache.unwrap(...)` is out of scope.** By the JCache
@@ -304,6 +309,10 @@ These dispose of whole families. Check them first.
   `ConcurrentSkipListMap` and pre-v8 CHM; CHM's put-through violates `Set.add` by returning
   false yet replacing.
 - `Policy.hottest`/`coldest` map overloads collapsing equal-but-distinct weak keys.
+- `Policy` snapshots pairing a value with a weight from another moment. The snapshot reports the
+  policy's weight under `evictionLock` while writers publish values under the node's monitor, so
+  a concurrent update can hand `coldestWeighted`/`hottestWeighted` a stale weight. It is a
+  best-effort view of what the policy sees; synchronizing every node to pair them was declined.
 - Message-less `requireArgument` on public API.
 
 **Notifications**

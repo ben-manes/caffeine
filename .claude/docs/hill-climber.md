@@ -808,7 +808,7 @@ Non-starved samples are the pure density step. The additions:
    natural workloads never reach the deep *starvation* rungs — the audit ladder shares this ×4
    stride scaling and is routinely deep on real traces (`audit.rung = 64` on 5 of 12
    real density cells, `auditWait = 128` on 4), so an argument from rung unreachability must say
-   which ladder it means; full undo on failure is unchanged, which is what
+   which ladder it means; the full return command on failure is unchanged, which is what
    separates this from the rejected v7 travel-budget family);
    direction flips only on |ΔHR| ≥ the **reversal** bar, which is not the crash abort's (see the
    crash-abort ending): priced for starvation probes, and for audits
@@ -836,6 +836,11 @@ Non-starved samples are the pure density step. The additions:
    window hits in an otherwise blank sample authorized the maximum step while the probe
    machinery was backing off.
 4. **Walk endings** (each maps to a verified failure without it):
+
+   A failed walk's return commands sum to its distance from the base. Applied movement can finish
+   short when a new sample replaces an unfulfilled transfer; later walks use that landing as their
+   base. This approximation is retained after [pricing reconciliation](#reconciling-failed-probe-returns).
+
    - **Crash-abort** (hit rate ≤ probe-start − the walk-interior bar): undo to the probe's start
      and re-arm the refractory WITHOUT doubling — an exogenous phase shift is indistinguishable
      from probe damage here, and mispricing it as a failed experiment starves the re-exploration
@@ -1126,7 +1131,9 @@ size, and the D2 study closes the weaker question of where the boundary belongs:
 `corda`'s own tier crossover sits between 2048 and 4096 (density − reactive reads −0.61 / −0.86 /
 −0.50 / **+0.43** at 512 / 1024 / 2048 / 4096), so the threshold is within one octave of the
 sensitive trace's crossover even though the aggregate crossover is between 563 and 1024. The
-placement is set by the worst case, not the mean (§3, the tier boundary).
+placement is set by the worst case, not the mean (§3, the tier boundary). The weighted threshold
+also remains in the weigher's units; the tested [entry-count alternatives](#entry-count-tier-selection-for-weighted-caches)
+did not establish a reason to change it.
 
 **The goal-metric layer (the F4 answer; shipped, then hardened).**
 The probe machine's trigger taxonomy is starvation-only, and a workload can hold the density arm
@@ -1737,6 +1744,83 @@ the victim pool indefinitely — protected never approaches its maximum, so `dem
 rarely fires to release them. Never-promote avoids the pathology by keeping protected empty. Any
 future proposal to gate promotion must answer this, not just pick a better threshold.
 
+### Reconciling failed-probe returns
+
+`undoRemaining` accounts for issued integral commands; the cache applies them through budgeted
+transfers of indivisible entries. A full sample can replace an unapplied remainder from each
+stride, so a failed return can finish short and rebase the next probe. This can accumulate beyond
+one entry: with maximum 10000 and nine entries weighing 1100, a public-operation witness returns
+from 7800 toward base 100 with commanded decreases of 3000 + 3000 + 1700, but applies only
+2200 + 2200 + 1100. The shortfall is 2200, two whole entries. A controlled unweighted witness with
+8192 residents, a 128-CPU buffer configuration, a queued executor and buffered replacements loses
+914 entries over two sample boundaries; its 16-CPU control returns exactly. These establish
+reachability, not ordinary-runtime prevalence or hit-rate harm.
+
+Two candidates were priced on 2026-09-13 against the real cache:
+
+- **Bounded reconciliation** retains the base and derives later strides from the actual window,
+  while the original command ledger limits the number of return samples. Final carry remains
+  best effort. It recovers the two lost 200-unit remainders in a 25-entry/400-weight witness
+  within the same three samples, so recovery need not prolong retreat.
+- **Acknowledged return** retains the base and preceding window, ending on observed arrival or
+  non-improving distance. Completion is checked before rate-reference updates to preserve the
+  ordinary arrival sample's anchor tracking. Small positive progress can keep this return alive
+  longer; the nine-entry witness needs a fourth sample to recover the whole 2200-unit shortfall.
+
+Ten weighted cells from six traces (`MetaCDN_rprn`, `metaStorage_block_traces_1`, `alibabaBlock_128`,
+`tencentBlock_11784`, `cloudphysics_w50` and `w99`, 16 MiB to 1 GiB), paired at admission seeds 1–8,
+gave mean object-hit-rate changes of **-0.050 to +0.060pp** across both candidates. Some small
+effects repeat: Tencent at 64 MiB gains about 0.04pp; w50 loses 0.016/0.010pp. Neither candidate
+earned adoption. After a fixed write-flood prefix exposing the unweighted shortfall, a switch to
+two million unit-weight w99 requests costs the candidates 813/834 additional misses (about 0.04pp)
+at all eight seeds. Exact return does not imply a better allocation after a workload change.
+
+The acknowledged arm reached 14 return samples against a maximum of three in the baseline and
+bounded arm. On metaStorage at 64 MiB, return duty rose from 3.30% to 7.26% of adaptation samples,
+with no resolved hit-rate gain. These are sample fractions on each arm's evolving path, not CPU
+time. Both arms still often stop short on weighted traces when the final remainder cannot move.
+JOL estimates on JDK 26 put the added retained state at 8/16 bytes per density cache, with no extra
+objects. A 32-fork uninstrumented JMH screen could not resolve its declared 5% threshold: baseline
+spread exceeded it. The acknowledged weighted arm was slower in all four blocks (descriptive mean
+-4.68%), an unresolved cost signal rather than a no-cost result. Three unit-weight trace projections
+and all 87 gate and
+bundled stress cells at eight seeds matched baseline's checked cache outputs and admission
+digests; shared baseline bar failures remained. This does not price weighted behavior by itself.
+
+Retain best-effort undo on the measured tradeoff. Reconsider with a repeatable quality benefit
+that pays for additional state or retreat time; neither incomplete physical arrival nor a
+percentage of displaced capacity establishes that benefit.
+
+### Entry-count tier selection for weighted caches
+
+`resized` selects density above a maximum of 4096 in the weigher's units, however few entries the
+cache holds, while `AddTask` sizes a weighted cache's sketch from its live entry count. Density's
+period `min(4·maximum, sketch.sampleSize)` matches standard reactive's when the sketch cap binds;
+byte units alone do not guarantee that. The comparison prices the whole controller, including
+density's floor, probes, audits and anchor.
+
+The 2026-09-13 comparison used 18 byte-weighted oracleGeneral cells (`MetaCDN_rprn`,
+`metaStorage_block_traces_1`, `tencentBlock_11784`, `alibabaBlock_128` and `cloudphysics_w99`, from
+4 MiB to 16 GiB) replayed through a cache configured like `product.Caffeine`, with three unseeded
+repeats per climber arm and static windows at 1/5/20/50/80% as the reference. Entry counts
+are medians sampled every 65536 demands after the first half-full observation. Small differences
+need seeded pairing before motivating a change. The fixed-window grid is a coarse reference,
+not an upper bound on adaptive gains.
+
+**No consistent reactive advantage at low resident counts.** On the seven cells with medians of 20–389,
+reactive − density reads −0.21..+0.27pp with density ahead on four, and density trails the best
+static window by at most 0.66pp (one cell reads above it), against up to 1.57pp on the cells holding
+800 to 72k entries. Larger observed differences do not follow a simple count threshold: reactive +0.96
+on `MetaCDN_rprn` @ 4 GiB (800 entries) and +0.45 on `tencentBlock_11784` @ 256 MiB (11k), −1.45 on
+`alibabaBlock_128` @ 1 GiB (72k), where its window median falls to 12% against a best static 80%.
+
+**Retain the configured-weight threshold on this evidence.** Grow-only selection from the first
+request changed object hit rates by −0.21..+0.26pp across the 18 cells. On five cells whose counts
+straddled 4096, delaying that check until half occupancy produced the same first switch. Following
+the count both ways on those five cells switched 23–13,434 times per run and changed hit rates by
+−1.71..+1.10pp. Each switch replaces the controller and resets its sample and carry; the experiment
+did not isolate those effects. Reconsider with a reproducible benefit that includes switching costs.
+
 ### Other pricings for the walk's two interior exits
 
 The split's own dead arms, all measured N=8 seeded. Do not re-derive either.
@@ -2220,12 +2304,14 @@ controls and §6's decision-replay protocol, with its own source binding and val
   the actual production host for retained state, steady allocation, command/boundary allocation,
   and CPU. Passing one layer says nothing about the next: replicated MiniSim passed its information
   screen and failed cost, while Compact Shadow passed layout and stopped before quality.
-- **Treat movement as a two-phase command.** A decision remains pending until the host acknowledges
-  the actual signed setpoint change. Reject overlapping acknowledgements and the wrong sign or
-  magnitude; retain geometry-specific evidence after a rail-clamped zero; clear it only after a
-  validated nonzero move. Continue a capped trip from the acknowledged setpoint, not from a
-  nominal percentage or transient queue occupancy. Tests must pin partial and zero clamps,
-  reversal, cancellation, and exact arrival in both directions.
+- **Distinguish issued commands from applied movement.** An experiment requiring exact arrival
+  must keep its decision pending until the host acknowledges the actual signed setpoint change.
+  Reject overlapping acknowledgements and the wrong sign or magnitude; retain geometry-specific
+  evidence after a rail-clamped zero; clear it only after a validated nonzero move. Continue a
+  capped trip from the acknowledged setpoint, not from a nominal percentage or transient queue
+  occupancy. Tests must pin partial and zero clamps, reversal, cancellation, and exact arrival in
+  both directions. The shipped undo retains
+  [best-effort arrival](#reconciling-failed-probe-returns); ledger closure alone does not prove arrival.
 - **Use an oracle ladder, not a self-confirming digest.** Compare a compact estimator first with an
   independent readable model, then request by request with the actual simulator policy under the
   same key, frequency history, and admission variate. Check hits/misses, membership, queue order,

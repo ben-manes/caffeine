@@ -61,9 +61,10 @@ lambda — which holds only the bin lock, no node monitor — e.g.
 | metadata | plain | plain | evictionLock |
 
 `getPolicyWeight` reads two plain fields, its own and `metadata`, so an unlocked reader can
-see them from different moments. Every caller holds `evictionLock`; the one exception is the
-`Policy` snapshot, which narrows the result to an `int` for `CacheEntry.weight` and accepts the
-staleness the surrounding rows already describe.
+see them from different moments. Every caller holds `evictionLock`, including the `Policy`
+snapshot, which narrows the result to an `int` for `CacheEntry.weight`. That is the policy's view,
+not what a writer last published under the node's monitor, so a concurrent update can pair a value
+with an older weight; the snapshot is best effort rather than synchronizing every node.
 
 Note: the expiry read protocol pairs these modes. A rewrite stores the value and then the
 timestamps, with `setValue`'s trailing `storeStoreFence` holding that order; a lock-free

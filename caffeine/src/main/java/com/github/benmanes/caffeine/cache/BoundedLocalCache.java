@@ -3508,9 +3508,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /**
    * Returns an entry for the given node if it can be used externally, else null. The weight is
-   * caller-supplied: snapshot callers hold evictionLock and read policyWeight (in sync with the
-   * drain thread); unlocked readers read weight, which may be stale for a concurrent in-place
-   * update (acceptable for a point-in-time CacheEntry).
+   * the caller's best-effort reading and may lag a concurrent update.
    */
   @Nullable CacheEntry<K, V> nodeToCacheEntry(
       Node<K, V> node, Function<@Nullable V, @Nullable V> transformer, int weight) {
@@ -3543,7 +3541,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     long refreshableAt = refreshAfterWrite()
         ? writeTimeOf(node) + refreshAfterWriteNanos()
         : now + Long.MAX_VALUE;
-    return SnapshotEntry.forEntry(key, value, now, weight, now + expiresAfter, refreshableAt);
+    return SnapshotEntry.forEntry(key, value, now,
+        isWeighted ? weight : 1, now + expiresAfter, refreshableAt);
   }
 
   /** Mutable context for passing state between a lambda and the caller. */

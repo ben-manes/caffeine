@@ -94,8 +94,12 @@ same extra warmup allocation. Pinned by `BoundedLocalCacheTest.isWeighted_onlyWh
 
 **The climber has three size tiers, in the configured maximum's native units.** Weight units
 are deliberate: the weighted stress track included about 200 entries of 25–100MB in a 10GB
-cache and scored 14 wins / no losses. Many tiny entries under a small weight bound land on
-reactive, which remains safe there.
+cache and scored 14 wins / no losses. A later comparison on 18 byte-weighted trace cells found
+no consistent reactive advantage at low resident counts. Grow-only entry-count selection gave
+small, mixed changes; bidirectional selection repeatedly reset the controller on cells crossing
+the threshold. Retain the configured-weight threshold on this evidence; see
+[entry-count tier selection](hill-climber.md#entry-count-tier-selection-for-weighted-caches).
+Many tiny entries under a small weight bound land on reactive, which remains safe there.
 
 | Maximum | Controller | Reason |
 |---|---|---|
@@ -121,8 +125,8 @@ MIN_SIGNAL_SHIFT` hits (~0.1%) supplies too little evidence to hold position. Pu
 can pin at the floor about 28pp below LRU at any size. Probe only when the starved region is
 small (≤¼ maximum), or the whole sample is dead; probing for a starved large main region
 destroys the functioning window on corda. Deep refractory rungs increase both reach and
-commitment, while cheap early adjudication protects thin-signal floors. Failures undo fully
-and back off (`PROBE_BACKOFF_INITIAL` 16 through 64 samples), costing about 1pp on short
+commitment, while cheap early adjudication protects thin-signal floors. Failures command a full
+return and back off (`PROBE_BACKOFF_INITIAL` 16 through 64 samples), costing about 1pp on short
 w50/S1 traces and amortizing toward
 zero with longer runs. Preserve the current router and ownership rules in
 [climber review constraints](#climber-review-constraints) and [hill-climber](hill-climber.md) §4.
@@ -284,13 +288,25 @@ exactly the base fails the walk one sample earlier than an integer predicate wou
 ending, one sample cheaper); and the 2% floor is a `double`, so the integer window rests one entry
 below it (pinned by `walkStep_floorBasedWalk_endsAtBudgetWithAFullUndo`), and at maxima above
 2^53 weight units the floor comparison has a rounding band of a few units, which is unreachable.
-Don't make the floor or the predicate integral. **The one ledger that must close is integral:**
+Don't make the floor or the predicate integral.
+**Undo accounting closes in integral published commands:**
 `undoRemaining` is a `long` charged with each return command as published, not with the
 fractional capped stride. Charged with the fraction it closed short of the base by the cap's
 fraction per capped stride (8,192: 2,457 + 2,457 + 84 for a 5,000 return), and at a permanently
 starved corner, where every deep-rung probe fails and undoes, that re-based each cycle 1–2 entries
-toward the probed direction, a slow creep toward the corner boundary. Pinned by `probeEnding_adjudication_wrongSignFailsAndDoubles` (the commands sum to
-the distance).
+toward the probed direction, a slow creep toward the corner boundary. Pinned by
+`probeEnding_adjudication_wrongSignFailsAndDoubles` (the commands sum to the distance).
+
+**Physical undo arrival is best effort.** The cache can retain unapplied movement when an entry
+does not fit or the transfer budget runs out; the next completed sample replaces that carry.
+Several capped strides can each lose a remainder, and later probes can inherit the resulting
+landing. There is no one-entry bound per return or across returns, and the transfer-cap case also
+affects unweighted caches. Retaining the base and reconciling actual movement was measured in two
+forms: bounded to the original return duration, or continued until arrival/nonprogress. Across ten
+weighted cells at eight seeds, mean object-hit-rate changes were only -0.050 to +0.060pp, while the
+latter prolonged retreats and showed a throughput slowdown signal. Retain the approximation on
+that evidence, not an assumption that displacement is harmless or confined to tiny caches. See
+[reconciling failed-probe returns](hill-climber.md#reconciling-failed-probe-returns) for scope and costs.
 
 **Async load completions replace quietly.** A completed future's `handleCompletion` (and the
 bulk `fillProxies`) calls `replace(..., quietly= true)`: the UpdateTask finalizes the weight and
@@ -382,7 +398,7 @@ The current machine and its rejected alternatives are described in [hill-climber
   test, priced by `AUDIT_BAR_FRACTION × max(baseHitRate, noiseBand)` under the same absolute cap.
   That fraction is `0.15 × VETO_MARGIN_SCALE`; widening the bars failed the measured controls.
   A floor-based walk can miss `crossesBase` through integer rounding; budget expiry gives the
-  same FAILED price and full undo, pinned by
+  same FAILED price and full return command, pinned by
   `WindowClimberTest.walkStep_floorBasedWalk_endsAtBudgetWithAFullUndo`.
 - **Anchor discard and metric reset stay paired on crash-scale shifts.** The inherited EMA is
   about 80% old regime. A distant crash keeps the claim and reference. On-anchor `resync` runs
