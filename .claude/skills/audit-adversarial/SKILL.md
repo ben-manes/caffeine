@@ -18,8 +18,9 @@ $ARGUMENTS
 
 If no argument, review all source files in `caffeine/src/main/java/`,
 `guava/src/main/java/`, `jcache/src/main/java/`, `simulator/src/main/java/`,
-and `examples/*/src/main/java/`. The adapters and examples hold the same
-quality bar as the core.
+and `examples/*/src/main/java/`. The adapters hold the same quality bar as the
+core. The examples are sketches: report one failing at what it shows, not
+hardening it leaves to the user (`ruled-out.md` §examples).
 
 ## Step 1: Inventory source files
 

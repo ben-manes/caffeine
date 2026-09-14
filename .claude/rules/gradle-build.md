@@ -146,7 +146,7 @@ compile.
 
 In CI the `run-gradle` action defaults `lint=false` (injected as `ORG_GRADLE_PROJECT_lint`,
 mirroring `earlyAccess`), so ErrorProne/NullAway run **only** in the dedicated `analysis.yml`
-`errorprone` job (JDK 11 + 26) — parallel to the tests, like PMD/SpotBugs/ECJ. Everything else
+`errorprone` job (JDK 26) — parallel to the tests, like PMD/SpotBugs/ECJ. Everything else
 (build.yml compile + shards, the other analysis jobs, examples, jcstress, …) compiles bare. The
 gate is a branch-protection required check, not a `needs:` edge (cross-workflow isn't possible).
 

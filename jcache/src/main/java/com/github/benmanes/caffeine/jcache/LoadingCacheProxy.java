@@ -43,9 +43,7 @@ import com.google.errorprone.annotations.Var;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("OvershadowingSubclassFields")
 public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
-  private final LoadingCache<K, @Nullable Expirable<V>> cache;
 
   @SuppressWarnings({"PMD.ExcessiveParameterList", "TooManyParameters"})
   public LoadingCacheProxy(String name, Executor executor, CacheManagerImpl cacheManager,
@@ -54,7 +52,6 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       Ticker ticker, JCacheStatisticsMXBean statistics, Copier copier) {
     super(name, executor, cacheManager, configuration, cache, dispatcher,
         Optional.of(cacheLoader), expiry, ticker, statistics, copier);
-    this.cache = cache;
   }
 
   @Override
@@ -111,7 +108,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       try {
         dispatcher.beginComputation();
         try {
-          expirable = cache.get(copyOf(key));
+          expirable = loadingCache().get(copyOf(key));
         } finally {
           dispatcher.endComputation();
         }
@@ -156,7 +153,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
               .collect(toUnmodifiableList());
           dispatcher.beginComputation();
           try {
-            entries.putAll(cache.getAll(keysToLoad));
+            entries.putAll(loadingCache().getAll(keysToLoad));
           } finally {
             dispatcher.endComputation();
           }
@@ -182,5 +179,10 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     }
     rethrowListenerFailure(awaitSynchronousFailure());
     return result;
+  }
+
+  /** Returns the delegate as a loading cache. */
+  private LoadingCache<K, @Nullable Expirable<V>> loadingCache() {
+    return (LoadingCache<K, @Nullable Expirable<V>>) cache;
   }
 }

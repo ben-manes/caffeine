@@ -1095,6 +1095,9 @@ final class EvictionTest {
 
     cache.put(key, Int.valueOf(2));
     assertThat(eviction.weightOf(key)).hasValue(2);
+
+    cache.put(key, Int.valueOf(0));
+    assertThat(eviction.weightOf(key)).hasValue(0);
   }
 
   @ParameterizedTest
@@ -1123,7 +1126,7 @@ final class EvictionTest {
       CacheContext context, Eviction<Int, Int> eviction) {
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);
-    assertThat(eviction.weightOf(context.absentKey())).hasValue(0);
+    assertThat(eviction.weightOf(context.absentKey())).isEmpty();
 
     future.complete(Int.valueOf(2));
     assertThat(eviction.weightOf(context.absentKey())).hasValue(2);

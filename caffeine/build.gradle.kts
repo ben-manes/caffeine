@@ -314,7 +314,6 @@ testing.suites {
         incompatibleWithConfigurationCache()
         maxParallelForks = Runtime.getRuntime().availableProcessors()
         val isCompatibleJdk = java.toolchain.languageVersion.map { it.asInt() <= 25 }
-        outputs.doNotCacheIf("Fray explores randomized thread interleavings") { isCI().get() }
         onlyIf { isCompatibleJdk.get() }
       }
     }

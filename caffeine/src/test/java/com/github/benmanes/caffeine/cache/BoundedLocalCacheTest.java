@@ -8372,6 +8372,34 @@ final class BoundedLocalCacheTest {
     assertThat(toWriteTime(Long.MAX_VALUE)).isEqualTo(Long.MAX_VALUE - 1);
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON, compute = Compute.SYNC,
+      expireAfterAccess = Expire.ONE_MINUTE, expireAfterWrite = Expire.ONE_MINUTE,
+      refreshAfterWrite = Expire.ONE_MINUTE)
+  void ageOf_negative(BoundedLocalCache<Int, Int> cache, CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess,
+      @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite,
+      FixedRefresh<Int, Int> refreshAfterWrite) {
+    var node = requireNonNull(cache.data.get(
+        cache.nodeFactory.newLookupKey(context.firstKey())));
+    long now = context.ticker().read();
+    // Model a concurrent timestamp update after the query captured its current time.
+    synchronized (node) {
+      node.setAccessTime(now + 2);
+      cache.setWriteTime(node, now + 2);
+    }
+
+    for (var unit : List.of(TimeUnit.NANOSECONDS, TimeUnit.SECONDS)) {
+      assertThat(expireAfterAccess.ageOf(context.firstKey(), unit)).isEmpty();
+      assertThat(expireAfterWrite.ageOf(context.firstKey(), unit)).isEmpty();
+      assertThat(refreshAfterWrite.ageOf(context.firstKey(), unit)).isEmpty();
+    }
+    context.ticker().advance(Duration.ofNanos(2));
+    assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.NANOSECONDS)).hasValue(0);
+    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS)).hasValue(0);
+    assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS)).hasValue(0);
+  }
+
   @Test
   void refreshMarker_roundTrips() {
     long writeTime = toWriteTime(100L);

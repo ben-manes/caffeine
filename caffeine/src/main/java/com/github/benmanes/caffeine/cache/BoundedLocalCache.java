@@ -4535,12 +4535,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           return OptionalInt.empty();
         }
         boolean expired = cache.hasExpired(node, cache.expirationTicker().read());
-        V value = node.getValue();
-        if ((value == null) || (expired && !cache.isComputingAsync(value))) {
+        if (expired) {
           return OptionalInt.empty();
         }
         synchronized (node) {
-          return node.isAlive() ? OptionalInt.of(node.getWeight()) : OptionalInt.empty();
+          V value = node.getValue();
+          return ((value != null) && node.isAlive() && !cache.isComputingAsync(value))
+              ? OptionalInt.of(node.getWeight())
+              : OptionalInt.empty();
         }
       }
       @Override public OptionalLong weightedSize() {
@@ -4610,12 +4612,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         long now = cache.expirationTicker().read();
         boolean expired = cache.hasExpired(node, now);
         V value = node.getValue();
-        if (value == null) {
+        if ((value == null) || expired || cache.isComputingAsync(value)) {
           return OptionalLong.empty();
         }
-        return (expired && !cache.isComputingAsync(value))
+        long age = now - node.getAccessTime();
+        return (age < 0)
             ? OptionalLong.empty()
-            : OptionalLong.of(unit.convert(now - node.getAccessTime(), TimeUnit.NANOSECONDS));
+            : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
       }
       @Override public long getExpiresAfter(TimeUnit unit) {
         return unit.convert(cache.expiresAfterAccessNanos(), TimeUnit.NANOSECONDS);
@@ -4654,13 +4657,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         long now = cache.expirationTicker().read();
         boolean expired = cache.hasExpired(node, now);
         V value = node.getValue();
-        if (value == null) {
+        if ((value == null) || expired || cache.isComputingAsync(value)) {
           return OptionalLong.empty();
         }
-        return (expired && !cache.isComputingAsync(value))
+        long age = toWriteTime(now) - writeTimeOf(node);
+        return (age < 0)
             ? OptionalLong.empty()
-            : OptionalLong.of(unit.convert(
-                toWriteTime(now) - writeTimeOf(node), TimeUnit.NANOSECONDS));
+            : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
       }
       @Override public long getExpiresAfter(TimeUnit unit) {
         return unit.convert(cache.expiresAfterWriteNanos(), TimeUnit.NANOSECONDS);
@@ -4702,12 +4705,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         long now = cache.expirationTicker().read();
         boolean expired = cache.hasExpired(node, now);
         V value = node.getValue();
-        if (value == null) {
+        if ((value == null) || expired || cache.isComputingAsync(value)) {
           return OptionalLong.empty();
         }
-        return (expired && !cache.isComputingAsync(value))
+        long duration = node.getVariableTime() - now;
+        return (cache.isAsync && (duration > MAXIMUM_EXPIRY))
             ? OptionalLong.empty()
-            : OptionalLong.of(unit.convert(node.getVariableTime() - now, TimeUnit.NANOSECONDS));
+            : OptionalLong.of(unit.convert(duration, TimeUnit.NANOSECONDS));
       }
       @Override public void setExpiresAfter(K key, long duration, TimeUnit unit) {
         requireNonNull(key);
@@ -4905,13 +4909,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         long now = cache.expirationTicker().read();
         boolean expired = cache.hasExpired(node, now);
         V value = node.getValue();
-        if (value == null) {
+        if ((value == null) || expired || cache.isComputingAsync(value)) {
           return OptionalLong.empty();
         }
-        return (expired && !cache.isComputingAsync(value))
+        long age = toWriteTime(now) - writeTimeOf(node);
+        return (age < 0)
             ? OptionalLong.empty()
-            : OptionalLong.of(unit.convert(
-                toWriteTime(now) - writeTimeOf(node), TimeUnit.NANOSECONDS));
+            : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
       }
       @Override public long getRefreshesAfter(TimeUnit unit) {
         return unit.convert(cache.refreshAfterWriteNanos(), TimeUnit.NANOSECONDS);

@@ -13,9 +13,9 @@
 - Notification assertions: cast to `ConsumingRemovalListener`, check `listener.removed()`
 - Fray tests use direct thread creation with `@FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)`, no parameterization
 - Tests: `caffeine/src/test/java/`, fixtures: `testFixtures/`
-- `examples/` hold the same quality bar as the library: their tests must cover
-  unhappy paths (duplicate keys, a failing write/load, empty batches) —
-  happy-path-only tests are where example bugs have hidden
+- `examples/` are sketches rather than production code the project owns, but not bad code: their
+  tests cover the behavior each one shows, including a failure it documents handling (a failing
+  write or load). Lifecycle, extreme-input, and concurrency hardening is left to the user.
 - **Pin a user-visible contract at the API level, in the test class that owns it.** A
   `Policy`/`Cache`/`asMap` behaviour belongs in `ExpireAfterVarTest`, `CacheTest`, `EvictionTest`
   and so on, written as the user would hit it. A white-box pin in the data structure's own test
@@ -98,9 +98,9 @@ Jazzer's one-`@FuzzTest`-per-JVM constraint, each fuzzer's selector pattern, and
 target and `testSourceSets` scoping are in `.claude/docs/testing.md` §*Fuzz Testing (Jazzer)*
 and §*PIT Mutation Testing*. Two traps worth carrying here:
 
-- **Take a fuzzer's selector pattern from `.github/workflows/build.yml`, don't guess it.**
-  Guessing a bare name for a nested holder class selects **zero tests and still reports BUILD
-  SUCCESSFUL**; confirm the result XML's `tests=` count either way.
+- **Take a fuzzer's selector pattern from `.github/workflows/build.yml`, don't guess it.** The
+  bare name of a fuzzer whose `@FuzzTest`s sit in nested holder classes matches no test and fails
+  with "No tests found for given includes"; `PacerFuzzer*` needs its wildcard.
 - PIT's `testSourceSets` must name every suite that covers the target, or everything that
   suite covers reports as `NO_COVERAGE`, which is a report full of phantoms rather than gaps.
 

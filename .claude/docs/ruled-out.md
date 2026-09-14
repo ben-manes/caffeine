@@ -44,7 +44,9 @@ These dispose of whole families. Check them first.
   *notifyRemoval*). Submitting outside the lock would fix only the joining executor: maintenance
   runs on the executor, so a lone worker still waits on its own full queue.
 - **Statistics are best-effort and lowest priority.** A counter that races, drifts, or
-  double-counts is not a correctness defect.
+  double-counts is not a correctness defect. `CacheStats.missRate`'s
+  `missCount >= loadSuccessCount + loadFailureCount` says a miss need not load (`getIfPresent`);
+  a refresh or `asMap` compute counting a load without a miss does not make it a defect.
 - **Anything reachable only through `Cache.unwrap(...)` is out of scope.** By the JCache
   spec `unwrap` is an ill-defined hack; once used, behaviour is undefined, however real the
   symptom.
@@ -422,6 +424,9 @@ Read `jsr107-conformance.md`'s topic sections with this section.
 - The two Guava-facade statistics divergences, under the best-effort-stats rule.
 - `CacheLoader.asyncReloading` fooling `hasLoadAll`, so `getAll` throws where native Guava
   falls back to per-key.
+- `caffeinate()`'s `ExternalBulkLoader` returning the loader's map uncopied, so a lazy view is
+  evaluated more than once. Core tries to evaluate once, but Guava promises no single evaluation
+  and itself evaluates twice in rare cases.
 - The facade overrides only where native diverges from Guava. It overrides `contains`,
   `containsKey` and `remove` because native `contains(null)` throws NPE; it does not override
   `containsAll`, because native `containsAll` is null-lenient. `containsKey(null)` throwing
@@ -474,14 +479,17 @@ takes no number with it, so it waits for a report too.
 
 ## examples
 
+The examples are simple, illustrative starting points that show how to think about a problem, so
+a need can be met without adding a feature to the library. They should not be bad code, but they
+are not production code the project owns. A defect is an example failing at what it shows; missing
+lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration are not.
+
 - The RxJava and Reactor examples having no backpressure or an unbounded buffer under a slow
   sink.
 - `IndexedCache` enforcing unique secondary keys only sequentially: two values sharing a unique key
   are user error. Its alias lookups and `invalidate` read two maps under no shared lock, so a
   concurrent same-primary key change can briefly return or remove the entity through the alias it
   just left; an exact check would run every indexer on each hit.
-
-Examples otherwise hold the full quality bar, including unhappy-path test coverage.
 
 ---
 
@@ -497,6 +505,10 @@ Examples otherwise hold the full quality bar, including unhappy-path test covera
   tests run there.
 - `configureondemand` is intentional.
 - Dependency verification is not wanted; the egress allowances are intentional.
+- `coverage` and `test-results` skipping after a failed `tests-minimum` matrix (the shards stay
+  red), the cacheable `jmh` task behind the benchmark gists, `analysis.yml`'s SARIF merge keeping
+  only the first input's `tool`, the `git diff` metadata freshness check missing a deleted file,
+  and the opt-in `-Pjfr` profile (JDK 16+ event settings, no declared recording output).
 
 ---
 

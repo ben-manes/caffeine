@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -euo pipefail
 trap 'exit 0' SIGINT
 
 BOLD="\033[1m"

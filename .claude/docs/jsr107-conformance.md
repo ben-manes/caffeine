@@ -121,8 +121,11 @@ Recorded zero-update comparison:
 
 | Behavior | UPDATED / put counted | Providers |
 |---|---|---|
-| Store immediately expired | yes / yes | RI, Coherence, cache2k, Ehcache 3 |
-| Remove or suppress | no / no | Infinispan, Ehcache 2, Hazelcast |
+| Store immediately expired | yes / yes | RI, Coherence, Ehcache 3 |
+| Remove or suppress | no / no | Infinispan, Ehcache 2, Hazelcast, cache2k |
+
+cache2k maps a zero update expiry to `ExpiryTimeValues.NOW` (`ExpiryPolicyAdapter.durationToTicks`),
+and core's `EntryAction.checkKeepOrRemove` removes an entry expiring `NOW`.
 
 Caffeine follows the first behavior because the spec distinguishes creation from update and the
 RI agrees. All put/replace/invoke siblings gate suppression on creation only

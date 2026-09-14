@@ -55,7 +55,7 @@ lambda — which holds only the bin lock, no node monitor — e.g.
 | key (weak) | plain | set (retire/die only) | immutable after construction; getRef uses getOpaque |
 | accessTime | getOpaque | setOpaque | benign races acceptable |
 | writeTime | getOpaque | setOpaque | synchronized(node) |
-| variableTime | getOpaque | setOpaque, CAS | synchronized(node) for CAS |
+| variableTime | getOpaque | setOpaque, CAS | synchronized(node), except `tryExpireAfterRead`'s lock-free CAS |
 | weight | plain | plain | synchronized(node); unlocked reads accept staleness |
 | policyWeight | plain | plain | evictionLock; unlocked reads accept staleness |
 | metadata | plain | plain | evictionLock |
@@ -117,8 +117,9 @@ pins the parked state deliberately. Don't add a recovery path for a broken execu
 
 ## User Callback Invocation Points
 
-### notifyEviction — INSIDE synchronized(node), BEFORE user code
-Called before mapping functions, weighers, and expiry callbacks. Irrevocable.
+### notifyEviction — INSIDE synchronized(node)
+Irrevocable. In `remap()` and `doComputeIfAbsent()` it precedes the mapping function, weigher,
+and expiry callbacks; `put()` calls its weigher (outside all locks) and `expireAfterCreate` first.
 - `put()`, `evictEntry()`, `remove()`, `removeNode()`
 - `remap()`, `doComputeIfAbsent()` (before try block with user code)
 
@@ -128,13 +129,12 @@ Wraps the listener call in a task submitted to the executor. The actual
 `evictEntry` and `removeNode`, notifyRemoval is called while evictionLock is
 still held (but outside synchronized(node) and CHM bin lock).
 
-**Executor-rejection fallback**: if `executor.execute(task)` throws
-`RejectedExecutionException`, the task is invoked inline (`task.run()`) on the
-caller thread. From `evictEntry`/`removeNode` that caller thread is holding
-`evictionLock`, so a user `RemovalListener` under a rejecting executor runs
-synchronously under the eviction lock. A listener that re-enters the cache via
-a write can deadlock in that path. (The default `ForkJoinPool.commonPool`
-rejects when shutting down.)
+**Inline delivery**: a caller-runs executor such as `Runnable::run` runs the task on the caller
+thread, and if `executor.execute(task)` throws (such as `RejectedExecutionException`) the task is
+invoked inline (`task.run()`). From `evictEntry`/`removeNode` that caller thread is holding
+`evictionLock`, so the user's `RemovalListener` runs synchronously under the eviction lock. A
+listener that re-enters the cache via a write can deadlock in that path. (The default
+`ForkJoinPool.commonPool` rejects when shutting down.)
 
 ### Mapping functions (compute, merge, etc.)
 Lock context depends on path:
@@ -173,15 +173,21 @@ runs under the **refreshes** bin lock. Two consequences, both bounded to user mi
 
 ### RemovalListener.onRemoval — OUTSIDE all locks (normal path)
 Delivered asynchronously via executor. Safe for re-entrant cache operations on
-the normal path. Exception: see the executor-rejection fallback under
-`notifyRemoval` — a rejecting executor collapses delivery to inline, which can
-run under `evictionLock` for eviction-triggered removals.
+the normal path. Exception: see inline delivery under `notifyRemoval`; a caller-runs or
+rejecting executor delivers on the caller thread, which holds `evictionLock` for
+eviction-triggered removals.
 
 ### EvictionListener — INSIDE synchronized(node), varies for other locks
 - In `evictEntry`/`removeNode`: evictionLock + CHM bin lock + synchronized(node)
 - In `put()`: synchronized(node) only
 - In `remove()`/compute paths: CHM bin lock + synchronized(node)
 Synchronous. Re-entrant cache operations risk deadlock.
+
+### Other user components under evictionLock
+These also run while `evictionLock` is held: `Scheduler.schedule` (through `Pacer`),
+`Executor.execute` (the maintenance task and eviction's removal notifications),
+`StatsCounter.recordEviction`, and `Ticker.read`. One that blocks stalls maintenance, then
+writers once the write buffer fills.
 
 ## Buffer Semantics
 

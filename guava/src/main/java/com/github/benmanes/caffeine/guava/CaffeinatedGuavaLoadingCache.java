@@ -51,11 +51,8 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   private static final ThreadLocal<Boolean> nullBulkLoad = new ThreadLocal<>();
   private static final long serialVersionUID = 1L;
 
-  private final com.github.benmanes.caffeine.cache.LoadingCache<K, V> cache;
-
   CaffeinatedGuavaLoadingCache(com.github.benmanes.caffeine.cache.LoadingCache<K, V> cache) {
     super(cache);
-    this.cache = cache;
   }
 
   @Override
@@ -63,7 +60,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   public V get(K key) throws ExecutionException {
     requireNonNull(key);
     try {
-      return requireLoaded(cache.get(key));
+      return requireLoaded(loadingCache().get(key));
     } catch (InvalidCacheLoadException e) {
       throw e;
     } catch (CacheLoaderException e) {
@@ -80,7 +77,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   public V getUnchecked(K key) {
     requireNonNull(key);
     try {
-      return requireLoaded(cache.get(key));
+      return requireLoaded(loadingCache().get(key));
     } catch (InvalidCacheLoadException e) {
       throw e;
     } catch (CacheLoaderException e) {
@@ -100,7 +97,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
     boolean enclosing = (nullBulkLoad.get() != null);
     nullBulkLoad.remove();
     try {
-      Map<K, V> result = cache.getAll(keysToLoad);
+      Map<K, V> result = loadingCache().getAll(keysToLoad);
       if (nullBulkLoad.get() != null) {
         throw new InvalidCacheLoadException("null key or value");
       }
@@ -136,7 +133,12 @@ final class CaffeinatedGuavaLoadingCache<K, V>
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
   public void refresh(K key) {
-    cache.refresh(key);
+    loadingCache().refresh(key);
+  }
+
+  /** Returns the delegate as a loading cache. */
+  private com.github.benmanes.caffeine.cache.LoadingCache<K, V> loadingCache() {
+    return (com.github.benmanes.caffeine.cache.LoadingCache<K, V>) cache;
   }
 
   /** Returns the loaded value, or throws if absent. */

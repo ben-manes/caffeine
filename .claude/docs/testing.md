@@ -385,27 +385,25 @@ fix is to delete the now-dead branch, not to test it.)
 - Jazzer cannot run 2+ fuzz tests in the same JVM process
   ([jazzer#599](https://github.com/CodeIntelligenceTesting/jazzer/issues/599))
 - `forkEvery = 1` is set in `build.gradle.kts` so each test class gets its own fork
-- When adding multiple `@FuzzTest` methods to one file, wrap each in a `@Nested`
-  inner class so forking isolates them:
+- A file with several `@FuzzTest`s gives each its own `static final` nested holder class, as
+  `PacerFuzzer` and `CaffeineSpecFuzzer` do:
   ```java
   final class MyFuzzer {
-    @Nested class FuzzA {
+    static final class FuzzA {
       @FuzzTest(maxDuration = "5m")
       void fuzz(FuzzedDataProvider data) { ... }
     }
-    @Nested class FuzzB {
+    static final class FuzzB {
       @FuzzTest(maxDuration = "5m")
       void fuzz(FuzzedDataProvider data) { ... }
     }
   }
   ```
-- Alternatively, keep one `@FuzzTest` per file (the current convention)
 - **Take a fuzzer's `--tests` pattern from `.github/workflows/build.yml`, don't guess it.** Each
   fuzzer is listed there with the form it needs: `PacerFuzzer*` and `CaffeineSpecFuzzer*` carry a
   trailing wildcard because their `@FuzzTest`s sit in nested holder classes, while
-  `TimerWheelFuzzer` and the rest match bare. Guessing the bare name for a nested one selects
-  **zero tests and still reports BUILD SUCCESSFUL**, so confirm the result XML's `tests=` count
-  either way
+  `TimerWheelFuzzer` and the rest match bare. The bare name of a holder fuzzer matches no test and
+  fails with "No tests found for given includes"
 - Fuzz tests require `JAZZER_FUZZ=1` environment variable (set by the Gradle task)
 - The current `fuzzTest` JaCoCo compatibility guard checks the configured Java toolchain
   language version, not a separately selected test launcher. With `-PjavaVersion=11

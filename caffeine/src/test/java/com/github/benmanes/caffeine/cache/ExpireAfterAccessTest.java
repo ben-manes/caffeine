@@ -21,6 +21,8 @@ import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_ACCE
 import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
@@ -40,6 +42,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -57,6 +60,8 @@ import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * The test cases for caches that support the expire-after-read (time-to-idle) policy.
@@ -382,18 +387,55 @@ final class ExpireAfterAccessTest {
   }
 
   @ParameterizedTest
-  @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE)
+  @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX, StartTime.ONE_MINUTE_BEFORE_ZERO})
   void ageOf_async(AsyncCache<Int, Int> cache,
       CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var future = new CompletableFuture<Int>();
     cache.put(context.absentKey(), future);
-    assertThat(expireAfterAccess.ageOf(context.absentKey()).orElseThrow())
-        .isAtLeast(Duration.ofNanos(-Async.ASYNC_EXPIRY));
+    assertThat(expireAfterAccess.ageOf(context.absentKey())).isEmpty();
+    assertThat(expireAfterAccess.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
 
-    future.complete(Int.valueOf(2));
+    context.ticker().advance(Duration.ofSeconds(45));
+    future.complete(context.absentValue());
     context.ticker().advance(Duration.ofSeconds(30));
     assertThat(expireAfterAccess.ageOf(context.absentKey()).orElseThrow())
         .isIn(Range.closed(Duration.ofSeconds(30), Duration.ofSeconds(31)));
+    assertThat(expireAfterAccess.ageOf(context.absentKey(), TimeUnit.SECONDS)).hasValue(30);
+  }
+
+  @ParameterizedTest
+  @SuppressFBWarnings("AFBR_ABNORMAL_FINALLY_BLOCK_RETURN")
+  @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX, StartTime.ONE_MINUTE_BEFORE_ZERO})
+  void ageOf_async_pendingCompletion(AsyncCache<Int, Int> cache, CacheContext context,
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) throws Exception {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    var localCache = (BoundedLocalCache<Int, CompletableFuture<Int>>)
+        ((LocalAsyncCache<Int, Int>) cache).cache();
+    var node = requireNonNull(localCache.data.get(
+        localCache.nodeFactory.newLookupKey(context.absentKey())));
+    var completion = new FutureTask<>(() -> future.complete(context.absentValue()));
+
+    context.ticker().advance(Duration.ofSeconds(45));
+    try {
+      synchronized (node) {
+        executor.execute(completion);
+        await().until(future::isDone);
+        // The value is ready, but its timestamps cannot be finalized until the monitor is released.
+        assertThat(completion.isDone()).isFalse();
+        assertThat(expireAfterAccess.ageOf(context.absentKey())).isEmpty();
+        assertThat(expireAfterAccess.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
+      }
+    } finally {
+      await().until(completion::isDone);
+      assertThat(completion.get()).isTrue();
+    }
+    context.ticker().advance(Duration.ofSeconds(30));
+    assertThat(expireAfterAccess.ageOf(context.absentKey()).orElseThrow())
+        .isIn(Range.closed(Duration.ofSeconds(30), Duration.ofSeconds(31)));
+    assertThat(expireAfterAccess.ageOf(context.absentKey(), TimeUnit.SECONDS)).hasValue(30);
   }
 
   /* --------------- Policy: oldest --------------- */

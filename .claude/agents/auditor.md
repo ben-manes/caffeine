@@ -24,7 +24,8 @@ if `caffeine/build/generated/` is empty.
 ## Module Map
 
 Audits are repository-wide unless the invoking skill or argument narrows them.
-The adapters, simulator, and examples hold the same quality bar as the core.
+The adapters hold the same quality bar as the core. The simulator and the examples have narrower
+scopes, stated in their `ruled-out.md` sections.
 When scoped outside the core, swap in that module's context — the core frame
 (lock hierarchy, node lifecycle, historical patterns below) does not transfer.
 
