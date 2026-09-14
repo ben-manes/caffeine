@@ -80,7 +80,8 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   the publishing thread; the first publish lazily creates its gate. `endComputation` releases it
   from `finally`, keeping the mark during release for caller-runs executors. Do not stage a
   publication outside a computation: an `unwrap` loader has no release point. No listeners means
-  no gate allocation.
+  no gate allocation; `endComputation` clears the slot with `set(null)`, since `remove()` would
+  discard and reallocate the thread-local entry on every computation.
 - Queue append uses atomic `compute`; cleanup uses conditional `remove(key, future)`. The
   preceding identity `get` is only a fast path. These protect a successor's slot and ordering;
   do not add locking. Await or ignore synchronous futures on relevant operation exits, including

@@ -426,8 +426,10 @@ Append events inside the mutating compute to preserve per-key ordering, but stag
 execution until it returns. `beginComputation` marks the publishing thread; the first publish
 lazily creates a gate. `endComputation` releases the gate from `finally`, holding the mark through
 release because a caller-runs executor may dispatch there. A throwing Weigher/native Expiry must
-not leave the chain blocked. No listeners means no gate allocation. Do not stage an event outside
-a computation, such as an unwrap-driven load, because it has no matching release.
+not leave the chain blocked. No listeners means no gate allocation, and the release clears the
+gate's slot with `set(null)`: `remove()` discarded the thread-local entry, so every computation
+allocated a fresh one. Do not stage an event outside a computation, such as an unwrap-driven load,
+because it has no matching release.
 
 This staging makes ordinary listeners observe committed mappings. RI dispatches after put under
 its key lock; Ehcache 3 releases a StoreEventSink after compute; Hazelcast publishes after record

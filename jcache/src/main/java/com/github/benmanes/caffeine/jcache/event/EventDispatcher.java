@@ -98,7 +98,7 @@ public final class EventDispatcher<K, V> {
   /** Releases the events staged by the computation, which has committed, and marks its end. */
   public void endComputation() {
     var barrier = gate.get();
-    gate.remove();
+    gate.set(null);
     try {
       if (barrier != null) {
         barrier.complete(null);
