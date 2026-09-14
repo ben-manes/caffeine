@@ -236,6 +236,26 @@ final class CacheManagerTest {
   }
 
   @Test
+  void throughConfiguration_nullFactoryProduct_failsFast() {
+    // A factory that produces nothing cannot read or write through, so the cache is not created
+    // rather than silently bypassing the loader or the system of record
+    var nullLoader = new MutableConfiguration<Integer, Integer>()
+        .setCacheLoaderFactory(() -> null)
+        .setReadThrough(true);
+    var nullWriter = new MutableConfiguration<Integer, Integer>()
+        .setCacheWriterFactory(() -> null)
+        .setWriteThrough(true);
+    try (var fixture = JCacheFixture.builder().build();
+         var cacheManager = fixture.cacheManager()) {
+      assertThrows(NullPointerException.class,
+          () -> cacheManager.createCache("null-loader", nullLoader));
+      assertThrows(NullPointerException.class,
+          () -> cacheManager.createCache("null-writer", nullWriter));
+      assertThat(cacheManager.getCacheNames()).containsNoneOf("null-loader", "null-writer");
+    }
+  }
+
+  @Test
   @SuppressLint("THREAD_SAFETY_VIOLATION")
   void isClosed() throws IllegalAccessException, InterruptedException, ExecutionException {
     try (var fixture = JCacheFixture.builder().build()) {

@@ -100,8 +100,8 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
 - HOCON (`TypesafeConfigurator`) can supply a cache before programmatic configuration is used.
   Validate resolved through-mode factories once in `CacheFactory.createCache`, before any factory
   runs or the name is published. A missing required loader/writer factory throws
-  `IllegalArgumentException`; a factory returning null is a separate initialization question.
-  `isReadThrough()` alone selects the loading proxy after validation. See
+  `IllegalArgumentException`, and a required one that produces null throws `NullPointerException`
+  as the cache is built. `isReadThrough()` alone selects the loading proxy after validation. See
   [configuration](../docs/jsr107-conformance.md#configuration).
 - `CacheProxy.copyOf` passes through NPE, ISE, CCE, and `CacheException`, wrapping any other
   exception as `CacheException`. Loader copying retains `CacheLoaderException`. Do not copy live

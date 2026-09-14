@@ -137,7 +137,9 @@ both behaviors pass. The parity tests above check the missing event/statistic di
 - Creation returning null or throwing, a checked exception included, yields eternal expiry
   (`Long.MAX_VALUE`), consistently in `CacheProxy` and `JCacheLoaderAdapter`. Null creation is
   implementation-defined; the RI would NPE. The normal CREATED/put effects still occur. Pin for a
-  checked throw: `CacheProxyTest.put_expiryThrowsCheckedException_storesWithDefaultExpiry`.
+  checked throw: `CacheProxyTest.put_expiryThrowsCheckedException_storesWithDefaultExpiry`. The
+  adapter catches `Exception`, so an `Error` propagates; RI, Ehcache 3, Infinispan, and Coherence
+  catch `Throwable` around expiry calls, Hazelcast catches `Exception`, and cache2k does not catch.
 - Update/access returning null or throwing leaves expiry unchanged. The loader helper takes a
   `created` flag; reload translates the update `Long.MIN_VALUE` sentinel to the old wrapper's
   deadline. Do not turn a finite deadline eternal or log an NPE for an ordinary null update.
@@ -396,7 +398,11 @@ made removeAll a no-op for non-clearing writers and was rejected. Pin:
 A partial batch failure reconciles the same way whatever the writer throws, including a checked
 exception thrown undeclared by another JVM language. Pins:
 `CacheWriterTest.putAll_partialSuccess_storesWrittenEntriesOnly` and
-`removeAll_partialSuccess_removesDeletedEntriesOnly`.
+`removeAll_partialSuccess_removesDeletedEntriesOnly`. The specification requires wrapping any
+`Exception` a writer or loader throws. Recorded from bytecode on 2026-09-14: RI, Ehcache 3,
+Hazelcast, Infinispan, and cache2k catch `Exception` or `Throwable` around loader and writer calls
+(Ehcache and cache2k in their cores), while Coherence's `writeAll` and `deleteAll` catch only
+`RuntimeException`.
 
 The batch exemption does not permit writes the adapter later refuses because copying failed.
 Copy all putAll keys/values before writeAll and reuse `CopiedEntry` in the store loop. A copier
@@ -616,7 +622,8 @@ Validate resolved readThrough/writeThrough dependencies once in `CacheFactory.cr
 before building any ticker, executor, scheduler, copier, policy, listener, loader, or writer.
 A missing required factory is an invalid configuration and throws IllegalArgumentException
 without publishing the name or causing factory side effects. False flags remain valid without
-factories. A supplied factory returning null is a separate initialization issue. After validation,
+factories. A required factory that produces null fails the creation with NullPointerException, the
+writer's as the loader's, rather than silently disabling write-through. After validation,
 `isReadThrough()` alone selects the loading proxy; do not restore an extra factory-present gate
 that silently substitutes a non-loading proxy for invalid configuration.
 
@@ -625,7 +632,8 @@ This follows `MutableConfiguration.setReadThrough`/`setWriteThrough` and
 `ConfigurationMerger.initCacheLoaderWriter` rejects them. TCK's `CacheMXBeanTest.testCustomConfiguration`
 uses false flags and does not resolve the split. HOCON read-through with a null loader must fail
 from getCache, not degrade silently. Pins: `CacheManagerTest.isReadThrough`,
-`invalidThroughConfiguration_hasNoCreationSideEffects`, and `createCache_minimalConfiguration`.
+`invalidThroughConfiguration_hasNoCreationSideEffects`,
+`throughConfiguration_nullFactoryProduct_failsFast`, and `createCache_minimalConfiguration`.
 
 `TypesafeConfigurator.from` ignores only `ConfigException.BadPath`, returning Optional.empty
 because valid JCache names need not fit Typesafe's path grammar. Wrap other ConfigExceptions

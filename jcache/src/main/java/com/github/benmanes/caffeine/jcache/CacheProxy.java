@@ -112,7 +112,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       com.github.benmanes.caffeine.cache.Cache<K, @Nullable Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, Optional<CacheLoader<K, V>> cacheLoader,
       ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics, Copier copier) {
-    this.writer = requireNonNullElse(configuration.getCacheWriter(), DisabledCacheWriter.get());
+    var cacheWriter = configuration.getCacheWriter();
+    this.writer = configuration.isWriteThrough()
+        ? requireNonNull(cacheWriter, "The CacheWriter factory returned null")
+        : requireNonNullElse(cacheWriter, DisabledCacheWriter.get());
     this.configuration = requireNonNull(configuration);
     this.cacheManager = requireNonNull(cacheManager);
     this.cacheLoader = requireNonNull(cacheLoader);
