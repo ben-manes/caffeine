@@ -169,6 +169,13 @@ Loader creation expiry uses the same ±1 correction as write/access expiry when 
 collides with sentinel `0` or `Long.MAX_VALUE`. Pins:
 `CacheLoaderTest.load_adjustedTimeSentinelZero` / `load_adjustedTimeSentinelMax`.
 
+The millisecond deadlines and their sentinels (`0` expire-now, `Long.MIN_VALUE` unchanged) assume
+a ticker that neither reads below zero nor crosses the signed wrap, and durations far below
+`Long.MAX_VALUE` milliseconds; beyond that the custom ticker is responsible, as in core's
+coarse-ticker ruling. A lazy expiry configured below a millisecond cannot be honoured:
+`TypesafeConfigurator` reads it in milliseconds, so it becomes `Duration.ZERO`, and
+`Duration.getAdjustedTime` truncates an exact sub-millisecond duration to a deadline of now.
+
 ### Access expiry
 
 `getAccessExpireTime` evaluates the policy; `setAccessExpireTime` writes the held wrapper's
@@ -258,8 +265,9 @@ from the caching implementation itself. Single-key writer failure therefore surf
 its writer is outside the catch; cache2k wraps and Ehcache 3 exposes `CacheWritingException`.
 TCK accepts all as `CacheException`; explicit spec text governs this corner.
 
-Pre-processor key-copy failure in single-key invoke remains a raw `CacheException`, consistent
-with the API's general cache-failure surface. `invokeAll`, however, must isolate each key's
+Pre-processor copy failures in single-key invoke, of the key or the prior value, remain a raw
+`CacheException`, consistent with the API's general cache-failure surface: invocation begins
+when the processor is called. `invokeAll`, however, must isolate each key's
 runtime failure in its `EntryProcessorResult`: preserve an existing EPE, wrap a non-EPE once,
 and continue. Otherwise one uncopyable key aborts the batch and discards completed results.
 RI, Ehcache 3, cache2k, and Hazelcast also isolate per-key failures (some double-wrap EPE).
@@ -339,6 +347,9 @@ and reload-before-prior-expiry as the same accepted design choice, not independe
   put/putAll, create/update, and statistics enabled/disabled.
 - `CacheGets = hits + misses`. Caffeine divides each average duration by its own operation
   counter; the RI's three averages all divide by gets, a known RI bug to avoid copying.
+- `invoke`, conditional `remove`, and iterator yields count gets without timing them, and an
+  empty `getAll` times no gets. The RI times the first three and not the last; these populations
+  stay unaligned under best-effort statistics.
 
 ### Commit and failure accounting
 
@@ -441,7 +452,10 @@ Quiet means no synchronous caller await: it informs resource-tracking listeners 
 the evicting/refresh thread. The ecosystem generally omits eviction events (RI never evicts).
 Clearing natively expired residents can produce quiet EXPIRED and eviction counts through core's
 removal cause, even though ordinary explicit clear removals are silent. Closed-cache delivery is
-separately suppressed by dispatch's closed check.
+separately suppressed by dispatch's closed check. A reload publishes before core decides whether
+it commits, and core reports a reload it discards because the entry changed in flight only to a
+removal listener, which the adapter does not register. That event stands with no mutation, which
+is accepted for a best-effort extension that has no post-commit hook.
 
 ### Listener failures
 
@@ -485,7 +499,9 @@ The mark is per cache/thread, not a general listener ban. Batch writeAll/deleteA
 the per-key loop and may use the cache (`CacheWriterTest.removeAll_racingInsert`). An eviction
 filter on an asynchronous maintenance thread has no mark and may read the cache; inline
 maintenance inherits an existing mark. Adding a mark there can abort publication before other
-listeners receive their events, so do not broaden it merely for symmetry.
+listeners receive their events, so do not broaden it merely for symmetry. `CacheEntryEventFilter`
+forbids side effects, so a filter whose cache call deadlocks the evicting thread, which holds the
+eviction lock and the entry's locks, is outside the contract.
 
 The spec permits implementation-specific deadlock detection. Two accepted hazards remain:
 cross-cache listener cycles and a synchronous listener dispatched on another thread that operates
@@ -518,6 +534,10 @@ copy. Requested keys are already copied on input, and application returns (`copy
 EntryProxy) copy on output. This is not equivalent to storing an uncopied caller key in put;
 the loader's internal key is not otherwise exposed through those returns. Its CREATED event is
 within the event-aliasing exception below. Do not add a loader key copy for false put/load parity.
+
+A read-through `MutableEntry.getValue` likewise hands the processor the loader's instance while
+`postProcess` stores a copy, as the RI does. The stored value stays isolated, and copying for the
+processor too would serialize every processor load.
 
 ### Event aliasing
 
@@ -574,6 +594,11 @@ listener construction, close the listener and suppress any close failure onto th
 Pins: `CacheProxyTest.registerCacheEntryListener_factoryThrows_isRetryable` and
 `registerCacheEntryListener_filterFactoryThrows_closesTheListener`.
 
+Deregistration removes a listener without closing it; registration failure and cache close are
+the paths that close. `Cache.close` requires closing registered listeners and deregistration's
+contract says nothing of closing, the RI does not close, and closing there could interrupt a
+listener whose published events are still dispatching.
+
 ## Configuration
 
 HOCON `application.conf` can supply caches before programmatic creation. Vendor
@@ -628,6 +653,9 @@ defining loader through the value side, even with no cache entries. The test's M
 factory belongs to the test loader, so it does not establish absence of this application pin.
 Weakening registry values would allow live managers to disappear. The explicit
 `CachingProvider.close(ClassLoader)` lifecycle operation is implemented; use it for unloading.
+A cache still used after its manager's loader was collected throws `NullPointerException` from
+every copy, since `copyOf` resolves the loader each time; that use outlives the loader, and the
+RI's serializing converter holds it weakly as well.
 
 ### Management
 
@@ -657,10 +685,14 @@ loader, writer, listeners, and expiry policy. Ownership is the adapter's resourc
 `inFlight` tracks explicit asynchronous loadAll work, including its CompletionListener
 notification, with a bounded 10-second close await. `loadAllAndNotify` returns the notification
 future; admission, synchronous submission-failure handling, and retirement stay in loadAll.
-Compose onto `dispatcher.chainSynchronous()` so completion includes notification. Do not move it
-to an untracked continuation or join the chain in the load body: a single-thread executor must
-be released to run the listener dispatch. A stuck listener can exhaust the timeout, reported as
-TimeoutException. The bounded await does not promise that timed-out work has stopped.
+Compose every outcome onto `dispatcher.chainSynchronous()`, so a failed load, a loader `Error` or
+checked exception included, is notified after its committed entries' synchronous listeners, with
+a listener failure suppressed onto the load's. Do not move it to an untracked continuation or
+join the chain in the load body: a single-thread executor must be released to run the listener
+dispatch. A stuck listener can exhaust the timeout, reported as TimeoutException. The bounded
+await does not promise that timed-out work has stopped. Pins:
+`CacheProxyTest.loadAll_loaderFailure_notifiesListener` and
+`loadAll_storeFailsMidway_notifiesAfterSynchronousListeners`.
 
 Native background refresh is best-effort and is not added to inFlight or awaited through
 `policy().refreshes()`. Blocking close on arbitrary user-executor refresh work was rejected.

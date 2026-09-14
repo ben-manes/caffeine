@@ -113,9 +113,10 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   shutdown flag. The spec does not require executor shutdown.
 - `inFlight` tracks explicit asynchronous work, including `loadAll`'s `CompletionListener`
   continuation. `loadAllAndNotify` returns that future; admission, submission failure handling,
-  and retirement stay in `loadAll`. Compose with `chainSynchronous()`, never join it on the load
-  executor. Do not add native refreshes to the barrier. Closed-cache event suppression uses
-  dispatch's `isClosed()` check independently of the bounded await. See [lifecycle](../docs/jsr107-conformance.md#lifecycle).
+  and retirement stay in `loadAll`. Compose every outcome, a failed load included, with
+  `chainSynchronous()`; never join it on the load executor. Do not add native refreshes to the
+  barrier. Closed-cache event suppression uses dispatch's `isClosed()` check independently of the
+  bounded await. See [lifecycle](../docs/jsr107-conformance.md#lifecycle).
 
 ## Validation
 

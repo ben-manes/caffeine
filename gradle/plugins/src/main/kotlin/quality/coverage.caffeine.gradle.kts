@@ -32,7 +32,7 @@ jacocoFullReport.configure {
   description = "Generates an aggregate report"
 
   mustRunAfter(coverageData)
-  executionData.setFrom(fileTree(rootDir)
+  executionData.setFrom(fileTree(rootDir).exclude("gradle/**")
     .include(coveredProjects.map { "**/*${it.removePrefix(":")}*/**/jacoco/*.exec" }))
   reports {
     html.required = true // human-readable

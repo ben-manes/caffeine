@@ -443,6 +443,16 @@ Read `jsr107-conformance.md`'s topic sections with this section.
 - The provider's `WeakHashMap` ClassLoader retention. Proven, and not fixable: the value
   chain reaches its own key, and weak values would collect a live manager. JSR-107 provides
   `CachingProvider.close(ClassLoader)` for exactly this. Documentation only.
+- `CacheManagerImpl.close()` deregistering by URI after it releases its lock. A lookup
+  overlapping the close can return the closing manager, and a close racing a provider close and a
+  fresh lookup can close the successor. Deregistering under the lock deadlocked against the
+  provider's registry monitor, and the RI also releases by URI.
+- `AbstractCopier` trusting an array's declared component type, so a `BigDecimal[]` holding a
+  mutable subclass is copied shallowly. The subclass breaks the declared type's immutability.
+- `JavaSerializationCopier` defining a proxy class in the manager's loader, which fails for a
+  non-public interface from another loader when Caffeine is loaded above that loader. No report.
+- A deserialized `CaffeineConfiguration` not equal to its original, as the default factories are
+  method-reference lambdas with identity equality. Nothing compares a round-tripped configuration.
 
 ---
 

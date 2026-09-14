@@ -321,33 +321,26 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   /** Performs the bulk load and returns a future that includes its completion notification. */
   private CompletableFuture<@Nullable Void> loadAllAndNotify(Set<? extends K> keys,
       boolean replaceExistingValues, CompletionListener listener) {
-    @Var boolean success = false;
+    @Var CacheLoaderException failure = null;
     try {
       if (replaceExistingValues) {
         loadAllAndReplaceExisting(keys);
       } else {
         loadAllAndKeepExisting(keys);
       }
-      success = true;
     } catch (CacheLoaderException e) {
-      listener.onException(e);
-    } catch (RuntimeException e) {
-      listener.onException(new CacheLoaderException(e));
-    } finally {
-      if (!success) {
-        dispatcher.ignoreSynchronous();
-      }
+      failure = e;
+    } catch (Throwable t) {
+      failure = new CacheLoaderException(t);
     }
-    if (!success) {
-      return CompletableFuture.completedFuture(null);
-    }
-    return dispatcher.chainSynchronous().<@Nullable Void>handle((failure, error) -> {
-      if (error != null) {
-        listener.onException(new CacheLoaderException(error));
-      } else if (failure != null) {
-        listener.onException(failure);
-      } else {
+    var loadFailure = failure;
+    return dispatcher.chainSynchronous().<@Nullable Void>handle((listenerFailure, error) -> {
+      var dispatchFailure = (error == null) ? listenerFailure : new CacheLoaderException(error);
+      var outcome = suppress(loadFailure, dispatchFailure);
+      if (outcome == null) {
         listener.onCompletion();
+      } else {
+        listener.onException(outcome);
       }
       return null;
     });

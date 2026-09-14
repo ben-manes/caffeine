@@ -55,6 +55,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -498,6 +499,80 @@ final class CacheProxyTest {
       CompletionListener listener = Mockito.mock();
       fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, listener);
       verify(listener).onException(any(CacheLoaderException.class));
+    }
+  }
+
+  @ParameterizedTest @MethodSource("loaderFailures")
+  void loadAll_loaderFailure_notifiesListener(Throwable failure) {
+    // An Error, or a checked exception thrown through the interface by another JVM language, still
+    // reaches the CompletionListener rather than stranding a caller that waits on it
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.loadAll(anyIterable())).thenAnswer(invocation -> { throw failure; });
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setCacheLoaderFactory(() -> loader);
+        }).build()) {
+      CompletionListener listener = Mockito.mock();
+      fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, listener);
+
+      var captor = ArgumentCaptor.forClass(Exception.class);
+      verify(listener).onException(captor.capture());
+      assertThat(captor.getValue()).isInstanceOf(CacheLoaderException.class);
+      assertThat(captor.getValue()).hasCauseThat().isSameInstanceAs(failure);
+    }
+  }
+
+  static Stream<Throwable> loaderFailures() {
+    return Stream.of(new NoClassDefFoundError(), new IOException());
+  }
+
+  @Test
+  void loadAll_storeFailsMidway_notifiesAfterSynchronousListeners() {
+    // A load that commits an entry and then fails notifies the CompletionListener only once that
+    // entry's synchronous listeners have run, as a load that succeeds does
+    var tasks = new ArrayDeque<Runnable>();
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        if (object.equals(VALUE_2)) {
+          throw new IllegalStateException("copy failed");
+        }
+        return object;
+      }
+    };
+    var created = new ArrayList<Integer>();
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      for (var event : events) {
+        created.add(event.getKey());
+      }
+    };
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.loadAll(anyIterable()))
+        .thenReturn(ImmutableMap.of(KEY_1, VALUE_1, KEY_2, VALUE_2));
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExecutorFactory(() -> tasks::add);
+          config.setCacheLoaderFactory(() -> loader);
+          config.setCopierFactory(() -> copier);
+          config.setStoreByValue(true);
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              () -> listener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        }).build()) {
+      CompletionListener completion = Mockito.mock();
+      fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, completion);
+
+      // run only the load, which commits KEY_1 and queues its listener before failing on KEY_2
+      assertThat(tasks).hasSize(1);
+      requireNonNull(tasks.pollFirst()).run();
+      assertThat(created).isEmpty();
+      verifyNoInteractions(completion);
+
+      while (!tasks.isEmpty()) {
+        requireNonNull(tasks.pollFirst()).run();
+      }
+      assertThat(created).containsExactly(KEY_1);
+      verify(completion).onException(any(CacheLoaderException.class));
     }
   }
 
