@@ -44,14 +44,25 @@ import org.mockito.Mockito;
 final class JmxRegistrationTest {
 
   @ParameterizedTest
-  @ValueSource(classes = {InstanceAlreadyExistsException.class,
-      MBeanRegistrationException.class, NotCompliantMBeanException.class})
+  @ValueSource(classes = {MBeanRegistrationException.class, NotCompliantMBeanException.class})
   void register_error(Class<? extends Throwable> throwableType) throws JMException {
     var name = new ObjectName("");
     var bean = new JCacheStatisticsMXBean();
     MBeanServer server = Mockito.mock();
     when(server.registerMBean(bean, name)).thenThrow(throwableType);
     assertThrows(CacheException.class, () -> JmxRegistration.register(server, name, bean));
+  }
+
+  @Test
+  void register_registeredConcurrently() throws JMException {
+    // a same-named bean registered between the check and the registration is skipped, as it is when
+    // the check sees it; the public API cannot schedule that interleaving deterministically
+    var name = new ObjectName("");
+    var bean = new JCacheStatisticsMXBean();
+    MBeanServer server = Mockito.mock();
+    when(server.registerMBean(bean, name)).thenThrow(InstanceAlreadyExistsException.class);
+    JmxRegistration.register(server, name, bean);
+    Mockito.verify(server).registerMBean(bean, name);
   }
 
   @ParameterizedTest

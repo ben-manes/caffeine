@@ -65,14 +65,15 @@ public final class JmxRegistration {
     unregister(server, objectName);
   }
 
-  /** Registers the management bean with the given object name. */
+  /** Registers the management bean with the given object name unless one is already registered. */
   static void register(MBeanServer server, ObjectName objectName, Object mbean) {
     try {
       if (!server.isRegistered(objectName)) {
         server.registerMBean(mbean, objectName);
       }
-    } catch (InstanceAlreadyExistsException
-        | MBeanRegistrationException | NotCompliantMBeanException e) {
+    } catch (InstanceAlreadyExistsException ignored) {
+      // registered concurrently under the same name, which the check would have skipped
+    } catch (MBeanRegistrationException | NotCompliantMBeanException e) {
       throw new CacheException("Error registering " + objectName, e);
     }
   }

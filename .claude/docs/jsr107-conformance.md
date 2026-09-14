@@ -686,8 +686,10 @@ RI's serializing converter holds it weakly as well.
 JMX ObjectName sanitization replaces `[,:=\n*?]` with a dot, following the RI. Distinct names or
 manager URIs can collide (a:b and a=b both become a.b): the second registration is skipped by
 isRegistered and destroying either unregisters the shared name. This accepted consequence is
-also present in RI's `MBeanServerRegistrationUtility`. Switching to ObjectName.quote would break
-operator tooling; do not do so solely to eliminate the collision.
+also present in RI's `MBeanServerRegistrationUtility`. A registration that loses the race between
+that check and registerMBean is skipped the same way, rather than failing createCache after the
+cache was published (`JmxRegistrationTest.register_registeredConcurrently`). Switching to
+ObjectName.quote would break operator tooling; do not do so solely to eliminate the collision.
 
 enableManagement/enableStatistics on an unknown name is a no-op; RI raw-NPEs. The spec's null-name
 NPE and closed-cache ISE do not mandate the RI's behavior for absence, and closed caches are
