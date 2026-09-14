@@ -42,6 +42,11 @@ paths:
   abandon dependent actions without making the value uncacheable, and dropping the mapping
   would prevent its eventual value from reaching a removal listener. Do not add cancellation
   cleanup to the bulk path.
+- If bulk setup fails before loader dispatch, remove only that call's installed proxies and
+  complete them exceptionally. A read-expiry throw on another key must not leave those futures
+  ownerless; conditional removal preserves a concurrent replacement. Propagate the original
+  failure without a load statistic or load-failure log, since loading never started. Cleanup
+  remains unguarded against a second failure from broken ticker or key operations.
 - Treat a completed valueless mapping as absent. Completion precedes removal, and
   `fillProxies` can run a caller's dependent action between them. Waiting for that mapping in
   `tryComputeRefresh` cannot make progress; `AsyncLoadingCacheTest.refresh_bulkAbsentKey`

@@ -1184,6 +1184,14 @@ Values views use identity equality like CHM. For exact comparisons, call `cleanU
 concurrent operations. An additional `asMap()` size warning was declined as redundant with
 the cache's existing approximation contract.
 
+The async synchronous view has the same gap for in-flight futures, which its `size()` counts and
+its iteration skips. `cleanUp()` cannot remove them, so the gap lasts until the load settles.
+Receivers split by algorithm: `AbstractMap`'s size check (`HashMap`, the bounded cache, the view
+itself) makes the comparison false in both directions, while `ConcurrentHashMap`'s two-sided scan,
+which the unbounded cache delegates to, makes `chm.equals(view)` true and `view.equals(chm)` false.
+No equality on the view is symmetric with both, and moving the unbounded cache to the size check
+would leave `ConcurrentHashMap` itself asymmetric.
+
 ## Maintenance nudges
 
 **Read paths nudge `scheduleDrainBuffers()` when they observe an expired/collected
@@ -1403,9 +1411,27 @@ cannot orphan the token (#1970).
 
 **`discardRefresh` is deliberately over-aggressive.** A mutation that races a
 refresh discards whatever token is in `refreshes` without trying to prove it's
-the same generation. Any refresh in flight was launched against a pre-mutation
-snapshot, so killing it is correct for linearizability even if it happens to be
-a "newer" generation from a later reader.
+the same generation. A refresh that registered before the mutation published its value was
+launched against the old value, so killing it is correct for linearizability. Insertions and
+unbounded writes release inside the map computation, before the new mapping is visible, so they
+discard only such refreshes. A bounded update of an existing entry (`put`, both `replace`
+methods, and `remap`'s present-entry write) publishes the value before its release, so a refresh
+registered in that gap loaded the new value and is discarded as well. That over-discard is
+accepted: the successor's reload is declined and the next refresh loads again.
+
+**A refresh completion's mutating exits follow the same rule, and releasing only the completing
+token was rejected.** A commit that replaces, creates, or removes the entry is a mutation, and a
+manual `refresh(k)` may replace its completed token while it runs. Releasing only the completing
+token rescues a successor that loaded the published value, which only a bounded update exposes,
+but keeps one that loaded the replaced value and can never install: its registration outlives the
+commit, so a later `refresh(k)` coalesces onto its load and is discarded with it, and
+`refreshIfNeeded`'s `containsKey` gate suppresses automatic refresh until that load finishes. That
+is the residue the prescreen race below leaves, widened to any refresh that registers during a
+commit before its value is published. In aligned races of 10,000 trials per case, owner-conditional
+release removed 31 discarded successors when nothing followed and added 147 discarded later
+refreshes when one did. Pinned by
+`RefreshAfterWriteTest.refresh_committingCompletion_discardsStaleSuccessor` and its
+`refreshIfNeeded` and absent-create twins, which park the commit in its `Weigher`.
 
 **The bounded cache's `containsKey` prescreen stays, and the race it leaves open is
 benign** (accepted). `ConcurrentHashMap.remove` takes the bin lock
@@ -1542,11 +1568,13 @@ exits — reject *and* absent — mirroring the error path, which was already ow
 same-instance no-op block: `remap`'s two absent **null-return** exits (`n == null` and the
 evicted-retire) and the unbounded absent exit skip the discard when `preserveRefresh` is set.
 The absent-**create** exit does not, and must not: installing a value is a mutation, so the
-over-aggressive-discard doctrine applies to it like any other write, and a completion that
-installs on an absent key is by construction the owner (both manual paths create only in their
-owned branch), so its `finally` is clearing its own token. Every one of the twelve callers that
-sets `preserveRefresh` either returns null or returns the existing value of a present entry, so
-the exit is not reachable with the hint set. Pinned by `BoundedLocalCacheTest.remap_absentCreate_discardsPendingRefresh`.
+over-aggressive-discard doctrine applies to it like any other write. Both manual paths create only
+in their owned branch, but a successor can replace the completed token before the `finally` runs;
+that successor loaded the key as absent, so discarding it is the doctrine rather than a steal.
+Every one of the twelve callers that sets `preserveRefresh` either returns null or returns the
+existing value of a present entry, so the exit is not reachable with the hint set. Pinned by
+`BoundedLocalCacheTest.remap_absentCreate_discardsPendingRefresh` and
+`RefreshAfterWriteTest.refresh_committingAbsentCompletion_discardsStaleSuccessor`.
 
 The `!computeIfAbsent` evicted-retire exit is outside the rule for a second reason: it runs
 *before* the remapping function, and the remapping function is the only thing that ever assigns
@@ -1577,7 +1605,7 @@ The **absent-branch** steal is reachable in **sync mode only**: a successor `ref
 absent key registers an `asyncLoad` without inserting the entry, so the stale completion observes the entry absent;
 in async mode the successor's `get` inserts an in-flight future, making the entry present so the
 completion takes the reject branch instead. Don't reintroduce an unconditional by-key discard on
-any refresh-completion exit.
+a non-mutating completion exit; a mutating exit keeps it (see the over-aggressive discard above).
 
 The same sibling-sync covers a **vanished-key skip**: a non-creating caller (`replaceAll`,
 `computeIfPresent`) whose key was concurrently removed hits `remap` with `value == null` and
@@ -1625,8 +1653,12 @@ siblings dedup via the `refreshes` map) but not the broad reading (any load, inc
 differs accordingly: cancelling the future from async `refresh(absentKey)` cancels the *shared*
 in-cache load (all `get` waiters get `CancellationException`, `handleCompletion` removes the entry),
 while cancelling the sync refresh future only unregisters the isolated reload and leaves a
-concurrent `get`'s own load untouched. Don't try to make the sync cache dedup a refresh against a
-`get`; pinned by `RefreshAfterWriteTest.refresh_absent_sideLoad_*`.
+concurrent `get`'s own load untouched. An expired entry that maintenance has not yet removed
+takes the same absent route in both caches: if maintenance removes it before the load completes,
+that removal discards the sync cache's registration, so the loaded value is notified as `EXPLICIT`
+while `refresh` still returns it, whereas the async view replaced the expired entry with its
+in-flight load when the refresh began and installs the value. Don't try to make the sync cache
+dedup a refresh against a `get`; pinned by `RefreshAfterWriteTest.refresh_absent_sideLoad_*`.
 
 **Sync `getAll` discards an unloaded key's refresh only on the sequential path — by design,
 and it reflects a real consistency difference, not a bug.** For a key that fails to load
@@ -1764,6 +1796,15 @@ linearizability regardless — it "reads the future it found" for computes as we
 reads. Whether coalescing is better or worse is perspective-dependent; the point is only
 that it *differs*. Don't "fix" `get(k, func)` by routing it through
 `AsyncAsMapView.computeIfAbsent`'s retry loop.
+
+**Read bookkeeping happens only at the lookup that finds a ready value.** `asMap().putIfAbsent`
+and `computeIfAbsent` record the access (access time, read expiry, frequency) on their first
+lookup. A value they obtain by waiting on a load, or that their atomic step finds after that lookup
+missed, is returned without it, so a variable `Expiry` sees no `expireAfterRead` until the next
+read. Waiting matches `Cache.get(k, func)` and the future-typed API, neither of which applies read
+expiry to an in-flight future. The raced exit is the one place a ready value skips the read
+(`Cache.get` goes through `computeIfAbsent`, which reads the entry it finds); covering it needs a
+second map read or a remap hint honoured by both caches, for a window between two steps.
 
 
 

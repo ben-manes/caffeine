@@ -108,7 +108,10 @@ Details: [expiration](../docs/design-decisions.md#expiration),
 - Real mutations discard refreshes. Query-style no-ops preserve them in both bounded and
   unbounded caches. Rejected completions set `preserveRefresh = !owned` and preserve timestamps;
   a stale completion must neither steal a successor's token nor reset its write clock.
-  Absent creates and purges still discard. Read the exit table before editing these paths.
+  A completion's mutating exit (replace, create, or remove) keeps its by-key release, even though
+  a bounded update also discards a successor that loaded the published value: releasing only its
+  own token keeps a load the commit superseded, which later refreshes join. Absent creates and
+  purges still discard. Read the exit table before editing these paths.
 - All refresh registrations use `referenceKey(key)`, never a node-owned weak reference that
   retirement clears. Keep the bounded cache's `containsKey` prescreen: its reservation race
   can defer one load but cannot commit a stale value through the ABA guards.

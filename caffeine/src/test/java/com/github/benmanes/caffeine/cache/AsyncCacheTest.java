@@ -45,6 +45,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.ERROR;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
@@ -276,6 +277,13 @@ final class AsyncCacheTest {
   void getBiFunc_nullLoader(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThrows(NullPointerException.class, () ->
         cache.get(context.absentKey(), nullBiFunction()));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  void getBiFunc_present_nullLoader(AsyncCache<Int, Int> cache, CacheContext context) {
+    assertThrows(NullPointerException.class, () ->
+        cache.get(context.firstKey(), nullBiFunction()));
   }
 
   @CacheSpec
@@ -1242,6 +1250,68 @@ final class AsyncCacheTest {
       assertThat(result.join()).containsExactlyEntriesIn(context.absent());
     }
     assertThat(logEvents()).isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON, expiry = CacheExpiry.MOCKITO)
+  void getAllBifunction_expiryFails(AsyncCache<Int, Int> cache, CacheContext context) {
+    var error = new IllegalStateException();
+    var pending = new ArrayList<CompletableFuture<Int>>();
+    var absentKeys = List.of(context.absentKey(), Iterables.get(context.absentKeys(), 1));
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenAnswer(invocation -> {
+          for (var key : absentKeys) {
+            pending.add(requireNonNull(cache.asMap().get(key)));
+          }
+          throw error;
+        }).thenReturn(context.expiryTime().timeNanos());
+
+    var keys = new ArrayList<>(absentKeys);
+    keys.add(context.firstKey());
+    var thrown = assertThrows(IllegalStateException.class, () ->
+        cache.getAll(keys, (keysToLoad, executor) -> { throw new AssertionError(); }));
+    assertThat(thrown).isSameInstanceAs(error);
+
+    assertThat(pending).hasSize(absentKeys.size());
+    for (var future : pending) {
+      assertThat(future).isDone();
+      assertThat(future).failsWith(CompletionException.class)
+          .hasCauseThat().isSameInstanceAs(error);
+    }
+    assertThat(cache).containsExactlyEntriesIn(context.original());
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
+    assertThat(cache.get(context.absentKey(), (key, executor) -> context.absentValue().toFuture()))
+        .succeedsWith(context.absentValue());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.SINGLETON, expiry = CacheExpiry.MOCKITO)
+  void getAllBifunction_expiryFails_replaced(AsyncCache<Int, Int> cache, CacheContext context) {
+    var error = new IllegalStateException();
+    var replacement = context.absentValue().toFuture();
+    var pending = new AtomicReference<@Nullable CompletableFuture<Int>>();
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenAnswer(invocation -> {
+          pending.set(requireNonNull(cache.asMap().get(context.absentKey())));
+          var writer = CompletableFuture.runAsync(() -> cache.put(context.absentKey(), replacement),
+              ConcurrentTestHarness.executor);
+          await().until(writer::isDone);
+          writer.join();
+          throw error;
+        }).thenReturn(context.expiryTime().timeNanos());
+
+    var keys = List.of(context.absentKey(), context.firstKey());
+    var thrown = assertThrows(IllegalStateException.class, () ->
+        cache.getAll(keys, (keysToLoad, executor) -> { throw new AssertionError(); }));
+    assertThat(thrown).isSameInstanceAs(error);
+
+    var future = requireNonNull(pending.get());
+    assertThat(future).isDone();
+    assertThat(future).failsWith(CompletionException.class)
+        .hasCauseThat().isSameInstanceAs(error);
+    assertThat(cache.asMap().get(context.absentKey())).isSameInstanceAs(replacement);
+    assertThat(cache.synchronous().asMap()).containsAtLeastEntriesIn(context.original());
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
   }
 
   /* --------------- put --------------- */

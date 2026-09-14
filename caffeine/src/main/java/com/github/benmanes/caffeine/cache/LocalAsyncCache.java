@@ -88,6 +88,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   @Override
   default CompletableFuture<V> get(K key, BiFunction<? super K, ? super Executor,
       ? extends CompletableFuture<? extends V>> mappingFunction) {
+    requireNonNull(mappingFunction);
     return get(key, mappingFunction, /* recordStats= */ true);
   }
 
@@ -141,20 +142,28 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     var proxies = new LinkedHashMap<K, CompletableFuture<V>>(initialCapacity);
-    for (var entry : futures.entrySet()) {
-      K key = entry.getKey();
-      @Var CompletableFuture<V> future = cache().getIfPresent(key, /* recordStats= */ false);
-      if (future == null) {
-        var proxy = new CompletableFuture<V>();
-        future = cache().putIfAbsent(key, proxy);
+    try {
+      for (var entry : futures.entrySet()) {
+        K key = entry.getKey();
+        @Var CompletableFuture<V> future = cache().getIfPresent(key, /* recordStats= */ false);
         if (future == null) {
-          future = proxy;
-          proxies.put(key, proxy);
+          var proxy = new CompletableFuture<V>();
+          future = cache().putIfAbsent(key, proxy);
+          if (future == null) {
+            future = proxy;
+            proxies.put(key, proxy);
+          }
         }
+        @SuppressWarnings("NullAway")
+        CompletableFuture<@Nullable V> castedFuture = future;
+        entry.setValue(castedFuture);
       }
-      @SuppressWarnings("NullAway")
-      CompletableFuture<@Nullable V> castedFuture = future;
-      entry.setValue(castedFuture);
+    } catch (Throwable t) {
+      for (var entry : proxies.entrySet()) {
+        cache().remove(entry.getKey(), entry.getValue());
+        entry.getValue().obtrudeException(t);
+      }
+      throw t;
     }
     cache().statsCounter().recordMisses(proxies.size());
     cache().statsCounter().recordHits(futures.size() - proxies.size());

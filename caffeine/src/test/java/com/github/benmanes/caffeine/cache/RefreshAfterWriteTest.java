@@ -660,6 +660,126 @@ final class RefreshAfterWriteTest {
 
   @CheckNoEvictions
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  void refresh_committingCompletion_discardsStaleSuccessor(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // A successor that replaces a completed refresh while its commit is weighing the new value
+    // loads from the value being replaced, so it can never install. The commit is a write and
+    // discards that registration; if it were kept, a later refresh would join the doomed load and
+    // be discarded with it. Exercises LocalLoadingCache.refresh (sync) and
+    // LocalAsyncLoadingCache.tryComputeRefresh (async) per the parameterized compute mode.
+    Int key = context.absentKey();
+    Int original = context.absentValue();
+    Int first = intern(original.add(1));
+    Int second = intern(original.add(2));
+    Int third = intern(original.add(3));
+    cache.put(key, original);
+
+    // R2 registers while R1's commit weighs R1's value
+    var r1 = cache.refresh(key);
+    var successor = refreshWhileWeighing(cache, context, key, first);
+    r1.complete(first);
+    var r2 = requireNonNull(successor.get());
+    assertThat(cache.policy().getIfPresentQuietly(key)).isSameInstanceAs(first);
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+
+    // R3 starts a new load from the committed value rather than joining R2
+    var r3 = cache.refresh(key);
+    assertThat(r3).isNotSameInstanceAs(r2);
+    r2.complete(second);
+    r3.complete(third);
+    assertThat(cache).containsEntry(key, third);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO)
+  void refreshIfNeeded_committingCompletion_discardsStaleSuccessor(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // Same stale successor, but R1 is the automatic refreshAfterWrite reload
+    // (BoundedLocalCache.refreshIfNeeded). A kept registration would also stop the next eligible
+    // read from starting a reload until the doomed load finished.
+    Int key = context.absentKey();
+    Int original = context.absentValue();
+    Int first = intern(original.add(1));
+    Int second = intern(original.add(2));
+    Int third = intern(original.add(3));
+    cache.put(key, original);
+
+    // R1 auto-refresh registers, then R2 registers while R1's commit weighs R1's value
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.get(key)).isEqualTo(original);
+    var r1 = requireNonNull(cache.policy().refreshes().get(key));
+    var successor = refreshWhileWeighing(cache, context, key, first);
+    r1.complete(first);
+    var r2 = requireNonNull(successor.get());
+    assertThat(cache.policy().getIfPresentQuietly(key)).isSameInstanceAs(first);
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+
+    // R3, the next eligible read's reload, starts from the committed value rather than waiting
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.get(key)).isEqualTo(first);
+    var r3 = requireNonNull(cache.policy().refreshes().get(key));
+    assertThat(r3).isNotSameInstanceAs(r2);
+    r2.complete(second);
+    r3.complete(third);
+    assertThat(cache).containsEntry(key, third);
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.ASYNC_INCOMPLETE,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.MOCKITO, compute = Compute.SYNC)
+  void refresh_committingAbsentCompletion_discardsStaleSuccessor(
+      LoadingCache<Int, Int> cache, CacheContext context) {
+    // Same stale successor on the absent-create exit, which releases registrations before the
+    // created entry is published, so the successor loads the key as absent. Sync only: the async
+    // view refreshes an absent key by loading it through the cache instead.
+    Int key = context.absentKey();
+    Int first = context.absentValue();
+    Int second = intern(first.add(1));
+    Int third = intern(first.add(2));
+
+    // R2 registers while R1's commit weighs the value it creates
+    var r1 = cache.refresh(key);
+    var successor = refreshWhileWeighing(cache, context, key, first);
+    r1.complete(first);
+    var r2 = requireNonNull(successor.get());
+    assertThat(cache.policy().getIfPresentQuietly(key)).isSameInstanceAs(first);
+    assertThat(cache.policy().refreshes()).doesNotContainKey(key);
+
+    // R3 reloads the created entry rather than joining R2
+    var r3 = cache.refresh(key);
+    assertThat(r3).isNotSameInstanceAs(r2);
+    r2.complete(second);
+    r3.complete(third);
+    assertThat(cache).containsEntry(key, third);
+  }
+
+  /**
+   * Stubs the weigher to issue {@code refresh(key)} from another thread when it sizes
+   * {@code value}, which a commit does before publishing that value.
+   */
+  private static AtomicReference<CompletableFuture<Int>> refreshWhileWeighing(
+      LoadingCache<Int, Int> cache, CacheContext context, Int key, Int value) {
+    var successor = new AtomicReference<CompletableFuture<Int>>();
+    when(context.weigher().weigh(any(), any())).thenAnswer(invocation -> {
+      if (value.equals(invocation.getArgument(1)) && (successor.get() == null)) {
+        CompletableFuture.runAsync(() -> successor.set(cache.refresh(key)), executor)
+            .orTimeout(10, TimeUnit.SECONDS).join();
+      }
+      return 1;
+    });
+    return successor;
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING,
       loader = Loader.ASYNC_INCOMPLETE)

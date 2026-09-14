@@ -217,7 +217,10 @@ These dispose of whole families. Check them first.
   rather than a defect (Ben, 2026-09-08). A caller who needs both operates per key; `refresh(key)`
   reaches each one. The equals-based dedup in `refreshAll` is not incidental either: dropping it
   costs a second load for a key repeated in the input, on the default and direct executors alike.
-  `invalidateAll(Iterable)` returns void, has no such limit, and does reach both keys.
+  `invalidateAll(Iterable)` returns void, has no such limit, and does reach both keys. A bulk
+  loader's result is a `Map` too: the asynchronous `getAll` snapshots it with `Map.copyOf`, which
+  rejects an `IdentityHashMap` holding equal-but-distinct keys under either key strength, so that
+  load fails loudly while the synchronous path, which iterates without a snapshot, stores both.
 - Weak-key lookups allocating a `LookupKeyReference` (24 B/op). A thread-local mutable
   wrapper pins the instance to the thread, rejected in #294 for virtual threads and
   classloader pinning. Young-gen allocation is the better trade.
@@ -252,6 +255,12 @@ These dispose of whole families. Check them first.
 - Refresh discard notification using the discarded value; refresh commit failure not
   surfaced on the future; `discardRefresh`'s `containsKey` prescreen missing a CHM
   `computeIfAbsent` reservation; `discardRefresh` invalidating a newer refresh generation.
+- A successful refresh completion discarding a successor that registered after it published the
+  new value, so that successor's reload is declined and the value waits for the next refresh.
+  Every bounded update of an existing entry has that overlap between publishing its value and
+  releasing the registration. Releasing only the completing token also keeps successors that
+  loaded the replaced value, which later refreshes then join; see
+  [refresh internals](design-decisions.md#refresh-internals).
 - A manual `refresh(k)` that started while the key was absent committing across a racing
   `put` then `invalidate`. Its only ownership test is `currentValue == oldValue`, vacuous at
   `null == null`, and the prescreen cannot see the registration reservation. Reproduced 5/5
@@ -355,9 +364,10 @@ These dispose of whole families. Check them first.
   divergence, and `WriteThroughEntry.setValue` not being fully atomic.
 - Async load-failure WARNING not unwrapping `CompletionException` before the
   `instanceof Timeout/Cancellation` suppression check.
-- A `getAll` bulk-load loop lacking per-entry containment. The only triggers are a throwing
-  `Ticker` or broken key equality, which poison every cache operation; the containment
-  operation is itself throw-prone on the same trigger.
+- General containment for `getAll` setup failures caused by a throwing `Ticker` or broken key
+  equality: cleanup can fail on the same component. Setup does settle its earlier proxies when
+  a later read-expiry callback throws, because conditional removal does not invoke that callback.
+  This limited cleanup does not establish recovery from broken clocks, keys, or cleanup itself.
 - Async `put(k, future)` completion-handler registration not being contained. For any
   spec-abiding `CompletableFuture`, `whenComplete` never throws at the registration site.
 - A `loadAll` returning a map with null keys or values causing a partial commit, and null
@@ -367,6 +377,24 @@ These dispose of whole families. Check them first.
 - `loadAll` retaining the caller's mutable `Set` across the async boundary.
 - A dropped or hung async load leaving a permanent in-flight mapping. The remedy is to cancel
   the future, which `async-cache.md` documents.
+- `synchronous().refresh(k)` on an absent key returning a write that completed between its
+  absence check and its load, without calling the loader. A refresh of an absent key is a
+  `get(key)`, which adopts the mapping it finds, and a load in that race could equally have been
+  discarded by the write.
+- The synchronous view's `asMap()` being equal to no other map while a load is in flight, and a
+  `ConcurrentHashMap` or an unbounded cache comparing equal to it in one direction only. See
+  [iteration](design-decisions.md#iteration).
+- `synchronous()`'s javadoc that a modification to a loading mapping blocks, while `Cache.put`,
+  `invalidate`, `invalidateAll`, `asMap().clear()` and key-set removals return at once: they
+  return nothing that needs the loaded value. `asMap().put` and `remove(k)` store first and then
+  wait for the displaced value they return; the wait is `join`'s, uninterruptible with the
+  interrupt status kept, and a load that fails during it yields null.
+- `asMap().putIfAbsent` and `computeIfAbsent` returning an existing value without read expiry when
+  they waited on a load or found the value after their first lookup missed. See
+  [async synchronous view](design-decisions.md#async-synchronous-view).
+- `AsyncCache.get(K, Function)` allocating its function adapter on a hit (16 B) once misses share
+  the compiled profile. Avoiding it takes a second hit probe ahead of the one in
+  `get(K, BiFunction)`, which a lambda allocation does not justify.
 
 ---
 
