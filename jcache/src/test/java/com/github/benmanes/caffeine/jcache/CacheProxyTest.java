@@ -437,6 +437,38 @@ final class CacheProxyTest {
   }
 
   @Test
+  void iterator_next_copierFails_doesNotReturnTheEntry() {
+    // An entry that fails to copy is never returned, so it is neither counted as a hit nor removable
+    var armed = new AtomicBoolean();
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        if (armed.get() && object.equals(VALUE_1)) {
+          throw new IllegalArgumentException("copy failed");
+        }
+        return object;
+      }
+    };
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setStatisticsEnabled(true);
+          config.setStoreByValue(true);
+          config.setCopierFactory(() -> copier);
+        }).build();
+        var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      armed.set(true);
+
+      var iterator = cache.iterator();
+      assertThrows(CacheException.class, iterator::next);
+      assertThrows(IllegalStateException.class, iterator::remove);
+      assertThat(getStatistics(cache).getCacheHits()).isEqualTo(0);
+
+      armed.set(false);
+      assertThat(cache.containsKey(KEY_1)).isTrue();
+    }
+  }
+
+  @Test
   void loadAll_listenerOnCompletionThrows_doesNotFireOnException() {
     // Per JSR-107 1.1.1 p.64: onCompletion and onException are the terminal
     // success/failure callbacks for one operation. If the user listener's

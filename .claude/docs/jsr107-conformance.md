@@ -757,3 +757,7 @@ iterator.remove delegates to remove(K), removing the last-returned key even if i
 replaced since next. It checks closure and expiry through that operation: an entry expired in
 between emits EXPIRED/eviction, not REMOVED/removal. cache2k, Infinispan, Coherence, and Hazelcast
 also delegate; RI retains an unconditional inline REMOVED path (source comparison 2026-07-20).
+
+`next()` copies an entry before recording it, so one that fails to copy is skipped without counting
+a hit or becoming the entry `remove()` deletes; the RI likewise converts before remembering its
+last entry. Pin: `CacheProxyTest.iterator_next_copierFails_doesNotReturnTheEntry`.

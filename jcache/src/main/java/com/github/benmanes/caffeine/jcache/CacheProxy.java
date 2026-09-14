@@ -1526,10 +1526,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      statistics.recordHits(1L);
-      current = requireNonNull(cursor);
+      var entry = requireNonNull(cursor);
       cursor = null;
-      return new EntryProxy<>(copyOf(current.getKey()), copyOf(current.getValue().get()));
+      var copy = new EntryProxy<>(copyOf(entry.getKey()), copyOf(entry.getValue().get()));
+      statistics.recordHits(1L);
+      current = entry;
+      return copy;
     }
 
     @Override
