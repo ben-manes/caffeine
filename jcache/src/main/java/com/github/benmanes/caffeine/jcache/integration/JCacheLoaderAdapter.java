@@ -81,7 +81,7 @@ public final class JCacheLoaderAdapter<K, V>
   }
 
   @Override
-  @SuppressWarnings("ConstantValue")
+  @SuppressWarnings({"CatchingUnchecked", "ConstantValue"})
   public @Nullable Expirable<V> load(K key) {
     try {
       boolean recordLoadTime = statistics.isRecordingLoadTime();
@@ -109,12 +109,13 @@ public final class JCacheLoaderAdapter<K, V>
       return expirable;
     } catch (CacheLoaderException e) {
       throw e;
-    } catch (RuntimeException e) {
+    } catch (Exception e) {
       throw new CacheLoaderException(e);
     }
   }
 
   @Override
+  @SuppressWarnings("CatchingUnchecked")
   public Map<K, Expirable<V>> loadAll(Set<? extends K> keys) {
     try {
       requireNonNull(cache);
@@ -151,12 +152,13 @@ public final class JCacheLoaderAdapter<K, V>
       return result;
     } catch (CacheLoaderException e) {
       throw e;
-    } catch (RuntimeException e) {
+    } catch (Exception e) {
       throw new CacheLoaderException(e);
     }
   }
 
   @Override
+  @SuppressWarnings("CatchingUnchecked")
   public @Nullable Expirable<V> reload(K key, Expirable<V> oldValue) {
     try {
       V value = delegate.load(key);
@@ -178,7 +180,7 @@ public final class JCacheLoaderAdapter<K, V>
       return new Expirable<>(copy, expireTime);
     } catch (CacheLoaderException e) {
       throw e;
-    } catch (RuntimeException e) {
+    } catch (Exception e) {
       throw new CacheLoaderException(e);
     }
   }
@@ -188,6 +190,7 @@ public final class JCacheLoaderAdapter<K, V>
     return requireNonNull(copier.copy(value, requireNonNull(cacheManager.getClassLoader())));
   }
 
+  @SuppressWarnings("CatchingUnchecked")
   private long expireTimeMillis(boolean created) {
     try {
       Duration duration = created ? expiry.getExpiryForCreation() : expiry.getExpiryForUpdate();
@@ -201,7 +204,7 @@ public final class JCacheLoaderAdapter<K, V>
       long millis = TimeUnit.NANOSECONDS.toMillis(ticker.read());
       long expireTime = duration.getAdjustedTime(millis);
       return ((expireTime == 0L) || (expireTime == Long.MAX_VALUE)) ? (expireTime - 1) : expireTime;
-    } catch (RuntimeException e) {
+    } catch (Exception e) {
       logger.log(Level.WARNING, "Exception thrown by expiry policy", e);
       return created ? Long.MAX_VALUE : Long.MIN_VALUE;
     }

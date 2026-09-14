@@ -134,9 +134,10 @@ both behaviors pass. The parity tests above check the missing event/statistic di
 
 ### Policy defaults
 
-- Creation returning null or throwing a runtime exception yields eternal expiry
+- Creation returning null or throwing, a checked exception included, yields eternal expiry
   (`Long.MAX_VALUE`), consistently in `CacheProxy` and `JCacheLoaderAdapter`. Null creation is
-  implementation-defined; the RI would NPE. The normal CREATED/put effects still occur.
+  implementation-defined; the RI would NPE. The normal CREATED/put effects still occur. Pin for a
+  checked throw: `CacheProxyTest.put_expiryThrowsCheckedException_storesWithDefaultExpiry`.
 - Update/access returning null or throwing leaves expiry unchanged. The loader helper takes a
   `created` flag; reload translates the update `Long.MIN_VALUE` sentinel to the old wrapper's
   deadline. Do not turn a finite deadline eternal or log an NPE for an ordinary null update.
@@ -224,7 +225,7 @@ solve invoke. These repairs were rejected.
 A throwing extension `Weigher` (`setWeigherFactory` / `setMaximumWeight`) or native `Expiry`
 (`setExpiryFactory` / `ExpiryAdapter`) runs in core after the adapter's remapping
 function has written through and published the event, so it can abort storage after those
-effects. Standard `ExpiryPolicy` is different: its runtime exceptions are caught by the adapter.
+effects. Standard `ExpiryPolicy` is different: the adapter catches all of its exceptions.
 The extension case remains accepted misuse of callbacks whose core contract forbids throwing.
 Notifications/writer effects cannot be rolled back, and core has no post-metadata hook. Attempted
 creation/update notifications are accepted; store/cache discrepancies need external reconciliation.
@@ -392,6 +393,11 @@ failure, when it identifies entries that failed. The RI's residual-on-success in
 made removeAll a no-op for non-clearing writers and was rejected. Pin:
 `CacheWriterTest.removeAll_nonClearingWriter_stillEmptiesCache`.
 
+A partial batch failure reconciles the same way whatever the writer throws, including a checked
+exception thrown undeclared by another JVM language. Pins:
+`CacheWriterTest.putAll_partialSuccess_storesWrittenEntriesOnly` and
+`removeAll_partialSuccess_removesDeletedEntriesOnly`.
+
 The batch exemption does not permit writes the adapter later refuses because copying failed.
 Copy all putAll keys/values before writeAll and reuse `CopiedEntry` in the store loop. A copier
 failure then writes/caches nothing. Pins: `CacheProxyTest.putAll_writeThrough_copierThrows_doesNotWriteToTheStore`
@@ -516,8 +522,8 @@ no re-entry in the then 493 TCK / 603 unit tests.
 ### Copy boundaries and failures
 
 `CacheProxy.copyOf` passes through `NullPointerException`, `IllegalStateException`,
-`ClassCastException`, and `CacheException`, the API's declared failure types; it wraps other
-runtime exceptions in CacheException across reads, writes, getAnd operations, and iteration.
+`ClassCastException`, and `CacheException`, the API's declared failure types; it wraps any other
+exception in CacheException across reads, writes, getAnd operations, and iteration.
 A user's readObject throwing ISE therefore surfaces raw intentionally. The primitive requires a
 nonnull argument; nullable prior-value returns guard it explicitly. Loader copying retains its
 contextual `CacheLoaderException`, including the TCK-required wrapping. Pin:

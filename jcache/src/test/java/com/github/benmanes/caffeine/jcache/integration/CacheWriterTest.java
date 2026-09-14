@@ -179,8 +179,8 @@ final class CacheWriterTest {
     }
   }
 
-  @Test
-  void putAll_partialSuccess_storesWrittenEntriesOnly() throws IOException {
+  @ParameterizedTest @MethodSource("writerFailures")
+  void putAll_partialSuccess_storesWrittenEntriesOnly(Exception failure) throws IOException {
     try (CloseableCacheWriter writer = Mockito.mock();
          var fixture = jcacheFixture(writer)) {
       // writeAll writes KEY_1 (removing it from the batch) then fails, leaving KEY_2 unwritten;
@@ -189,7 +189,7 @@ final class CacheWriterTest {
         Collection<Cache.Entry<? extends Integer, ? extends Integer>> entries =
             invocation.getArgument(0);
         entries.removeIf(entry -> entry.getKey().equals(KEY_1));
-        throw new CacheWriterException();
+        throw failure;
       }).when(writer).writeAll(any());
 
       var map = new HashMap<Integer, Integer>();
@@ -200,6 +200,35 @@ final class CacheWriterTest {
       assertThat(fixture.jcache().containsKey(KEY_1)).isTrue();
       assertThat(fixture.jcache().containsKey(KEY_2)).isFalse();
     }
+  }
+
+  @ParameterizedTest @MethodSource("writerFailures")
+  void removeAll_partialSuccess_removesDeletedEntriesOnly(Exception failure) throws IOException {
+    try (CloseableCacheWriter writer = Mockito.mock();
+         var fixture = jcacheFixture(writer)) {
+      fixture.jcache().putAll(Map.of(KEY_1, VALUE_1, KEY_2, VALUE_2));
+
+      // deleteAll deletes KEY_1 (removing it from the batch) then fails, leaving KEY_2 in the store;
+      // only the deleted entry is removed from the cache
+      doAnswer(invocation -> {
+        Collection<?> keys = invocation.getArgument(0);
+        keys.remove(KEY_1);
+        throw failure;
+      }).when(writer).deleteAll(any());
+
+      assertThrows(CacheWriterException.class,
+          () -> fixture.jcache().removeAll(Set.of(KEY_1, KEY_2)));
+      assertThat(fixture.jcache().containsKey(KEY_1)).isFalse();
+      assertThat(fixture.jcache().containsKey(KEY_2)).isTrue();
+    }
+  }
+
+  static Stream<Arguments> writerFailures() {
+    // a checked exception may be thrown through the interface by another JVM language
+    return Stream.of(
+        arguments(named("CacheWriterException", new CacheWriterException())),
+        arguments(named("RuntimeException", new IllegalStateException())),
+        arguments(named("checked Exception", new IOException())));
   }
 
   @Test

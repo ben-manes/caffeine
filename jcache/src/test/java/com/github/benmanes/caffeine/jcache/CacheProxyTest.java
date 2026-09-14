@@ -133,7 +133,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 /**
  * @author github.com/kdombeck (Ken Dombeck)
  */
-@SuppressFBWarnings("SIC_INNER_SHOULD_BE_STATIC_ANON")
+@SuppressFBWarnings({"SIC_INNER_SHOULD_BE_STATIC_ANON", "UJM_UNJITABLE_METHOD"})
 final class CacheProxyTest {
 
   private static JCacheFixture jcacheFixture(CloseableCacheLoader loader,
@@ -1326,6 +1326,25 @@ final class CacheProxyTest {
       when(expiry.getExpiryForUpdate()).thenThrow(IllegalStateException.class);
       long time = fixture.jcache().getWriteExpireTimeMillis(false);
       assertThat(time).isEqualTo(Long.MIN_VALUE);
+    }
+  }
+
+  @Test
+  void put_expiryThrowsCheckedException_storesWithDefaultExpiry() {
+    // A checked exception thrown through the interface by another JVM language falls back to the
+    // default expiry like a runtime one, rather than aborting the store after the writer persisted
+    CacheWriter<Integer, Integer> writer = Mockito.mock();
+    ExpiryPolicy expiry = Mockito.mock();
+    when(expiry.getExpiryForCreation()).thenAnswer(invocation -> { throw new IOException(); });
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(true);
+        }).build()) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      verify(writer).write(any());
+      assertThat(fixture.jcache().get(KEY_1)).isEqualTo(VALUE_1);
     }
   }
 

@@ -65,6 +65,10 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   rethrow it. Suppress a listener failure onto the operation's own failure. Do not broaden this
   into a `Throwable` catch: listener `Error` propagates unchanged. See
   [listener failures](../docs/jsr107-conformance.md#listener-failures).
+- Loader, writer, expiry-policy, and copier boundaries catch `Exception`, suppressing
+  `CatchingUnchecked`: another JVM language can throw a checked exception through these
+  interfaces undeclared, and it takes the runtime failure's path, so a partial batch write still
+  reconciles and expiry still falls back to its default.
 
 ## Event dispatch and re-entry
 
@@ -87,9 +91,9 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   is inline inside an already marked computation. Batch writer callbacks outside the per-key
   loop are also unmarked. See [callback re-entry](../docs/jsr107-conformance.md#callback-re-entry).
 - Throwing vendor `Weigher`/native `Expiry` callbacks can abort storage after writer/event
-  publication. This accepted misuse boundary differs from standard `ExpiryPolicy`, whose runtime
-  failures are caught. Do not move publication outside `compute` to handle it. See
-  [native extensions](../docs/jsr107-conformance.md#native-extensions).
+  publication. This accepted misuse boundary differs from standard `ExpiryPolicy`, whose
+  exceptions, checked ones included, are caught. Do not move publication outside `compute` to
+  handle it. See [native extensions](../docs/jsr107-conformance.md#native-extensions).
 
 ## Configuration and lifecycle
 
@@ -99,8 +103,8 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   `IllegalArgumentException`; a factory returning null is a separate initialization question.
   `isReadThrough()` alone selects the loading proxy after validation. See
   [configuration](../docs/jsr107-conformance.md#configuration).
-- `CacheProxy.copyOf` passes through NPE, ISE, CCE, and `CacheException`, wrapping other runtime
-  failures as `CacheException`. Loader copying retains `CacheLoaderException`. Do not copy live
+- `CacheProxy.copyOf` passes through NPE, ISE, CCE, and `CacheException`, wrapping any other
+  exception as `CacheException`. Loader copying retains `CacheLoaderException`. Do not copy live
   listener-configuration leaves or re-key registrations by the caller's custom `equals`. See
   [copying and listener configuration](../docs/jsr107-conformance.md#copying-and-listener-configuration).
 - In OSGi, creation/get paths temporarily use the manager's classloader as TCCL for

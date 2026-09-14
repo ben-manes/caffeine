@@ -479,6 +479,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
+  @SuppressWarnings("CatchingUnchecked")
   public void putAll(Map<? extends K, ? extends V> map) {
     requireOperable();
 
@@ -503,7 +504,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       } catch (CacheWriterException e) {
         failedKeys = entries.stream().map(Cache.Entry::getKey).collect(toSet());
         error = e;
-      } catch (RuntimeException e) {
+      } catch (Exception e) {
         failedKeys = entries.stream().map(Cache.Entry::getKey).collect(toSet());
         error = new CacheWriterException("Exception in CacheWriter", e);
       }
@@ -887,6 +888,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
+  @SuppressWarnings("CatchingUnchecked")
   public void removeAll(Set<? extends K> keys) {
     requireOperable();
     var keysToRemove = new LinkedHashSet<>(keys);
@@ -903,7 +905,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       } catch (CacheWriterException e) {
         error = e;
         failedKeys = keysToWrite;
-      } catch (RuntimeException e) {
+      } catch (Exception e) {
         error = new CacheWriterException("Exception in CacheWriter", e);
         failedKeys = keysToWrite;
       }
@@ -1333,6 +1335,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Performs the action with the cache writer if write-through is enabled. */
+  @SuppressWarnings("CatchingUnchecked")
   private <T> void publishToCacheWriter(Consumer<T> action, Supplier<T> data) {
     if (!configuration.isWriteThrough()) {
       return;
@@ -1341,7 +1344,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       action.accept(data.get());
     } catch (CacheWriterException e) {
       throw e;
-    } catch (RuntimeException e) {
+    } catch (Exception e) {
       throw new CacheWriterException("Exception in CacheWriter", e);
     }
   }
@@ -1368,13 +1371,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param <T> the type of object being copied
    * @return a copy of the object if storing by value or the same instance if by reference
    */
+  @SuppressWarnings("CatchingUnchecked")
   protected final <T> T copyOf(T object) {
     try {
       return requireNonNull(
           copier.copy(requireNonNull(object), requireNonNull(cacheManager.getClassLoader())));
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
       throw e;
-    } catch (RuntimeException e) {
+    } catch (Exception e) {
       throw new CacheException(e);
     }
   }
@@ -1403,10 +1407,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Returns the duration to expire an accessed entry after, or {@code null} if unchanged. */
+  @SuppressWarnings("CatchingUnchecked")
   protected final @Nullable Duration getAccessExpireTime() {
     try {
       return expiry.getExpiryForAccess();
-    } catch (RuntimeException e) {
+    } catch (Exception e) {
       logger.log(Level.WARNING, "Failed to get the policy's expiration time", e);
       return null;
     }
@@ -1467,6 +1472,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @return the time when the entry will expire, zero if it should expire immediately,
    *         Long.MIN_VALUE if it should not be changed, or Long.MAX_VALUE if eternal
    */
+  @SuppressWarnings("CatchingUnchecked")
   protected final long getWriteExpireTimeMillis(boolean created) {
     try {
       Duration duration = created ? expiry.getExpiryForCreation() : expiry.getExpiryForUpdate();
@@ -1481,7 +1487,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       return ((expireTimeMillis == 0L) || (expireTimeMillis == Long.MAX_VALUE))
           ? (expireTimeMillis - 1)
           : expireTimeMillis;
-    } catch (RuntimeException e) {
+    } catch (Exception e) {
       logger.log(Level.WARNING, "Failed to get the policy's expiration time", e);
       return created ? Long.MAX_VALUE : Long.MIN_VALUE;
     }
