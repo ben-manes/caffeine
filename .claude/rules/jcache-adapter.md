@@ -69,7 +69,8 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
 - Loader, writer, expiry-policy, and copier boundaries catch `Exception`, suppressing
   `CatchingUnchecked`: another JVM language can throw a checked exception through these
   interfaces undeclared, and it takes the runtime failure's path, so a partial batch write still
-  reconciles and expiry still falls back to its default.
+  reconciles and expiry still falls back to its default. An `InterruptedException` first restores
+  the thread's interrupt status, as core's `Caffeine.toUnchecked` does.
 
 ## Event dispatch and re-entry
 

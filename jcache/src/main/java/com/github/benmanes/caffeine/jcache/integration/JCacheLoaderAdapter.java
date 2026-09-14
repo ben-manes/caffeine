@@ -110,6 +110,7 @@ public final class JCacheLoaderAdapter<K, V>
     } catch (CacheLoaderException e) {
       throw e;
     } catch (Exception e) {
+      restoreInterrupt(e);
       throw new CacheLoaderException(e);
     }
   }
@@ -153,6 +154,7 @@ public final class JCacheLoaderAdapter<K, V>
     } catch (CacheLoaderException e) {
       throw e;
     } catch (Exception e) {
+      restoreInterrupt(e);
       throw new CacheLoaderException(e);
     }
   }
@@ -181,6 +183,7 @@ public final class JCacheLoaderAdapter<K, V>
     } catch (CacheLoaderException e) {
       throw e;
     } catch (Exception e) {
+      restoreInterrupt(e);
       throw new CacheLoaderException(e);
     }
   }
@@ -188,6 +191,13 @@ public final class JCacheLoaderAdapter<K, V>
   /** Returns a copy of the value if value-based caching is enabled. */
   private V copyOf(V value) {
     return requireNonNull(copier.copy(value, requireNonNull(cacheManager.getClassLoader())));
+  }
+
+  /** Restores the thread's interrupt status if the failure is an interruption. */
+  private static void restoreInterrupt(Throwable failure) {
+    if (failure instanceof InterruptedException) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   @SuppressWarnings("CatchingUnchecked")
@@ -205,6 +215,7 @@ public final class JCacheLoaderAdapter<K, V>
       long expireTime = duration.getAdjustedTime(millis);
       return ((expireTime == 0L) || (expireTime == Long.MAX_VALUE)) ? (expireTime - 1) : expireTime;
     } catch (Exception e) {
+      restoreInterrupt(e);
       logger.log(Level.WARNING, "Exception thrown by expiry policy", e);
       return created ? Long.MAX_VALUE : Long.MIN_VALUE;
     }

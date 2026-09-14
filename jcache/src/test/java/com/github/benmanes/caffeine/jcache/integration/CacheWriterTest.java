@@ -581,6 +581,28 @@ final class CacheWriterTest {
     }
   }
 
+  @ParameterizedTest
+  @MethodSource("updateOps")
+  void writeOp_writerInterrupted_restoresInterruptStatus(Consumer<Cache<Integer, Integer>> op) {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer);
+         var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      doAnswer(invocation -> { throw new InterruptedException(); }).when(writer).write(any());
+      doAnswer(invocation -> { throw new InterruptedException(); }).when(writer).writeAll(any());
+
+      // the writer's interruption is wrapped, so the thread's interrupt status must carry it
+      boolean interrupted;
+      try {
+        assertThrows(CacheException.class, () -> op.accept(cache));
+      } finally {
+        interrupted = Thread.interrupted();
+      }
+      assertThat(interrupted).isTrue();
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+    }
+  }
+
   /** A successful write-through update must still count the put after notifying the writer. */
   @ParameterizedTest
   @MethodSource("updateOps")

@@ -334,6 +334,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     } catch (CacheLoaderException e) {
       failure = e;
     } catch (Throwable t) {
+      restoreInterrupt(t);
       failure = new CacheLoaderException(t);
     }
     var loadFailure = failure;
@@ -508,6 +509,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         failedKeys = entries.stream().map(Cache.Entry::getKey).collect(toSet());
         error = e;
       } catch (Exception e) {
+        restoreInterrupt(e);
         failedKeys = entries.stream().map(Cache.Entry::getKey).collect(toSet());
         error = new CacheWriterException("Exception in CacheWriter", e);
       }
@@ -910,6 +912,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         error = e;
         failedKeys = keysToWrite;
       } catch (Exception e) {
+        restoreInterrupt(e);
         error = new CacheWriterException("Exception in CacheWriter", e);
         failedKeys = keysToWrite;
       }
@@ -1075,6 +1078,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       return (EntryProcessorException) e;
     }
     return new EntryProcessorException(e);
+  }
+
+  /** Restores the thread's interrupt status if the failure is an interruption. */
+  private static void restoreInterrupt(Throwable failure) {
+    if (failure instanceof InterruptedException) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**
@@ -1349,6 +1359,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     } catch (CacheWriterException e) {
       throw e;
     } catch (Exception e) {
+      restoreInterrupt(e);
       throw new CacheWriterException("Exception in CacheWriter", e);
     }
   }
@@ -1383,6 +1394,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
       throw e;
     } catch (Exception e) {
+      restoreInterrupt(e);
       throw new CacheException(e);
     }
   }
@@ -1416,6 +1428,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     try {
       return expiry.getExpiryForAccess();
     } catch (Exception e) {
+      restoreInterrupt(e);
       logger.log(Level.WARNING, "Failed to get the policy's expiration time", e);
       return null;
     }
@@ -1492,6 +1505,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           ? (expireTimeMillis - 1)
           : expireTimeMillis;
     } catch (Exception e) {
+      restoreInterrupt(e);
       logger.log(Level.WARNING, "Failed to get the policy's expiration time", e);
       return created ? Long.MAX_VALUE : Long.MIN_VALUE;
     }

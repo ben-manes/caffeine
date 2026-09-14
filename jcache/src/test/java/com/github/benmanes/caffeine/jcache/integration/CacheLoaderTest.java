@@ -273,6 +273,33 @@ final class CacheLoaderTest {
     }
   }
 
+  @ParameterizedTest @MethodSource("readOperations")
+  void readThrough_loaderInterrupted_restoresInterruptStatus(
+      Consumer<Cache<Integer, Integer>> operation, Set<Integer> keys) {
+    // An interrupted loader, as another JVM language throws it undeclared, leaves the caller's thread
+    // interrupted, as core's loading cache does when it converts the exception itself
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
+    when(cacheLoader.load(any())).thenAnswer(invocation -> { throw new InterruptedException(); });
+    when(cacheLoader.loadAll(anyIterable())).thenAnswer(invocation -> {
+      throw new InterruptedException();
+    });
+    try (var fixture = jcacheFixture(expiry, cacheLoader)) {
+      boolean interrupted;
+      try {
+        var error = assertThrows(CacheLoaderException.class,
+            () -> operation.accept(fixture.jcacheLoading()));
+        assertThat(error).hasCauseThat().isInstanceOf(InterruptedException.class);
+      } finally {
+        interrupted = Thread.interrupted();
+      }
+      assertThat(interrupted).isTrue();
+      for (int key : keys) {
+        assertThat(fixture.jcacheLoading().containsKey(key)).isFalse();
+      }
+    }
+  }
+
   @Test
   void refresh_publishesUpdatedNotCreated() {
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);

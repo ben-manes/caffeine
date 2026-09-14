@@ -173,11 +173,12 @@ collides with sentinel `0` or `Long.MAX_VALUE`. Pins:
 `CacheLoaderTest.load_adjustedTimeSentinelZero` / `load_adjustedTimeSentinelMax`.
 
 The millisecond deadlines and their sentinels (`0` expire-now, `Long.MIN_VALUE` unchanged) assume
-a ticker that neither reads below zero nor crosses the signed wrap, and durations far below
-`Long.MAX_VALUE` milliseconds; beyond that the custom ticker is responsible, as in core's
-coarse-ticker ruling. A lazy expiry configured below a millisecond cannot be honoured:
-`TypesafeConfigurator` reads it in milliseconds, so it becomes `Duration.ZERO`, and
-`Duration.getAdjustedTime` truncates an exact sub-millisecond duration to a deadline of now.
+a clock that neither reads below zero nor crosses the signed wrap, and durations far below
+`Long.MAX_VALUE` milliseconds. These boundaries are accepted without a fix. The recorded witnesses
+used custom boundary tickers; `System.nanoTime` documents that its values may be negative, so the
+system ticker can also read below zero, at a frequency that is unmeasured. JCache cannot express a
+lazy expiry below a millisecond: `Duration` rejects smaller units, and `TypesafeConfigurator` reads
+a configured duration in milliseconds, so a smaller one becomes `Duration.ZERO`.
 
 ### Access expiry
 
@@ -406,6 +407,12 @@ exception thrown undeclared by another JVM language. Pins:
 Hazelcast, Infinispan, and cache2k catch `Exception` or `Throwable` around loader and writer calls
 (Ehcache and cache2k in their cores), while Coherence's `writeAll` and `deleteAll` catch only
 `RuntimeException`.
+
+Converting or defaulting a callback's `InterruptedException` first restores the thread's interrupt
+status, as core's `Caffeine.toUnchecked` does, since the wrapper or the default would otherwise hide
+the interruption. Pins: `CacheLoaderTest.readThrough_loaderInterrupted_restoresInterruptStatus`,
+`CacheWriterTest.writeOp_writerInterrupted_restoresInterruptStatus`, and
+`CacheProxyTest.put_expiryInterrupted_restoresInterruptStatus`.
 
 The batch exemption does not permit writes the adapter later refuses because copying failed.
 Copy all putAll keys/values before writeAll and reuse `CopiedEntry` in the store loop. A copier

@@ -1381,6 +1381,28 @@ final class CacheProxyTest {
   }
 
   @Test
+  void put_expiryInterrupted_restoresInterruptStatus() {
+    // An interrupted expiry policy falls back to the default duration without failing the put, so
+    // the thread's interrupt status is the only trace of the interruption
+    ExpiryPolicy expiry = Mockito.mock();
+    when(expiry.getExpiryForCreation()).thenAnswer(invocation -> {
+      throw new InterruptedException();
+    });
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> config.setExpiryPolicyFactory(() -> expiry))
+        .build()) {
+      boolean interrupted;
+      try {
+        fixture.jcache().put(KEY_1, VALUE_1);
+      } finally {
+        interrupted = Thread.interrupted();
+      }
+      assertThat(interrupted).isTrue();
+      assertThat(fixture.jcache().get(KEY_1)).isEqualTo(VALUE_1);
+    }
+  }
+
+  @Test
   void getWriteExpireTimeMillis_adjustedTimeSentinelZero() throws IOException {
     try (CloseableExpiryPolicy expiry = Mockito.mock();
         var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry)) {
