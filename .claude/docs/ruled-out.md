@@ -329,6 +329,8 @@ These dispose of whole families. Check them first.
   policy's weight under `evictionLock` while writers publish values under the node's monitor, so
   a concurrent update can hand `coldestWeighted`/`hottestWeighted` a stale weight. It is a
   best-effort view of what the policy sees; synchronizing every node to pair them was declined.
+  The same replay can hold a weight no entry has, which the snapshot clamps into the `int` range: a
+  negative transient reads as 0, and an over-count such as `2W - w` stays within this ruling.
 - Message-less `requireArgument` on public API.
 
 **Notifications**

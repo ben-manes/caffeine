@@ -38,6 +38,7 @@ import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.TRACE;
@@ -54,9 +55,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.params.ParameterizedTest;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
@@ -1449,6 +1452,28 @@ final class EvictionTest {
     assertThat(coldest).containsExactlyEntriesIn(context.original());
   }
 
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC, maximumSize = Maximum.ONE_FIFTY, weigher = CacheWeigher.VALUE,
+      removalListener = Listener.MOCKITO, executor = CacheExecutor.DIRECT)
+  void coldestWeighted_reorderedUpdates(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var coldest = snapshotWhileReplayingWeight(cache, context, 1, 100, 1,
+        () -> eviction.coldestWeighted(eviction.getMaximum()));
+    assertThat(coldest).containsExactlyEntriesIn(cache.asMap());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC, maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE,
+      removalListener = Listener.MOCKITO, executor = CacheExecutor.DIRECT)
+  void coldestWeighted_reorderedUpdates_beyondIntRange(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var coldest = snapshotWhileReplayingWeight(cache, context,
+        Integer.MAX_VALUE, 1, Integer.MAX_VALUE, () -> eviction.coldestWeighted(Integer.MAX_VALUE));
+    assertThat(coldest).containsExactlyEntriesIn(cache.asMap());
+  }
+
   /* --------------- Policy: Hottest --------------- */
 
   @ParameterizedTest
@@ -1663,5 +1688,63 @@ final class EvictionTest {
     keys.remove(context.lastKey());
     coldest.remove(context.lastKey());
     assertThat(coldest).containsExactlyElementsIn(keys).inOrder();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC, maximumSize = Maximum.ONE_FIFTY, weigher = CacheWeigher.VALUE,
+      removalListener = Listener.MOCKITO, executor = CacheExecutor.DIRECT)
+  void hottestWeighted_reorderedUpdates(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var hottest = snapshotWhileReplayingWeight(cache, context, 1, 100, 1,
+        () -> eviction.hottestWeighted(eviction.getMaximum()));
+    assertThat(hottest).containsExactlyEntriesIn(cache.asMap());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC, maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE,
+      removalListener = Listener.MOCKITO, executor = CacheExecutor.DIRECT)
+  void hottestWeighted_reorderedUpdates_beyondIntRange(Cache<Int, Int> cache,
+      CacheContext context, Eviction<Int, Int> eviction) {
+    var hottest = snapshotWhileReplayingWeight(cache, context,
+        Integer.MAX_VALUE, 1, Integer.MAX_VALUE, () -> eviction.hottestWeighted(Integer.MAX_VALUE));
+    assertThat(hottest).containsExactlyEntriesIn(cache.asMap());
+  }
+
+  /**
+   * Returns the snapshot taken while an entry's policy weight is one that none of its values
+   * weighs. A writer replacing the {@code first} value with {@code parked} is parked by the removal
+   * listener before it queues its weight change, so the policy applies the change to {@code next}
+   * first.
+   */
+  private static Map<Int, Int> snapshotWhileReplayingWeight(Cache<Int, Int> cache,
+      CacheContext context, int first, int parked, int next, Supplier<Map<Int, Int>> snapshot) {
+    Int key = context.absentKey();
+    Int firstValue = intern(Int.valueOf(first));
+    Int parkedValue = intern(Int.valueOf(parked));
+    Int nextValue = intern(Int.valueOf(next));
+    cache.put(key, firstValue);
+
+    var park = new AtomicBoolean(true);
+    var arrived = new AtomicBoolean();
+    var release = new AtomicBoolean();
+    doAnswer(invocation -> {
+      if (park.compareAndSet(true, false)) {
+        arrived.set(true);
+        await().untilTrue(release);
+      }
+      return null;
+    }).when(context.removalListener()).onRemoval(any(), any(), any());
+
+    var writer = CompletableFuture.runAsync(() -> cache.put(key, parkedValue), executor);
+    await().untilTrue(arrived);
+    cache.put(key, nextValue);
+    try {
+      return snapshot.get();
+    } finally {
+      release.set(true);
+      writer.join();
+    }
   }
 }

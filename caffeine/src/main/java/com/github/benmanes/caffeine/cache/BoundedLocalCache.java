@@ -3484,6 +3484,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param mappingFunction the mapping function to compute a value
    * @return the computed value
    */
+  @SuppressWarnings("MathClampLong")
   <T extends @Nullable Object> T snapshot(Iterable<Node<K, V>> iterable,
       Function<@Nullable V, @Nullable V> transformer,
       Function<Stream<CacheEntry<K, V>>, T> mappingFunction) {
@@ -3501,7 +3502,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         boolean[] open = { true };
         return mappingFunction.apply(stream.onClose(() -> open[0] = false)
             .peek(ignored -> requireState(open[0], "stream has already been closed"))
-            .map(node -> nodeToCacheEntry(node, transformer, (int) node.getPolicyWeight()))
+            .map(node -> nodeToCacheEntry(node, transformer,
+                (int) Math.max(0L, Math.min(node.getPolicyWeight(), Integer.MAX_VALUE))))
             .filter(Objects::nonNull));
       }
     } finally {
