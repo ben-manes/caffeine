@@ -725,9 +725,12 @@ checked exception included, is notified after its committed entries' synchronous
 a listener failure suppressed onto the load's. Do not move it to an untracked continuation or
 join the chain in the load body: a single-thread executor must be released to run the listener
 dispatch. A stuck listener can exhaust the timeout, reported as TimeoutException. The bounded
-await does not promise that timed-out work has stopped. Pins:
-`CacheProxyTest.loadAll_loaderFailure_notifiesListener` and
-`loadAll_storeFailsMidway_notifiesAfterSynchronousListeners`.
+await does not promise that timed-out work has stopped. `close()` sets the closed flag and
+deregisters under the configuration monitor, which admission and registration also check, and
+awaits outside it; an awaited listener that reads the configuration would otherwise wait out the
+timeout. Pins: `CacheProxyTest.loadAll_loaderFailure_notifiesListener`,
+`loadAll_storeFailsMidway_notifiesAfterSynchronousListeners`, and
+`close_awaitsListenerReadingConfiguration`.
 
 Native background refresh is best-effort and is not added to inFlight or awaited through
 `policy().refreshes()`. Blocking close on arbitrary user-executor refresh work was rejected.

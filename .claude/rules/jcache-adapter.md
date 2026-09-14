@@ -123,7 +123,8 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   and retirement stay in `loadAll`. Compose every outcome, a failed load included, with
   `chainSynchronous()`; never join it on the load executor. Do not add native refreshes to the
   barrier. Closed-cache event suppression uses dispatch's `isClosed()` check independently of the
-  bounded await. See [lifecycle](../docs/jsr107-conformance.md#lifecycle).
+  bounded await, which `close()` runs outside the configuration monitor after setting the closed
+  flag under it. See [lifecycle](../docs/jsr107-conformance.md#lifecycle).
 
 ## Validation
 

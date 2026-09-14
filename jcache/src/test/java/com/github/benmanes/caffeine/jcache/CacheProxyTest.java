@@ -1755,6 +1755,51 @@ final class CacheProxyTest {
 
   @Test
   @SuppressFBWarnings("HES_LOCAL_EXECUTOR_SERVICE")
+  void close_awaitsListenerReadingConfiguration() throws InterruptedException {
+    @SuppressWarnings("PMD.CloseResource")
+    var executor = Executors.newSingleThreadExecutor();
+    var cacheRef = new AtomicReference<Cache<Integer, Integer>>();
+    var listenerEntered = new CountDownLatch(1);
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      listenerEntered.countDown();
+      var cache = requireNonNull(cacheRef.get());
+      await().until(cache::isClosed);
+      @SuppressWarnings("unchecked")
+      var configuration = cache.getConfiguration(Configuration.class);
+      assertThat(configuration).isNotNull();
+    };
+    var listenerNotified = new AtomicBoolean();
+    var completionListener = new CompletionListener() {
+      @Override public void onCompletion() {
+        listenerNotified.set(true);
+      }
+      @Override public void onException(Exception e) { /* unused */ }
+    };
+    var listenerConfig = new MutableCacheEntryListenerConfiguration<>(
+        /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+    try {
+      try (var fixture = JCacheFixture.builder()
+          .configure(config -> {
+            config.setExecutorFactory(() -> executor);
+            config.addCacheEntryListenerConfiguration(listenerConfig);
+          }).build()) {
+        var cache = fixture.jcacheLoading();
+        cacheRef.set(cache);
+        cache.loadAll(Set.of(KEY_1), /* replaceExistingValues= */ false, completionListener);
+        listenerEntered.await();
+
+        // close waits for the load's listener, which reads the configuration once it sees closure
+        assertTimeoutPreemptively(java.time.Duration.ofSeconds(5), cache::close);
+        assertThat(listenerNotified.get()).isTrue();
+      }
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  @Test
+  @SuppressFBWarnings("HES_LOCAL_EXECUTOR_SERVICE")
   void getAll_awaitsSynchronousListeners() throws InterruptedException, ExecutionException {
     @SuppressWarnings("PMD.CloseResource")
     var executor = Executors.newSingleThreadExecutor();

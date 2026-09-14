@@ -1189,28 +1189,29 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     if (isClosed()) {
       return;
     }
+    @Var Throwable thrown = null;
     synchronized (configuration) {
-      if (!isClosed()) {
-        @Var Throwable thrown = null;
-        thrown = tryClose((AutoCloseable) () -> enableManagement(false), thrown);
-        thrown = tryClose((AutoCloseable) () -> enableStatistics(false), thrown);
-
-        closed = true;
-        try {
-          cacheManager.destroyCache(name, this);
-        } catch (IllegalStateException ignored) { /* manager already closed */ }
-
-        thrown = shutdownExecutor(thrown);
-        thrown = tryClose(expiry, thrown);
-        thrown = tryClose(writer, thrown);
-        thrown = tryClose(cacheLoader.orElse(null), thrown);
-        for (Registration<K, V> registration : dispatcher.registrations()) {
-          thrown = tryClose(registration.getCacheEntryListener(), thrown);
-        }
-        if (thrown != null) {
-          logger.log(Level.WARNING, "Failure when closing cache resources", thrown);
-        }
+      if (isClosed()) {
+        return;
       }
+      thrown = tryClose((AutoCloseable) () -> enableManagement(false), thrown);
+      thrown = tryClose((AutoCloseable) () -> enableStatistics(false), thrown);
+
+      closed = true;
+      try {
+        cacheManager.destroyCache(name, this);
+      } catch (IllegalStateException ignored) { /* manager already closed */ }
+    }
+
+    thrown = shutdownExecutor(thrown);
+    thrown = tryClose(expiry, thrown);
+    thrown = tryClose(writer, thrown);
+    thrown = tryClose(cacheLoader.orElse(null), thrown);
+    for (Registration<K, V> registration : dispatcher.registrations()) {
+      thrown = tryClose(registration.getCacheEntryListener(), thrown);
+    }
+    if (thrown != null) {
+      logger.log(Level.WARNING, "Failure when closing cache resources", thrown);
     }
     dispatcher.beginComputation();
     try {
