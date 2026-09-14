@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
+import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.CompleteConfiguration;
@@ -48,6 +49,7 @@ import com.github.benmanes.caffeine.jcache.integration.JCacheLoaderAdapter;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
 
 /**
  * A factory for creating a cache from the configuration.
@@ -101,8 +103,13 @@ final class CacheFactory {
 
   /** Returns the resolved configuration. */
   private static Config rootConfig(CacheManager cacheManager) {
-    return requireNonNull(TypesafeConfigurator.configSource().get(
-        cacheManager.getURI(), cacheManager.getClassLoader()));
+    try {
+      return requireNonNull(TypesafeConfigurator.configSource().get(
+          cacheManager.getURI(), cacheManager.getClassLoader()));
+    } catch (ConfigException e) {
+      throw new CacheException(
+          "Failed to load the configuration from " + cacheManager.getURI(), e);
+    }
   }
 
   /** Copies the configuration and overlays it on top of the default settings. */

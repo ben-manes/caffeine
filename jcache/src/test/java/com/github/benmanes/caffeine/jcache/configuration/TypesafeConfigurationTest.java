@@ -505,4 +505,22 @@ final class TypesafeConfigurationTest {
     assertThat(error).hasCauseThat().isInstanceOf(ConfigException.class);
     assertThat(error).hasMessageThat().contains("malformed");
   }
+
+  @Test
+  void defaults_malformedSetting() {
+    var config = ConfigFactory
+        .parseString("caffeine.jcache.default.policy.maximum.size = abc")
+        .withFallback(ConfigFactory.load());
+
+    var error = assertThrows(CacheException.class, () -> TypesafeConfigurator.defaults(config));
+    assertThat(error).hasCauseThat().isInstanceOf(ConfigException.class);
+  }
+
+  @Test
+  void cacheNames_malformed() {
+    var config = ConfigFactory.parseString("caffeine.jcache = 1");
+
+    var error = assertThrows(CacheException.class, () -> TypesafeConfigurator.cacheNames(config));
+    assertThat(error).hasCauseThat().isInstanceOf(ConfigException.class);
+  }
 }

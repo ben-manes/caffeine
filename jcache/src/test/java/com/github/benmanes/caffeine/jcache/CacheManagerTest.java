@@ -256,6 +256,20 @@ final class CacheManagerTest {
   }
 
   @Test
+  void getCache_unreadableConfiguration_throwsCacheException() {
+    // A configuration file that cannot be read is reported as a configuration failure through the
+    // cache API, as a malformed setting within a readable file is
+    try (var fixture = JCacheFixture.builder().build()) {
+      @SuppressWarnings("PMD.CloseResource")
+      var cacheManager = fixture.cachingProvider().getCacheManager(
+          URI.create("file:/absent.conf"), fixture.cachingProvider().getDefaultClassLoader());
+      assertThrows(CacheException.class, () -> cacheManager.getCache("absent"));
+      assertThrows(CacheException.class,
+          () -> cacheManager.createCache("absent", new MutableConfiguration<>()));
+    }
+  }
+
+  @Test
   @SuppressLint("THREAD_SAFETY_VIOLATION")
   void isClosed() throws IllegalAccessException, InterruptedException, ExecutionException {
     try (var fixture = JCacheFixture.builder().build()) {

@@ -85,12 +85,16 @@ public final class TypesafeConfigurator {
    * @return the names of the configured caches
    */
   public static Set<String> cacheNames(Config config) {
-    if (!config.hasPath("caffeine.jcache")) {
-      return Collections.emptySet();
+    try {
+      if (!config.hasPath("caffeine.jcache")) {
+        return Collections.emptySet();
+      }
+      var names = new LinkedHashSet<>(config.getObject("caffeine.jcache").keySet());
+      names.removeAll(RESERVED_NAMES);
+      return Collections.unmodifiableSet(names);
+    } catch (ConfigException e) {
+      throw new CacheException("Failed to load the configured cache names", e);
     }
-    var names = new LinkedHashSet<>(config.getObject("caffeine.jcache").keySet());
-    names.removeAll(RESERVED_NAMES);
-    return Collections.unmodifiableSet(names);
   }
 
   /**
@@ -102,7 +106,11 @@ public final class TypesafeConfigurator {
    * @return the default configuration for a cache
    */
   public static <K, V> CaffeineConfiguration<K, V> defaults(Config config) {
-    return new Configurator<K, V>(config, "default").configure();
+    try {
+      return new Configurator<K, V>(config, "default").configure();
+    } catch (ConfigException e) {
+      throw new CacheException("Failed to load the default cache configuration", e);
+    }
   }
 
   /**
