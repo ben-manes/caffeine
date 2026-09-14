@@ -535,6 +535,10 @@ nonnull argument; nullable prior-value returns guard it explicitly. Loader copyi
 contextual `CacheLoaderException`, including the TCK-required wrapping. Pin:
 `CacheProxyTest.copierFailure_wrappedInCacheException`.
 
+A replacement copies its new value only once the entry is known to be present, as `replace(K,V,V)`
+does, so `replace(K,V)` and `getAndReplace` on an absent key return `false` or `null` without
+copying. Pin: `CacheProxyTest.replace_absent_copierFails_isNoOp`.
+
 `JavaSerializationCopier` reports nonserializable values as CacheException, matching its
 deserialize path and the cache API. Do not restore `UncheckedIOException` or follow the RI's
 serialize-side `IllegalArgumentException`; cache2k uses CacheException, while Hazelcast also

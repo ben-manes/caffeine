@@ -2050,6 +2050,29 @@ final class CacheProxyTest {
   }
 
   @Test
+  void replace_absent_copierFails_isNoOp() {
+    // An absent key is not replaced, so the new value is not copied and cannot fail the operation
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        if (object.equals(VALUE_1)) {
+          throw new IllegalArgumentException("copy failed");
+        }
+        return object;
+      }
+    };
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setStoreByValue(true);
+          config.setCopierFactory(() -> copier);
+        }).build();
+        var cache = fixture.jcache()) {
+      assertThat(cache.replace(KEY_1, VALUE_2, VALUE_1)).isFalse();
+      assertThat(cache.replace(KEY_1, VALUE_1)).isFalse();
+      assertThat(cache.getAndReplace(KEY_1, VALUE_1)).isNull();
+    }
+  }
+
+  @Test
   void invoke_created_copierThrows_doesNotWriteThrough() throws IOException {
     var copier = new Copier() {
       @Override public <T> T copy(T object, ClassLoader classLoader) {

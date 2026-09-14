@@ -863,7 +863,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @return the old value
    */
   private @Nullable V replaceNoCopyOrAwait(K key, V value) {
-    V copy = copyOf(value);
+    requireNonNull(value);
     @SuppressWarnings("unchecked")
     var replaced = (V[]) new Object[1];
     dispatcher.beginComputation();
@@ -875,6 +875,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           return null;
         }
 
+        V copy = copyOf(value);
         publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, value));
         @Var long expireTimeMillis = getWriteExpireTimeMillis(/* created= */ false);
         if (expireTimeMillis == Long.MIN_VALUE) {
