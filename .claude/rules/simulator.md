@@ -51,12 +51,16 @@ two routinely mixed characteristics justify it.
   warnings were reverted as excessive export machinery. Revisit only for a concrete need.
 - **Recognized but undecodable containers must fail.** Probes try xz, commons-compress
   compressors, then archivers, rewinding on format misses before falling back to raw bytes.
-  Swallow only format-miss exceptions: `XZFormatException` and `EOFException` for xz;
-  `StreamingNotSupportedException` is set aside for archive handling. Other failures escape.
-  Raw binary readers accept arbitrary bytes, so swallowing decode errors fabricates events
-  (previous witnesses: corrupt xz became two corda events; valid 7z became 71).
-  The xz EOF exception is necessary for eight-byte, one-event traces because probing reads a
-  twelve-byte header; an xz-magic-only file consequently still falls through to raw.
+  Swallow only format-miss exceptions: `XZFormatException` and `EOFException` for xz; a `detect`
+  miss (a `CompressorException` without a cause) and an `EOFException` cause while constructing a
+  compressor; `StreamingNotSupportedException` is set aside for archive handling. Other failures
+  escape. Raw binary readers accept arbitrary bytes, so swallowing decode errors fabricates events
+  (previous witnesses: corrupt xz became two corda events; valid 7z became 71; a gzip magic with
+  a bad header became raw keys). The EOF exceptions keep traces shorter than a probed header
+  readable: xz reads twelve bytes, so an eight-byte, one-event trace needs it, and an
+  xz-magic-only file consequently still falls through to raw. The price of failing loudly is that
+  a raw trace whose first bytes match a compressor signature but not its header, such as a first
+  key beginning `1f 8b 00`, is rejected; compress it to read it.
 - **Text decoding preserves byte identity.** ISO-8859-1 maps each byte to a distinct character,
   preserving real Latin-1 traces and avoiding malformed-UTF-8 aliases through U+FFFD for keys
   derived from fields such as MSR hostnames or Baleen shards. Parsing/filtering uses ASCII.

@@ -447,7 +447,9 @@ Read `jsr107-conformance.md`'s topic sections with this section.
 
 The simulator is a testing tool. Its correctness matters only to avoid misleading benchmark
 claims, not user harm. Weight effort toward the core and the adapters; sibling-divergence is
-the one lens that stays productive here.
+the one lens that stays productive here. A mechanism that no bundled trace, default run, or
+reported issue reaches is won't-do until one does, however cleanly it reproduces. A loud abort
+takes no number with it, so it waits for a report too.
 
 - Approximate and lossy policies are intentional. `membership.bloom.FastFilter` is opt-in.
 - `product.*` policies inheriting third-party libraries' wall-clock expiry defaults.
@@ -461,6 +463,12 @@ the one lens that stays productive here.
   input for a penalty-aware policy.
 - Synthetic workloads being unseeded, so `random-seed` does not cover them.
 - Dedup-of-duplicates in ClockPro is author-sanctioned (confirmed with Song Jiang).
+- A multi-member gzip or bzip2 trace (`pbzip2`, `bgzip`, `cat`) reading only its first member, and
+  a truncated gzip or xz trace of 4- or 8-byte records ending at a 64 KiB buffer boundary without an
+  error. Neither has a use case; revisit when a real trace needs one.
+- The TinyCache policies, Gil Einziger's contribution, are kept as contributed: neither repaired
+  nor removed. That includes building `ceil(maximumSize / 64)` sets of 64 entries, so a cell runs
+  at the next multiple of 64.
 
 ---
 
@@ -468,6 +476,10 @@ the one lens that stays productive here.
 
 - The RxJava and Reactor examples having no backpressure or an unbounded buffer under a slow
   sink.
+- `IndexedCache` enforcing unique secondary keys only sequentially: two values sharing a unique key
+  are user error. Its alias lookups and `invalidate` read two maps under no shared lock, so a
+  concurrent same-primary key change can briefly return or remove the entity through the alias it
+  just left; an exact check would run every indexer on each hit.
 
 Examples otherwise hold the full quality bar, including unhappy-path test coverage.
 

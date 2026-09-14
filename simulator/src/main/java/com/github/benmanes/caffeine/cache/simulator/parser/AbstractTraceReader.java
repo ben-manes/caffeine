@@ -115,10 +115,22 @@ public abstract class AbstractTraceReader implements TraceReader {
 
   /** Returns an uncompressed stream, else {@code null}. */
   private static @Nullable InputStream tryCompressed(InputStream input) {
+    String format;
     try {
-      return new CompressorStreamFactory().createCompressorInputStream(input);
-    } catch (CompressorException _) {
-      return null;
+      format = CompressorStreamFactory.detect(input);
+    } catch (CompressorException e) {
+      if (e.getCause() == null) {
+        return null;
+      }
+      throw new UncheckedIOException(e);
+    }
+    try {
+      return new CompressorStreamFactory().createCompressorInputStream(format, input);
+    } catch (CompressorException e) {
+      if (e.getCause() instanceof EOFException) {
+        return null;
+      }
+      throw new UncheckedIOException("Could not decode the " + format + " stream", e);
     }
   }
 

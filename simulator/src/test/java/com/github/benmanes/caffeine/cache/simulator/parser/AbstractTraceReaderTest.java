@@ -62,6 +62,13 @@ final class AbstractTraceReaderTest {
   }
 
   @Test
+  void trace_gzip_corrupt(@TempDir Path dir) {
+    var corrupt = ByteBuffer.allocate(16).put(new byte[] {0x1f, (byte) 0x8b}).array();
+    var thrown = assertThrows(UncheckedIOException.class, () -> read(dir, corrupt));
+    assertThat(thrown).hasMessageThat().contains("gz");
+  }
+
+  @Test
   void trace_raw(@TempDir Path dir) throws IOException {
     // Shorter than an xz header, so the decoder cannot rule the format out on its own
     assertThat(read(dir, longs(10))).asList().containsExactly(10L);
