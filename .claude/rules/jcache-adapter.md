@@ -36,9 +36,10 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   Forward an explicitly null varargs array unchanged.
 - `invoke` reconciles a lazily expired prior **before** the processor: publish EXPIRED, count
   eviction, and present absence. If the processor or writer throws any `Throwable`, commit that
-  expiry removal, await its synchronous listener, then rethrow via `processorFailure`: `Error`
-  unchanged, other failures as `EntryProcessorException`. `postProcess` stays expiry-free;
-  READ/UPDATED imply a live prior. See [entry processors](../docs/jsr107-conformance.md#entry-processors).
+  expiry removal, await its synchronous listener, then rethrow via `processorFailure` with the
+  listener's failure suppressed: `Error` unchanged, other failures as `EntryProcessorException`.
+  `postProcess` stays expiry-free; READ/UPDATED imply a live prior. See
+  [entry processors](../docs/jsr107-conformance.md#entry-processors).
 - Query operations returning the same wrapper still count as native writes. Their interaction
   with vendor refresh/native TTL settings is accepted; do not expose a public no-op hint or
   split an atomic operation to avoid it. See [native extensions](../docs/jsr107-conformance.md#native-extensions).

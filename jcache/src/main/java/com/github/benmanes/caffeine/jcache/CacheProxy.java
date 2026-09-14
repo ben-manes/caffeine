@@ -1028,11 +1028,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
     var listenerFailure = awaitSynchronousFailure();
     if (failure[0] != null) {
-      var error = processorFailure(failure[0]);
+      var error = (failure[0] instanceof Error) ? failure[0] : processorFailure(failure[0]);
       if (listenerFailure != null) {
         error.addSuppressed(listenerFailure);
       }
-      throw error;
+      throw processorFailure(error);
     }
     rethrowListenerFailure(listenerFailure);
 

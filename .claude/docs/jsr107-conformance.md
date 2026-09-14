@@ -257,9 +257,12 @@ pin the miss/no-put behavior with `CacheProxyTest.invoke_readThroughLoad_records
 `invoke` reconciles a lazily expired prior before the processor: publish EXPIRED, count eviction,
 and expose absence. If the processor or writer then throws any `Throwable`, commit removal of
 that expired prior, await its synchronous listener, and rethrow after compute via
-`processorFailure` (`Error` unchanged; other failures as `EntryProcessorException`). Otherwise
-the already-published expiry would be orphaned and could fire again. `postProcess` is expiry-free;
-READ/UPDATED require a live prior, so do not re-read the clock or restore an expiry check there.
+`processorFailure` (`Error` unchanged; other failures as `EntryProcessorException`), with a
+listener failure suppressed onto either. Otherwise the already-published expiry would be orphaned
+and could fire again. `postProcess` is expiry-free; READ/UPDATED require a live prior, so do not
+re-read the clock or restore an expiry check there. Pins:
+`EventDispatcherTest.invoke_expiredAndProcessorThrows_retainsListenerFailure` and
+`invoke_expiredAndProcessorThrowsError_retainsListenerFailure`.
 
 Failures inside processor invocation, including write-through, are wrapped in
 `EntryProcessorException`; the spec's “Exceptions in EntryProcessors” section includes failures

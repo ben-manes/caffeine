@@ -884,6 +884,33 @@ final class EventDispatcherTest {
   }
 
   @Test
+  void invoke_expiredAndProcessorThrowsError_retainsListenerFailure() {
+    var listenerFailure = new IllegalStateException("listener");
+    var processorFailure = new AssertionError("processor");
+    CacheEntryExpiredListener<Integer, Integer> listener = events -> {
+      throw listenerFailure;
+    };
+    var jcacheFixture = syncListenerFixture(listener, config -> {
+      config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(Duration.ONE_MINUTE));
+      config.setExpireAfterWrite(OptionalLong.of(TimeUnit.HOURS.toNanos(1)));
+    });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      fixture.ticker().advance(java.time.Duration.ofMinutes(2));
+
+      // an Error propagates unchanged and, like a wrapped failure, retains the listener's
+      var e = assertThrows(AssertionError.class, () ->
+          cache.invoke(KEY_1, (entry, arguments) -> {
+            throw processorFailure;
+          }));
+      assertThat(e).isSameInstanceAs(processorFailure);
+      assertThat(e.getSuppressed()).hasLength(1);
+      assertThat(e.getSuppressed()[0]).hasCauseThat().isSameInstanceAs(listenerFailure);
+    }
+  }
+
+  @Test
   void getAll_copierThrows_retainsPrimaryFailure() {
     // An expired entry publishes EXPIRED to a failing synchronous listener while copying the
     // surviving entries fails. The copier's failure is the caller's, with the listener's retained
