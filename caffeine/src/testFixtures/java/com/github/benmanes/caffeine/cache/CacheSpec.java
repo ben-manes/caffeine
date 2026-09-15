@@ -799,7 +799,7 @@ public @interface CacheSpec {
     DEFAULT(() -> null), // fork-join common pool
     // Cache implementations must avoid deadlocks by incorrectly assuming async execution
     DIRECT(() -> new TrackingExecutor(MoreExecutors.newDirectExecutorService())),
-    // Cache implementations must continue to evict if the maintenance task is lost
+    // Cache implementations must continue to evict on writes if the maintenance task is lost
     DISCARDING(() -> new TrackingExecutor(TestingExecutors.noOpScheduledExecutor())),
     // Use with caution as may be unpredictable during tests if awaiting completion
     THREADED(() -> new TrackingExecutor(ConcurrentTestHarness.executor)),

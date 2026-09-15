@@ -1142,7 +1142,7 @@ final class AsMapTest {
   @CacheSpec
   @CheckNoStats
   @ParameterizedTest
-  void replaceAll_sameValue(Map<Int, Int> map, CacheContext context) {
+  void replaceAll_sameInstance(Map<Int, Int> map, CacheContext context) {
     map.replaceAll((key, value) -> value);
     assertThat(map).containsExactlyEntriesIn(context.original());
 

@@ -1288,7 +1288,7 @@ final class WindowClimber {
     static final int VETO_RETURN_BUDGET = 8;
     /** The settling samples at the anchor before its reference rate is retested. */
     static final int RETEST_SETTLE = 2;
-    /** The consecutive shortfall samples that sustain a guard-rail veto. */
+    /** The shortfall samples that sustain a guard-rail veto. */
     static final int VETO_STREAK = 4;
 
     int shortfallStreak;

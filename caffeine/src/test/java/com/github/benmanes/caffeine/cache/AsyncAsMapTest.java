@@ -1153,7 +1153,7 @@ final class AsyncAsMapTest {
 
   @CacheSpec
   @ParameterizedTest
-  void replaceAll_sameValue(AsyncCache<Int, Int> cache, CacheContext context) {
+  void replaceAll_sameInstance(AsyncCache<Int, Int> cache, CacheContext context) {
     cache.asMap().replaceAll((key, value) -> value);
     assertThat(cache).containsExactlyEntriesIn(context.original());
     assertThat(context).removalNotifications().isEmpty();

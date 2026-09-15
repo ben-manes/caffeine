@@ -144,7 +144,9 @@ These dispose of whole families. Check them first.
   `drainTo` leaving the slot nulled before `consumer.accept` stalls `readCounter` on a
   consumer throw.
 - Neither write-buffer consumer waiting for a producer's publication (`relaxedPoll`). The
-  task is not stranded: `scheduleAfterWrite` runs after `offer` returns and re-arms.
+  task is not lost: `scheduleAfterWrite` runs after `offer` returns and re-arms. Where a
+  weak-memory interleaving defeats that re-arm (the IDLE strand below), the task waits in the
+  buffer for the next write, `cleanUp`, or a read that fills a stripe.
 - `clear()`'s write-buffer drain loop being unbounded under `evictionLock`.
 - The write buffer's backpressure is a capacity limit, not a CAS.
 - The constructor's read-buffer and access-policy conditions not naming `expiresVariable()`.
@@ -190,10 +192,11 @@ These dispose of whole families. Check them first.
 - `TimerWheel.Traverser` detecting concurrent modification via `nanos` rather than a
   `modCount`, unlike the deque-backed `Policy` families. The "spins forever holding
   `evictionLock`" consequence is a frozen-ticker artifact: `advance()` sets
-  `nanos = currentTimeNanos` unconditionally, so under `systemTicker` any re-entrant
-  operation reaching maintenance throws CME. Only `clear()` does not, and its result is a
-  truncated snapshot, which is the weakly-consistent contract `Policy`'s javadoc already
-  documents.
+  `nanos = currentTimeNanos` unconditionally, so under `systemTicker` a re-entrant operation
+  reaching maintenance throws CME. Two do not: `clear()`, whose result is a truncated snapshot,
+  and one whose maintenance cycle exhausts the expiration budget, since the rewind restores the
+  `nanos` the traverser captured. Both results fall within the best-effort view the `Policy`
+  snapshot entry under *Views, iteration, and the Map contract* accepts.
 - `TimerWheel.expire()`'s catch block holding a stale `prev` pointer.
 
 **Node lifecycle and access modes**
@@ -221,6 +224,10 @@ These dispose of whole families. Check them first.
   loader's result is a `Map` too: the asynchronous `getAll` snapshots it with `Map.copyOf`, which
   rejects an `IdentityHashMap` holding equal-but-distinct keys under either key strength, so that
   load fails loudly while the synchronous path, which iterates without a snapshot, stores both.
+  Loaded entries are stored as returned, as Guava's `getAll` stores them: a requested hit the
+  loader also returns comes back with its pre-load value while the loaded one replaces it (or is
+  evicted as oversized), and under `weakKeys()` a rebuilt key is a distinct entry, so an
+  over-delivered hit is duplicated and the synchronous path's requested key misses its own load.
 - Weak-key lookups allocating a `LookupKeyReference` (24 B/op). A thread-local mutable
   wrapper pins the instance to the thread, rejected in #294 for virtual threads and
   classloader pinning. Young-gen allocation is the better trade.
@@ -324,11 +331,17 @@ These dispose of whole families. Check them first.
 - `entrySet().add` throwing UOE rather than putting through. It matches
   `ConcurrentSkipListMap` and pre-v8 CHM; CHM's put-through violates `Set.add` by returning
   false yet replacing.
+- Lazily created views (`AsyncCache.asMap()` and `synchronous()`, the synchronous view's `asMap()`,
+  the Guava facade's `asMap()`) stored without synchronization, so racing first callers can
+  receive distinct, equivalent instances (1 to 6 trials in 50,000). `ConcurrentHashMap.keySet()`
+  and Guava's cache `keySet()` publish the same way; Guava's `asMap()` is the cache itself.
 - `Policy.hottest`/`coldest` map overloads collapsing equal-but-distinct weak keys.
 - `Policy` snapshots pairing a value with a weight from another moment. The snapshot reports the
   policy's weight under `evictionLock` while writers publish values under the node's monitor, so
-  a concurrent update can hand `coldestWeighted`/`hottestWeighted` a stale weight. It is a
-  best-effort view of what the policy sees; synchronizing every node to pair them was declined.
+  a concurrent update can hand `coldestWeighted`/`hottestWeighted` a stale weight, and the
+  expiration timestamps are read after the value. It is a best-effort view of what the policy
+  sees, which also omits an entry whose `AddTask` is still in the write buffer when the
+  snapshot's maintenance pass ends; synchronizing every node to pair them was declined.
   The same replay can hold a weight no entry has, which the snapshot clamps into the `int` range: a
   negative transient reads as 0, and an over-count such as `2W - w` stays within this ruling.
 - Message-less `requireArgument` on public API.
@@ -391,6 +404,10 @@ These dispose of whole families. Check them first.
   return nothing that needs the loaded value. `asMap().put` and `remove(k)` store first and then
   wait for the displaced value they return; the wait is `join`'s, uninterruptible with the
   interrupt status kept, and a load that fails during it yields null.
+- `synchronous().get(k)`, `get(k, fn)` and `getAll` waiting on a load in flight without responding
+  to interruption, the interrupt status kept. A synchronous cache's caller waits the same way at the
+  bin lock for another thread's load, as Guava's does; only a thread running an interruptible
+  loader returns early.
 - `asMap().putIfAbsent` and `computeIfAbsent` returning an existing value without read expiry when
   they waited on a load or found the value after their first lookup missed. See
   [async synchronous view](design-decisions.md#async-synchronous-view).
@@ -405,17 +422,15 @@ These dispose of whole families. Check them first.
 Read `jsr107-conformance.md`'s topic sections with this section.
 
 - **The 1.0 PDF is not authoritative.** The 1.1 and 1.1.1 maintenance releases revised
-  normative behaviour without regenerating the formal PDF. Cross-check the 1.1.1 Maintenance
-  Release and its revision history before treating a 1.0 sentence as load-bearing. Confirmed
-  relaxations: `getCacheNames` iterator IAE to UOE; `getCache(String)` typed-cache IAE
-  removed; the `CacheLoader` exception-wrapping rule removed; the iterator EXPIRED firing
-  requirement removed.
+  normative behaviour without regenerating the formal PDF. Cross-check the 1.1.1 API javadoc
+  before treating a 1.0 sentence as load-bearing; the specification's revision history records
+  no 1.1 behaviour change. Confirmed relaxations: the `getCacheNames` iterator's ISE on
+  modification removed; `getCache(String)` typed-cache IAE removed; the iterator EXPIRED firing
+  requirement removed. Loader exception wrapping was not relaxed: the 1.1.1
+  `CacheLoaderException` javadoc still requires it, and the TCK asserts it for `get` and `loadAll`.
 - Operations racing `close()`. The spec explicitly permits a closed cache to retain
   contents, governs only *future* use, and punts concurrent behaviour to implementation
   dependent. Local in-memory means no OS resource leaks.
-- `EventDispatcher.publish`'s first-event-per-key path throwing `RejectedExecutionException`
-  synchronously while subsequent events capture it in the future. The only trigger is a
-  rejecting executor. The symmetry tidy was declined.
 - `CacheProxy.close()` calling `executor.shutdown()` and `tryClose`. Spec-silent rather than
   spec-required; defensible as a cache-owned resource.
 - A jcache proxy "leaking" when abandoned without `close()`.
@@ -432,16 +447,12 @@ Read `jsr107-conformance.md`'s topic sections with this section.
   `recordEvictions` drift.
 - `CacheManagerImpl.getCache(String)` not throwing IAE for typed caches (relaxed in 1.1.1),
   and `getCacheNames()`'s iterator throwing UOE rather than ISE on `remove()` (relaxed).
-- `LoadingCacheProxy.loadAll` not wrapping a `CacheLoader` `RuntimeException` in
-  `CacheLoaderException` (rule removed in 1.1.1).
 - `LoadingCacheProxy.getAll` skipping access-expiry on loaded entries, unlike `get`.
 - `CacheProxy.EntryIterator.hasNext` skipping expired entries without firing EXPIRED
   (requirement removed in 1.1.1).
 - `JCacheLoaderAdapter.expireTimeMillis` returning `Long.MAX_VALUE` when the `ExpiryPolicy`
   throws, and `getWriteExpireTimeMillis` returning `Long.MIN_VALUE` on a creation-policy
   exception.
-- `getAverageGetTime()` going permanently negative. Reachable only by driving the unwrapped
-  native cache; reproduced at -2545us and still out of scope under the `unwrap` rule.
 - The provider's `WeakHashMap` ClassLoader retention. Proven, and not fixable: the value
   chain reaches its own key, and weak values would collect a live manager. JSR-107 provides
   `CachingProvider.close(ClassLoader)` for exactly this. Documentation only.
@@ -535,7 +546,7 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
 
 ## build and CI
 
-- `tests-latest` (JDK 25) gated to default-branch push only.
+- `tests-latest` (`LATEST_JDK`) gated to default-branch push only.
 - `run-gradle`'s blanket `attempt-limit: 2` retry.
 - jcstress and lincheck tasks being cacheable rather than `cacheIf { false }`.
 - `EclipseJavaCompile`'s `argumentProviders.add { lambda }` emitting absolute paths.

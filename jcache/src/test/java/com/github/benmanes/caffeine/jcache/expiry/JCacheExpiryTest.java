@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache.expiry;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -26,15 +27,22 @@ import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
+import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Expiry;
+import com.github.benmanes.caffeine.cache.Scheduler;
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * The test cases that ensure the variable expiry policy is configured.
@@ -86,6 +94,41 @@ final class JCacheExpiryTest {
 
       var expiresAfter = JCacheFixture.getNativeExpiresAfter(cache, KEY_1);
       assertThat(expiresAfter).isEqualTo(java.time.Duration.ofMinutes(1));
+    }
+  }
+
+  @Test
+  void nativeExpiry_systemTicker_publishesExpiredOnce() {
+    var expired = new AtomicInteger();
+    CacheEntryExpiredListener<Integer, Integer> listener =
+        events -> events.forEach(event -> expired.incrementAndGet());
+    var listenerConfiguration = new MutableCacheEntryListenerConfiguration<>(
+        /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(
+              new Duration(TimeUnit.MILLISECONDS, 10)));
+          config.addCacheEntryListenerConfiguration(listenerConfiguration);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setSchedulerFactory(Scheduler::systemScheduler);
+          config.setTickerFactory(Ticker::systemTicker);
+          config.setStatisticsEnabled(true);
+        }).build();
+        var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+
+      // On the system ticker the native timer removes the entry, so the event and the eviction
+      // count arrive from the scheduled maintenance without a further operation
+      JCacheFixture.await().untilAsserted(() -> {
+        assertThat(expired.get()).isEqualTo(1);
+        assertThat(getStatistics(cache).getCacheEvictions()).isEqualTo(1L);
+      });
+
+      cache.unwrap(Cache.class).cleanUp();
+      assertThat(cache.containsKey(KEY_1)).isFalse();
+      assertThat(expired.get()).isEqualTo(1);
+      assertThat(getStatistics(cache).getCacheEvictions()).isEqualTo(1L);
     }
   }
 }

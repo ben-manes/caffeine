@@ -20,6 +20,9 @@ paths:
 
 - In-flight futures have weight 0 and `ASYNC_EXPIRY` (~220 years). Completion finalizes only
   deferred weight/expiry work; a future already complete at insertion was weighed and dated then.
+  Finalization is a dependent action, so a caller can read the value while `Policy` reports weight
+  0, and a `Weigher` or `Expiry` that throws there is logged, counted as a load failure, and
+  removes the mapping the caller already received.
 - Read `handleCompletion`'s `deferred` flag **before storing the future**. A later readiness
   check could miss completion after insertion and leave weight 0 and the sentinel indefinitely.
   The flag is conservative: the future can complete before insertion reads it, so a quiet
@@ -38,7 +41,8 @@ paths:
 - Null results and failed futures remove the mapping without invoking the user's removal
   listener. Refresh failure preserves the old value.
 - A bulk proxy belongs to `AsyncBulkCompleter`, not `handleCompletion`. Cancellation leaves it
-  mapped until `fillProxies` obtrudes the loaded value. This is accepted: cancellation may
+  mapped until `fillProxies` obtrudes the loaded value, and a caller's own completion of the proxy
+  (`completeOnTimeout`) is served, without expiring, until then. This is accepted: cancellation may
   abandon dependent actions without making the value uncacheable, and dropping the mapping
   would prevent its eventual value from reaching a removal listener. Do not add cancellation
   cleanup to the bulk path.

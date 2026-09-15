@@ -3514,7 +3514,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
   /**
    * Returns an entry for the given node if it can be used externally, else null. The weight is
-   * the caller's best-effort reading and may lag a concurrent update.
+   * the caller's best-effort reading and the timestamps are read after the value, so either may
+   * belong to a concurrent update.
    */
   @Nullable CacheEntry<K, V> nodeToCacheEntry(
       Node<K, V> node, Function<@Nullable V, @Nullable V> transformer, int weight) {

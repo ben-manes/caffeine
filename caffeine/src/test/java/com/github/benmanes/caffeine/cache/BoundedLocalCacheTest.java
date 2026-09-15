@@ -7776,11 +7776,11 @@ final class BoundedLocalCacheTest {
         .maximumSize(10)
         .build(loader);
     var local = asBoundedLocalCache(cache);
-    int value = 12_345;
+    Integer value = 12_345;
     cache.put(1, value);
 
     ticker.advance(Duration.ofMinutes(2));
-    assertThat(cache.getIfPresent(1)).isEqualTo(value);
+    assertThat(cache.getIfPresent(1)).isSameInstanceAs(value);
     var keyReference = local.referenceKey(1);
     var stale = loader.pending.get(0);
     assertThat(local.refreshes()).containsEntry(keyReference, stale);
@@ -7790,7 +7790,7 @@ final class BoundedLocalCacheTest {
     local.refreshes().put(keyReference, stale);
 
     stale.complete(999);
-    assertThat(cache.getIfPresent(1)).isEqualTo(value);
+    assertThat(cache.getIfPresent(1)).isSameInstanceAs(value);
     assertThat(local.refreshes()).isEmpty();
   }
 

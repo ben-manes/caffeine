@@ -42,7 +42,7 @@ full matrix sharded across 40 workers. See `.claude/rules/testing.md`.
 ./gradlew :caffeine:osgiTest         # OSGi bundle tests
 ```
 
-Tests cannot be `@Disabled` or skipped — the build fails on any skipped test.
+Tests cannot be `@Disabled` or skipped: a test that JUnit reports as skipped fails the build, though a task that Gradle skips with `onlyIf` runs no tests and does not.
 
 ### Static Analysis
 
@@ -131,7 +131,7 @@ For deep dives, read these on demand (not auto-loaded to save context):
 
 When to read which doc:
 - Concurrency or thread-safety work → `synchronization.md`
-- Auditing or reviewing code → `design-decisions.md` first (prevents false positives)
+- Reviewing code → `design-decisions.md` first (prevents false positives); an audit reads it at the auditor's Phase 1.5, after recording its own findings
 - Adjudicating an audit row, or arguing one past a standing ruling → `ruled-out.md` **and the rule file for the row's module**. Checking only `ruled-out.md` misses rulings that live solely in the rule files
 - Writing or modifying tests → `testing.md`
 - Understanding algorithm choices → `research-foundations.md`

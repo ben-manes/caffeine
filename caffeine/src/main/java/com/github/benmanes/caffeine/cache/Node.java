@@ -34,7 +34,10 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 @SuppressWarnings({"EmptyMethod", "unused"})
 abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
-  /** Return the key or {@code null} if it has been reclaimed by the garbage collector. */
+  /**
+   * Return the key or {@code null} if it has been reclaimed by the garbage collector. A retired or
+   * dead node returns a sentinel for a strong key and {@code null} for a weak key.
+   */
   public abstract @Nullable K getKey();
 
   /**

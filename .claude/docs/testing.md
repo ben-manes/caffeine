@@ -112,7 +112,7 @@ frozen probation baseline.
 var listener = (ConsumingRemovalListener<Int, Int>) context.evictionListener();
 // ... cache operation ...
 assertThat(listener.removed()).containsExactly(
-    RemovalNotification.create(key, value, RemovalCause.EXPIRED));
+    new RemovalNotification<>(key, value, RemovalCause.EXPIRED));
 ```
 
 ### Async coordination
@@ -246,6 +246,9 @@ real ring buffer's wrap gap is modeled). A reproduced result on a simplified
 shape justifies a fix only if the real structure also reproduces or the fix is
 free. For suspected JIT-dependent interleavings a single run is not evidence of
 absence — vary seeds across many short launches instead of one long run.
+
+These tools answer an escalated interleaving. A path that sequential tests pin and that no report
+left ambiguous does not get a Fray, LinCheck or jcstress test for coverage.
 
 ## Fray Concurrency Tests
 

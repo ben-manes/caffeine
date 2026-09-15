@@ -49,10 +49,10 @@ lambda — which holds only the bin lock, no node monitor — e.g.
 
 | Field | Read Mode | Write Mode | Guard |
 |-------|-----------|------------|-------|
-| value (strong) | getAcquire | setRelease + storeStoreFence | synchronized(node) for mutations; fence orders the store before subsequent timestamp stores |
-| value (weak/soft) | getAcquire | setRelease + storeStoreFence | synchronized(node); fence publishes non-final fields of new reference and orders subsequent timestamp stores |
-| key (strong) | getOpaque | set (retire/die only) | immutable after construction |
-| key (weak) | plain | set (retire/die only) | immutable after construction; getRef uses getOpaque |
+| value (strong) | getAcquire | setRelease + storeStoreFence; `die()` plain-sets null | synchronized(node) for mutations; fence orders the store before subsequent timestamp stores |
+| value (weak/soft) | getAcquire | setRelease + storeStoreFence | synchronized(node); the release store publishes the new reference, and the fence orders it before the old reference's `clear()` and subsequent timestamp stores |
+| key (strong) | getOpaque | set (retire/die only) | synchronized(node) for retire/die; otherwise immutable after construction |
+| key (weak) | plain | set (retire/die only) | synchronized(node) for retire/die; otherwise immutable after construction; getRef uses getOpaque |
 | accessTime | getOpaque | setOpaque | benign races acceptable |
 | writeTime | getOpaque | setOpaque | synchronized(node) |
 | variableTime | getOpaque | setOpaque, CAS | synchronized(node), except `tryExpireAfterRead`'s lock-free CAS |

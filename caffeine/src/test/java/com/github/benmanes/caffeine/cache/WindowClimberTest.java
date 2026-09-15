@@ -167,8 +167,9 @@ final class WindowClimberTest {
 
   @Test
   void samplePeriod_hugeMaximum_staysQuiescent() {
-    // 4·maximum overflows near Long.MAX_VALUE; the guard saturates the period so the climber
-    // idles rather than completing garbage-length samples
+    // 4·maximum overflows near Long.MAX_VALUE; the guard saturates it rather than letting a
+    // negative period close every sample, so the sketch's sample size bounds the period and the
+    // climber idles
     long maximum = Long.MAX_VALUE - 100;
     var climber = new WindowClimber();
     climber.resized(maximum);

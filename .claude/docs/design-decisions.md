@@ -90,7 +90,8 @@ grows, so filling a `maximumSize(10_000)` async cache allocated the sketch twice
 allocates 16384 once. It also called `data.mappingCount()` on every insertion past half the
 maximum. The one case still answered wrongly is an async cache given an explicit
 `Weigher.singletonWeigher()`, which needs unwrapping `AsyncWeigher` to reach and costs only that
-same extra warmup allocation. Pinned by `BoundedLocalCacheTest.isWeighted_onlyWhenWeightsVary`.
+same extra warmup allocation. `BoundedLocalCacheTest.isWeighted_onlyWhenWeightsVary` pins the cases
+answered correctly.
 
 **The climber has three size tiers, in the configured maximum's native units.** Weight units
 are deliberate: the weighted stress track included about 200 entries of 25–100MB in a 10GB
@@ -556,7 +557,8 @@ late in a long scan can therefore be returned present just after a concurrent si
 `get` (fresh `now`) reported it expired (a LATE-direction over-stay). That's accepted
 best-effort: a concurrent single-key read can always disagree with a bulk read on a
 boundary entry under lock-free expiration, the over-stay self-heals on the next
-maintenance/access, and it's sub-millisecond (inside `EXPIRE_TOLERANCE`) unless a *user*
+maintenance/access, and it lasts no longer than the scan (measured at up to about 2 ms for
+10,000 keys and 140 ms for 1,000,000), inside `EXPIRE_TOLERANCE` unless a *user*
 `Expiry.expireAfterRead` callback is slow (callback misuse). Don't "fix" this by re-reading
 the ticker per element — it judges keys of the same call at different instants (a downgrade
 of the snapshot) and adds a `nanoTime` read per key on the hot path.
@@ -803,9 +805,13 @@ must-not-throw note to `Ticker`.
 A value-bearing throw can land after a commit. Examples include `AddTask` / `UpdateTask`
 updating policy totals before a ticker read, and refresh/async prologues reading `statsTicker`
 before cleanup. Such failures can skew accounting or strand tokens/proxies; those mechanisms
-are accepted under this boundary, not denied. Containment often invokes the same broken
-component. Preserve existing targeted cleanup, including refresh completion's own-token catch;
-the boundary is not a reason to remove it.
+are accepted under this boundary, not denied. Broken key equality can cost the size bound. A
+`hashCode` that throws in `evictEntry` during an `UpdateTask` skips that update's `weightedSize`
+delta, relaxing the bound by the delta for the cache's lifetime; one that throws when admission
+compares frequencies stops size eviction, logging each failed cycle, until it stops throwing,
+because every removal hashes the key too. Containment often invokes the same broken component.
+Preserve existing targeted cleanup, including refresh completion's own-token catch; the boundary
+is not a reason to remove it.
 
 **Concurrent standard-future obtrusion is the supported exception.** Between readiness checks
 and `join`, an `obtrudeException` can make `Async.getIfReady` throw. A plain-future stress run
@@ -813,7 +819,9 @@ produced 3.5M throws in 1.28B query rounds. Its narrow `CancellationException` /
 `CompletionException` catch now returns null as the method promises, including to maintenance
 under `evictionLock`; other hostile-subclass exceptions propagate. Completion handlers are
 one-shot, so obtruding after success can leave a physical entry that queries filter. That is
-accepted. `AsyncBulkCompleter.failProxies` removes before obtruding.
+accepted, although the entry never expires: `evictEntry` reads the failed future as in flight and
+re-dates it with the async sentinel, so only size eviction or an explicit removal reclaims it.
+`AsyncBulkCompleter.failProxies` removes before obtruding.
 
 **A maintenance throw defers buffered work; it does not drop it.** The final CAS can settle
 `PROCESSING_TO_IDLE → IDLE` on a throw, leaving unprocessed tasks in the buffer. Later writes
@@ -959,10 +967,12 @@ drains can leave a live node's `policyWeight` transiently negative; the climb tr
 loops then charge that weight to their quota and over-shift the region caps beyond the
 commanded adjustment (the net can even invert the commanded direction). Adjudicated
 tolerated, not guarded (2026-07, audit-adaptivity F1): the caps are the controller's
-policy targets, not capacity enforcement — eviction and the total bound ride on the
-telescoping `weightedSize`/`maximum` — and the split coerces back on its own: the next
-completed sample overwrites the inflated carry-over, the below-floor lift is not
-step-capped, and the excursion is bounded by a single weigher swing on one key. Don't
+policy targets, not capacity enforcement (eviction and the total bound compare `weightedSize`
+and each node's `policyWeight` with `maximum`, and eviction on the same transient before it
+telescopes is the premature eviction `ruled-out.md` §Core accepts), and the split coerces back
+on its own: the next completed sample overwrites the inflated carry-over, the below-floor lift
+is not step-capped, and the excursion is bounded by one weigher swing per writer racing on the
+key. Don't
 clamp the transfer quota against negative weights, and don't "fix" the offer ordering.
 
 **Queue type constants** are plain ints, not enums: WINDOW=0, PROBATION=1, PROTECTED=2.
@@ -990,7 +1000,10 @@ The **`evictionListener` runs inside the CHM compute lambda** — `notifyEvictio
 within `data.compute`/`computeIfPresent`, holding the entry's bin lock — so it is subject to this
 rule: a listener that modifies the cache (same-key *or* other-key) is a recursive update → an ISE
 (caught + logged in `notifyEviction`, so the write is silently lost) or silent corruption. The
-`Caffeine.evictionListener` javadoc says "must not modify this cache." That (and the parallel
+corruption can outlive the listener: a dead node left mapped makes every later `put` of its key
+throw the broken-equality `IllegalStateException`, which blames the key's `equals` or `hashCode`,
+and neither `invalidate` nor `invalidateAll` removes it. The `Caffeine.evictionListener` javadoc
+says "must not modify this cache." That (and the parallel
 `mappingFunction`/`remappingFunction` warnings across `Cache`/`AsyncCache`/`LoadingCache`/`Policy`)
 was tightened from the wording inherited from ConcurrentHashMap's `compute` javadoc — "must not
 attempt to update any *other* mappings" (CHM's phrasing through JDK 13; JDK-8232652 replaced it with
@@ -1125,9 +1138,11 @@ views. Keep write-through entries for `iterator` / `spliterator` / `toArray`, an
 restore the positional `iterator.remove` default for predicate removal.
 
 **Map equality uses size, iteration over this map, and `count == expectedSize`.** The
-AbstractMap shape is symmetric with HashMap and costs O(n), versus CHM's O(n+m) two-sided
-scan. The final count catches maintenance trimming dead entries after the size prescreen;
-otherwise a surviving subset can incorrectly compare equal. Preserve it in
+AbstractMap shape is symmetric with HashMap for `equals`-keyed caches and costs O(n), versus
+CHM's O(n+m) two-sided scan. Under `weakKeys()` it is not: the cache equals a `HashMap` holding
+an equal but distinct key, and that `HashMap` does not equal the cache (`IdentityHashMap` is
+unequal both ways). The final count catches maintenance trimming dead entries after the size
+prescreen; otherwise a surviving subset can incorrectly compare equal. Preserve it in
 `BoundedLocalCache.equals` and the future-typed `LocalAsyncCache.AsMapView.equals`.
 
 **`asMap()` iteration is not a cache read.** Iterators do not update access times or
@@ -1159,13 +1174,18 @@ Guava's `LocalCache` extends `AbstractMap` and declares no `equals` at all.
 
 **So value identity is coherent with no map, and that is accepted.** Under `weakValues()` or
 `softValues()` the value-bearing queries compare by identity (`containsValue`, `remove(k, v)`,
-`replace(k, old, new)`, `values().contains`/`remove`, `entrySet().contains`, and through
-`AbstractSet` the entry view's `equals`, `removeAll` and `retainAll`), while `Map.equals`,
-`hashCode` and the `WriteThroughEntry` objects the views emit compare with `equals`. Probed against
+`replace(k, old, new)`, `values().contains`/`remove`, `entrySet().contains`/`remove`, and through
+`AbstractSet` the entry view's `equals`), while `Map.equals`, `hashCode` and the
+`WriteThroughEntry` objects the views emit compare with `equals`. The bulk removals compare with
+`equals` as well: `values().removeAll`/`retainAll` ask the argument collection and
+`entrySet().removeAll`/`retainAll` compare the emitted entries, so they can remove an entry
+`contains` reports absent or keep one, under `weakKeys()` too; `IdentityHashMap`'s identity entries
+do neither. Probed against
 a `HashMap` holding an equal-but-distinct value: `equals` true both ways with matching hash codes,
 `entrySet().equals` false one way and true the other, `contains` and `containsValue` false, and the
 emitted entry equal to the probe entry. Guava's `weakValues()` cache reproduces that row element for
-element. Both coherent alternatives are worse. `IdentityHashMap` buys internal coherence and is
+element, though its `values().remove` removes by equality where Caffeine's compares identity. Both
+coherent alternatives are worse. `IdentityHashMap` buys internal coherence and is
 still asymmetric against a `HashMap` (`equals` false one way, true the other, differing hash codes),
 which is the bilateral case above. Making the queries `equals`-based would contradict the value
 semantics `weakValues()` and `softValues()` document. Reference implementations do not agree with
@@ -1303,6 +1323,13 @@ non-deterministic behavior," and the default `commonPool` only rejects at JVM sh
 lost expiration cycle is irrelevant). Don't add an executor wrapper to complete the future on
 rejection — it hardens a self-healing, user-configuration-warned corner for no real gain.
 
+**`delayedExecutor` has two other accepted consequences.** Cancelling the pacer's future does not
+dequeue the JDK's delayed task, which stays queued until its original fire time (about 600 B each;
+the cache is held weakly and remains collectable). The delayed task also submits to the cache's
+executor from the JDK's shared delay thread, so with a direct executor the maintenance cycle,
+eviction listener included, runs on that thread and delays every other `orTimeout`,
+`completeOnTimeout` and `delayedExecutor` task in the JVM until it returns.
+
 **`rescheduleCleanUpIfIncomplete` piggybacks an already-scheduled pacer fire, by
 design.** A `drainStatus == REQUIRED` backlog re-arms the pacer only when
 `!pacer.isScheduled()`; if a fire is already pending (the next expiration event), the
@@ -1310,7 +1337,10 @@ backlog rides that fire rather than stacking a second schedule. An *expiration*
 backlog stays prompt regardless — a >`EXPIRATION_THRESHOLD` backlog leaves an
 already-expired deque/wheel head, so `getExpirationDelay` returns `≤ 0` and
 `expireEntries` already scheduled the pacer at `TOLERANCE` (~1s). Size eviction is
-uncapped (drains fully in one cycle), so it never backlogs. A *reference* backlog defers
+uncapped (drains fully in one cycle), so it never backlogs. A region transfer
+(`evictFromWindow`, `demoteFromMainProtected`) is capped at `QUEUE_TRANSFER_THRESHOLD` and
+re-arms after `expireEntries` armed the pacer, so a large window resize rides the pending fire
+too, delaying the rebalance rather than overfilling the cache. A *reference* backlog defers
 the same way a write-buffer one does, and its entries are already unreachable, so the
 delay costs a late `COLLECTED` notification rather than a stale read. The shape is a
 *write-buffer* backlog (`drainWriteBuffer`'s `WRITE_BUFFER_MAX` cap, reached only when
@@ -1318,7 +1348,9 @@ a concurrent writer refills during the drain, or its `relaxedPoll` passing over 
 producer has not published) on a cache whose next expiration is
 distant, that then goes idle: the buffered policy tasks — LRU/weight bookkeeping over
 CHM mappings that are *already committed and visible* — wait for that distant fire or
-any later write / read-stripe / `cleanUp`. Worst observable is a transient over-
+any later write / read-stripe / `cleanUp`. If the pass over an unpublished slot instead settles
+`IDLE` (the accepted weak-memory strand) while no other entry is expiring, no fire is pending,
+and only a later operation drains the task. Worst observable is a transient over-
 `maximumSize` on an idle cache, the documented async-eviction contract — plus, under
 *variable* expiry, a deferred **expiration notification**: an entry whose `AddTask` is
 still buffered is not yet in the timer wheel, so it was invisible to the
@@ -1357,7 +1389,10 @@ offers.
 
 **The loader's original future is both refresh token and public result.** Its identity
 represents the generation. Per-generation copies would change `refresh(k)` / `policy.refreshes`
-and stop cancellation reaching the loader's future. Completion also precedes dependent
+and stop cancellation reaching the loader's future. Any holder's completion reaches it the same
+way: `complete(v)` is cached and counted as a load success, `orTimeout` fails every caller waiting
+on that load and removes the entry, and completing a `Policy.refreshes()` future installs its value
+and discards the loader's. Completion also precedes dependent
 handlers, so awaiting that future cannot guarantee the cache-updating handler has run.
 
 Reusing one pending future for two generations of the same key is outside this model: the
@@ -1679,7 +1714,9 @@ With no atomic absence-observation instant, it has nothing to hang a discard on.
 sequential path discards because it *can* judge; the bulk path preserves because it *can't* —
 forcing bulk to discard would impose an absence-decision onto the one path structurally unable
 to make one. Don't "fix" the split; don't add `discardRefresh` to the `LocalCache` interface
-for it.
+for it. The asynchronous bulk load does not stomp a write that lands during the load:
+`fillProxies` completes the proxy the write displaced, so the caller receives the loaded value,
+the cache keeps the write, and the write's `REPLACED` notification carries the loaded value.
 
 **`doComputeIfAbsent`'s new-node path preserves a racing refresh on a weigher/expiry throw —
 by design; don't add a `discardRefresh` there.** It discards on a clean value return (a real
@@ -1740,8 +1777,10 @@ physical.** `containsKey`, `get`, iteration, and `containsValue` treat in-flight
 entries as absent (`Async.isReady` / `Async.getIfReady`). But `KeySet.remove`,
 `removeAll`, `removeIf`, `retainAll`, and `EntryIterator.remove` operate on the
 raw delegate map without blocking on in-flight futures. Blocking everywhere
-would invite deadlock and non-linearizable observations; the split is the
-inherent sync-over-async tradeoff. `keySet().contains(k) != keySet().remove(k)`
+would invite deadlock, and unlike `values()`'s removals and `entrySet().removeIf`/`retainAll`,
+which skip an in-flight mapping, these discard it. That is deliberate: the view is best effort,
+and it is better to discard too much than to keep stale contents on linearization assumptions
+the async cache cannot support. `keySet().contains(k) != keySet().remove(k)`
 on a loading entry is accepted. `size()`/`isEmpty()` are physical too — they delegate straight to
 the backing map and count in-flight entries.
 
@@ -1751,9 +1790,14 @@ future (resolved *outside* the `compute`, then CAS inside), mirroring CHM where 
 take the bin lock an in-flight `compute` holds: in-flight is absent to *reads* but blocks
 *mutations* as if present. Only the key-based removals above are raw. Bulk collection-view ops
 split along the same line: `values().removeAll`/`remove`/`retainAll` are value-searches that skip
-in-flight via the `getIfReady` filter (like CHM `ValuesView.remove`) so they never block, while
+in-flight via the `getIfReady` filter (like CHM `ValuesView.remove`), so they do not block on a
+mapping in flight when scanned (one replaced by a pending future between the scan and its
+conditional `remove(k, v)` still waits in `remapWhenSettled`), while
 `entrySet().removeAll`'s iterate-argument branch routes through the blocking `remove(k,v)` (like
-CHM `EntrySetView.remove` → `map.remove(k,v)` → bin lock) so it can. Don't "fix" that asymmetry —
+CHM `EntrySetView.remove` → `map.remove(k,v)` → bin lock) so it can. It iterates the argument only
+when the keys are strong and the argument is not a `Set` larger than the physical `size()`, which
+counts in-flight entries, so whether it waits for and removes an in-flight entry depends on how many
+other loads are in flight. Don't "fix" that asymmetry —
 and a test on the blocking path must coordinate threads (complete the future off-thread), as the
 `_async` conditional `remove`/`replace` tests do.
 

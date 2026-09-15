@@ -7,8 +7,9 @@ Provider comparisons are recorded evidence, not a substitute for checking curren
 ## Sources and method
 
 Use the JSR-107 1.1.1 specification and API javadoc. The 1.0 PDF predates changes to
-`getCacheNames` iterator behavior, typed `getCache(String)`, loader exception wrapping, and
-iteration over expired entries. Check the 1.1.1 revision history before relying on older text.
+`getCacheNames` iterator behavior, typed `getCache(String)`, and iteration over expired entries.
+Compare the 1.1.1 API javadoc before relying on older text; the specification's revision history
+records no 1.1 behavior change.
 
 - [JSR landing page](https://jcp.org/en/jsr/detail?id=107)
 - [Specification](https://docs.google.com/document/d/1ijduF_tmHvBaUS7VBBU2ZN8_eEBiFaXXg9OI0_ZxCrA/edit)
@@ -73,13 +74,17 @@ listener, not an explicit event call in `put`. Distinguish local and partitioned
 Run `:jcache:test` and `:jcache:tckTest` for conformance changes. The latter unpacks tests into
 `jcache/build/tck/org/jsr107/tck/`; its `cache-tests-1.1.1-test-sources.jar` is also in the Gradle
 cache. Read `CacheExpiryTest` and `CacheMBStatisticsBeanTest` assertions, not just test names.
-`CacheLoaderTest.shouldPropagateExceptionUsingLoadAll` retains stricter wrapping than 1.1.1;
+`CacheLoaderTest.shouldPropagateExceptionUsingGet` and `shouldPropagateExceptionUsingLoadAll`
+assert the `CacheLoaderException` wrapping 1.1.1 still requires;
 `CacheMBStatisticsBeanTest.testIterateAndRemove` pins iterator hit/removal accounting.
 
 Use a parameterized parity test when sibling operations should agree on events, counters, and
 contents. Examples: `JCacheCreationExpiryTest.writeOp_absent_zeroCreationExpiry` and
 `JCacheUpdateExpiryTest.writeOp_present_zeroUpdateExpiry`. Establish the expected direction from
-the contract first; an existing sibling can itself be wrong.
+the contract first; an existing sibling can itself be wrong. Add a pin only where siblings diverge
+or the TCK is silent on an outcome a caller or listener acts on; the TCK's per-operation checks
+count as pins, and statistics vectors or event and processor tables for behavior recorded here are
+not added for completeness.
 
 ## Expiry
 
@@ -96,7 +101,10 @@ the entry is not added; zero update expiry means it is updated and immediately e
 Do not suppress the writer on zero creation. It persists the caller's write intent even though
 the cache stores nothing, matching `RICache.writeCacheEntry` before creation-expiry evaluation.
 Do not substitute the prior value or null in its EXPIRED event: that would hide disposal of the
-new value from resource-tracking listeners.
+new value from resource-tracking listeners. A read-through load under zero creation expiry follows
+the same rule: `get`, `getAll` and a processor's `getValue` publish EXPIRED for the loaded value
+and count no eviction. The RI publishes it from `invoke` and `loadAll`, but `RICache.getValue`
+returns null silently for `get` and `getAll`.
 
 Recorded creation-path comparison, from source on 2026-08-29:
 
@@ -150,7 +158,8 @@ both behaviors pass. The parity tests above check the missing event/statistic di
   no expiry counter. This accepted choice makes expiry visible to dashboards; do not remove it
   for ecosystem parity.
 - An expired entry found by remove/getAndRemove/removeAll emits EXPIRED and an eviction, not
-  REMOVED and a removal. The RI set overload disagrees with its own single-key/no-argument paths.
+  REMOVED and a removal, and `containsKey` reaps one the same way where the RI only tests the
+  deadline. The RI set overload disagrees with its own single-key/no-argument paths.
   TCK pins: `CacheExpiryTest.testCacheStatisticsRemoveAll` and
   `testCacheStatisticsRemoveAllNoneExpired`; the expired set-overload pairing is not pinned.
 
@@ -450,8 +459,8 @@ This staging makes ordinary listeners observe committed mappings. RI dispatches 
 its key lock; Ehcache 3 releases a StoreEventSink after compute; Hazelcast publishes after record
 mutation; Infinispan forwards post events; Coherence uses post-mutation MapEvents. Recorded cache2k
 listeners run before its final value write. The read-through publication exception is described
-above. Pins: `EventDispatcherTest.publish_listenerObservesTheCommittedMutation` (observes through
-the native cache because callback JCache re-entry is refused),
+above. Pins: `EventDispatcherTest.publish_listenerObservesTheCommittedMutation` (a created
+listener, observing through the native cache because callback JCache re-entry is refused),
 `publish_computationThrowsAfterPublishing_doesNotWedgeTheKey`, and
 `CacheProxyTest.unwrap_nativeLoad_dispatchesAndDoesNotStallTheKey`.
 
@@ -481,7 +490,12 @@ mechanism remains reproducible.
 Native size/weight eviction publishes quiet REMOVED; native EXPIRED publishes quiet EXPIRED.
 Refresh reload publishes quiet UPDATED, EXPIRED for zero update expiry, or REMOVED on a miss.
 Quiet means no synchronous caller await: it informs resource-tracking listeners without blocking
-the evicting/refresh thread. The ecosystem generally omits eviction events (RI never evicts).
+the evicting/refresh thread. Lazy expiry mostly arrives this way on the system ticker: the native
+mirror hides an expired entry from reads, except in the sub-millisecond gap between the wrapper's
+millisecond deadline and the native one, so a read that finds it expired publishes and counts
+nothing, and its EXPIRED and eviction wait for a maintenance cycle after a wheel tick, which an
+idle cache without a `Scheduler` does not run. The ecosystem generally omits eviction events (RI
+never evicts).
 Clearing natively expired residents can produce quiet EXPIRED and eviction counts through core's
 removal cause, even though ordinary explicit clear removals are silent. Closed-cache delivery is
 separately suppressed by dispatch's closed check. A reload publishes before core decides whether
@@ -615,7 +629,8 @@ Registration and deregistration normalize listener settings through a defensive
 equality, not a custom caller configuration's equals. Two field-equal custom objects that call
 themselves unequal therefore register once (the RI fires both). The stable copy prevents caller
 mutation from changing a registration key; deregister must perform the same normalization.
-Do not restore raw-config keys or the old deregistration-key mismatch.
+Do not restore raw-config keys or the old deregistration-key mismatch. Dispatch does not consult
+`isOldValueRequired`: UPDATED, REMOVED, and EXPIRED events carry the old value either way.
 
 `getConfiguration()` returns a read-only configuration with an unmodifiable listener iterable,
 but retains its live mutable listener-setting leaves. This accepted shallow-immutability reading
@@ -645,6 +660,10 @@ HOCON `application.conf` can supply caches before programmatic creation. Vendor
 `CaffeineConfiguration` and shipped `reference.conf` default store-by-value to false; standard
 `MutableConfiguration` defaults true and its flag is reapplied by `resolveConfigurationFor`.
 This vendor-only difference is intentional; `StoreByValueTest` covers the standard surface.
+A HOCON-defined cache is created by its first `getCache`, so until then `getCacheNames()` omits it
+(the API allows omitting implementation-defined caches) and `createCache` for its name throws
+`CacheException` as configured externally; `destroyCache` lasts only until the next `getCache`
+recreates it from the configuration.
 
 Validate resolved readThrough/writeThrough dependencies once in `CacheFactory.createCache`,
 before building any ticker, executor, scheduler, copier, policy, listener, loader, or writer.

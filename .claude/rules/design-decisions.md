@@ -28,7 +28,8 @@ For adjudication, also read your module's section of [ruled-out](../docs/ruled-o
 - The sketch's shrink retrack and reset's zero clamp are a pair. Keep the table grow-only;
   retained-table reset cost after a large shrink is accepted.
 - Both write-buffer consumers (`drainWriteBuffer` and `clear`) use `relaxedPoll` so a stalled
-  producer cannot spin the lock holder. The producer re-arms after publishing its task.
+  producer cannot spin the lock holder. The producer re-arms after publishing its task; a
+  weak-memory interleaving can defeat that re-arm, leaving the task for the next drain.
 - `StripedBuffer` expands on `FAILED` contention, not `FULL` backlog. A full home stripe
   returns `FULL` to request a drain; it does not search other stripes. A thread's starting
   stripe is fixed because the JDK's mutable thread probe is inaccessible.

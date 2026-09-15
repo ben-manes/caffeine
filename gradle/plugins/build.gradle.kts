@@ -64,6 +64,7 @@ tasks.named<Jar>("jar").configure {
 
 tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
   checkBuildEnvironmentConstraints = true
+  checkEmbeddedKotlin = true
   checkConstraints = true
   resolutionStrategy {
     componentSelection {

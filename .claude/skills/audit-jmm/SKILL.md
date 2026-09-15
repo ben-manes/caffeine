@@ -37,7 +37,9 @@ Do not report deliberately racy patterns with documented stale-read tolerance.
 
 **Platform focus**: Pay specific attention to aarch64 (ARM) memory ordering.
 ARM's weaker-than-TSO model exposes reordering bugs invisible on x86.
-Historical bug: WeakValueReference.keyReference required setRelease +
-storeStoreFence (not just setRelease alone) because the field is non-final
-and aarch64 reorders the field write after reference publication. Check for
-similar patterns — non-final fields published via release without a fence.
+Historical bug (#1820): a weak/soft-value `setValue` published the new
+`WeakValueReference` with `setRelease` and then cleared the old reference.
+Without a `storeStoreFence` between them, aarch64 could make the `clear()`
+visible before the publication, so a reader saw a null value. Check for
+similar patterns: a release store followed by a store that a racing reader
+must not observe first.

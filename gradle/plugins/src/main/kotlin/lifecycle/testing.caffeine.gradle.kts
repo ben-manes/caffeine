@@ -111,6 +111,11 @@ tasks.withType<Test>().configureEach {
     showCauses = true
 
     addTestListener(object : TestListener {
+      override fun afterSuite(descriptor: TestDescriptor, result: TestResult) {
+        if ((result.resultType == TestResult.ResultType.SKIPPED) && (result.testCount == 0L)) {
+          throw GradleException("Do not skip tests (e.g. ${descriptor.name})")
+        }
+      }
       override fun afterTest(descriptor: TestDescriptor, result: TestResult) {
         if (result.resultType == TestResult.ResultType.SKIPPED) {
           throw GradleException("Do not skip tests (e.g. ${descriptor.name})")

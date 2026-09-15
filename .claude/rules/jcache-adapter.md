@@ -133,7 +133,6 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
 - Run `:jcache:tckTest` as well as `:jcache:test` for conformance changes. Tests include the
   unpacked TCK and isolated per-JVM tests. Read what the TCK asserts: event/statistic differences
   often need parity tests. Preserve TCK interoperability when it is stricter than 1.1.1, including
-  `CacheLoaderTest.shouldPropagateExceptionUsingLoadAll` and
   `CacheMBStatisticsBeanTest.testIterateAndRemove`.
 - Compare primary source, not web-search summaries: local `cache-api-*-sources.jar` for javadoc,
   TCK source, and the relevant provider's code. Prior summaries reversed Ehcache 3 and Coherence's

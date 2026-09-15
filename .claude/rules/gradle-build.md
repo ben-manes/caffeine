@@ -15,14 +15,17 @@ Without it, absolute paths leak into cache keys, breaking cache reuse across mac
 
 Common patterns that break relocatability:
 - `inputs.files(otherTask.outputs.files)` — add `.withPathSensitivity(RELATIVE)`
-- Lambda `argumentProviders.add { ... }` / `jvmArgumentProviders.add { ... }` (incl. `Test`
-  tasks) embedding an absolute path — Gradle fingerprints `asArguments()` opaquely, baking the
-  path into the key. Use a typed `CommandLineArgumentProvider`: `@get:Internal` on the path
-  property (its content is tracked elsewhere — `outputs.dir()` or an input `@Classpath`), value
-  args stay `@get:Input`
 - Resolving file paths at configuration time (e.g., in Javadoc options) — defer to
   `doFirst` blocks so paths are only resolved at execution time
 - `inputs.files(downloadTask.map { it.outputs.files })` — add `.withPathSensitivity(RELATIVE)`
+
+A lambda `argumentProviders.add { ... }` / `jvmArgumentProviders.add { ... }` (incl. `Test`
+tasks) enters the cache key without its arguments: Gradle does not fingerprint the lambda's
+`asArguments()`, so an absolute path there leaves the key relocatable, and a changed argument
+reuses the old output (two checkout roots and two argument values shared one key on Gradle 9.8).
+Where an argument affects the output, use a typed `CommandLineArgumentProvider` with value args
+`@get:Input` and `@get:Internal` on a path whose content is tracked elsewhere (`outputs.dir()` or
+an input `@Classpath`).
 
 ## Publishing
 
@@ -148,7 +151,9 @@ In CI the `run-gradle` action defaults `lint=false` (injected as `ORG_GRADLE_PRO
 mirroring `earlyAccess`), so ErrorProne/NullAway run **only** in the dedicated `analysis.yml`
 `errorprone` job (JDK 26) — parallel to the tests, like PMD/SpotBugs/ECJ. Everything else
 (build.yml compile + shards, the other analysis jobs, examples, jcstress, …) compiles bare. The
-gate is a branch-protection required check, not a `needs:` edge (cross-workflow isn't possible).
+job is not a required status check (the branch rulesets require Test Results, Coverage, PMD, and
+Spotbugs) and cannot be a `needs:` edge across workflows, so an ErrorProne failure does not block a
+merge.
 
 **Invariant — do not break:** toggling `lint` changes each `JavaCompile`'s compiler args, hence its
 build-cache key. Any job that pulls compiled output from the remote cache must run with the *same*

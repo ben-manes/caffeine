@@ -11,11 +11,12 @@ Audit the following subsystem for correctness defects: $ARGUMENTS
 
 Subsystem scopes (if no argument given, audit ALL subsystems one at a time):
 - Eviction path: evictFromMain, evictFromWindow, evictEntry, makeDead, resurrection
-- Refresh path: refreshIfNeeded, tryRefresh, doRefreshIfNeeded, afterRefreshCompletion
+- Refresh path: refreshIfNeeded, discardRefresh, LocalLoadingCache.refresh,
+  LocalAsyncLoadingCache.refresh and tryComputeRefresh
 - Write buffer: afterWrite, AddTask, UpdateTask, RemovalTask, drainWriteBuffer
 - Compute path: doComputeIfAbsent, remap, and their interaction with CHM compute lambdas
 - Expiration path: expireEntries, hasExpired, timer wheel scheduling, Pacer
-- Reference collection: referenceKey, referenceValue, cleanUpReferences
+- Reference collection: referenceKey, drainKeyReferences, drainValueReferences
 - Read path: getIfPresent, afterRead, read buffer, frequency sketch updates
 
 DO NOT analyze code outside your scope unless it is directly called by your scoped methods.
@@ -25,8 +26,9 @@ Key cross-cutting invariants your subsystem must preserve:
 - Weight accounting: weightedSize must converge to the sum of weights of
   live entries, regardless of task ordering in the write buffer
 - Lock ordering: evictionLock -> CHM bin lock -> synchronized(node)
-- The value field on a node uses acquire/release semantics; the key
-  reference is immutable after construction (plain read is safe)
+- The value field on a node uses acquire/release semantics; the key field
+  is written only by retire() and die() under synchronized(node) (access
+  modes in .claude/docs/synchronization.md)
 
 For each method in your scope:
 
