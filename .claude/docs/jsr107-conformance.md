@@ -184,7 +184,10 @@ a configured duration in milliseconds, so a smaller one becomes `Duration.ZERO`.
 
 `getAccessExpireTime` evaluates the policy; `setAccessExpireTime` writes the held wrapper's
 timestamp on every access path. Only lock-free reads call `setVariableExpiration` to update the
-native timer by key. Writes already refresh it through core's `expireAfterUpdate`, including a
+native timer by key, after writing the wrapper: any core read re-derives the native deadline from
+the wrapper through `ExpirableToExpiry`, so one landing between the two writes would otherwise
+restore the older deadline. Pin: `JCacheAccessExpiryTest.get_concurrentRead_extendsNativeExpiration`.
+Writes already refresh the native timer through core's `expireAfterUpdate`, including a
 same-wrapper return. Calling policy `setExpiresAfter` inside their compute violates the policy
 API's atomic-scope restriction and can enter maintenance while holding a bin lock.
 Read-path anchors: `getAndFilterExpiredEntries`, `EntryIterator.hasNext`, and
@@ -199,9 +202,14 @@ add a bin lock or identity guard to every access-expiry read.
 
 `get` and `getAll` are happen-before, so a read whose captured wrapper has expired removes it only
 by identity and continues with a live replacement that the removal kept: a key replaced before the
-captured deadline was never absent. `LoadingCacheProxy.getOrLoad` reaches the same answer by
-looking the key up again. `containsKey` and `EntryIterator.hasNext` are last-value and may still
-skip it. Pinned by `CacheProxyTest.get_replacedBeforeExpiry` and `getAll_replacedBeforeExpiry`.
+captured deadline was never absent. The removal also rechecks the captured wrapper's deadline at
+the read's clock, so a wrapper that another read extended meanwhile is kept as well, `containsKey`'s
+removal included. `LoadingCacheProxy.getOrLoad` reaches the same answer by looking the key up again.
+`containsKey` and `EntryIterator.hasNext` are last-value and may still skip it. A read whose thread
+stalls across its own deadline between the two writes still loses its extension, because
+`setExpiresAfter` refuses an expired node; closing that needs the per-read key lock declined above.
+Pinned by `CacheProxyTest.get_replacedBeforeExpiry`, `getAll_replacedBeforeExpiry`,
+`containsKey_extendedBeforeExpiry`, `get_extendedBeforeExpiry`, and `getAll_extendedBeforeExpiry`.
 
 An accepted timestamp-race report combined zero access expiry, an eternal entry, and a concurrent
 processor READ to produce `EntryProcessorException`. Its `postProcess` path predates pre-processor
@@ -517,7 +525,11 @@ set, with `IllegalStateException: Recursive cache operation`. Filter, processor,
 expiry-policy, and copier callbacks inside a computation can otherwise acquire another bin while
 holding one; caller-runs listeners can await the dispatch future executing themselves. Keep the
 mark through gate release and refuse reads too: lazy expiry makes get/containsKey/getAll compute,
-so a read-only exemption would depend on whether a key happened to expire.
+so a read-only exemption would depend on whether a key happened to expire. The mark is checked
+when an operation begins, so an iterator obtained before a callback and advanced inside it is not
+refused and can reschedule native access expiry under the callback's locks. The specification's
+reentrancy section permits restricting such use without requiring it, the RI refuses nothing, and
+checking every advance would add a thread-local read per staged entry.
 
 The mark is per cache/thread, not a general listener ban. Batch writeAll/deleteAll runs before
 the per-key loop and may use the cache (`CacheWriterTest.removeAll_racingInsert`). An eviction

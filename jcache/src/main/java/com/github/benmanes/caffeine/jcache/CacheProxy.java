@@ -139,11 +139,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     if (expirable == null) {
       return false;
     }
-    if (!expirable.isEternal() && expirable.hasExpired(currentTimeMillis())) {
+    if (expirable.isEternal()) {
+      return true;
+    }
+    long millis = currentTimeMillis();
+    if (expirable.hasExpired(millis)) {
       dispatcher.beginComputation();
       try {
         cache.asMap().computeIfPresent(key, (k, e) -> {
-          if (e == expirable) {
+          if ((e == expirable) && expirable.hasExpired(millis)) {
             dispatcher.publishExpired(this, key, expirable.get());
             statistics.recordEvictions(1L);
             return null;
@@ -186,7 +190,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         dispatcher.beginComputation();
         try {
           current = cache.asMap().computeIfPresent(key, (k, e) -> {
-            if (e == expired) {
+            if ((e == expired) && expired.hasExpired(millis)) {
               dispatcher.publishExpired(this, key, expired.get());
               statistics.recordEvictions(1L);
               return null;
@@ -210,8 +214,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
 
     var duration = getAccessExpireTime();
-    setVariableExpiration(key, duration);
     setAccessExpireTime(expirable, duration, millis);
+    setVariableExpiration(key, duration);
     V value = copyOf(expirable.get());
     if (statsEnabled) {
       statistics.recordHits(1L);
@@ -259,7 +263,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         Expirable<V> current;
         try {
           current = cache.asMap().computeIfPresent(entry.getKey(), (k, expirable) -> {
-            if (expirable == entry.getValue()) {
+            if ((expirable == entry.getValue()) && expirable.hasExpired(millis[0])) {
               dispatcher.publishExpired(this, entry.getKey(), entry.getValue().get());
               expired[0]++;
               return null;
@@ -275,8 +279,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         entry.setValue(current);
       }
       var duration = getAccessExpireTime();
-      setVariableExpiration(entry.getKey(), duration);
       setAccessExpireTime(entry.getValue(), duration, millis[0]);
+      setVariableExpiration(entry.getKey(), duration);
       return false;
     });
 
@@ -1528,8 +1532,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         long millis = entry.getValue().isEternal() ? 0L : currentTimeMillis();
         if (!entry.getValue().hasExpired(millis)) {
           var duration = getAccessExpireTime();
-          setVariableExpiration(entry.getKey(), duration);
           setAccessExpireTime(entry.getValue(), duration, millis);
+          setVariableExpiration(entry.getKey(), duration);
           cursor = entry;
         }
       }

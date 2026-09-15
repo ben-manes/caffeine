@@ -30,6 +30,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.Duration;
@@ -41,6 +43,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -125,6 +128,37 @@ final class JCacheAccessExpiryTest {
 
       assertThat(fixture.jcache().get(KEY_1)).isNull();
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+    }
+  }
+
+  @Test
+  void get_concurrentRead_extendsNativeExpiration() {
+    var fixtureRef = new AtomicReference<JCacheFixture>();
+    var armed = new AtomicBoolean();
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExpiryPolicyFactory(() -> new AccessedExpiryPolicy(
+              new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION.toMillis())));
+          config.setExecutorFactory(() -> task -> {
+            if (armed.getAndSet(false)) {
+              assertThat(requireNonNull(fixtureRef.get()).jcache().containsKey(KEY_1)).isTrue();
+            }
+            task.run();
+          });
+        }).build()) {
+      fixtureRef.set(fixture);
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.ticker().advance(EXPIRY_DURATION.dividedBy(2));
+      fixture.jcache().unwrap(Cache.class).cleanUp();
+
+      // The get's rescheduling of the native timer submits maintenance, where a read re-derives the
+      // native deadline from the entry's timestamp; it must see the extended one
+      armed.set(true);
+      assertThat(fixture.jcache().get(KEY_1)).isEqualTo(VALUE_1);
+      assertNativeExpiryExtended(fixture);
+      fixture.ticker().advance(EXPIRY_DURATION.multipliedBy(3).dividedBy(4));
+
+      assertThat(getExpirable(fixture.jcache(), KEY_1)).isNotNull();
     }
   }
 

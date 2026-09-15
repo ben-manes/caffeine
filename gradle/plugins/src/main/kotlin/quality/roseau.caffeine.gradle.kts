@@ -10,7 +10,6 @@ val roseau = configurations.register("roseau")
 
 dependencies {
   roseau(libs.roseau)
-  roseau(libs.slf4j.nop)
 }
 
 tasks.register<Roseau>("roseau") {
