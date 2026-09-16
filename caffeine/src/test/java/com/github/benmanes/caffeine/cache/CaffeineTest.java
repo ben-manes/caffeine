@@ -207,6 +207,12 @@ final class CaffeineTest {
     boolean overridden = Caffeine.hasMethodOverride(
         CacheLoader.class, loader, "abc_xyz", Set.class);
     assertThat(overridden).isFalse();
+    assertThat(logEvents()
+        .withMessage(message -> message.startsWith("Cannot determine if"))
+        .withThrowable(NoSuchMethodException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   @Test

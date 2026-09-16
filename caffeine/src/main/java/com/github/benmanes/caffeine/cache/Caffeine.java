@@ -286,8 +286,8 @@ public final class Caffeine<K, V> {
       Method classMethod = clazz.getMethod(methodName, parameterTypes);
       return !instanceMethod.equals(classMethod);
     } catch (NoSuchMethodException | SecurityException e) {
-      logger.log(Level.WARNING, "Cannot determine if {0} overrides {1}({2})",
-          instance.getClass().getSimpleName(), methodName, Arrays.toString(parameterTypes), e);
+      logger.log(Level.WARNING, String.format(US, "Cannot determine if %s overrides %s(%s)",
+          instance.getClass().getSimpleName(), methodName, Arrays.toString(parameterTypes)), e);
       return false;
     }
   }
