@@ -107,13 +107,15 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
     @Var boolean success = false;
     try {
       var loaded = mappingFunction.apply(Collections.unmodifiableSet(keysToLoad));
-      loaded.forEach(cache()::put);
-      for (K key : keysToLoad) {
-        V value = loaded.get(key);
-        if (value == null) {
-          result.remove(key);
-        } else {
+      loaded.forEach((key, value) -> {
+        cache().put(key, value);
+        if (keysToLoad.contains(key)) {
           result.put(key, value);
+        }
+      });
+      for (K key : keysToLoad) {
+        if (result.get(key) == null) {
+          result.remove(key);
         }
       }
       success = !loaded.isEmpty();

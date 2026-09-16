@@ -16,9 +16,12 @@ raising a compatibility finding.
   their delegate lacks it. `InternalBulkLoader`/`ExternalBulkLoader` catch
   `UnsupportedLoadingOperationException` and fall back to per-key loading. Its package-private
   constructor makes it an unambiguous marker for the base-class default.
-- `InternalBulkLoader` copies the returned map once into a `HashMap`: the map may materialize
-  lazily, and core would otherwise iterate it again and probe every requested key.
-  Equality-based copying is intentional; see the accepted weak-key limitation below.
+- `InternalBulkLoader` copies the returned map once into an `IdentityHashMap`, dropping null keys
+  and values in the same pass, so a lazy map is evaluated once. Identity keeps distinct extras that
+  are equal, which Guava stores as separate entries under `weakKeys()` and as a replacement
+  otherwise (`bulkLoad_equalExtras`). It relies on core matching loaded keys to requested ones by
+  equality: a core that probed `loaded.get(requestedKey)` would miss fresh but equal result keys
+  and fail with `InvalidCacheLoadException` (`bulkLoad_freshKeys`).
 - The static `nullBulkLoad` ThreadLocal signals null keys/values filtered inside the loader so
   the facade can throw `InvalidCacheLoadException`. `getAll` saves the enclosing marker and
   restores it in `finally`. Weighers, expiry, and same-thread removal listeners can perform a
@@ -42,14 +45,6 @@ The two `build` overloads bridge different contracts:
 
 ## Accepted Compatibility Limits
 
-- **Extra weak-key mappings can collapse.** The `HashMap` copy merges distinct but
-  `equals`-equal keys from the loader's result; native Guava inserts each result directly.
-  Lost extras never reach the cache or its removal listener. Requested keys already deduplicate
-  by equality in both implementations. This uncommon extra-result case is accepted; users
-  requiring different behavior can use Caffeine directly.
-  Do not substitute `IdentityHashMap`: core probes `loaded.get(requestedKey)`, and fresh but
-  equal result keys would fail with `InvalidCacheLoadException`. `bulkLoad_freshKeys` covers
-  that shape; both full Guava suites passed the incorrect swap before this test existed.
 - **Fallback bulk failure discards the successful prefix.** Per-key fallback accumulates a
   map for core to install after every load succeeds. Native Guava commits each key immediately:
   an `asyncReloading` loader failing on key two leaves key one and its load-success statistic
@@ -60,9 +55,18 @@ The two `build` overloads bridge different contracts:
 - **Statistics are best-effort.** `asMap().computeIfAbsent` records request hits/misses where
   Guava does not, and counts a null result as a load failure. With an existing key, an absent
   key, then a null result, Guava reports hit/miss/success/failure = 0/0/1/0; the facade reports
-  1/2/1/1. `getAllPresent` deduplicates before accounting: `[1,1,1,2,2]` with only key 1 cached
-  reports 1 hit/1 miss instead of Guava's 3 hits/2 misses. Returned values, stored entries, and
-  exceptions agree.
+  1/2/1/1. `getAllPresent` deduplicates before looking up: `[1,1,1,2,2]` with only key 1 cached
+  reports 1 hit/1 miss instead of Guava's 3 hits/2 misses, because a lookup per repeated key
+  adds hit/miss noise to the statistics and the eviction policy. Returned values, stored
+  entries, and exceptions agree, except for the weak-key case below.
+- **Bulk reads keep the first of distinct but equal weak keys.** Core deduplicates a bulk
+  request by `equals` before its identity lookups, as Guava's `getAll` does, but Guava's
+  `getAllPresent` looks up every input key and keeps the last. With two such keys the facade's
+  `getAllPresent` returns nothing for `[absent, cached]` where Guava returns the cached key, and
+  the first key's value where Guava returns the second's when both are cached; `getAll` returns
+  the first key's load in both. Matching Guava would bring back the per-key lookup noise, for
+  keys that override `equals` yet rely on identity. See the weak-key bulk entry in [standing
+  rulings](../docs/ruled-out.md#core).
 - **Absent-key refresh uses the configured executor.** Guava calls `load` inline when no old
   value exists; the facade queues it. A queuing executor therefore leaves the facade's load
   pending when Guava has already installed the result. `Runnable::run` gives Guava's timing.

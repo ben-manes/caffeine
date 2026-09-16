@@ -67,6 +67,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -646,6 +647,24 @@ final class CacheTest {
 
     var result = List.copyOf(cache.getAll(keys, CacheTest::bulkMapping).keySet());
     assertThat(result.subList(0, keys.size())).containsExactlyElementsIn(keys).inOrder();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void getAll_lazyResult_evaluatesEachValueOnce(Cache<Int, Int> cache, CacheContext context) {
+    // A lazy view re-applies the transform on every value access; the bulk load must evaluate
+    // each value once, not again when building the result
+    var transforms = new AtomicInteger();
+    Function<Set<? extends Int>, Map<Int, Int>> mappingFunction = keys -> Maps.transformValues(
+        Maps.toMap(ImmutableSet.copyOf(keys), key -> intern(key.negate())), value -> {
+          transforms.incrementAndGet();
+          return value;
+        });
+    var result = cache.getAll(context.absentKeys(), mappingFunction);
+
+    assertThat(result).hasSize(context.absentKeys().size());
+    assertThat(transforms.get()).isEqualTo(context.absentKeys().size());
   }
 
   @ParameterizedTest

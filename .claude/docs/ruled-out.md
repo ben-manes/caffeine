@@ -228,6 +228,13 @@ These dispose of whole families. Check them first.
   loader also returns comes back with its pre-load value while the loaded one replaces it (or is
   evicted as oversized), and under `weakKeys()` a rebuilt key is a distinct entry, so an
   over-delivered hit is duplicated and the synchronous path's requested key misses its own load.
+  Weak keys and bulk loading follow Guava's precedent rather than a model of their own (Ben,
+  2026-09-16). Guava's `getAll` returns an equals-based, ordered `ImmutableMap` and dedupes by
+  `equals`; Caffeine returns a `LinkedHashMap` because users asked for that ordering, an identity
+  result would need an `IdentityLinkedHashMap` the JDK lacks, and neither project has had a user
+  report of what weak-key users expect. Match Guava's observable behavior before proposing identity
+  semantics for a bulk path; the facade's `IdentityHashMap` copy of a loader's result does that for
+  the extras Guava stores.
 - Weak-key lookups allocating a `LookupKeyReference` (24 B/op). A thread-local mutable
   wrapper pins the instance to the thread, rejected in #294 for virtual threads and
   classloader pinning. Young-gen allocation is the better trade.

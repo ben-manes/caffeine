@@ -30,6 +30,7 @@ import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
@@ -267,6 +268,32 @@ final class CaffeinatedGuavaTest {
     };
     var cache = factory.apply(loader);
     assertThat(cache.getAll(ImmutableList.of(new Key("ab")))).containsExactly(new Key("ab"), 2);
+  }
+
+  @Test
+  void bulkLoad_equalExtras() throws ExecutionException {
+    // Guava stores each returned entry, so distinct extras that are equal are both cached
+    var extra1 = new Key("x");
+    var extra2 = new Key("x");
+    var cache = CaffeinatedGuava.build(Caffeine.newBuilder().weakKeys(),
+        new CacheLoader<Key, Integer>() {
+          @Override public Integer load(Key key) {
+            throw new IllegalStateException();
+          }
+          @Override public Map<Key, Integer> loadAll(Iterable<? extends Key> keys) {
+            var loaded = new IdentityHashMap<Key, Integer>();
+            for (var key : keys) {
+              loaded.put(key, key.name.length());
+            }
+            loaded.put(extra1, 1);
+            loaded.put(extra2, 2);
+            return loaded;
+          }
+        });
+    var key = new Key("ab");
+    assertThat(cache.getAll(ImmutableList.of(key))).containsExactly(key, 2);
+    assertThat(cache.getIfPresent(extra1)).isEqualTo(1);
+    assertThat(cache.getIfPresent(extra2)).isEqualTo(2);
   }
 
   @Test

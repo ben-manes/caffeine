@@ -63,6 +63,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -466,6 +467,33 @@ final class LoadingCacheTest {
 
     var result = new ArrayList<>(cache.getAll(keys).keySet());
     assertThat(result.subList(0, keys.size())).containsExactlyElementsIn(keys).inOrder();
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void getAll_lazyResult_evaluatesEachValueOnce(CacheContext context) {
+    var transforms = new AtomicInteger();
+    var loader = new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new IllegalStateException();
+      }
+      @Override public Map<? extends Int, Int> loadAll(Set<? extends Int> keys) {
+        // A lazy view re-applies the transform on every value access; the bulk load must
+        // evaluate each value once, not again when building the result
+        return Maps.transformValues(Maps.toMap(keys, key -> intern(key.negate())), value -> {
+          transforms.incrementAndGet();
+          return value;
+        });
+      }
+    };
+    var cache = context.build(loader);
+    var keys = context.absentKeys();
+    var result = cache.getAll(keys);
+
+    assertThat(result).hasSize(keys.size());
+    assertThat(transforms.get()).isEqualTo(keys.size());
   }
 
   @CheckNoEvictions

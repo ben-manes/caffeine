@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -230,7 +231,7 @@ final class CaffeinatedGuavaLoadingCache<K, V>
         if (loaded == null) {
           throw new InvalidCacheLoadException("null map");
         }
-        var result = new HashMap<K, V>(loaded.size(), /* loadFactor= */ 1.0f);
+        var result = new IdentityHashMap<K, V>(loaded.size());
         loaded.forEach((key, value) -> {
           if ((key == null) || (value == null)) {
             nullBulkLoad.set(true);
