@@ -62,10 +62,12 @@ final class SerializationProxy<K, V> implements Serializable {
     if (maximumSize != UNSET_INT) {
       builder.maximumSize(maximumSize);
     }
+    if (maximumWeight != UNSET_INT) {
+      builder.maximumWeight(maximumWeight);
+    }
     if (weigher != null) {
       @SuppressWarnings("unchecked")
       var castedWeigher = (Weigher<Object, Object>) weigher;
-      builder.maximumWeight(maximumWeight);
       builder.weigher(castedWeigher);
     }
     if (expiry != null) {

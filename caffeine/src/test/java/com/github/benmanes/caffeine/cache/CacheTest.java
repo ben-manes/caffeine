@@ -1125,6 +1125,16 @@ final class CacheTest {
     }
   }
 
+  @Test
+  void readObject_serializationProxy_rejectsMaximumWeightWithoutWeigher() {
+    var proxy = new SerializationProxy<Object, Object>();
+    proxy.maximumWeight = 100;
+
+    var exception = assertThrows(IllegalStateException.class,
+        () -> SerializableTester.reserialize(proxy));
+    assertThat(exception).hasMessageThat().isEqualTo("maximumWeight requires weigher");
+  }
+
   /**
    * Crafts a serialized object stream whose class-descriptor chain declares the named concrete
    * {@code AbstractCacheView} subclass but skips {@code AbstractCacheView} itself (superClassDesc =
