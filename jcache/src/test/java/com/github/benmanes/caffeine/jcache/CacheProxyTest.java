@@ -55,6 +55,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -82,11 +83,15 @@ import java.util.stream.Stream;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
+import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Configuration;
+import javax.cache.configuration.Factory;
+import javax.cache.configuration.FactoryBuilder;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.configuration.MutableConfiguration;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
+import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryListener;
 import javax.cache.event.CacheEntryListenerException;
@@ -784,6 +789,71 @@ final class CacheProxyTest {
       assertThrows(IllegalStateException.class,
           () -> cache.registerCacheEntryListener(listenerConfig));
 
+      verify(listener).close();
+    }
+  }
+
+  @Test
+  @SuppressWarnings("try")
+  void registerCacheEntryListener_filterFactoryThrows_keepsASharedListenerOpen()
+      throws IOException {
+    // factoryOf(instance) returns the listener that the first registration still dispatches to
+    try (SerializableCloseableListener listener = Mockito.mock();
+        var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+        var cache = fixture.jcache()) {
+      cache.registerCacheEntryListener(new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+          FactoryBuilder.factoryOf(listener), /* filterFactory= */ null,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+      var failing = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+          FactoryBuilder.factoryOf(listener),
+          /* filterFactory= */ () -> { throw new IllegalStateException("filter"); },
+          /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+
+      assertThrows(IllegalStateException.class, () -> cache.registerCacheEntryListener(failing));
+      verify(listener, never()).close();
+
+      cache.close();
+      verify(listener).close();
+    }
+  }
+
+  @Test
+  @SuppressWarnings("try")
+  void registerCacheEntryListener_normalizedDuplicate_keepsTheSharedListenerOpen()
+      throws IOException {
+    // configurations that are unequal to each other but equal once normalized register once
+    try (SerializableCloseableListener listener = Mockito.mock();
+        var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+        var cache = fixture.jcache()) {
+      cache.registerCacheEntryListener(
+          new IdentityListenerConfiguration(FactoryBuilder.factoryOf(listener)));
+      cache.registerCacheEntryListener(
+          new IdentityListenerConfiguration(FactoryBuilder.factoryOf(listener)));
+      verify(listener, never()).close();
+
+      cache.put(KEY_1, VALUE_1);
+      verify(listener).onCreated(anyIterable());
+
+      cache.close();
+      verify(listener).close();
+    }
+  }
+
+  @Test
+  void createCache_normalizedDuplicate_keepsTheSharedListenerOpen() throws IOException {
+    try (SerializableCloseableListener listener = Mockito.mock();
+        var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      var configuration = new MutableConfiguration<Integer, Integer>()
+          .addCacheEntryListenerConfiguration(
+              new IdentityListenerConfiguration(FactoryBuilder.factoryOf(listener)))
+          .addCacheEntryListenerConfiguration(
+              new IdentityListenerConfiguration(FactoryBuilder.factoryOf(listener)));
+      try (var cache = fixture.cacheManager().createCache("duplicate", configuration)) {
+        verify(listener, never()).close();
+
+        cache.put(KEY_1, VALUE_1);
+        verify(listener).onCreated(anyIterable());
+      }
       verify(listener).close();
     }
   }
@@ -2588,9 +2658,41 @@ final class CacheProxyTest {
     }
   }
 
+  /** A synchronous listener configuration whose equality is identity. */
+  static final class IdentityListenerConfiguration
+      implements CacheEntryListenerConfiguration<Integer, Integer> {
+    private static final long serialVersionUID = 1L;
+
+    final Factory<? extends CacheEntryListener<? super Integer, ? super Integer>> listenerFactory;
+
+    IdentityListenerConfiguration(
+        Factory<? extends CacheEntryListener<? super Integer, ? super Integer>> listenerFactory) {
+      this.listenerFactory = listenerFactory;
+    }
+    @Override
+    @SuppressWarnings("unchecked")
+    public Factory<CacheEntryListener<? super Integer, ? super Integer>>
+        getCacheEntryListenerFactory() {
+      return (Factory<CacheEntryListener<? super Integer, ? super Integer>>) listenerFactory;
+    }
+    @Override
+    public @Nullable Factory<CacheEntryEventFilter<? super Integer, ? super Integer>>
+        getCacheEntryEventFilterFactory() {
+      return null;
+    }
+    @Override public boolean isOldValueRequired() {
+      return false;
+    }
+    @Override public boolean isSynchronous() {
+      return true;
+    }
+  }
+
   interface CloseableExpiryPolicy extends ExpiryPolicy, Closeable {}
   interface CloseableCacheLoader extends CacheLoader<Integer, Integer>, Closeable {}
   interface CloseableCacheWriter extends CacheWriter<Integer, Integer>, Closeable {}
   @SuppressWarnings("PMD.ImplicitFunctionalInterface")
   interface CloseableCacheEntryListener extends CacheEntryListener<Integer, Integer>, Closeable {}
+  interface SerializableCloseableListener
+      extends CacheEntryCreatedListener<Integer, Integer>, Closeable, Serializable {}
 }

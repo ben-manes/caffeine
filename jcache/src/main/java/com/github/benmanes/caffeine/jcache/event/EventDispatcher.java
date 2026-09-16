@@ -368,10 +368,18 @@ public final class EventDispatcher<K, V> {
     }
   }
 
-  /** Closes the resource, retaining a close failure as suppressed by the outermost error. */
-  private static void closeQuietly(AutoCloseable resource, @Nullable Throwable outer) {
+  /**
+   * Closes a listener that no registration dispatches to, retaining a close failure as suppressed
+   * by the outermost error.
+   */
+  private void closeQuietly(EventTypeAwareListener<K, V> listener, @Nullable Throwable outer) {
+    for (var registration : dispatchQueues.keySet()) {
+      if (registration.getCacheEntryListener().listener == listener.listener) {
+        return;
+      }
+    }
     try {
-      resource.close();
+      listener.close();
     } catch (Throwable t) {
       if (outer == null) {
         logger.log(Level.WARNING, "Failure when closing an unregistered listener", t);

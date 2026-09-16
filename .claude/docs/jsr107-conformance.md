@@ -627,9 +627,13 @@ aliasing path. Preserve this rejected-repair boundary.
 Registration and deregistration normalize listener settings through a defensive
 `MutableCacheEntryListenerConfiguration` copy. Identity uses its specified factory/flag field
 equality, not a custom caller configuration's equals. Two field-equal custom objects that call
-themselves unequal therefore register once (the RI fires both). The stable copy prevents caller
-mutation from changing a registration key; deregister must perform the same normalization.
-Do not restore raw-config keys or the old deregistration-key mismatch. Dispatch does not consult
+themselves unequal therefore register once (the RI fires both), and deregistering either removes
+that registration while the other stays listed (the RI keeps the other). The listed configuration
+then receives no events, and a listener instance the two share is never closed, because it counts
+as deregistered. RI parity would need a count on the registration, decremented only when
+deregistration removes a listed configuration. The stable copy prevents caller mutation from
+changing a registration key; deregister must perform the same normalization. Do not restore
+raw-config keys or the old deregistration-key mismatch. Dispatch does not consult
 `isOldValueRequired`: UPDATED, REMOVED, and EXPIRED events carry the old value either way.
 
 `getConfiguration()` returns a read-only configuration with an unmodifiable listener iterable,
@@ -643,16 +647,42 @@ user-implemented original configuration, while it matched Registration's copy. D
 removed dispatch state but left the configuration entry, so the listener remained listed, was
 not closed, and could not be registered again. Do not repeat that repair.
 
-Runtime registration records configuration first so true duplicates fail before factories run.
-If a factory throws, roll that entry back so retry succeeds. If filter construction fails after
-listener construction, close the listener and suppress any close failure onto the primary.
-Pins: `CacheProxyTest.registerCacheEntryListener_factoryThrows_isRetryable` and
-`registerCacheEntryListener_filterFactoryThrows_closesTheListener`.
+Runtime registration records configuration first so true duplicates fail before factories run. A
+configuration with a null listener factory is recorded and listed but registers nothing
+(`EventDispatcherTest.register_noListener`); the RI and Ehcache 3 fail it with NPE, and cache2k
+with IAE. If a factory throws, roll that entry back so retry succeeds. If filter construction fails
+after listener construction, or registration drops a normalized duplicate, close the listener
+unless a registration already dispatches to that instance, as `FactoryBuilder.factoryOf(instance)`
+shares one, and suppress a close failure onto the primary. The surviving registration owns a shared
+instance, so there is no later close to defer: cache close already closes it, deregistration does
+not, and a close queued behind dispatch would reach a listener that is still registered. Pins:
+`CacheProxyTest.registerCacheEntryListener_factoryThrows_isRetryable`,
+`registerCacheEntryListener_filterFactoryThrows_closesTheListener`,
+`registerCacheEntryListener_filterFactoryThrows_keepsASharedListenerOpen`,
+`registerCacheEntryListener_normalizedDuplicate_keepsTheSharedListenerOpen`,
+and `createCache_normalizedDuplicate_keepsTheSharedListenerOpen`.
 
-Deregistration removes a listener without closing it; registration failure and cache close are
-the paths that close. `Cache.close` requires closing registered listeners and deregistration's
-contract says nothing of closing, the RI does not close, and closing there could interrupt a
-listener whose published events are still dispatching.
+Deregistration removes a listener without closing it; registration failure and cache close are the
+paths that close. The spec's one closing requirement is `Cache.close`'s: the manager closes the
+configured loader, writer, and expiry policy and the registered listeners that implement
+`java.io.Closeable`. Deregistration's contract says nothing of closing, the RI does not close, and
+closing there could interrupt a listener whose published events are still dispatching. Closing a
+failed registration's listener is resource hygiene beyond that requirement.
+
+In the recorded twelve-provider comparison, Ehcache 3, Hazelcast, and Ignite close a listener on
+deregistration, while the RI, cache2k, Infinispan, Coherence, and Blazing Cache do not. Ehcache 3
+closes the listener when its filter fails to build, even when another registration shares the
+instance, and Ignite closes it when the listener's query fails to start; the RI, Hazelcast, and
+Blazing Cache leave it open. JCS, Redisson, Triava, and the Ehcache 2 adapter close no listener at
+all.
+
+Filters are never closed, at cache close, at deregistration, or when registration drops a
+duplicate: `Cache.close` does not name them. Of the twelve, only Ehcache 3 and Blazing Cache close
+filters, and Infinispan builds a new filter for every event. Cache close closes each role and each
+registration's listener, so one object serving as loader and writer, or one listener under two
+distinct registrations, is closed twice, as in the RI, Ehcache 3, Hazelcast, Coherence, and Blazing
+Cache; cache2k and Infinispan close a shared listener instance once. `Cache.close` names
+`java.io.Closeable`, whose close has no effect once closed.
 
 ## Configuration
 
