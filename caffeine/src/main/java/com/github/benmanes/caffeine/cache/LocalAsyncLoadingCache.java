@@ -225,9 +225,11 @@ abstract class LocalAsyncLoadingCache<K, V>
         @SuppressWarnings("unchecked")
         var prior = (CompletableFuture<V>) asyncCache.cache()
             .refreshes().putIfAbsent(keyReference, future);
-        var result = (prior == null) ? future : prior;
-        result.whenComplete((r, e) -> asyncCache.cache().refreshes().remove(keyReference, result));
-        return result;
+        if (prior != null) {
+          return prior;
+        }
+        future.whenComplete((r, e) -> asyncCache.cache().refreshes().remove(keyReference, future));
+        return future;
       } else if (!oldValueFuture.isDone()) {
         // no-op if load is pending
         return oldValueFuture;

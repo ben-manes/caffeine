@@ -105,7 +105,10 @@ Details: [expiration](../docs/design-decisions.md#expiration),
   cancellation/completion catch; a later obtrusion need not remove the physical entry.
 - Automatic refresh stays lock-free. Commit requires the captured node alive, the same value,
   and matching write time with its soft-lock bit masked. Completion catches conditionally
-  release their own token, including failures before `remap` reaches its discard.
+  release their own token, including failures before `remap` reaches its discard. Only the
+  registering call attaches refresh completion cleanup; coalescing onto an existing refresh
+  attaches no handler, in the synchronous operation and in the async view's absent-key side-load
+  alike.
 - Real mutations discard refreshes. Query-style no-ops preserve them in both bounded and
   unbounded caches. Rejected completions set `preserveRefresh = !owned` and preserve timestamps;
   a stale completion must neither steal a successor's token nor reset its write clock.

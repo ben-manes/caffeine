@@ -1411,6 +1411,14 @@ ownership check.
 It carries the registration and completion state, while the loader's original future remains
 the token and return value. Registration runs inside `refreshes.compute`; completion is attached
 after it returns, and coalescing onto an existing refresh attaches no additional handler.
+The async view's absent-key branch registers with `putIfAbsent` rather than a compute and owes
+the same rule: it attaches its by-key release only when it won the registration. Attaching that
+release to whichever future it returns puts a `refreshes.remove` on a token this caller never
+registered, and since dependents run most recently registered first it fires ahead of the owner's
+commit, which then reads itself unowned and discards a reload no write had superseded. The
+identity argument does not catch it, because the token removed is the owner's; only the caller is
+wrong. A refresh completion that commits a mutation still discards the current registration by
+key. Pinned by `AsyncLoadingCacheTest.refresh_absent_racingRefresh`.
 
 **`refreshIfNeeded` is intentionally lock-free.** Reads of `writeTime`, `getKey`,
 `getValue`, `getKeyReference`, `isAlive`, and the CAS of `writeTime` happen

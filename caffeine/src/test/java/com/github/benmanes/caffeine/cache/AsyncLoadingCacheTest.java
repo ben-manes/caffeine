@@ -76,6 +76,7 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.LocalAsyncCache.AsyncBulkCompleter.NullMapCompletionException;
 import com.github.benmanes.caffeine.testing.Int;
@@ -807,6 +808,46 @@ final class AsyncLoadingCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, compute = Compute.ASYNC, keys = ReferenceType.STRONG,
+      maximumSize = { Maximum.DISABLED, Maximum.UNREACHABLE }, executor = CacheExecutor.THREADED)
+  void refresh_absent_racingRefresh(CacheContext context) {
+    var key = new RacingKey();
+    var reload = new CompletableFuture<Int>();
+    AsyncLoadingCache<RacingKey, Int> cache = context.buildAsync(
+        new AsyncCacheLoader<RacingKey, Int>() {
+          @Override public CompletableFuture<Int> asyncLoad(RacingKey k, Executor executor) {
+            k.loadingThread = Thread.currentThread();
+            return context.absentValue().toFuture();
+          }
+          @Override public CompletableFuture<Int> asyncReload(
+              RacingKey k, Int oldValue, Executor executor) {
+            return reload;
+          }
+        });
+
+    // An absent-key refresh installs its load and then registers it. A second refresh that reloads
+    // the loaded value in between owns the registration, so its reload must install its value.
+    var racing = new AtomicReference<@Nullable CompletableFuture<Int>>();
+    key.onHash = new Runnable() {
+      @Override public void run() {
+        if (cache.asMap().containsKey(key)) {
+          racing.set(cache.synchronous().refresh(key));
+        } else {
+          key.onHash = this; // a lookup inside the load's computation, before it is visible
+        }
+      }
+    };
+    var refreshed = cache.synchronous().refresh(key);
+    reload.complete(context.absentKey());
+
+    assertThat(racing.get()).isNotNull();
+    assertThat(refreshed).isSameInstanceAs(racing.get());
+    assertThat(refreshed).succeedsWith(context.absentKey());
+    assertThat(cache.synchronous().getIfPresent(key)).isEqualTo(context.absentKey());
+    assertThat(cache.synchronous().policy().refreshes()).isEmpty();
+  }
+
+  @ParameterizedTest
   @CacheSpec(loader = Loader.REFRESH_EXCEPTIONAL)
   void refresh_throwsException(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
     var key = context.original().isEmpty() ? context.absentKey() : context.firstKey();
@@ -1065,6 +1106,24 @@ final class AsyncLoadingCacheTest {
     assertThat(loader.asyncLoadAll(Int.setOf(1, 2), Runnable::run))
         .succeedsWith(Int.mapOf(1, 1, 2, 2));
     assertThat(loader.asyncLoad(Int.valueOf(1), Runnable::run)).succeedsWith(1);
+  }
+
+  /** A key that runs an action on its first hash lookup by the thread that loaded it. */
+  private static final class RacingKey {
+    volatile @Nullable Thread loadingThread;
+    volatile @Nullable Runnable onHash;
+
+    @Override public boolean equals(@Nullable Object o) {
+      return (o == this);
+    }
+    @Override public int hashCode() {
+      var action = onHash;
+      if ((action != null) && (Thread.currentThread() == loadingThread)) {
+        onHash = null;
+        action.run();
+      }
+      return System.identityHashCode(this);
+    }
   }
 
   private static final class LoadAllException extends RuntimeException {
