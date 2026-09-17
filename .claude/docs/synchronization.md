@@ -184,6 +184,10 @@ eviction-triggered removals.
 - In `evictEntry`/`removeNode`: evictionLock + CHM bin lock + synchronized(node)
 - In `put()`: synchronized(node) only
 - In `remove()`/compute paths: CHM bin lock + synchronized(node)
+- Writers to the key wait for the listener; lock-free readers do not, and return the value until the
+  computation completes. That is `ConcurrentHashMap.compute`'s atomicity and what
+  `Caffeine.evictionListener` means by "the atomic operation to remove the entry". A listener that
+  disposes of the value must tolerate a reader still holding it, as it must after any removal.
 Synchronous. Re-entrant cache operations risk deadlock.
 
 ### Other user components under evictionLock

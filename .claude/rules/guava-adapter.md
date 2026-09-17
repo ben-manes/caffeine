@@ -57,8 +57,11 @@ The two `build` overloads bridge different contracts:
   key, then a null result, Guava reports hit/miss/success/failure = 0/0/1/0; the facade reports
   1/2/1/1. `getAllPresent` deduplicates before looking up: `[1,1,1,2,2]` with only key 1 cached
   reports 1 hit/1 miss instead of Guava's 3 hits/2 misses, because a lookup per repeated key
-  adds hit/miss noise to the statistics and the eviction policy. Returned values, stored
-  entries, and exceptions agree, except for the weak-key case below.
+  adds hit/miss noise to the statistics and the eviction policy. `getAll` records one outcome
+  per bulk load: an empty `loadAll` map counts as a failure and a map with null keys or values
+  as a success, the reverse of Guava, and the per-key fallback records one success where Guava
+  records one per key. Returned values, stored entries, and exceptions agree, except for the
+  weak-key case below.
 - **Bulk reads keep the first of distinct but equal weak keys.** Core deduplicates a bulk
   request by `equals` before its identity lookups, as Guava's `getAll` does, but Guava's
   `getAllPresent` looks up every input key and keeps the last. With two such keys the facade's
@@ -78,3 +81,7 @@ The two `build` overloads bridge different contracts:
   different failures, with the k-th paying k times the latency. This is native Caffeine
   semantics; changing the facade would require rebuilding Guava's loading-reference machinery.
   `AsyncLoadingCache` shares failures because it stores the future.
+- **A stale entry's `setValue` returns the value it captured.** The facade's entry set yields
+  core's write-through entries, which follow `ConcurrentHashMap`: after another write to the key,
+  `setValue` returns the entry's captured value where Guava returns the value its `put` replaced.
+  Both install the new value.

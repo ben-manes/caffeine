@@ -21,4 +21,6 @@ paths:
   `scheduleAfterWrite`, unless a weak-memory interleaving defeats the re-arm, when the task waits
   for the next write, `cleanUp`, or a read that fills a stripe
 - The drain status state machine (IDLE → REQUIRED → PROCESSING_TO_IDLE/PROCESSING_TO_REQUIRED) ensures single-threaded maintenance
-- Node state encoding: alive (has value), retired (marked for removal), dead (fully unlinked)
+- Node state encoding: alive (in the map and policy), retired (removed from the map, awaiting policy
+  removal), dead (removed from both). Reference collection is orthogonal: an alive node can read a
+  null weak key or weak/soft value, which readers treat as collected

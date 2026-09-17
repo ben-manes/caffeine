@@ -110,7 +110,10 @@ and supplies immediate next-access times for Bélády's MIN and the admitter.
 hit/miss agreement on canonical traces before changing memory bounds, naming, or quality.
 For a published algorithm, the paper remains the specification when the authors' repository
 later diverges (e.g. post-publication S3-FIFO warmup/hit-rate changes in libCacheSim).
-Document that divergence rather than chasing it.
+Document that divergence rather than chasing it. When the paper's description and the authors'
+own reference implementation disagree, offer both as a setting whose comments name the source
+each value matches (`camp.tie-break`, `clockpro.cold-hand`), so a reader of either source can
+see where the port stands.
 
 Simulator policies omit library machinery such as concurrency and field-access/layout
 optimizations, but must preserve algorithmic quality. `product.Caffeine` runs the shipped
@@ -123,6 +126,13 @@ direction and never-freeze restart. Validate with bundled traces and
   as `clock-pro.c` keeps `page_struct` in its hash table after `remove_from_clock`.
   Removing them changed 8/48 canonical cells (cs, multi1, 2_pools, sprite at 512/1024), by up
   to 0.5pp. Cardinality-sized memory is the accepted price of reference fidelity.
+- **CLOCK-Pro's cold hand is a setting.** `clock-pro.c` replaces a referenced cold page whose
+  test period has ended, while the paper resets its bit and moves it to the list head;
+  `cold-hand` selects `replace` (the default for CLOCK-Pro and CLOCK-Pro+) or `reset`.
+  `replace` brings all 39 bundled LIRS cells into bit-for-bit agreement with `clock-pro.c`,
+  which `ClockProReferenceTest` pins. Neither rule wins on hit rate: `replace` gains 15.4pp on
+  backf@500, `reset` gains up to 2.5pp on sprite and 0.3pp on zigzag@2000, and the
+  `corda_large + 5×loop + corda_large` mix is identical at 512.
 - **Consecutive duplicate handling belongs to each policy.** The LIRS references
   (`lirs.c`, Zhong's `replace_lirs_base.cc`/`replace_lirs2.cc`) skip correlated references
   after incrementing the hit-rate denominator (`warm_pg_refs++`/`mTraceLength`).

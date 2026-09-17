@@ -8,7 +8,7 @@ bnd = "7.4.0"
 bouncycastle-jdk18on = "1.86"
 cache2k = "2.6.1.Final"
 caffeine = "3.2.4"
-coherence = "26.04"
+coherence = "26.07"
 commons-collections4 = "4.6.0"
 commons-compress = "1.28.0"
 commons-lang3 = "3.20.0"
@@ -105,7 +105,7 @@ versions = "0.63.1"
 xz = "1.12"
 ycsb = "0.17.0"
 zero-allocation-hashing = "2026.0"
-zstd = "1.5.7-16"
+zstd = "1.5.7-17"
 
 [libraries]
 ap-loader = { module = "me.bechberger:ap-loader-all", version.ref = "ap-loader" }

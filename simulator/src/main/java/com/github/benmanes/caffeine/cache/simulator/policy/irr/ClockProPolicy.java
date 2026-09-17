@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
 import org.jspecify.annotations.Nullable;
@@ -24,6 +25,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.base.Enums;
 import com.google.common.base.MoreObjects;
 import com.google.errorprone.annotations.Var;
 import com.typesafe.config.Config;
@@ -82,6 +84,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
   // Maximum number of resident pages (hot + resident cold)
   private final int maxSize;
   private final int maxNonResSize;
+  private final ColdHand coldHand;
 
   private int sizeHot;
   private int sizeResCold;
@@ -107,6 +110,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
     var settings = new ClockProSettings(config);
     maxSize = Math.toIntExact(settings.maximumSize());
     maxNonResSize = (int) (maxSize * settings.nonResidentMultiplier());
+    coldHand = settings.coldHand();
     minResColdSize = Math.max(settings.lowerBoundCold(),
         (int) (maxSize * settings.percentMinCold()));
     maxResColdSize = Math.min(maxSize - minResColdSize,
@@ -261,26 +265,26 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
     requireNonNull(handCold);
     checkState(handCold.isResidentCold());
 
-    if (handCold.marked) {
+    if (handCold.marked && handCold.isInTest()) {
       // If its bit is set, and it is in its test period, we turn the cold page into a hot page,
       // and ask HAND for its actions, because an access during the test period indicates a
-      // competitively small reuse distance. If its bit is set, but it is not in its test period,
-      // then there is no status change or HAND actions. Its reference bit is reset, and we
-      // move it to the list head.
-      if (handCold.isInTest()) {
-        if (canPromote(handCold)) {
-          handCold.moveToHead(Status.HOT);
-        } else {
-          handCold.moveToHead(Status.COLD_RES_IN_TEST);
-        }
+      // competitively small reuse distance.
+      if (canPromote(handCold)) {
+        handCold.moveToHead(Status.HOT);
       } else {
         handCold.moveToHead(Status.COLD_RES_IN_TEST);
       }
+    } else if (handCold.marked && (coldHand == ColdHand.RESET)) {
+      // If its bit is set, but it is not in its test period, then the paper makes no status change
+      // or HAND actions. Its reference bit is reset, and we move it to the list head.
+      handCold.marked = false;
+      handCold.moveToHead(Status.COLD_RES);
     } else {
-      // If the reference bit of the cold page currently pointed to by handCold is unset, we replace
-      // the cold page for a free space. If the replaced cold page is in its test period, then it
-      // will remain in the list as a non-resident cold page until it runs out of its test period.
-      // If the replaced cold page is not in its test period, we move it out of the clock.
+      // Otherwise we replace the cold page for a free space, which the author's reference
+      // implementation also does when its bit is set but it is not in its test period. If the
+      // replaced cold page is in its test period, then it will remain in the list as a non-resident
+      // cold page until it runs out of its test period. If the replaced cold page is not in its
+      // test period, we move it out of the clock.
       if (handCold.isInTest()) {
         handCold.setStatus(Status.COLD_NON_RES);
         handCold = handCold.prev;
@@ -517,6 +521,11 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
     HOT, COLD_RES, COLD_RES_IN_TEST, COLD_NON_RES, OUT_OF_CLOCK,
   }
 
+  // The cold hand's action on a referenced cold page whose test period has ended
+  enum ColdHand {
+    REPLACE, RESET,
+  }
+
   final class Node {
     final long key;
 
@@ -636,6 +645,11 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
     }
     public double nonResidentMultiplier() {
       return config().getDouble("clockpro.non-resident-multiplier");
+    }
+    public ColdHand coldHand() {
+      var coldHand = config().getString("clockpro.cold-hand");
+      return Enums.getIfPresent(ColdHand.class, coldHand.toUpperCase(US)).toJavaUtil()
+          .orElseThrow(() -> new IllegalArgumentException("Unknown cold hand: " + coldHand));
     }
   }
 }

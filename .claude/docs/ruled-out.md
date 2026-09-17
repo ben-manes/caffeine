@@ -92,8 +92,11 @@ These dispose of whole families. Check them first.
   quiesced excess is capped by the write buffer (`estimatedSize() <= maximum + WRITE_BUFFER_MAX`),
   because a full buffer forces `afterWrite`'s inline assist. The live peak under concurrent
   writers is `maximum + 2 * WRITE_BUFFER_MAX + 1` plus the writers, since a drain applies its
-  whole batch before evicting. Do not add a third re-arm and do not move the resubmission into
-  `PerformCleanupTask`; both were built and declined.
+  whole batch before evicting. The same debt can keep a removed value reachable: a removal that
+  lands after a cycle's write-buffer drain leaves its `RemovalTask` queued, and the retired node
+  holds a strong value until the next operation or `cleanUp()`. The removal is already notified,
+  and weak or soft values are cleared at retirement. Do not add a third re-arm and do not move the
+  resubmission into `PerformCleanupTask`; both were built and declined.
 - `rescheduleCleanUpIfIncomplete`'s `!pacer.isScheduled()` gate deferring a REQUIRED backlog
   to the pacer's horizon is the same design. Same for the executor-reject catch in
   `scheduleDrainBuffers` not calling it.
@@ -143,6 +146,10 @@ These dispose of whole families. Check them first.
 - `BoundedBuffer.RingBuffer` stripes unusable during a producer stall, and
   `drainTo` leaving the slot nulled before `consumer.accept` stalls `readCounter` on a
   consumer throw.
+- `StripedBuffer.expandOrRetry` attaching a stripe with a plain array store while the `RingBuffer`
+  constructor stores its write counter plainly. A producer racing the attach can step that counter
+  back and drop a bounded number of read records on the stripe until it passes the read counter;
+  the drain does not spin and producers do not block, so the cost is the lossy read buffer's.
 - Neither write-buffer consumer waiting for a producer's publication (`relaxedPoll`). The
   task is not lost: `scheduleAfterWrite` runs after `offer` returns and re-arms. Where a
   weak-memory interleaving defeats that re-arm (the IDLE strand below), the task waits in the
@@ -176,6 +183,13 @@ These dispose of whole families. Check them first.
   entry stays resident and unreadable until that bucket is swept (measured: 3574s against a 3s
   request, with a `Scheduler` arming 3569s out). Bounded by the previous deadline, so it never
   extends an entry's life; see [TimerWheel](design-decisions.md#timerwheel).
+- A dropped read-buffer reorder leaving a live `expireAfterAccess` head in front of expired entries.
+  The scan moves a live head to the back only when its access time is newer than the tail's, so
+  when the tail was read later, the entries behind a head whose reorder was lost wait for that
+  head's next recorded read or its own expiry. Measured with twelve threads keeping their
+  read-buffer stripes full, the delay exceeded a second; without that contention it stayed under
+  25 ms. The timer wheel sweeps by bucket and has no such stop; see
+  [TimerWheel](design-decisions.md#timerwheel).
 - `Pacer.calculateSchedule`'s 0L sentinel collision.
 - `Pacer.schedule`'s reschedule arm must call `cancel()`, not `future.cancel(...)`: the
   immediate-scheduler recursion guard is `future == null && nextFireTime != 0L` and only
@@ -206,6 +220,11 @@ These dispose of whole families. Check them first.
 - Drain status terminal arms that skip the CAS, and a stale opaque read settling IDLE with a
   buffered task.
 - `scheduleAfterWrite`'s weak-memory IDLE strand.
+- `maintenance`'s entry store overwriting a writer's `PROCESSING_TO_REQUIRED` while the drain
+  passes over that writer's slot, so the exit swap settles `IDLE` with the task buffered. It is the
+  executor-run maintenance task's route to the same end state and heals the same way; jcstress
+  reached it on aarch64 at about two per million racing pairs, where the direct `cleanUp` route
+  measured about four per ten thousand.
 - Weak key identity semantics. Historical cleared-reference aliasing was harmless to the
   interner's uniform values; cleared references now compare equal only to themselves. See
   [refresh internals](design-decisions.md#refresh-internals).
@@ -244,6 +263,10 @@ These dispose of whole families. Check them first.
   `computeIfPresent`'s fast path bypassing `requireIsAlive` for value==null nodes;
   `getKey(K)` lacking expiry, value and alive filtering.
 - `BoundedLocalCache.put` missing an `isAlive()` re-check after the `Expiry` callback.
+- `put` and `putIfAbsent` weighing and dating a candidate node before `data.putIfAbsent`, so a
+  writer that loses that race has called `Weigher.weigh` and `Expiry.expireAfterCreate` for a node
+  it discards (two of each for one installed entry, where `computeIfAbsent` makes one). The node
+  must be complete when that call publishes it, and neither callback promises one call per entry.
 - `BoundedLocalCache.replace(K, V, V)` calling the weigher before the oldValue check.
 - `BoundedLocalCache.getIfPresent` casting the lookup `Object` to `K` for
   `tryExpireAfterRead`.
@@ -364,6 +387,11 @@ These dispose of whole families. Check them first.
 - `AsyncRemovalListener` notification on executor rejection.
 - `LocalCache.notifyOnReplace` dropped when both old and new are async futures and the old
   completed exceptionally.
+- A same-instance write over an expired entry notifying `EXPIRED` for the value it reinstalls. The
+  mapping expired, and maintenance reaping it before the write delivers the same notification, so
+  suppressing it would only make the notification depend on timing. `notifyOnReplace`'s identity
+  check is for replacing a live value, which removes nothing, and on `compute` and
+  `computeIfAbsent` the eviction listener runs before the function returns its value.
 - Historical `afterWrite` inline-fallback loss when maintenance throws. The repair runs
   the write's own task in `maintenance`'s `finally`; buffered work remains deferred.
 
@@ -421,6 +449,10 @@ These dispose of whole families. Check them first.
 - `AsyncCache.get(K, Function)` allocating its function adapter on a hit (16 B) once misses share
   the compiled profile. Avoiding it takes a second hit probe ahead of the one in
   `get(K, BiFunction)`, which a lambda allocation does not justify.
+- `synchronous().get(k, fn)` surfacing the cause of a `CompletionException` that the function threw
+  itself, where the synchronous cache rethrows it unchanged. `supplyAsync` stores a thrown
+  `CompletionException` as the wrapper it would otherwise add, so `resolve` cannot tell them apart,
+  and both throw the `RuntimeException` that `Cache.get` promises.
 
 ---
 
@@ -479,7 +511,7 @@ Read `jsr107-conformance.md`'s topic sections with this section.
 ## guava adapter
 
 - Guava-facade exception-translation divergences.
-- The two Guava-facade statistics divergences, under the best-effort-stats rule.
+- Guava-facade statistics divergences, under the best-effort-stats rule.
 - `CacheLoader.asyncReloading` fooling `hasLoadAll`, so `getAll` throws where native Guava
   falls back to per-key.
 - `caffeinate()`'s `ExternalBulkLoader` returning the loader's map uncopied, so a lazy view is
@@ -502,7 +534,9 @@ Read `jsr107-conformance.md`'s topic sections with this section.
   broken. Recursive loading is an implementation hole left undefined, not a contract, and
   Guava never promised it either. Drop-in compatibility is about honoring their API contracts,
   not reproducing their implementation: Guava is not linearizable and Caffeine does not give
-  that up to match. Migrating users do hit it.
+  that up to match. Migrating users do hit it. A `reload` that refreshes its own key fails the
+  same way, because the facade calls `reload` inside the refresh registration, while native
+  Guava's loading reference turns the nested refresh into a no-op.
 
 ---
 

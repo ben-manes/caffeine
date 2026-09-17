@@ -505,11 +505,11 @@ is accepted for a best-effort extension that has no post-commit hook.
 
 ### Listener failures
 
-Filters run inside compute and decide whether an event is published. A filter runtime failure
-is logged and returns false from `GuardedCacheEntryEventFilter.evaluate`; it must not abort a
-mutation after the writer or earlier registrations already took effect. This differs from
-post-commit listener failure. RI commits before propagating filter failures; Hazelcast/cache2k
-filter at delivery. Pin: `EventDispatcherTest.publishCreated_filterThrows`.
+Filters run inside compute and decide whether an event is published. A filter failure, an
+`Error` included, is logged and returns false from `GuardedCacheEntryEventFilter.evaluate`; it
+must not abort a mutation after the writer or earlier registrations already took effect. This
+differs from post-commit listener failure. RI commits before propagating filter failures;
+Hazelcast/cache2k filter at delivery. Pin: `EventDispatcherTest.publishCreated_filterThrows`.
 
 A synchronous listener's `CacheEntryListenerException` passes through; other listener runtime
 exceptions are wrapped in it. `javax.cache.event` package-info and `CacheEntryListener` require
@@ -777,6 +777,12 @@ shutdown check and, being non-AutoCloseable, the trailing tryClose. A singleton 
 returned raw by a factory does not opt out of ownership; do not add a shutdown flag.
 The JCache spec does not specifically require executor shutdown; its named Closeable list is
 loader, writer, listeners, and expiry policy. Ownership is the adapter's resource policy.
+The executor is the only vendor factory product the cache releases; a configured `Scheduler`,
+`Copier`, `Ticker`, `Weigher`, or native `Expiry` is borrowed, as in core. `Scheduler` has no
+close contract and none of its stock implementations owns a thread
+(`forScheduledExecutorService` adapts the caller's service), so the application releases a
+scheduler that starts one. cache2k instead closes an `AutoCloseable` scheduler with the cache, as
+its `Scheduler` interface documents.
 
 `inFlight` tracks explicit asynchronous loadAll work, including its CompletionListener
 notification, with a bounded 10-second close await. `loadAllAndNotify` returns the notification
