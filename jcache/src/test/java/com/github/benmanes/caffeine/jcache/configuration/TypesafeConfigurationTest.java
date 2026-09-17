@@ -255,6 +255,18 @@ final class TypesafeConfigurationTest {
   }
 
   @Test
+  void from_malformedListenerPath_throwsCacheException() {
+    // a malformed setting fails the cache's configuration rather than hiding the cache
+    var config = ConfigFactory.parseString(
+        "caffeine.jcache { malformed { listeners = [\"a..b\"] } }")
+        .withFallback(ConfigFactory.load());
+
+    var error = assertThrows(CacheException.class,
+        () -> TypesafeConfigurator.from(config, "malformed"));
+    assertThat(error).hasCauseThat().isInstanceOf(ConfigException.BadPath.class);
+  }
+
+  @Test
   void isSet_customized_null() {
     Config root = Mockito.mock();
     Config merged = Mockito.mock();

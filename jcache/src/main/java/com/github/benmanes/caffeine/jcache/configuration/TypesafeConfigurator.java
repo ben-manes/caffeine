@@ -20,8 +20,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.io.File;
-import java.lang.System.Logger;
-import java.lang.System.Logger.Level;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.Collections;
@@ -66,8 +64,6 @@ import jakarta.inject.Inject;
  */
 @NullMarked
 public final class TypesafeConfigurator {
-  static final Logger logger = System.getLogger(TypesafeConfigurator.class.getName());
-
   /** Sections nested under {@code caffeine.jcache} that are reserved and not cache definitions. */
   static final Set<String> RESERVED_NAMES = Set.of("default", "listeners");
 
@@ -128,9 +124,6 @@ public final class TypesafeConfigurator {
       return (!RESERVED_NAMES.contains(cacheName) && config.hasPath(cachePath(cacheName)))
           ? Optional.of(new Configurator<K, V>(config, cacheName).configure())
           : Optional.empty();
-    } catch (ConfigException.BadPath e) {
-      logger.log(Level.WARNING, "Failed to load cache configuration", e);
-      return Optional.empty();
     } catch (ConfigException e) {
       throw new CacheException("Failed to load the configuration for cache " + cacheName, e);
     }

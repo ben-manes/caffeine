@@ -2444,7 +2444,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
       boolean expired = hasExpired(node, now);
       V value = node.getValue();
-      if ((value == null) || (expired && !isComputingAsync(value))) {
+      if ((value == null) || expired) {
         iter.remove();
         drain = true;
       } else {
@@ -2525,21 +2525,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         if ((prior == null) || (prior == node)) {
           afterWrite(new AddTask(node, newWeight));
           return null;
-        } else if (onlyIfAbsent) {
-          // An optimistic fast path to avoid unnecessary locking
-          long now = expirationTicker().read();
-          boolean expired = hasExpired(prior, now);
-          V currentValue = prior.getValue();
-          if ((currentValue != null) && (!expired || isComputingAsync(currentValue))) {
-            if (!isComputingAsync(currentValue)) {
-              tryExpireAfterRead(prior, key, currentValue, expiry, now);
-              setAccessTime(prior, now);
-            }
-            afterRead(prior, now, /* recordHit= */ false);
-            return currentValue;
-          }
         }
-      } else if (onlyIfAbsent) {
+      }
+      if (onlyIfAbsent) {
         // An optimistic fast path to avoid unnecessary locking
         long now = expirationTicker().read();
         boolean expired = hasExpired(prior, now);
@@ -3030,7 +3018,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
     boolean expired = hasExpired(node, now = expirationTicker().read());
     V value = node.getValue();
-    if ((value == null) || (expired && !isComputingAsync(value))) {
+    if ((value == null) || expired) {
       scheduleDrainBuffers();
       return null;
     }
@@ -3527,8 +3515,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
     V value = transformer.apply(rawValue);
     K key = node.getKey();
-    if ((key == null) || (value == null) || !node.isAlive()
-        || (expired && !isComputingAsync(rawValue))) {
+    if ((key == null) || (value == null) || !node.isAlive() || expired) {
       return null;
     }
 

@@ -278,9 +278,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           }
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during asynchronous load", t);
-          if (recordLoad) {
-            cache().statsCounter().recordLoadFailure(loadTime);
-          }
+          cache().statsCounter().recordLoadFailure(loadTime);
           cache().remove(key, valueFuture);
         }
       }

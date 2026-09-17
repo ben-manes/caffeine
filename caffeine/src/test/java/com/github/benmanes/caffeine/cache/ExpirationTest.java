@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
 import static com.github.benmanes.caffeine.cache.AsyncCacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.CacheContext.intern;
 import static com.github.benmanes.caffeine.cache.CacheContextSubject.assertThat;
@@ -24,6 +25,7 @@ import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.Pacer.TOLERANCE;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
+import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
@@ -48,6 +50,7 @@ import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -651,6 +654,8 @@ final class ExpirationTest {
     assertThat(cache.getIfPresent(context.absentKey())).isSameInstanceAs(future);
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.getIfPresent(context.absentKey())).isSameInstanceAs(future);
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.getIfPresent(context.absentKey())).isSameInstanceAs(future);
     future.complete(null);
   }
 
@@ -876,6 +881,9 @@ final class ExpirationTest {
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().containsKey(context.absentKey())).isTrue();
     assertThat(cache.synchronous().asMap().containsKey(context.absentKey())).isFalse();
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().containsKey(context.absentKey())).isTrue();
+    assertThat(cache.synchronous().asMap().containsKey(context.absentKey())).isFalse();
     future.complete(null);
   }
 
@@ -905,6 +913,8 @@ final class ExpirationTest {
     assertThat(cache.asMap().containsValue(future)).isTrue();
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().containsValue(future)).isTrue();
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().containsValue(future)).isTrue();
     future.complete(null);
   }
 
@@ -921,6 +931,24 @@ final class ExpirationTest {
 
     assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, removalListener = Listener.CONSUMING,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE }, expiryTime = Expire.ONE_MINUTE,
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void clear_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    cache.asMap().clear();
+
+    future.complete(context.absentValue());
+    assertThat(context).removalNotifications().withCause(EXPLICIT)
+        .contains(context.absentKey(), context.absentValue()).exclusively();
   }
 
   @ParameterizedTest
@@ -953,6 +981,23 @@ final class ExpirationTest {
     var newValue = intern(List.copyOf(context.absent().values()));
     map.putIfAbsent(context.absentKey(), newValue);
     assertThat(context).hasWeightedSize(context.absent().size());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void putIfAbsent_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var f1 = new CompletableFuture<Int>();
+    var f2 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f1);
+    assertThat(cache.asMap().putIfAbsent(context.absentKey(), f2)).isSameInstanceAs(f1);
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().putIfAbsent(context.absentKey(), f2)).isSameInstanceAs(f1);
+    f1.complete(nullRef());
   }
 
   @ParameterizedTest
@@ -1021,11 +1066,14 @@ final class ExpirationTest {
     var f1 = new CompletableFuture<Int>();
     var f2 = new CompletableFuture<Int>();
     var f3 = new CompletableFuture<Int>();
+    var f4 = new CompletableFuture<Int>();
     cache.put(context.absentKey(), f1);
     assertThat(cache.asMap().put(context.absentKey(), f2)).isSameInstanceAs(f1);
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().put(context.absentKey(), f3)).isSameInstanceAs(f2);
-    f3.complete(nullRef());
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().put(context.absentKey(), f4)).isSameInstanceAs(f3);
+    f4.complete(nullRef());
   }
 
   @ParameterizedTest
@@ -1074,11 +1122,14 @@ final class ExpirationTest {
     var f1 = new CompletableFuture<Int>();
     var f2 = new CompletableFuture<Int>();
     var f3 = new CompletableFuture<Int>();
+    var f4 = new CompletableFuture<Int>();
     cache.put(context.absentKey(), f1);
     assertThat(cache.asMap().replace(context.absentKey(), f2)).isSameInstanceAs(f1);
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().replace(context.absentKey(), f3)).isSameInstanceAs(f2);
-    f3.complete(nullRef());
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().replace(context.absentKey(), f4)).isSameInstanceAs(f3);
+    f4.complete(nullRef());
   }
 
   @ParameterizedTest
@@ -1149,11 +1200,14 @@ final class ExpirationTest {
     var f1 = new CompletableFuture<Int>();
     var f2 = new CompletableFuture<Int>();
     var f3 = new CompletableFuture<Int>();
+    var f4 = new CompletableFuture<Int>();
     cache.put(context.absentKey(), f1);
     assertThat(cache.asMap().replace(context.absentKey(), f1, f2)).isTrue();
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().replace(context.absentKey(), f2, f3)).isTrue();
-    f3.complete(nullRef());
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().replace(context.absentKey(), f3, f4)).isTrue();
+    f4.complete(nullRef());
   }
 
   @ParameterizedTest
@@ -1185,6 +1239,11 @@ final class ExpirationTest {
     cache.put(context.absentKey(), f2);
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().remove(context.absentKey())).isSameInstanceAs(f2);
+
+    var f3 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f3);
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().remove(context.absentKey())).isSameInstanceAs(f3);
   }
 
   @ParameterizedTest
@@ -1222,6 +1281,11 @@ final class ExpirationTest {
     cache.put(context.absentKey(), f2);
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().remove(context.absentKey(), f2)).isTrue();
+
+    var f3 = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), f3);
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().remove(context.absentKey(), f3)).isTrue();
   }
 
   @ParameterizedTest
@@ -1353,6 +1417,9 @@ final class ExpirationTest {
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().computeIfAbsent(
         context.absentKey(), key -> null)).isSameInstanceAs(f1);
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().computeIfAbsent(
+        context.absentKey(), key -> null)).isSameInstanceAs(f1);
     f1.complete(nullRef());
 
     if (context.expiryType() == CacheExpiry.MOCKITO) {
@@ -1470,7 +1537,14 @@ final class ExpirationTest {
       assertThat(f).isSameInstanceAs(f2);
       return f3;
     });
-    f3.complete(nullRef());
+
+    var f4 = new CompletableFuture<@Nullable Int>();
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().computeIfPresent(context.absentKey(), (k, f) -> {
+      assertThat(f).isSameInstanceAs(f3);
+      return f4;
+    })).isSameInstanceAs(f4);
+    f4.complete(nullRef());
 
     if (context.expiryType() == CacheExpiry.MOCKITO) {
       verifyNoInteractions(context.expiry());
@@ -1653,7 +1727,14 @@ final class ExpirationTest {
       assertThat(f).isSameInstanceAs(f2);
       return f3;
     });
-    f3.complete(nullRef());
+
+    var f4 = new CompletableFuture<@Nullable Int>();
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().compute(context.absentKey(), (k, f) -> {
+      assertThat(f).isSameInstanceAs(f3);
+      return f4;
+    })).isSameInstanceAs(f4);
+    f4.complete(nullRef());
 
     if (context.expiryType() == CacheExpiry.MOCKITO) {
       verifyNoInteractions(context.expiry());
@@ -1807,6 +1888,14 @@ final class ExpirationTest {
 
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().keySet().contains(context.absentKey())).isTrue();
+
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().keySet().contains(context.absentKey())).isTrue();
+    assertThat(cache.asMap().keySet()).containsExactly(context.absentKey());
+    var keys = new ArrayList<Int>();
+    cache.asMap().keySet().spliterator().forEachRemaining(keys::add);
+    assertThat(cache.asMap().keySet().spliterator().tryAdvance(keys::add)).isTrue();
+    assertThat(keys).containsExactly(context.absentKey(), context.absentKey());
     future.complete(null);
   }
 
@@ -1949,6 +2038,13 @@ final class ExpirationTest {
 
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().values().contains(future)).isTrue();
+
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().values().contains(future)).isTrue();
+    var values = new ArrayList<CompletableFuture<Int>>();
+    cache.asMap().values().spliterator().forEachRemaining(values::add);
+    assertThat(cache.asMap().values().spliterator().tryAdvance(values::add)).isTrue();
+    assertThat(values).containsExactly(future, future);
     future.complete(null);
   }
 
@@ -2091,6 +2187,15 @@ final class ExpirationTest {
 
     context.ticker().advance(Duration.ofMinutes(5));
     assertThat(cache.asMap().entrySet().contains(entry(context.absentKey(), future))).isTrue();
+
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().entrySet().contains(entry(context.absentKey(), future))).isTrue();
+    assertThat(cache.asMap().entrySet()).containsExactly(entry(context.absentKey(), future));
+    var entries = new ArrayList<Map.Entry<Int, CompletableFuture<Int>>>();
+    cache.asMap().entrySet().spliterator().forEachRemaining(entries::add);
+    assertThat(cache.asMap().entrySet().spliterator().tryAdvance(entries::add)).isTrue();
+    assertThat(entries).containsExactly(
+        entry(context.absentKey(), future), entry(context.absentKey(), future));
     future.complete(null);
   }
 
@@ -2214,6 +2319,21 @@ final class ExpirationTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void equals_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<@Nullable Int>();
+    cache.put(context.absentKey(), future);
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().equals(Map.of(context.absentKey(), future))).isTrue();
+    future.complete(null);
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -2232,6 +2352,21 @@ final class ExpirationTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void hashCode_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<@Nullable Int>();
+    cache.put(context.absentKey(), future);
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().hashCode()).isEqualTo(Map.of(context.absentKey(), future).hashCode());
+    future.complete(null);
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
@@ -2247,6 +2382,21 @@ final class ExpirationTest {
 
     context.cleanUp();
     assertThat(parseToString(map)).containsExactlyEntriesIn(parseToString(context.absent()));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void toString_inFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<@Nullable Int>();
+    cache.put(context.absentKey(), future);
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(5)));
+    assertThat(cache.asMap().toString()).isEqualTo(Map.of(context.absentKey(), future).toString());
+    future.complete(null);
   }
 
   private static Map<String, String> parseToString(Map<Int, Int> map) {

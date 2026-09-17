@@ -144,19 +144,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
     long millis = currentTimeMillis();
     if (expirable.hasExpired(millis)) {
-      dispatcher.beginComputation();
-      try {
-        cache.asMap().computeIfPresent(key, (k, e) -> {
-          if ((e == expirable) && expirable.hasExpired(millis)) {
-            dispatcher.publishExpired(this, key, expirable.get());
-            statistics.recordEvictions(1L);
-            return null;
-          }
-          return e;
-        });
-      } finally {
-        dispatcher.endComputation();
-      }
+      removeExpired(key, expirable, millis);
       dispatcher.awaitSynchronous();
       return false;
     }
@@ -185,21 +173,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       long now = ticker.read();
       millis = nanosToMillis(now);
       if (expirable.hasExpired(millis)) {
-        Expirable<V> current;
-        var expired = expirable;
-        dispatcher.beginComputation();
-        try {
-          current = cache.asMap().computeIfPresent(key, (k, e) -> {
-            if ((e == expired) && expired.hasExpired(millis)) {
-              dispatcher.publishExpired(this, key, expired.get());
-              statistics.recordEvictions(1L);
-              return null;
-            }
-            return e;
-          });
-        } finally {
-          dispatcher.endComputation();
-        }
+        var current = removeExpired(key, expirable, millis);
         if ((current == null) || current.hasExpired(millis)) {
           var listenerFailure = awaitSynchronousFailure();
           statistics.recordMisses(1L);
@@ -250,7 +224,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * time.
    */
   protected Map<K, Expirable<V>> getAndFilterExpiredEntries(Set<? extends K> keys) {
-    int[] expired = { 0 };
     long[] millis = { 0L };
     int requested = keys.size();
     var result = new HashMap<K, @NonNull Expirable<V>>(cache.getAllPresent(keys));
@@ -259,20 +232,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         millis[0] = currentTimeMillis();
       }
       if (!entry.getValue().isEternal() && entry.getValue().hasExpired(millis[0])) {
-        dispatcher.beginComputation();
-        Expirable<V> current;
-        try {
-          current = cache.asMap().computeIfPresent(entry.getKey(), (k, expirable) -> {
-            if ((expirable == entry.getValue()) && expirable.hasExpired(millis[0])) {
-              dispatcher.publishExpired(this, entry.getKey(), entry.getValue().get());
-              expired[0]++;
-              return null;
-            }
-            return expirable;
-          });
-        } finally {
-          dispatcher.endComputation();
-        }
+        var current = removeExpired(entry.getKey(), entry.getValue(), millis[0]);
         if ((current == null) || current.hasExpired(millis[0])) {
           return true;
         }
@@ -286,7 +246,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     statistics.recordHits(result.size());
     statistics.recordMisses(requested - result.size());
-    statistics.recordEvictions(expired[0]);
     return result;
   }
 
@@ -1425,6 +1384,24 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   /** Returns the nanosecond time in milliseconds. */
   protected static long nanosToMillis(long nanos) {
     return TimeUnit.NANOSECONDS.toMillis(nanos);
+  }
+
+  /** Removes the entry if it is still the expired wrapper, returning the wrapper that remains. */
+  @CanIgnoreReturnValue
+  protected final @Nullable Expirable<V> removeExpired(K key, Expirable<V> expired, long millis) {
+    dispatcher.beginComputation();
+    try {
+      return cache.asMap().computeIfPresent(key, (k, expirable) -> {
+        if ((expirable == expired) && expired.hasExpired(millis)) {
+          dispatcher.publishExpired(this, key, expired.get());
+          statistics.recordEvictions(1L);
+          return null;
+        }
+        return expirable;
+      });
+    } finally {
+      dispatcher.endComputation();
+    }
   }
 
   /** Returns the duration to expire an accessed entry after, or {@code null} if unchanged. */

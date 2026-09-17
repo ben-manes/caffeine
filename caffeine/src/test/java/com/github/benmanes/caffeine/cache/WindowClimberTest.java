@@ -1559,6 +1559,32 @@ final class WindowClimberTest {
   }
 
   @Test
+  void audit_confirm_skipsANegativeBestSample() {
+    // a transient negative policy weight can report the window below zero, and a streak sample
+    // taken there can carry the walk's best rate. The verdict must not send the window to that
+    // position, so the audit parks where its streak completed
+    var climber = makeClimber();
+    var density = (DensityClimber) climber.tier;
+    for (int i = 0; i < (AUDIT_WAIT_INITIAL + 2); i++) {
+      steadySample(climber, /* windowMax= */ 4096, /* hitRate= */ 0.50);
+      if (density.walk != null) {
+        break;
+      }
+    }
+    assertThat(walkOf(density).isAudit).isTrue();
+
+    sample(climber, /* windowMax= */ -100, /* windowHits= */ 0, /* mainHits= */ 600,
+        /* misses= */ 400);
+    for (int i = 0; (i < PROBE_WALK_BUDGET) && (density.walk != null); i++) {
+      steadySample(climber, /* windowMax= */ 3000, /* hitRate= */ 0.58);
+    }
+
+    assertThat(density.walk).isNull();
+    assertThat(density.anchor.held).isTrue();
+    assertThat(density.anchor.window).isEqualTo(3000);
+  }
+
+  @Test
   void audit_confirm_onAnImprovingWalk_parksWhereItStopped() {
     // a walk still improving when its streak completes has its best sample last, so the verdict is
     // the position it stands on, and a walk over a flat plateau has a best sample by noise alone,
@@ -2143,6 +2169,27 @@ final class WindowClimberTest {
     assertThat(density.anchor.isPlanted()).isTrue();
     assertThat(density.anchor.held).isTrue();
     assertThat(density.rates.isUnseeded()).isFalse();
+  }
+
+  @Test
+  void guardRail_retestDue_waitsForTheReturnToEnd() {
+    // the router asks only once a return has ended, but a return still under way has no retest
+    // due, and asking from off the anchor must not cancel the retest that the arrival owes
+    var climber = seededShortfall();
+    var density = (DensityClimber) climber.tier;
+    density.auditClock.waitSamples = AUDIT_WAIT_INITIAL;
+    for (int i = 0; i < VETO_STREAK; i++) {
+      steadySample(climber, /* windowMax= */ 7500, /* hitRate= */ 0.66);
+    }
+    assertThat(density.anchor.returning).isTrue();
+    assertThat(density.anchor.retestClaim).isWithin(1.0e-6).of(0.70);
+    int settleLeft = density.anchor.settleLeft;
+
+    var reading = new WindowClimber.Reading(climber.sample, MAXIMUM, /* windowMax= */ 7500,
+        protectedMax(MAXIMUM, /* windowMax= */ 7500));
+    assertThat(density.anchor.isRetestDue(reading)).isFalse();
+    assertThat(density.anchor.retestClaim).isWithin(1.0e-6).of(0.70);
+    assertThat(density.anchor.settleLeft).isEqualTo(settleLeft);
   }
 
   @Test

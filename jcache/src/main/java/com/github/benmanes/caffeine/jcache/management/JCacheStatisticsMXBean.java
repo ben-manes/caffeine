@@ -256,11 +256,8 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
     return (float) opsTimeMicro / requestCount;
   }
 
-  @SuppressWarnings("ShortCircuitBoolean")
   private static long saturatedAdd(long a, long b) {
-    long naiveSum = a + b;
-    return ((a ^ b) < 0) | ((a ^ naiveSum) >= 0)
-        ? naiveSum
-        : Long.MAX_VALUE + ((naiveSum >>> (Long.SIZE - 1)) ^ 1);
+    long sum = a + b;
+    return (sum < 0) ? Long.MAX_VALUE : sum;
   }
 }

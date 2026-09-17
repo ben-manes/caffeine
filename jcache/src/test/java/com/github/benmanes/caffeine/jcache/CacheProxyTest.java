@@ -794,6 +794,47 @@ final class CacheProxyTest {
   }
 
   @Test
+  void registerCacheEntryListener_filterFactoryAndCloseThrow_suppressesTheCloseFailure()
+      throws IOException {
+    var filterFailure = new IllegalStateException("filter");
+    var closeFailure = new IllegalStateException("close");
+    try (CloseableCacheEntryListener listener = Mockito.mock();
+        var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+        var cache = fixture.jcache()) {
+      doThrow(closeFailure).doNothing().when(listener).close();
+      var listenerConfig = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+          /* listenerFactory= */ () -> listener,
+          /* filterFactory= */ () -> { throw filterFailure; },
+          /* isOldValueRequired= */ false, /* isSynchronous= */ false);
+
+      var thrown = assertThrows(IllegalStateException.class,
+          () -> cache.registerCacheEntryListener(listenerConfig));
+      assertThat(thrown).isSameInstanceAs(filterFailure);
+      assertThat(thrown.getSuppressed()).asList().containsExactly(closeFailure);
+    }
+  }
+
+  @Test
+  void registerCacheEntryListener_filterFactoryAndCloseThrowSameFailure_doesNotSelfSuppress()
+      throws IOException {
+    var failure = new IllegalStateException("shared");
+    try (CloseableCacheEntryListener listener = Mockito.mock();
+        var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
+        var cache = fixture.jcache()) {
+      doThrow(failure).doNothing().when(listener).close();
+      var listenerConfig = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+          /* listenerFactory= */ () -> listener,
+          /* filterFactory= */ () -> { throw failure; },
+          /* isOldValueRequired= */ false, /* isSynchronous= */ false);
+
+      var thrown = assertThrows(IllegalStateException.class,
+          () -> cache.registerCacheEntryListener(listenerConfig));
+      assertThat(thrown).isSameInstanceAs(failure);
+      assertThat(thrown.getSuppressed()).isEmpty();
+    }
+  }
+
+  @Test
   @SuppressWarnings("try")
   void registerCacheEntryListener_filterFactoryThrows_keepsASharedListenerOpen()
       throws IOException {
@@ -981,6 +1022,45 @@ final class CacheProxyTest {
   }
 
   @Test
+  void removeAll_writerPartiallyFails_storeThrows_retainsWriterFailure() throws IOException {
+    var failTicker = new AtomicBoolean();
+    Ticker ticker = () -> {
+      if (failTicker.get()) {
+        throw new IllegalStateException("ticker");
+      }
+      return 0L;
+    };
+    try (CloseableCacheWriter writer = Mockito.mock();
+        var fixture = JCacheFixture.builder().configure(config -> {
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(true);
+          config.setTickerFactory(() -> ticker);
+          // a non-eternal entry consults the clock on removal, which is where the loop breaks
+          config.setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(ONE_DAY));
+        }).build();
+        var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      cache.put(KEY_2, VALUE_2);
+
+      // the writer deletes KEY_1 and reports KEY_2 as failed, then removing KEY_1 aborts
+      var failure = new CacheWriterException("partial");
+      Mockito.doAnswer(invocation -> {
+        Collection<?> keys = invocation.getArgument(0);
+        keys.remove(KEY_1);
+        throw failure;
+      }).when(writer).deleteAll(any());
+
+      failTicker.set(true);
+      var thrown = assertThrows(IllegalStateException.class,
+          () -> cache.removeAll(Set.of(KEY_1, KEY_2)));
+      failTicker.set(false);
+
+      // the partial write-through must still be reported rather than replaced by the store failure
+      assertThat(thrown.getSuppressed()).asList().contains(failure);
+    }
+  }
+
+  @Test
   void loadAll_loading_executorRejects_notifiesListener() {
     Executor rejecting = task -> { throw new RejectedExecutionException("test"); };
     try (var fixture = JCacheFixture.builder()
@@ -1054,8 +1134,25 @@ final class CacheProxyTest {
   void get_replacedBeforeExpiry() {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       replaceWhenCheckedForExpiry(fixture.jcache(),
-          fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+          fixture.currentTime().plus(EXPIRY_DURATION).toMillis(),
+          () -> fixture.jcache().put(KEY_1, VALUE_2));
       assertThat(fixture.jcache().get(KEY_1)).isEqualTo(VALUE_2);
+      assertThat(fixture.jcache().statistics.getCacheEvictions()).isEqualTo(0);
+    }
+  }
+
+  @Test
+  void get_replacedByExpired() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      long expireTimeMillis = fixture.currentTime().plus(EXPIRY_DURATION).toMillis();
+      Expirable<Integer> replacement = Mockito.mock();
+      when(replacement.hasExpired(anyLong())).thenReturn(true);
+      when(replacement.getExpireTimeMillis()).thenReturn(expireTimeMillis);
+      replaceWhenCheckedForExpiry(fixture.jcache(), expireTimeMillis,
+          () -> fixture.jcache().cache.asMap().put(KEY_1, replacement));
+
+      assertThat(fixture.jcache().get(KEY_1)).isNull();
+      assertThat(fixture.jcache().cache.asMap()).containsEntry(KEY_1, replacement);
       assertThat(fixture.jcache().statistics.getCacheEvictions()).isEqualTo(0);
     }
   }
@@ -1075,8 +1172,25 @@ final class CacheProxyTest {
   void getAll_replacedBeforeExpiry() {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       replaceWhenCheckedForExpiry(fixture.jcache(),
-          fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+          fixture.currentTime().plus(EXPIRY_DURATION).toMillis(),
+          () -> fixture.jcache().put(KEY_1, VALUE_2));
       assertThat(fixture.jcache().getAll(Set.of(KEY_1))).isEqualTo(Map.of(KEY_1, VALUE_2));
+      assertThat(fixture.jcache().statistics.getCacheEvictions()).isEqualTo(0);
+    }
+  }
+
+  @Test
+  void getAll_replacedByExpired() {
+    try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
+      long expireTimeMillis = fixture.currentTime().plus(EXPIRY_DURATION).toMillis();
+      Expirable<Integer> replacement = Mockito.mock();
+      when(replacement.hasExpired(anyLong())).thenReturn(true);
+      when(replacement.getExpireTimeMillis()).thenReturn(expireTimeMillis);
+      replaceWhenCheckedForExpiry(fixture.jcache(), expireTimeMillis,
+          () -> fixture.jcache().cache.asMap().put(KEY_1, replacement));
+
+      assertThat(fixture.jcache().getAll(Set.of(KEY_1))).isEmpty();
+      assertThat(fixture.jcache().cache.asMap()).containsEntry(KEY_1, replacement);
       assertThat(fixture.jcache().statistics.getCacheEvictions()).isEqualTo(0);
     }
   }
@@ -1229,14 +1343,14 @@ final class CacheProxyTest {
    * reader that captured the entry judges its deadline passed only after a writer replaced it.
    */
   private static void replaceWhenCheckedForExpiry(
-      CacheProxy<Integer, Integer> jcache, long expireTimeMillis) {
+      CacheProxy<Integer, Integer> jcache, long expireTimeMillis, Runnable replace) {
     var replaced = new AtomicBoolean();
     Expirable<Integer> expirable = Mockito.mock();
     when(expirable.get()).thenReturn(VALUE_1);
     when(expirable.getExpireTimeMillis()).thenReturn(expireTimeMillis);
     when(expirable.hasExpired(anyLong())).thenAnswer(invocation -> {
       if (replaced.compareAndSet(false, true)) {
-        jcache.put(KEY_1, VALUE_2);
+        replace.run();
         return true;
       }
       return false;

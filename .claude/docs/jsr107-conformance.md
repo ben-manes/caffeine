@@ -712,14 +712,17 @@ from getCache, not degrade silently. Pins: `CacheManagerTest.isReadThrough`,
 `invalidThroughConfiguration_hasNoCreationSideEffects`,
 `throughConfiguration_nullFactoryProduct_failsFast`, and `createCache_minimalConfiguration`.
 
-`TypesafeConfigurator.from` ignores only `ConfigException.BadPath`, returning Optional.empty
-because valid JCache names need not fit Typesafe's path grammar. Wrap other ConfigExceptions
-(Missing/WrongType) in CacheException with their cause, as configuration failures through the
-cache API; do not restore raw Typesafe exceptions. `defaults`, `cacheNames`, and `CacheFactory`'s
-read of the configuration source wrap theirs too, so an unreadable or malformed file surfaces
-from getCache and createCache as CacheException. Pins:
-`TypesafeConfigurationTest.from_malformedSetting`, `defaults_malformedSetting`,
-`cacheNames_malformed`, and `CacheManagerTest.getCache_unreadableConfiguration_throwsCacheException`.
+`TypesafeConfigurator.from` wraps every ConfigException (BadPath/Missing/WrongType) in
+CacheException with its cause, as configuration failures through the cache API; do not restore raw
+Typesafe exceptions or an ignored subtype. A valid JCache name need not fit Typesafe's path grammar,
+so `cachePath` quotes it with `ConfigUtil.joinPath` and resolves it as a literal key. A BadPath can
+then only come from a malformed path within the settings, such as a `listeners` entry, which must
+fail rather than hide the cache as undefined. `defaults`, `cacheNames`, and `CacheFactory`'s read of
+the configuration source wrap theirs too, so an unreadable or malformed file surfaces from getCache
+and createCache as CacheException. Pins: `TypesafeConfigurationTest.from_malformedSetting`,
+`from_dottedCacheName`, `from_malformedListenerPath_throwsCacheException`,
+`defaults_malformedSetting`, `cacheNames_malformed`, and
+`CacheManagerTest.getCache_unreadableConfiguration_throwsCacheException`.
 Separate existing paths remain unchanged: type-resolution CNFE becomes ISE, and bad factory-class
 RuntimeException originates in the spec's own FactoryBuilder.
 

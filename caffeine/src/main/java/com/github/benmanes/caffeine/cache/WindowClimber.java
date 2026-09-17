@@ -381,9 +381,10 @@ final class WindowClimber {
      * reach an obsolete anchor without a large enough rate change to trigger workload detection.
      */
     private void retestReturn(Reading reading) {
-      if (anchor.retestFails(rates) && anchor.standDown(reading)) {
+      if (anchor.retestFails(rates)) {
         // Subsequent anchors must use rate measurements from the new workload
         rates.reset();
+        anchor.standDown(reading);
       }
     }
 
@@ -1416,6 +1417,7 @@ final class WindowClimber {
      * a change at the anchor invalidates its rate; a change elsewhere may result from the
      * controller's own movement.
      */
+    @CanIgnoreReturnValue
     boolean standDown(Reading r) {
       boolean discarded = isAt(r.windowMax, r.band);
       if (discarded) {

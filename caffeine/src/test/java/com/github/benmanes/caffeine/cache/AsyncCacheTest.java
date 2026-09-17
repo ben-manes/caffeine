@@ -1766,6 +1766,50 @@ final class AsyncCacheTest {
         .hasSize(1);
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY)
+  void handleCompletion_completedWrite_obtrudedNull(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    CompletableFuture<@Nullable Int> future = Mockito.spy();
+    ArgumentCaptor<BiConsumer<@Nullable Int, @Nullable Throwable>> captor =
+        ArgumentCaptor.captor();
+    doReturn(future).when(future).whenComplete(captor.capture());
+    future.complete(context.absentValue());
+    cache.put(context.absentKey(), future);
+
+    // the write stored a completed value, so a result changed afterwards is not a load failure
+    future.obtrudeValue(null);
+    captor.getValue().accept(null, /* error */ null);
+
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
+    assertThat(cache).doesNotContainKey(context.absentKey());
+  }
+
+  @ParameterizedTest
+  @CheckMaxLogLevel(ERROR)
+  @CacheSpec(population = Population.EMPTY)
+  void handleCompletion_completedWrite_brokenFuture(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    CompletableFuture<Int> future = Mockito.spy();
+    ArgumentCaptor<BiConsumer<@Nullable Int, @Nullable Throwable>> captor =
+        ArgumentCaptor.captor();
+    doReturn(future).when(future).whenComplete(captor.capture());
+    future.complete(context.absentValue());
+    cache.put(context.absentKey(), future);
+
+    future.obtrudeException(new IllegalStateException());
+    captor.getValue().accept(context.absentValue(), /* error */ null);
+
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(logEvents()
+        .withMessage(msg -> msg.contains("An invalid state was detected"))
+        .withThrowable(IllegalStateException.class)
+        .withLevel(ERROR)
+        .exclusively())
+        .hasSize(1);
+  }
+
   @CacheSpec
   @ParameterizedTest
   void serialize(AsyncCache<Int, Int> cache) {

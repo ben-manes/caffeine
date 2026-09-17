@@ -35,7 +35,8 @@ paths:
   degrading measured hit rate (w50 -38.6pp; stress@512 -12.7pp). User replacements remain loud.
 - Record a load when `computed || deferred`: `get`/`getAll` and map computations record their
   computation; `put`, `putIfAbsent`, and `replace` on either surface record only futures still
-  in flight at insertion. Already-resolved writes do not load anything. Preserve failure
+  in flight at insertion. Already-resolved writes do not load anything, even when the future is
+  later obtruded or broken (`handleCompletion_completedWrite_*`). Preserve failure
   accounting for in-flight writes (`computeIfAbsent_present_failed`,
   `handleCompletion_brokenFuture_*`); "writes never record loads" is incorrect.
 - Null results and failed futures remove the mapping without invoking the user's removal

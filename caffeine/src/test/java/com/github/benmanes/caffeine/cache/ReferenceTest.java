@@ -1672,6 +1672,10 @@ final class ReferenceTest {
   void reference_equality() {
     var first = new Int(1);
     var second = new Int(1);
+    var firstCleared = new WeakKeyEqualsReference<>(first, null);
+    var secondCleared = new WeakKeyEqualsReference<>(second, null);
+    firstCleared.clear();
+    secondCleared.clear();
     new EqualsTester()
         .addEqualityGroup(new LookupKeyReference<>(first), new WeakKeyReference<>(first, null))
         .addEqualityGroup(new LookupKeyReference<>(second), new WeakKeyReference<>(second, null))
@@ -1680,6 +1684,8 @@ final class ReferenceTest {
         .addEqualityGroup(
             new LookupKeyEqualsReference<>(first), new WeakKeyEqualsReference<>(first, null),
             new LookupKeyEqualsReference<>(second), new WeakKeyEqualsReference<>(second, null))
+        .addEqualityGroup(firstCleared)
+        .addEqualityGroup(secondCleared)
         .testEquals();
     new EqualsTester()
         .addEqualityGroup(new WeakValueReference<>(first, first, null),

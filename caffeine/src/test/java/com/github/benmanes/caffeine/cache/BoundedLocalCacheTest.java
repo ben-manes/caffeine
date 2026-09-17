@@ -531,6 +531,63 @@ final class BoundedLocalCacheTest {
 
   @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
+      expireAfterAccess = Expire.ONE_MINUTE, removalListener = Listener.MOCKITO)
+  void expireAfterAccess_promotedDuringScan(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    cache.setWindowMaximum(context.maximumSize());
+    for (int i = 0; i < 4; i++) {
+      var value = cache.put(Int.valueOf(i), Int.valueOf(i));
+      assertThat(value).isNull();
+    }
+    cache.cleanUp();
+
+    // Stage one protected entry, so that an entry promoted during the scan has live links, and
+    // three probation entries in insertion order
+    var window = cache.accessOrderWindowDeque();
+    var probation = cache.accessOrderProbationDeque();
+    var protectedDeque = cache.accessOrderProtectedDeque();
+    for (int i = 0; i < 4; i++) {
+      var node = requireNonNull(window.peekFirst());
+      assertThat(window.remove(node)).isTrue();
+      cache.setWindowWeightedSize(cache.windowWeightedSize() - node.getPolicyWeight());
+      if (i == 0) {
+        assertThat(protectedDeque.offerLast(node)).isTrue();
+        cache.setMainProtectedWeightedSize(
+            cache.mainProtectedWeightedSize() + node.getPolicyWeight());
+        node.makeMainProtected();
+      } else {
+        assertThat(probation.offerLast(node)).isTrue();
+        node.makeMainProbation();
+      }
+    }
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    long now = cache.expirationTicker().read();
+    requireNonNull(protectedDeque.peekFirst()).setAccessTime(now);
+    var head = requireNonNull(probation.peekFirst());
+    var promoted = requireNonNull(head.getNextInAccessOrder());
+    var last = requireNonNull(probation.peekLast());
+    promoted.setAccessTime(now - TimeUnit.SECONDS.toNanos(40));
+    last.setAccessTime(now - TimeUnit.SECONDS.toNanos(30));
+
+    // Evicting the expired head delivers the notification inline. The listener reads the successor
+    // that the scan is holding, and the re-entrant maintenance promotes it to the protected queue
+    // while the tail stays in probation, so the scan resumes on an entry that another queue owns.
+    var promotedKey = requireNonNull(promoted.getKey());
+    doAnswer(invocation -> {
+      assertThat(cache.get(promotedKey)).isNotNull();
+      cache.cleanUp();
+      return null;
+    }).doNothing().when(context.removalListener()).onRemoval(any(), any(), any());
+
+    cache.cleanUp();
+    assertThat(promoted.getQueueType()).isEqualTo(PROTECTED);
+    assertQueuesConsistent(cache);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.VALUE,
       executor = CacheExecutor.DISCARDING, removalListener = Listener.CONSUMING)
   void addTask_declinedEviction_leavesEntryLinked(BoundedLocalCache<Int, Int> cache) {
@@ -4480,6 +4537,22 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE}, expiryTime = Expire.ONE_MINUTE,
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  void isPendingEviction_async_expiredInFlight(AsyncCache<Int, Int> cache, CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    context.ticker().advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(2)));
+
+    var localCache = (LocalAsyncCache<Int, Int>) cache;
+    assertThat(localCache.cache().isPendingEviction(context.absentKey())).isFalse();
+    future.complete(context.absentValue());
+  }
+
+  @ParameterizedTest
   @CacheSpec(compute = Compute.ASYNC, population = Population.EMPTY, keys = ReferenceType.STRONG)
   void asyncCompletion_removesRefresh(AsyncCache<Int, Int> cache, CacheContext context) {
     var localCache = ((LocalAsyncCache<Int, Int>) cache).cache();
@@ -5032,6 +5105,40 @@ final class BoundedLocalCacheTest {
     assertThat(removed).isEmpty();
     assertThat(cache.stats().evictionCount()).isEqualTo(0);
     assertThat(cache).isValid();
+  }
+
+  @Test
+  void computeIfAbsent_inFlightAfterOptimisticMiss_keptUnderLock() {
+    var ticker = new FakeTicker();
+    var onRead = new AtomicReference<@Nullable Runnable>();
+    AsyncCache<Int, Int> cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(() -> {
+          var action = onRead.getAndSet(null);
+          if (action != null) {
+            action.run();
+          }
+          return ticker.read();
+        })
+        .buildAsync();
+
+    // The optimistic lookup misses and its clock read stands in for a concurrent writer that
+    // inserts an in-flight load before the locked path. Past the async horizon the load's
+    // timestamps read expired, so the locked path must keep it rather than evict it and run the
+    // mapping function.
+    var key = Int.valueOf(1);
+    var future = new CompletableFuture<Int>();
+    onRead.set(() -> {
+      cache.put(key, future);
+      ticker.advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(2)));
+    });
+
+    var result = cache.asMap().computeIfAbsent(key, k -> {
+      throw new AssertionError("the in-flight load must not be replaced");
+    });
+    assertThat(result).isSameInstanceAs(future);
+    future.complete(Int.valueOf(100));
   }
 
   @ParameterizedTest

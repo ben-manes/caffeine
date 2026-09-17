@@ -87,4 +87,31 @@ final class JCacheStatisticsMXBeanTest {
     assertThat(stats.getAveragePutTime()).isEqualTo(0F);
     assertThat(stats.getAverageRemoveTime()).isEqualTo(0F);
   }
+
+  @Test
+  void loadTime_untracked_isIgnored() {
+    var stats = new JCacheStatisticsMXBean();
+
+    // The loader adapter records only after isRecordingLoadTime() and the read-through proxy ends
+    // only what it began, so an untracked record or end is reachable only by a direct call
+    stats.recordLoadTime(1);
+    assertThat(stats.isRecordingLoadTime()).isFalse();
+    assertThat(stats.endLoadTime()).isEqualTo(0L);
+
+    stats.beginLoadTime();
+    stats.recordLoadTime(1);
+    assertThat(stats.endLoadTime()).isEqualTo(1L);
+    assertThat(stats.isRecordingLoadTime()).isFalse();
+  }
+
+  @Test
+  void getCacheGets_overflow_saturates() {
+    var stats = new JCacheStatisticsMXBean();
+    stats.enable(true);
+    stats.recordHits(Long.MAX_VALUE);
+    stats.recordMisses(1);
+
+    assertThat(stats.getCacheGets()).isEqualTo(Long.MAX_VALUE);
+    assertThat(stats.getCacheHitPercentage()).isEqualTo(100F);
+  }
 }

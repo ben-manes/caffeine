@@ -114,6 +114,19 @@ final class JavaSerializationCopierTest {
     assertThat(requested).contains(SerializableGreeter.class.getName());
   }
 
+  @Test
+  void deserializable_resolveProxyClass_notVisible() {
+    // an interface that the supplied class loader cannot see falls back to the stream's resolution
+    var proxy = Proxy.newProxyInstance(getClass().getClassLoader(),
+        new Class<?>[] { SerializableGreeter.class }, new GreeterHandler());
+
+    var copier = new JavaSerializationCopier();
+    var copy = copier.copy(proxy, ClassLoader.getPlatformClassLoader());
+
+    assertThat(copy).isInstanceOf(SerializableGreeter.class);
+    assertThat(((SerializableGreeter) copy).greet()).isEqualTo("hello");
+  }
+
   /** An interface for a serializable dynamic proxy. */
   @FunctionalInterface
   public interface SerializableGreeter extends Serializable {

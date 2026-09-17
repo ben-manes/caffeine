@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.slf4j.event.Level.WARN;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -91,6 +92,7 @@ import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.copy.Copier;
+import com.github.valfirst.slf4jtest.TestLoggerFactory;
 import com.google.common.collect.Iterables;
 import com.google.common.testing.EqualsTester;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -168,15 +170,43 @@ final class EventDispatcherTest {
     assertThat(created.get(1).closed).isTrue();
   }
 
-  /** A listener that records whether it was closed. */
+  @Test
+  void register_duplicateRegistration_closeThrows_logsTheFailure() {
+    // a registration race is the only way through the cache to the dropped listener
+    var failure = new IllegalStateException("close");
+    Factory<CacheEntryListener<? super Integer, ? super Integer>> factory = () -> {
+      var listener = new CloseableCreatedListener();
+      listener.failure = failure;
+      return listener;
+    };
+    var logger = TestLoggerFactory.getTestLogger(EventDispatcher.class);
+    logger.clear();
+
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    dispatcher.register(new MutableCacheEntryListenerConfiguration<>(factory,
+        /* filterFactory= */ null, /* isOldValueRequired= */ false, /* isSynchronous= */ false));
+    dispatcher.register(new MutableCacheEntryListenerConfiguration<>(factory,
+        /* filterFactory= */ null, /* isOldValueRequired= */ false, /* isSynchronous= */ false));
+
+    assertThat(dispatcher.dispatchQueues).hasSize(1);
+    var event = Iterables.getOnlyElement(logger.getLoggingEvents());
+    assertThat(event.getLevel()).isEqualTo(WARN);
+    assertThat(event.getThrowable()).hasValue(failure);
+  }
+
+  /** A listener that records whether it was closed and then throws the failure, if set. */
   private static final class CloseableCreatedListener
       implements CacheEntryCreatedListener<Integer, Integer>, AutoCloseable {
+    @Nullable RuntimeException failure;
     boolean closed;
 
     @Override public void onCreated(
         Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {}
     @Override public void close() {
       closed = true;
+      if (failure != null) {
+        throw failure;
+      }
     }
   }
 
