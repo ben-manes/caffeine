@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Caffeine.toUnchecked;
 import static java.util.Objects.requireNonNull;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -219,20 +220,33 @@ public interface CacheLoader<K, V extends @Nullable Object> extends AsyncCacheLo
   @SuppressWarnings("FunctionalInterfaceClash")
   static <K, V extends @Nullable Object> CacheLoader<K, V> bulk(Function<? super Set<? extends K>,
       ? extends Map<? extends K, ? extends @NonNull V>> mappingFunction) {
-    requireNonNull(mappingFunction);
-    return new CacheLoader<>() {
-      /*
-       * If the caller passes a mapping function that may ever return partial results, then calls to
-       * load() may return null. In that case, the caller should type the return value of bulk(...)
-       * as a CacheLoader<Foo, @Nullable Bar>, rather than a CacheLoader<Foo, Bar>.
-       */
-      @SuppressWarnings("NullAway")
-      @Override public V load(K key) {
-        return loadAll(Set.of(key)).get(key);
-      }
-      @Override public Map<? extends K, ? extends @NonNull V> loadAll(Set<? extends K> keys) {
-        return mappingFunction.apply(keys);
-      }
-    };
+    return new BulkCacheLoader<>(mappingFunction);
+  }
+}
+
+/** A cache loader that delegates to a function that loads the values in bulk. */
+final class BulkCacheLoader<K, V extends @Nullable Object>
+    implements CacheLoader<K, V>, Serializable {
+  private static final long serialVersionUID = 1L;
+
+  @SuppressWarnings("serial")
+  final Function<? super Set<? extends K>,
+      ? extends Map<? extends K, ? extends @NonNull V>> mappingFunction;
+
+  BulkCacheLoader(Function<? super Set<? extends K>,
+      ? extends Map<? extends K, ? extends @NonNull V>> mappingFunction) {
+    this.mappingFunction = requireNonNull(mappingFunction);
+  }
+  /*
+   * If the caller passes a mapping function that may ever return partial results, then calls to
+   * load() may return null. In that case, the caller should type the return value of bulk(...)
+   * as a CacheLoader<Foo, @Nullable Bar>, rather than a CacheLoader<Foo, Bar>.
+   */
+  @SuppressWarnings("NullAway")
+  @Override public V load(K key) {
+    return loadAll(Set.of(key)).get(key);
+  }
+  @Override public Map<? extends K, ? extends @NonNull V> loadAll(Set<? extends K> keys) {
+    return mappingFunction.apply(keys);
   }
 }

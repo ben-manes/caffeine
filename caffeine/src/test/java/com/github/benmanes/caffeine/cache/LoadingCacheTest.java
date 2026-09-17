@@ -48,6 +48,7 @@ import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
+import java.io.Serializable;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,6 +65,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -88,6 +90,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.google.common.testing.SerializableTester;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -1587,6 +1590,17 @@ final class LoadingCacheTest {
     assertThat(loader.load(Int.valueOf(1))).isEqualTo(1);
   }
 
+  @Test
+  void bulk_serialize() throws Exception {
+    SerializableBulkFunction mappingFunction = keys ->
+        keys.stream().collect(toImmutableMap(identity(), identity()));
+    CacheLoader<Int, Int> loader = CacheLoader.bulk(mappingFunction);
+    var reserialized = SerializableTester.reserialize(loader);
+    assertThat(reserialized.loadAll(Int.setOf(1, 2)))
+        .containsExactlyEntriesIn(Int.mapOf(1, 1, 2, 2));
+    assertThat(reserialized.load(Int.valueOf(1))).isEqualTo(1);
+  }
+
   /* --------------- Policy: refreshes --------------- */
 
   @ParameterizedTest
@@ -1618,4 +1632,8 @@ final class LoadingCacheTest {
       future.cancel(true);
     }
   }
+
+  @FunctionalInterface
+  private interface SerializableBulkFunction
+      extends Function<Set<? extends Int>, Map<Int, Int>>, Serializable {}
 }

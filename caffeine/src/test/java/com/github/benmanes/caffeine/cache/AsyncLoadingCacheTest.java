@@ -44,6 +44,7 @@ import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
+import java.io.Serializable;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,6 +63,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -85,6 +87,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.google.common.testing.SerializableTester;
 
 /**
  * The test cases for the {@link AsyncLoadingCache} interface that simulate the most generic usages.
@@ -1081,6 +1084,17 @@ final class AsyncLoadingCacheTest {
   }
 
   @Test
+  void bulk_function_serialize() throws Exception {
+    SerializableBulkFunction mappingFunction = keys ->
+        keys.stream().collect(toImmutableMap(identity(), identity()));
+    AsyncCacheLoader<Int, Int> loader = AsyncCacheLoader.bulk(mappingFunction);
+    var reserialized = SerializableTester.reserialize(loader);
+    assertThat(reserialized.asyncLoadAll(Int.setOf(1, 2), Runnable::run))
+        .succeedsWith(Int.mapOf(1, 1, 2, 2));
+    assertThat(reserialized.asyncLoad(Int.valueOf(1), Runnable::run)).succeedsWith(1);
+  }
+
+  @Test
   void bulk_bifunction_null() {
     assertThrows(NullPointerException.class, () -> AsyncCacheLoader.bulk(nullBiFunction()));
   }
@@ -1107,6 +1121,28 @@ final class AsyncLoadingCacheTest {
         .succeedsWith(Int.mapOf(1, 1, 2, 2));
     assertThat(loader.asyncLoad(Int.valueOf(1), Runnable::run)).succeedsWith(1);
   }
+
+  @Test
+  void bulk_bifunction_serialize() throws Exception {
+    SerializableBulkBiFunction mappingFunction = (keys, executor) -> {
+      ImmutableMap<Int, Int> results = keys.stream()
+          .collect(toImmutableMap(identity(), identity()));
+      return CompletableFuture.completedFuture(results);
+    };
+    AsyncCacheLoader<Int, Int> loader = AsyncCacheLoader.bulk(mappingFunction);
+    var reserialized = SerializableTester.reserialize(loader);
+    assertThat(reserialized.asyncLoadAll(Int.setOf(1, 2), Runnable::run))
+        .succeedsWith(Int.mapOf(1, 1, 2, 2));
+    assertThat(reserialized.asyncLoad(Int.valueOf(1), Runnable::run)).succeedsWith(1);
+  }
+
+  @FunctionalInterface
+  private interface SerializableBulkFunction
+      extends Function<Set<? extends Int>, Map<Int, Int>>, Serializable {}
+
+  @FunctionalInterface
+  private interface SerializableBulkBiFunction extends BiFunction<Set<? extends Int>, Executor,
+      CompletableFuture<Map<Int, Int>>>, Serializable {}
 
   /** A key that runs an action on its first hash lookup by the thread that loaded it. */
   private static final class RacingKey {

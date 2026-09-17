@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -161,19 +162,34 @@ public interface AsyncCacheLoader<K, V extends @Nullable Object> {
           ? super Executor,
           ? extends CompletableFuture<? extends Map<? extends K, ? extends @NonNull V>>>
       mappingFunction) {
-    requireNonNull(mappingFunction);
-    return new AsyncCacheLoader<>() {
-      @SuppressWarnings("NullAway")
-      @Override public CompletableFuture<@Nullable V> asyncLoad(K key, Executor executor) {
-        return asyncLoadAll(Set.of(key), executor).thenApply(results -> results.get(key));
-      }
-      @Override
-      public CompletableFuture<? extends Map<? extends K, ? extends @NonNull V>> asyncLoadAll(
-          Set<? extends K> keys, Executor executor) {
-        requireNonNull(keys);
-        requireNonNull(executor);
-        return mappingFunction.apply(keys, executor);
-      }
-    };
+    return new BulkAsyncCacheLoader<>(mappingFunction);
+  }
+}
+
+/** An asynchronous cache loader that delegates to a function that loads the values in bulk. */
+final class BulkAsyncCacheLoader<K, V extends @Nullable Object>
+    implements AsyncCacheLoader<K, V>, Serializable {
+  private static final long serialVersionUID = 1L;
+
+  @SuppressWarnings("serial")
+  final BiFunction<? super Set<? extends K>, ? super Executor,
+      ? extends CompletableFuture<? extends Map<? extends K, ? extends @NonNull V>>>
+      mappingFunction;
+
+  BulkAsyncCacheLoader(BiFunction<? super Set<? extends K>, ? super Executor,
+      ? extends CompletableFuture<? extends Map<? extends K, ? extends @NonNull V>>>
+      mappingFunction) {
+    this.mappingFunction = requireNonNull(mappingFunction);
+  }
+  @SuppressWarnings("NullAway")
+  @Override public CompletableFuture<@Nullable V> asyncLoad(K key, Executor executor) {
+    return asyncLoadAll(Set.of(key), executor).thenApply(results -> results.get(key));
+  }
+  @Override
+  public CompletableFuture<? extends Map<? extends K, ? extends @NonNull V>> asyncLoadAll(
+      Set<? extends K> keys, Executor executor) {
+    requireNonNull(keys);
+    requireNonNull(executor);
+    return mappingFunction.apply(keys, executor);
   }
 }
