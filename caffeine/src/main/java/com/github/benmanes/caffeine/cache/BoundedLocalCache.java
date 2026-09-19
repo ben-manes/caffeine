@@ -2295,7 +2295,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           notifyEviction(key, ctx.value, ctx.cause);
         }
 
-        discardRefresh(node.getKeyReference());
+        discardRefresh(k);
         node.retire();
         return null;
       }
@@ -2606,7 +2606,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             setWriteTime(prior, expirationTime);
           }
 
-          discardRefresh(prior.getKeyReference());
+          discardRefresh(lookupKey);
         }
 
         setVariableTime(prior, varTime);
@@ -2863,7 +2863,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     for (K key : keySet()) {
       Object lookupKey = nodeFactory.newLookupKey(key);
       remap(key, lookupKey, remappingFunction, expiry(),
-          new ComputeContext<>(expirationTicker().read()), /* computeIfAbsent= */ false);
+          new ComputeContext<>(), /* computeIfAbsent= */ false);
     }
   }
 
@@ -2876,8 +2876,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     // An optimistic fast path to avoid unnecessary locking
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
-    long now = expirationTicker().read();
     if (node != null) {
+      long now = expirationTicker().read();
       boolean expired = hasExpired(node, now);
       V value = node.getValue();
       if ((value != null) && (!expired || isComputingAsync(value))) {
@@ -2893,8 +2893,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       mappingFunction = statsAware(mappingFunction, recordLoad);
     }
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
-    return doComputeIfAbsent(key, keyRef, mappingFunction,
-        new ComputeContext<>(now), recordStats);
+    return doComputeIfAbsent(key, keyRef, mappingFunction, new ComputeContext<>(), recordStats);
   }
 
   /** Returns the current value from a computeIfAbsent invocation. */
@@ -3012,11 +3011,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     // An optimistic fast path to avoid unnecessary locking
     Object lookupKey = nodeFactory.newLookupKey(key);
     var node = data.get(lookupKey);
-    long now;
     if (node == null) {
       return null;
     }
-    boolean expired = hasExpired(node, now = expirationTicker().read());
+    boolean expired = hasExpired(node, expirationTicker().read());
     V value = node.getValue();
     if ((value == null) || expired) {
       scheduleDrainBuffers();
@@ -3027,7 +3025,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> statsAwareRemappingFunction =
         statsAware(remappingFunction, /* recordLoad= */ true, /* recordLoadFailure= */ true);
     return remap(key, lookupKey, statsAwareRemappingFunction,
-        expiry(), new ComputeContext<>(now), /* computeIfAbsent= */ false);
+        expiry(), new ComputeContext<>(), /* computeIfAbsent= */ false);
   }
 
   @Override
@@ -3039,7 +3037,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     requireNonNull(remappingFunction);
 
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
-    var ctx = new ComputeContext<K, V>(expirationTicker().read());
+    var ctx = new ComputeContext<K, V>();
     ctx.hints = hints;
     return remap(key, keyRef, statsAware(remappingFunction, recordLoad, recordLoadFailure),
         expiry, ctx, /* computeIfAbsent= */ true);
@@ -3056,7 +3054,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     BiFunction<? super V, ? super V, ? extends @Nullable V> f = statsAware(remappingFunction);
     return remap(key, keyRef,
         (k, oldValue) -> (oldValue == null) ? value : f.apply(oldValue, value), expiry(),
-        new ComputeContext<>(expirationTicker().read()), /* computeIfAbsent= */ true);
+        new ComputeContext<>(), /* computeIfAbsent= */ true);
   }
 
   /**
@@ -3071,8 +3069,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * @param keyRef the key to associate with or a lookup only key if not {@code computeIfAbsent}
    * @param remappingFunction the function to compute a value
    * @param expiry the calculator for the expiration time
-   * @param ctx the mutable context for passing state to and from the {@link ConcurrentHashMap}
-   *        compute lambda, with {@link ComputeContext#now} set to the current ticker time
+   * @param ctx the mutable context for passing state to and from the compute lambda
    * @param computeIfAbsent if an absent entry can be computed
    * @return the new value associated with the specified key, or null if none
    */
@@ -3573,20 +3570,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Nullable K nodeKey;
     @Nullable V oldValue;
     @Nullable V newValue;
+    @Nullable RemapHints hints;
     @Nullable Node<K, V> removed;
     @Nullable RemovalCause cause;
     @Nullable Throwable exception;
-    @Nullable RemapHints hints;
 
     long now;
     int oldWeight;
     int newWeight;
     boolean unmodified;
     boolean exceedsTolerance;
-
-    ComputeContext(long now) {
-      this.now = now;
-    }
   }
 
   /** A function that produces an unmodifiable map up to the limit in stream order. */

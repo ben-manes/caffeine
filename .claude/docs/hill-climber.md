@@ -260,6 +260,22 @@ owns it; a confirmed family lands here and in the gate table.
   square duty re-creates the starved clock below every-sample motion (the Sol
   round's `entry_duty`, a dose note on the `posjam_d0` gate row); the loss there is the
   rider's class-3 mask, not the jam.
+  The optional `audit-regret/specs/bandrider.json` control uses a finite-distance rider
+  (pairs at 0.15·max) with a sine-modulated share, a steady far band at 0.67·max, and a
+  Zipf core. At maximum 8192, workload seed 1093 and 256 continuous samples, admission
+  seeds 1–8 give hybrid **51.44** (51.36–51.52), bit-identical to `noaudit`, against
+  **62.01** for reactive and a **64.94** best tested static reference. All eight default-start
+  histories have no audits after one early starvation confirmation. The later 128-sample
+  suffix still loses 12.92pp to the same fixed 45% reference, so the deficit is not only
+  startup. Holding probation at its live 1622-entry allocation gives 64.78–64.90 at
+  43/50/60% windows; actual adaptive starts at 43% and 60% give 65.28 and 65.37. These are
+  different initial histories, not frozen decision counterfactuals. The observed small-window
+  orbit is path-dependent. Eleven one-factor neighbors at 128 continuous samples retain 13.4–13.9pp gaps at one
+  admission seed (amplitude, period, phase, distance, scale and trace seed); a lower modulation dose
+  escapes later. Its amplitude ladder mixes delayed escape, unsuccessful audits and audit
+  absence, so a hit-rate threshold does not identify a mechanism boundary. This is another
+  class-3/class-5 dose beside `entry_duty`, not a new failure class or mandatory gate bar.
+  No individual missed audit's benefit was measured.
 - **crashnoise / mixnoise** (`crashnoise.py`, `mixnoise.py`, adv3 rows): the whisper and
   mixture bases under a mean-centred, RMS-normalised rate modulation whose **amplitude** is
   the dose — the walk's exit-bar instruments. The two interior exits test different statistics

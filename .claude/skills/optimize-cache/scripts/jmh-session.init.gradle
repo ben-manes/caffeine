@@ -1,0 +1,74 @@
+/* Isolated JMH settings for one optimize-cache invocation. */
+gradle.beforeProject { project ->
+  if (project.path != ':caffeine') {
+    return
+  }
+  project.afterEvaluate {
+    def property = { name, fallback ->
+      project.providers.gradleProperty(name).getOrElse(fallback).trim()
+    }
+    def count = { name ->
+      def value = property(name, '5')
+      if (!(value ==~ /[0-9]+/) || value.toBigInteger() < 5
+          || value.toBigInteger() > Integer.MAX_VALUE) {
+        throw new GradleException("${name} must be an integer of at least 5")
+      }
+      value.toInteger()
+    }
+    def duration = { name, fallback ->
+      def value = property(name, fallback)
+      def match = value =~ /([1-9][0-9]*)(ns|us|ms|s|m)/
+      if (!match.matches() || match.group(1).toBigInteger() > Long.MAX_VALUE) {
+        throw new GradleException("${name} must be a positive duration, such as 10s or 1ms")
+      }
+      value
+    }
+
+    def path = property('optimizeRunDir', '')
+    def runDir = new File(path)
+    if (!runDir.isAbsolute() || path.contains(';')) {
+      throw new GradleException('optimizeRunDir must be an absolute path without semicolons')
+    }
+    runDir = runDir.canonicalFile
+    def resultsFile = new File(runDir, 'results.json')
+    def profilerDir = new File(runDir, 'async').absolutePath
+
+    def extension = project.extensions.getByName('jmh')
+    extension.fork.set(1)
+    extension.warmupIterations.set(count('optimizeWarmups'))
+    extension.iterations.set(count('optimizeIterations'))
+    extension.warmup.set(duration('optimizeWarmupTime', '10s'))
+    extension.timeOnIteration.set(duration('optimizeMeasurementTime', '10s'))
+    extension.resultsFile.set(resultsFile)
+    extension.humanOutputFile.set(new File(runDir, 'jmh.txt'))
+
+    // The report plugin stores strings rather than following the resultsFile provider.
+    def report = project.extensions.getByName('jmhReport')
+    report.jmhResultPath = resultsFile.absolutePath
+    report.jmhReportOutput = new File(runDir, 'report').absolutePath
+
+    project.tasks.named('jmh').configure { task ->
+      // Keep library extraction lazy; reading the extension here would precede its task.
+      task.profilers.set(extension.profilers.map { profilers ->
+        profilers.collect { profiler ->
+          if (!profiler.startsWith('async:')) {
+            return profiler
+          }
+          def options = profiler.substring('async:'.length()).split(';').toList()
+          options.removeAll { it.startsWith('dir=') || it.startsWith('threads=') }
+          options.add("dir=${profilerDir}")
+          options.add('threads=true')
+          'async:' + options.join(';')
+        }
+      })
+      task.doFirst {
+        if (resultsFile.exists()) {
+          throw new GradleException("Refusing to overwrite ${resultsFile}; choose a new optimizeRunDir")
+        }
+        if (!runDir.isDirectory() && !runDir.mkdirs()) {
+          throw new GradleException("Cannot create optimizeRunDir: ${runDir}")
+        }
+      }
+    }
+  }
+}

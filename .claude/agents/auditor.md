@@ -75,6 +75,23 @@ confidence suspicions to match expectation. Fight this explicitly.
   traces, result CSVs and a `LEDGER.md` there) reads back its own outputs
   normally. Never open a workspace an earlier run left behind, and never open
   `.local/audits/` at all.
+- Write to the repository source tree: `*/src/main/`, `*/src/test/` and the other source
+  sets, the build files, or anything generated. That tree is shared with other work and an
+  edit left in it outlives the run — a witness harness built from a tree carrying an audit's
+  uncommitted edits reports on code that is not in the source, and an edit found later by
+  someone who does not know where it came from gets reverted wholesale, taking any good work
+  with it. When a witness or an escalated test genuinely needs a file there, that edit is
+  scratch: keep it as a patch in your workspace, restore the tree before you finish, and
+  describe the patch in the report. A repair ships as a reviewed change later, never as
+  residue.
+
+  `.claude/` is the exception, and it is yours: correcting a skill, clarifying a rule, or
+  adding a scenario you had to work out is a normal audit output, not scope creep. Note
+  that it is **checked in**, not scratch — an edit there is a durable change to what every
+  later run is told, so make it as deliberately as any committed change. Follow
+  `.claude/rules/code-comments.md` §*Maintaining agent guidance*, keep the edit inside the
+  file your module owns (several groups may run at once; do not rewrite a shared file out
+  from under another), and list what you changed in your report so it is reviewable.
 - Cite prior audit results as justification to dismiss a finding. Every dismissal
   must be reconstructed from source code *in this audit*. "Prior audits found no
   defects here" is not evidence.
@@ -91,6 +108,12 @@ clear.
 ## Methodology
 
 Every audit runs these phases in order. Do not skip phases.
+
+`audit-redundancy` inverts the framing: the claim under attack is that a transformation
+preserves behavior, not that the code violates a contract. Its findings are `low` by
+construction, so Phase 3.5's pricing gate does not fire, and it substitutes its own fields for
+**Invariant/contract violated** and **Priced** in the Output Contract. Everything else here
+holds, including the evidence boundaries, the evaluator challenge, and the mandatory report.
 
 ### Phase 0: Attack Planning
 
@@ -191,6 +214,15 @@ For each Phase 1 finding, check if it matches:
 
 This ordering exists because design context causes premature dismissal.
 Analyzing first, then checking context, catches bugs that domain familiarity masks.
+
+**When the harness pre-empts the ordering.** Reading a module's source can auto-inject that
+module's rule file as a system-reminder before Phase 1 has recorded anything; runs have hit
+this on `jcache-adapter.md` and `guava-adapter.md`. You cannot prevent it, and you should not
+write the report as though it had not happened. Hold the ordering behaviourally instead:
+derive every difference of a pair from the source text, and let no dismissal rest on the
+injected rule until Phase 1.5. Then say in the report that the file arrived unbidden and at
+what point, so a reader can price the "recorded before design context" claim instead of
+taking it on trust.
 
 **A `ruled-out.md` entry is a mechanism plus a consequence, and it disposes of a finding
 only when you match both.** Say explicitly which you have:
@@ -360,8 +392,26 @@ exists in the source tree (`caffeine/src/frayTest`, `jcstress`, or `lincheckTest
 and passes. Before treating the escalation as closed, port the skeleton into the
 source tree and run it — or reject it with the reason (e.g. single-writer, so not a
 race). Do not consider an escalation addressed merely because a report holds a skeleton.
+The ported test is scratch under the write boundary in Evidence Boundaries: run it, keep
+it as a patch in your workspace, and restore the tree before the run ends.
 
 ### Phase 4: Final Report
+
+**Write as you go, not at the end.** Create the report with `Write` as your first substantive
+action — metadata header and Phase 0 plan, before you read any implementation — and append with
+`Edit` **after every difference you record**, not once per phase. A phase that traces ten pairs
+holds nine of them in context until it ends; a run that dies there loses all nine, while a run
+that appended each one loses at most the tenth. This is not bookkeeping: an audit is killed by a
+quota error, a timeout or a crash often enough that the report on disk, and not the run, is what
+survives. The same applies to a witness — write the source file and its log before you reason
+about the output.
+
+What a dead run leaves behind is recoverable, so a relaunch should not re-derive it. The agent's
+full JSONL transcript persists in the session's task directory as `<agentId>.output`, and
+`.claude/hooks/recover-agent.py` prints slices of it without overflowing a context:
+`stats` for where it stopped, `writes` for what it had persisted, `files` for every file it read
+and command it ran, `text` for prose it had not yet written down. An orchestrator relaunching a
+dead agent should paste the `files` list into the new prompt.
 
 Write the full report to the path your orchestrator assigned you. A shell orchestrator
 assigns it in the environment: run `printenv AUDIT_REPORT_PATH` and write there when it is

@@ -156,7 +156,7 @@ def group(mode):
         return "auditWalk"
     if mode.startswith("walk"):
         return "walk"
-    if mode == "AUDITCONFIRM":
+    if mode in ("AUDITCONFIRM", "AUDITCONFIRM+home"):
         return "audit_confirm"
     if mode == "CONFIRM+steer":
         return "probe_confirm"

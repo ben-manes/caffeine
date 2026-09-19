@@ -16,6 +16,9 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   whose captured wrapper expired removes it by identity, only if its deadline still says expired,
   and continues with a live replacement, since both are happen-before. See
   [access expiry](../docs/jsr107-conformance.md#access-expiry).
+- Read-through lookup can find a concurrent insertion/replacement after the initial miss and
+  skip one JCache access-policy call. Native expiry still applies; this is an accepted race in
+  `get` and `getAll`, including expired-wrapper recovery. See the access-expiry reference.
 - Access expiry writes the held wrapper's timestamp, then updates the native timer **only on
   read paths** (`get`, `getAll`, iterator). Keep that order: a core read re-derives the native
   deadline from the wrapper. Reads remain lock-free; the by-key timer update can

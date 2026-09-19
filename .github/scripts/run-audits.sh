@@ -92,6 +92,7 @@ SKILLS_DEFAULT=(
   audit-performance            # three validated wins last run
   audit-adaptivity             # climber yielded one row last sweep; last two runs found no defects
   audit-build-ci               # ties jcache on row count, but they are CI rows, not library defects
+  audit-redundancy
   audit-coverage-gaps
 )
 

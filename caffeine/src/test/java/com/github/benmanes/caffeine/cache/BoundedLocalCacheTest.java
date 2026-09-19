@@ -5110,26 +5110,29 @@ final class BoundedLocalCacheTest {
   @Test
   void computeIfAbsent_inFlightAfterOptimisticMiss_keptUnderLock() {
     var ticker = new FakeTicker();
-    var onRead = new AtomicReference<@Nullable Runnable>();
-    AsyncCache<Int, Int> cache = Caffeine.newBuilder()
+    var lookups = new AtomicInteger();
+    var onLookup = new AtomicReference<@Nullable Runnable>();
+    AsyncCache<Object, Int> cache = Caffeine.newBuilder()
         .expireAfterWrite(Duration.ofMinutes(1))
         .executor(Runnable::run)
-        .ticker(() -> {
-          var action = onRead.getAndSet(null);
-          if (action != null) {
-            action.run();
-          }
-          return ticker.read();
-        })
+        .ticker(ticker::read)
         .buildAsync();
 
-    // The optimistic lookup misses and its clock read stands in for a concurrent writer that
-    // inserts an in-flight load before the locked path. Past the async horizon the load's
-    // timestamps read expired, so the locked path must keep it rather than evict it and run the
-    // mapping function.
-    var key = Int.valueOf(1);
+    // The second hash occurs after the optimistic lookup and before the locked computation.
+    // Insert an in-flight load there. Past the async horizon its timestamps read expired, so
+    // the locked path must keep the load rather than evict it and run the mapping function.
+    var key = new Object() {
+      @SuppressFBWarnings("HE_HASHCODE_USE_OBJECT_EQUALS")
+      @SuppressWarnings("PMD.OverrideBothEqualsAndHashcode")
+      @Override public int hashCode() {
+        if (lookups.incrementAndGet() == 2) {
+          requireNonNull(onLookup.getAndSet(null)).run();
+        }
+        return 1;
+      }
+    };
     var future = new CompletableFuture<Int>();
-    onRead.set(() -> {
+    onLookup.set(() -> {
       cache.put(key, future);
       ticker.advance(Duration.ofNanos(ASYNC_EXPIRY).plus(Duration.ofMinutes(2)));
     });
@@ -5262,7 +5265,7 @@ final class BoundedLocalCacheTest {
     // ConcurrentHashMap.compute lambdas with synchronized + try-catch can't track ctx.exception
     // being set. The mapping function returns null for the absent key so data.compute is a no-op,
     // and the post-lambda code sees the pre-set checked exception, wraps it in CompletionException.
-    var ctx = new ComputeContext<Int, Int>(cache.expirationTicker().read());
+    var ctx = new ComputeContext<Int, Int>();
     ctx.exception = new IOException("test");
     Object keyRef = cache.nodeFactory.newReferenceKey(
         context.absentKey(), cache.keyReferenceQueue());
@@ -5276,7 +5279,7 @@ final class BoundedLocalCacheTest {
   @ParameterizedTest
   @CacheSpec
   void remap_throwsException(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    var ctx = new ComputeContext<Int, Int>(cache.expirationTicker().read());
+    var ctx = new ComputeContext<Int, Int>();
     ctx.exception = new IOException("test");
     Object keyRef = cache.nodeFactory.newLookupKey(context.absentKey());
 
@@ -5796,7 +5799,7 @@ final class BoundedLocalCacheTest {
       writer.set(Thread.currentThread());
       await().untilTrue(started);
       var result = cache.doComputeIfAbsent(key, node.getKeyReference(),
-          k -> context.absentValue(), new ComputeContext<>(0L), /* recordStats= */ false);
+          k -> context.absentValue(), new ComputeContext<>(), /* recordStats= */ false);
       assertThat(result).isEqualTo(context.absentValue());
     }, executor);
     synchronized (node) {
@@ -5832,11 +5835,10 @@ final class BoundedLocalCacheTest {
     // returns the refreshed value (the key itself, distinct from the populated negation). The bug
     // discarded that return; the fix uses it.
     context.ticker().advance(Duration.ofMinutes(2));
-    long now = context.ticker().read();
 
     var result = cache.doComputeIfAbsent(context.firstKey(), node.getKeyReference(),
         key -> { throw new AssertionError("mapping must not run for valid entry"); },
-        new ComputeContext<>(now), /* recordStats= */ false);
+        new ComputeContext<>(), /* recordStats= */ false);
 
     assertThat(cache).containsEntry(context.firstKey(), context.firstKey());
     assertThat(result).isEqualTo(context.firstKey());
@@ -5879,7 +5881,7 @@ final class BoundedLocalCacheTest {
     cache.refreshes().put(keyRef, future);
 
     var result = cache.doComputeIfAbsent(context.absentKey(), keyRef,
-        key -> context.absentValue(), new ComputeContext<>(0L), /* recordStats= */ false);
+        key -> context.absentValue(), new ComputeContext<>(), /* recordStats= */ false);
     assertThat(result).isEqualTo(context.absentValue());
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
@@ -5894,7 +5896,7 @@ final class BoundedLocalCacheTest {
 
     Function<Int, @Nullable Int> function = key -> null;
     var result = cache.doComputeIfAbsent(context.absentKey(), keyRef,
-        function, new ComputeContext<>(0L), /* recordStats= */ false);
+        function, new ComputeContext<>(), /* recordStats= */ false);
     assertThat(result).isNull();
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
@@ -5910,7 +5912,7 @@ final class BoundedLocalCacheTest {
     cache.refreshes().put(keyRef, future);
 
     var result = cache.doComputeIfAbsent(requireNonNull(node.getKey()), keyRef,
-        key -> context.absentValue(), new ComputeContext<>(0L), /* recordStats= */ false);
+        key -> context.absentValue(), new ComputeContext<>(), /* recordStats= */ false);
     assertThat(result).isEqualTo(context.absentValue());
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
@@ -5926,7 +5928,7 @@ final class BoundedLocalCacheTest {
     cache.refreshes().put(keyRef, future);
 
     var result = cache.doComputeIfAbsent(requireNonNull(node.getKey()), keyRef,
-        key -> nullValue(), new ComputeContext<>(0L), /* recordStats= */ false);
+        key -> nullValue(), new ComputeContext<>(), /* recordStats= */ false);
     assertThat(result).isNull();
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
@@ -5947,7 +5949,7 @@ final class BoundedLocalCacheTest {
     // absent key, the refresh is preserved (not discarded like remap's completion-path self-clean).
     assertThrows(IllegalStateException.class, () ->
         cache.doComputeIfAbsent(context.absentKey(), keyRef,
-            key -> context.absentValue(), new ComputeContext<>(0L), /* recordStats= */ false));
+            key -> context.absentValue(), new ComputeContext<>(), /* recordStats= */ false));
 
     assertThat(cache.refreshes()).containsKey(keyRef);
     cache.refreshes().remove(keyRef); // the artificial token has no completion to self-clean it
@@ -5967,7 +5969,7 @@ final class BoundedLocalCacheTest {
       await().untilTrue(started);
       var result = cache.remap(context.firstKey(), node.getKeyReference(),
           (k, v) -> context.absentValue(), context.expiresVariably() ? context.expiry() : null,
-          new ComputeContext<>(0L), /* computeIfAbsent= */ true);
+          new ComputeContext<>(), /* computeIfAbsent= */ true);
       assertThat(result).isEqualTo(context.absentValue());
     }, executor);
     synchronized (node) {
@@ -7642,7 +7644,7 @@ final class BoundedLocalCacheTest {
     cache.refreshes().put(keyRef, pendingRefresh);
 
     context.ticker().advance(Duration.ofMinutes(2));
-    var ctx = new BoundedLocalCache.ComputeContext<Int, Int>(context.ticker().read());
+    var ctx = new BoundedLocalCache.ComputeContext<Int, Int>();
     var result = cache.remap(key, cache.nodeFactory.newLookupKey(key),
         (k, oldValue) -> { throw new AssertionError("Should never be called"); },
         cache.expiry(), ctx, /* computeIfAbsent= */ false);

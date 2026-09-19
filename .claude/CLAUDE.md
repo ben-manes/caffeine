@@ -63,6 +63,9 @@ ErrorProne + NullAway run on every build. Prefer fixing warnings over suppressin
 ./gradlew :caffeine:stress --workload read --duration PT30S  # Stress testing (read, write, refresh)
 ```
 
+Use [/optimize-cache](skills/optimize-cache/SKILL.md) for bounded cache performance experiments
+with paired stress measurements, correctness review, and a reviewable patch as the output.
+
 ## Style
 
 Google Java Style. Contributors must sign a CLA.
@@ -173,6 +176,7 @@ When to read which doc:
 | Re-entrancy from user callbacks | `/audit-reentrancy` |
 | Concurrent iteration and view consistency | `/audit-iteration` |
 | Performance inefficiencies on hot paths | `/audit-performance` |
+| Provably redundant work or state, including clarity-only cleanups | `/audit-redundancy` |
 | Serialization proxy completeness and safety | `/audit-serialization` |
 | Behavior under extreme/adversarial API inputs | `/audit-adversarial-input` |
 | Progress and termination guarantees | `/audit-liveness` |
@@ -211,4 +215,4 @@ They compose: `/audit-regret` finds a family and promotes it to a `/climber-gate
 holds it against every later change, and `/climber-minimize` asks periodically whether the rule
 added to fix it is still paying for itself. Read `hill-climber.md` §3 and §5 before starting any of them.
 
-**Review vs Audit**: `/review-change` is for pre-commit code review — reads design docs and filters known-intentional patterns. `/audit-*` skills are for correctness doubts — independent, no design context filtering. Use review for routine changes, audit when you need fresh-eyes analysis. `/audit-temporal-walk` is a third category (heavyweight, rare-run history-mining) — see its `SKILL.md` for invocation.
+**Review vs Audit**: `/review-change` is for pre-commit code review — reads design docs and filters known-intentional patterns. `/audit-*` skills independently search a specific lens; `/audit-redundancy` proves safe simplifications without requiring a defect or measured speedup. Use review for routine changes, audit when you need fresh-eyes analysis. `/audit-temporal-walk` is a third category (heavyweight, rare-run history-mining) — see its `SKILL.md` for invocation.

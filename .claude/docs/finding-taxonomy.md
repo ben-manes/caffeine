@@ -24,6 +24,7 @@ auditor agent and all `/audit-*` and `/review-change` skills.
 | exception-safety | Incomplete cleanup on exception paths, phantom state |
 | api-surprise | Public method returning nonsensical values for valid inputs |
 | performance | O(n) on O(1) path, unnecessary allocation on hot path |
+| redundancy | Removable work or state with a behavioral-equivalence proof and a concrete source simplification |
 | liveness | Progress/termination failure without corruption: stranded drain status, lost wakeup, unbounded stall |
 | external-contract | Misuse of a third-party or JDK API contract (dispose-on-error, merge-less collectors, live-view iteration) |
 
@@ -57,6 +58,11 @@ reachable are two separate claims, and the second is the one severity encodes.
 | medium | Plausible scenario but depends on timing or conditions not fully verified |
 
 Omit low-confidence speculation entirely — it wastes triage time.
+
+For `redundancy`, high confidence may rest on a complete source equivalence proof covering the
+relevant exits, callers, and observations. Keep cleanup severity `low` and report test execution
+and runtime effects separately. A measurable speedup or broken contract is not required; do not
+invent one to justify the cleanup.
 
 ## Classification (for triage)
 

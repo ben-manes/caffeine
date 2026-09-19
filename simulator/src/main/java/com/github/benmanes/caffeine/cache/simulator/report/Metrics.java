@@ -132,7 +132,6 @@ public record Metrics(Function<@Nullable Object, String> objectFormatter,
     @CanIgnoreReturnValue
     public Builder objectFormatter(Function<@Nullable Object, String> objectFormatter) {
       this.objectFormatter = requireNonNull(objectFormatter);
-      requireNonNull(objectFormatter);
       return this;
     }
     @CanIgnoreReturnValue

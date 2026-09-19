@@ -996,6 +996,12 @@ hits, because its own lambda cannot throw before materialization. Either way the
 self-heals on the next write/removal. Don't add a catch-side `refreshes.remove` — it
 re-throws on the broken-`hashCode` sibling.
 
+The same restriction covers a read inside a computation that triggers an inline refresh
+update. Two remappers reading each other's stale key can deadlock when completed reloads
+commit under the enclosing computations' locks, even with a pure loader and the default
+executor. That is still unsupported recursive modification under the existing mapping-function
+warning; it does not call for a dispatch change or another API warning.
+
 The **`evictionListener` runs inside the CHM compute lambda** — `notifyEviction` is called
 within `data.compute`/`computeIfPresent`, holding the entry's bin lock — so it is subject to this
 rule: a listener that modifies the cache (same-key *or* other-key) is a recursive update → an ISE
@@ -1564,28 +1570,33 @@ node owns. Pinned by
 
 **A refresh completion releases its own token in its `catch`, not only through `remap`.** The
 completion's commit normally clears the registration inside `remap`, so the outer `catch` looks
-redundant. It is not: `remap` has throw sites that precede every `discardRefresh` — the ticker
-read that builds the `ComputeContext`, `requireIsAlive`'s broken-`equals` check, and the ticker
-read behind `hasExpired`. A throw there leaves the registration behind, and because
-`refreshIfNeeded` gates on `refreshes.containsKey`, that key's **automatic refresh is suppressed
-for the rest of the cache's life** from one transient user-component failure. All three
-completions therefore mirror their own error branch with the identity-conditional
-`refreshes.remove(keyReference, ownFuture)`, which cannot take a successor's token. Note the
-throw sites *after* the discard are already safe, since the material tail discards before
-returning from the map computation. Pinned by
+redundant. It is not: `remap` has throw sites that precede every `discardRefresh`, including
+`requireIsAlive`'s broken-`equals` check and the ticker read behind `hasExpired`. A throw there leaves
+the registration behind, and because `refreshIfNeeded` gates on `refreshes.containsKey`, that key's
+**automatic refresh is suppressed for the rest of the cache's life** from one transient
+user-component failure. All three completions therefore mirror their own error branch with the
+identity-conditional `refreshes.remove(keyReference, ownFuture)`, which cannot take a successor's
+token. Note the throw sites *after* the discard are already safe, since the material tail discards
+before returning from the map computation. Pinned by
 `BoundedLocalCacheTest.refreshIfNeeded_completionThrows_releasesToken` and its `refresh` /
 `refreshAsync` twins, which fail a refresh completion through a throwing `Ticker`.
 
 **A rejected reload is notified even though it was never in the cache.** When the
 completion's `compute` declines to install the reloaded value it sets a cause and calls
 `notifyRemoval(key, value, cause)` — `EXPLICIT` on the absent exit, `REPLACED` on the reject
-exit (a same-instance reload is not notified). So a `RemovalListener` can see a value that was
-never a mapping. That is intentional and follows from linearizability: the value was produced,
-the cache decided not to keep it, and the listener is the disposal hook, so *not* notifying
+exit (a result identical to the current value is not notified). So a `RemovalListener` can see a
+value that was never a mapping. That is intentional and follows from linearizability: the value
+was produced, the cache decided not to keep it, and the listener is the disposal hook, so *not* notifying
 would be the surprise — the value would be dropped with no chance to release what it holds.
 Deliberately not spelled out in the public javadoc: the surrounding refresh ordering is
 vague there (Guava was not linearizable either), and pinning this corner would over-specify it.
 Don't "fix" the notification away, and don't treat the two causes as interchangeable.
+
+Returning the captured `oldValue` still offers it as the new value to retain. If it is no
+longer current, rejecting the refresh rejects that attempted resurrection and notifies again;
+the earlier removal does not discharge disposal of this new offer. Do not suppress by comparing
+with the captured old argument. Disposal after a user `Weigher` or `Expiry` throws during
+installation is outside the cache's responsibilities; keep the existing failure cleanup.
 
 The one exception is a **query-style no-op**, flagged with `RemapHints.preserveRefresh`:
 `putIfAbsent` on a present key, a non-matching conditional `remove`/`replace`, or a
@@ -1607,7 +1618,11 @@ refresh-eligible read). So each completion path (`LocalLoadingCache.refresh`,
 `LocalAsyncLoadingCache.tryComputeRefresh`, `BoundedLocalCache.refreshIfNeeded`) computes
 `owned = refreshes.get(kr) == ownFuture` and sets `preserveRefresh = !owned` on its non-commit
 exits — reject *and* absent — mirroring the error path, which was already owner-scoped
-(`refreshes.remove(kr, ownFuture)`). Honoring the hint therefore extends beyond the
+(`refreshes.remove(kr, ownFuture)`). The hint protects a successor already present at the
+ownership check. A successor that registers between that check and the by-key no-op release
+can still be discarded; tightening this residual was declined. A later refresh recovers, and
+this interval does not justify restoring the rejected token-bearing hint.
+Honoring the hint therefore extends beyond the
 same-instance no-op block: `remap`'s two absent **null-return** exits (`n == null` and the
 evicted-retire) and the unbounded absent exit skip the discard when `preserveRefresh` is set.
 The absent-**create** exit does not, and must not: installing a value is a mutation, so the

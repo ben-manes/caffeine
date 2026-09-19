@@ -78,9 +78,7 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
   @Override
   public void remove() {
     action = (action == Action.CREATED) ? Action.NONE : Action.DELETED;
-    if (value != null) {
-      value = null;
-    }
+    value = null;
   }
 
   @Override

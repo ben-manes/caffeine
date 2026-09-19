@@ -248,7 +248,7 @@ All under this directory unless noted; the runners come from `climber-gate/` (`r
   fields side by side at the first divergence, from the first seed's `hybrid` dumps.
 - **Setup for trajectories and arms**: `git worktree add --detach <workspace>/tree HEAD`,
   `python3 .claude/skills/climber-gate/harness.py apply <workspace>/tree` (then `verify`; the two
-  counts must match — 52/52 as of 2026-08-21, growing as harness hooks are added),
+  counts must match — 59/59 as of 2026-09-17, growing as harness hooks are added),
   and `CAF_TREE=<workspace>/tree` on every call. Never commit the worktree's edits. A stock tree
   yields end-to-end regret only (`no trajectory`), which is enough for a screen and useless for a
   classification. Maxima in the millions need `CAF_EXTRA=-PjvmArgs=-Xmx26g` for the eleven-policy
@@ -632,6 +632,10 @@ not read prior reports. Strike a line when it is done or dead.
   each run (`gate.py`), and neither compares across sweeps.
 - A trace holds `requests / (4 × max)` decisions; classify nothing under 40 and re-check any
   finding at `repeat` ×2 before calling it steady state.
+  Repetition restarts the segment-local modulation clock, so it can introduce a phase jump.
+  For a single sine- or square-modulated segment, also lengthen `samples` with `repeat=1` and
+  verify that the original request prefix is unchanged. Keep restarted and continuous controls
+  separate; recovery after a restart does not establish recovery under uninterrupted demand.
 - Sign-uniform losses across a family are a mechanism, not noise, whatever their size, and a
   result that contradicts the round's hypothesis is written up as the result rather than
   reframed into one the data supports.

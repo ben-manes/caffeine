@@ -77,12 +77,13 @@ thread's value, which closes the tear. It does not follow that an already-announ
 is never returned. A reader that judged the entry live at its own clock reading can park in
 `Expiry.expireAfterRead` and land `tryExpireAfterRead`'s CAS after a writer has announced the
 entry's EXPIRED eviction but before it stores the replacement, leaving the announced value looking
-fresh to a later reader. That is the read-extension resurrection in
-`design-decisions.md`, and it is a benign race: any lock-free read can be invalidated an
-instruction after it returns, so closing it would require synchronized reads. Readers must not
-load the value before `hasExpired`, and writers must not store a timestamp before `setValue`; a
-caller acting on an expired verdict exempts an in-flight async load via `isComputingAsync` on a
-value loaded after the check.
+fresh to a later reader. The opaque `setAccessTime` store for a fixed `expireAfterAccess` has the
+same window with no callback, needing only a pause between `hasExpired` and the store. That is
+the read-extension resurrection in `design-decisions.md`, and it is a benign race: any lock-free
+read can be invalidated an instruction after it returns, so closing it would require synchronized
+reads. Readers must not load the value before `hasExpired`, and writers must not store a
+timestamp before `setValue`; a caller acting on an expired verdict exempts an in-flight async load
+via `isComputingAsync` on a value loaded after the check.
 
 ## Drain Status State Machine
 

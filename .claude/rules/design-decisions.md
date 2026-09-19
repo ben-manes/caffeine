@@ -110,8 +110,9 @@ Details: [expiration](../docs/design-decisions.md#expiration),
   attaches no handler, in the synchronous operation and in the async view's absent-key side-load
   alike.
 - Real mutations discard refreshes. Query-style no-ops preserve them in both bounded and
-  unbounded caches. Rejected completions set `preserveRefresh = !owned` and preserve timestamps;
-  a stale completion must neither steal a successor's token nor reset its write clock.
+  unbounded caches. Rejected completions set `preserveRefresh = !owned` and preserve timestamps,
+  protecting a successor observed at the ownership check without resetting its write clock.
+  The late-successor gap between that check and the no-op release is an accepted residual.
   A completion's mutating exit (replace, create, or remove) keeps its by-key release, even though
   a bounded update also discards a successor that loaded the published value: releasing only its
   own token keeps a load the commit superseded, which later refreshes join. Absent creates and

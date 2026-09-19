@@ -221,8 +221,6 @@ FLAGS = '''
    */
   static final double AUDIT_BAR = Double.parseDouble(java.util.Objects.requireNonNullElse(
       System.getProperty("caffeine.climber.auditbar"), Double.toString(Walk.AUDIT_BAR_FRACTION)));
-  String dbgMode = "";
-  long dbgSample;
 
   /** Whether the density tier applies, honoring the harness tier override. */
   static boolean isDense(long maximum) {
@@ -230,32 +228,24 @@ FLAGS = '''
         && (DENSITY_TIER || DENS_10X || DensityClimber.appliesTo(maximum));
   }
 
-  /**
-   * Whether the density tier's sample period applies. The shipped gate moves the law and the
-   * cadence together, so neither can be attributed without splitting them; react4x/dens10x are
-   * the two cross arms of that 2x2.
-   */
-  static boolean isDensePeriod(long maximum) {
-    return REACT_4X || (!DENS_10X && isDense(maximum));
-  }
 '''
 
-TRACE = '''    if (DEBUG && dense) {
-      long wh = sample.windowHits;
-      System.err.printf("climb max=%d win=%d hr=%.4f s=%d mode=%s adj=%d wh=%d mh=%d ph=%d"
-          + " stable=%d auditWait=%d rung=%d left=%d arung=%d acs=%d pcs=%d undo=%d"
-          + " anchorW=%d anchorR=%.4f ema=%.4f dev=%.4f hold=%d fresh=%d shortfall=%d ret=%d"
-          + " auditbar=%.4f wbase=%.4f wbar=%.4f%n",
-          maximum, windowMaximum, hitRate, dbgSample++, dbgMode, adjustment, wh,
-          sample.hits - wh, sample.probationHits, auditClock.stillSamples,
-          auditClock.waitSamples, starvation.rung, refractoryLeft, audit.rung,
-          audit.crashStreak, starvation.crashStreak, undoRemaining, anchor.window, anchor.rate,
-          rates.smoothed, rates.deviation, anchor.held ? 1 : 0, anchor.freshLeft,
-          anchor.shortfallStreak, anchor.returning ? 1 : 0, AUDIT_BAR,
-          (walk == null) ? -1.0 : walk.baseHitRate,
-          (walk == null) ? -1.0 : walk.reversalBar(rates));
-      dbgMode = "-";
-    }
+TRACE = '''      if (DEBUG) {
+        long wh = sample.windowHits;
+        System.err.printf("climb max=%d win=%d hr=%.4f s=%d mode=%s adj=%d wh=%d mh=%d ph=%d"
+            + " stable=%d auditWait=%d rung=%d left=%d arung=%d acs=%d pcs=%d undo=%d"
+            + " anchorW=%d anchorR=%.4f ema=%.4f dev=%.4f hold=%d fresh=%d shortfall=%d ret=%d"
+            + " auditbar=%.4f wbase=%.4f wbar=%.4f%n",
+            maximum, windowMax, sample.hitRate(), dbgSample++, dbgMode, (long) amount, wh,
+            sample.hits - wh, sample.probationHits, auditClock.stillSamples,
+            auditClock.waitSamples, starvation.rung, refractoryLeft, audit.rung,
+            audit.crashStreak, starvation.crashStreak, undoRemaining, anchor.window, anchor.rate,
+            rates.smoothed, rates.deviation, anchor.held ? 1 : 0, anchor.freshLeft,
+            anchor.shortfallStreak, anchor.returning ? 1 : 0, AUDIT_BAR,
+            (walk == null) ? -1.0 : walk.baseHitRate,
+            (walk == null) ? -1.0 : walk.reversalBar(rates));
+        dbgMode = "-";
+      }
 '''
 
 SEED = '''  /** EXPERIMENT HARNESS: a seeded admission tiebreak, or null for the shipped TLR draw. */
@@ -290,13 +280,14 @@ EDITS = [
      "  static final double RESTART_THRESHOLD = 0.05d;\n" + FLAGS),
 
     ("tier-override", W,
-     "    boolean dense = DensityClimber.appliesTo(maximum);\n",
-     "    boolean dense = isDense(maximum);\n"),
+     "    tier = DensityClimber.appliesTo(maximum)\n",
+     "    tier = isDense(maximum)\n"),
 
     ("trace", W,
-     "      auditClock.tick(windowMaximum, Reading.stableBand(maximum));\n    }\n    sample.close(hitRate);\n",
-     "      auditClock.tick(windowMaximum, Reading.stableBand(maximum));\n    }\n" + TRACE
-     + "    sample.close(hitRate);\n"),
+     "      auditClock.tick(windowMax, Reading.stableBand(maximum));\n"
+     "      return (long) amount;\n",
+     "      auditClock.tick(windowMax, Reading.stableBand(maximum));\n" + TRACE
+     + "      return (long) amount;\n"),
 
     ("ablate-corner", W,
      "      return isDeadSample() || (windowStarved && (windowMax <= (maximum >>> 2)));\n",
@@ -336,8 +327,8 @@ EDITS = [
      "      return repeat && fired(REPEAT);\n"),
 
     ("ablate-wedge", W,
-     "        if (walk.isReversedBy(reading)\n",
-     "        if ((!NOWEDGE && walk.isReversedBy(reading) && fired(WEDGE))\n"),
+     "          if (walk.isReversedBy(reading)\n",
+     "          if ((!NOWEDGE && walk.isReversedBy(reading) && fired(WEDGE))\n"),
 
     ("ablate-follow", W,
      "      if (!Double.isNaN(settledRate)) {\n        if (!parked || (Math.abs(rate - settledRate) >= RESTART_THRESHOLD)) {\n",
@@ -366,138 +357,205 @@ EDITS = [
      "          * (NOFREEZE ? 1.0 : ((double) r.requestCount / Math.max(1L, baseRequestCount)));\n"),
 
     ("tier-override-period", W,
-     "    return DensityClimber.appliesTo(maximum)\n        ? density.samplePeriod(maximum, sketchSampleSize)\n",
-     "    return isDensePeriod(maximum)\n        ? density.samplePeriod(maximum, sketchSampleSize)\n"),
+     "      @Var long period = SAMPLE_MULTIPLIER * maximum;\n",
+     "      if (DENS_10X) {\n"
+     "        return sketchSampleSize;\n"
+     "      }\n"
+     "      @Var long period = SAMPLE_MULTIPLIER * maximum;\n"),
 
     ("staleclaim", W,
-     "    if (isWorkloadShift(reading) && anchor.standDown(reading)) {\n",
-     "    if (isWorkloadShift(reading) && anchor.standDown(reading) && !STALECLAIM) {\n"),
+     "      if (isWorkloadShift(reading) && anchor.standDown(reading)) {\n",
+     "      if (isWorkloadShift(reading) && anchor.standDown(reading) && !STALECLAIM) {\n"),
 
     ("mode-walking", W,
-     "      if (ending == ProbeEnding.WALKING) {\n        return walkStep(walk, /* entry= */ false, reading);\n",
-     "      if (ending == ProbeEnding.WALKING) {\n"
-     "        dbgMode = (walk.isAudit ? \"auditWalk\" : \"walk\") + walk.aboveStreak;\n"
-     "        return walkStep(walk, /* entry= */ false, reading);\n"),
+     "        if (ending == ProbeEnding.WALKING) {\n"
+     "          return walkStep(walk, /* entry= */ false, reading);\n",
+     "        if (ending == ProbeEnding.WALKING) {\n"
+     "          dbgMode = (walk.isAudit ? \"auditWalk\" : \"walk\") + walk.aboveStreak;\n"
+     "          return walkStep(walk, /* entry= */ false, reading);\n"),
 
     ("mode-undo", W,
-     "      } else if (ending != ProbeEnding.CONFIRMED) {\n        return undoProbe(walk, ending, reading);\n",
-     "      } else if (ending != ProbeEnding.CONFIRMED) {\n"
-     "        dbgMode = (walk.isAudit ? \"audit\" : \"\")\n"
-     "            + ((ending == ProbeEnding.CRASHED) ? \"Crash\" : \"Fail\");\n"
-     "        return undoProbe(walk, ending, reading);\n"),
+     "        } else if (ending != ProbeEnding.CONFIRMED) {\n"
+     "          return undoProbe(walk, ending, reading);\n",
+     "        } else if (ending != ProbeEnding.CONFIRMED) {\n"
+     "          dbgMode = (walk.isAudit ? \"audit\" : \"\")\n"
+     "              + ((ending == ProbeEnding.CRASHED) ? \"Crash\" : \"Fail\");\n"
+     "          return undoProbe(walk, ending, reading);\n"),
 
     ("nocheapen", W,
-     "      walk.ladder.reset();\n      refractoryLeft = 0;\n      starvation.reward();\n",
-     "      walk.ladder.reset();\n      if (!NOCHEAPEN) {\n        refractoryLeft = 0;\n"
-     "        starvation.reward();\n      }\n"),
+     "        walk.ladder.reset();\n"
+     "        refractoryLeft = 0;\n"
+     "        starvation.reward();\n",
+     "        walk.ladder.reset();\n"
+     "        if (!NOCHEAPEN) {\n"
+     "          refractoryLeft = 0;\n"
+     "          starvation.reward();\n"
+     "        }\n"),
 
     ("mode-auditconfirm", W,
-     "      } else if (keepConfirmedPosition(walk, reading)) {\n"
-     "        return anchor.returning ? strideHome(reading) : 0.0;\n",
-     "      } else if (keepConfirmedPosition(walk, reading)) {\n"
-     "        dbgMode = anchor.returning ? \"AUDITCONFIRM+home\" : \"AUDITCONFIRM\";\n"
-     "        return anchor.returning ? strideHome(reading) : 0.0;\n"),
+     "        } else if (keepConfirmedPosition(walk, reading)) {\n"
+     "          return anchor.returning ? strideHome(reading) : 0.0;\n",
+     "        } else if (keepConfirmedPosition(walk, reading)) {\n"
+     "          dbgMode = anchor.returning ? \"AUDITCONFIRM+home\" : \"AUDITCONFIRM\";\n"
+     "          return anchor.returning ? strideHome(reading) : 0.0;\n"),
 
     ("mode-confirm-steer", W,
-     "      return density.steer(reading.steeringError(), reading);\n    } else if (hasPendingUndo()) {\n      return undoStride(reading);\n    } else if (anchor.returning) {\n      return strideHome(reading);\n    } else if (anchor.isRetestDue(reading)) {\n      retestReturn(reading);\n      return 0.0;\n    } else if (reading.hasBlindCorner()) {\n",
-     "      dbgMode = \"CONFIRM+steer\";\n      return density.steer(reading.steeringError(), reading);\n"
-     "    } else if (hasPendingUndo()) {\n      dbgMode = \"undo\";\n      return undoStride(reading);\n"
-     "    } else if (anchor.returning) {\n      dbgMode = \"vetoRet\";\n      return strideHome(reading);\n"
-     "    } else if (anchor.isRetestDue(reading)) {\n      dbgMode = \"retest\";\n      retestReturn(reading);\n      return 0.0;\n"
-     "    } else if (reading.hasBlindCorner()) {\n      dbgMode = isBackingOff() ? \"hold\" : \"ARM\";\n"),
+     "        return steer(reading.steeringError(), reading);\n"
+     "      } else if (hasPendingUndo()) {\n"
+     "        return undoStride(reading);\n"
+     "      } else if (anchor.returning) {\n"
+     "        return strideHome(reading);\n"
+     "      } else if (anchor.isRetestDue(reading)) {\n"
+     "        retestReturn(reading);\n"
+     "        return 0.0;\n"
+     "      } else if (reading.hasBlindCorner()) {\n",
+     "        dbgMode = \"CONFIRM+steer\";\n"
+     "        return steer(reading.steeringError(), reading);\n"
+     "      } else if (hasPendingUndo()) {\n"
+     "        dbgMode = \"undo\";\n"
+     "        return undoStride(reading);\n"
+     "      } else if (anchor.returning) {\n"
+     "        dbgMode = \"vetoRet\";\n"
+     "        return strideHome(reading);\n"
+     "      } else if (anchor.isRetestDue(reading)) {\n"
+     "        dbgMode = \"retest\";\n"
+     "        retestReturn(reading);\n"
+     "        return 0.0;\n"
+     "      } else if (reading.hasBlindCorner()) {\n"
+     "        dbgMode = isBackingOff() ? \"hold\" : \"ARM\";\n"),
 
     ("mode-veto-audit-park", W,
-     "    } else if (anchor.vetoTriggered(reading, rates)) {\n      return strideHome(reading);\n    } else if (auditClock.isDue()) {\n      return armEquilibriumAudit(reading);\n    } else if (anchor.held) {\n",
-     "    } else if (anchor.vetoTriggered(reading, rates)) {\n      dbgMode = \"VETO\";\n      return strideHome(reading);\n"
-     "    } else if (AUDITS && auditClock.isDue()) {\n      dbgMode = \"AUDIT\";\n      return armEquilibriumAudit(reading);\n"
-     "    } else if (anchor.held) {\n      dbgMode = \"park\";\n"),
+     "      } else if (anchor.vetoTriggered(reading, rates)) {\n"
+     "        return strideHome(reading);\n"
+     "      } else if (auditClock.isDue()) {\n"
+     "        return armEquilibriumAudit(reading);\n"
+     "      } else if (anchor.held) {\n",
+     "      } else if (anchor.vetoTriggered(reading, rates)) {\n"
+     "        dbgMode = \"VETO\";\n"
+     "        return strideHome(reading);\n"
+     "      } else if (AUDITS && auditClock.isDue()) {\n"
+     "        dbgMode = \"AUDIT\";\n"
+     "        return armEquilibriumAudit(reading);\n"
+     "      } else if (anchor.held) {\n"
+     "        dbgMode = \"park\";\n"),
 
     ("mode-steer", W,
-     "    return density.steer(reading.steeringError(), reading);\n  }\n",
-     "    dbgMode = \"steer\";\n    return density.steer(reading.steeringError(), reading);\n  }\n"),
+     "      return steer(reading.steeringError(), reading);\n"
+     "    }\n",
+     "      dbgMode = \"steer\";\n"
+     "      return steer(reading.steeringError(), reading);\n"
+     "    }\n"),
 
     ("parkbound", W,
-     "      anchor.ageShield();\n    }\n",
-     "      anchor.ageShield();\n      if (PARKBOUND && (anchor.freshLeft <= 0)) {\n"
-     "        anchor.release();\n      }\n    }\n"),
+     "        anchor.ageShield();\n"
+     "      }\n",
+     "        anchor.ageShield();\n"
+     "        if (PARKBOUND && (anchor.freshLeft <= 0)) {\n"
+     "          anchor.release();\n"
+     "        }\n"
+     "      }\n"),
 
     ("pricedshift", W,
-     "  private boolean isWorkloadShift(Reading reading) {\n"
-     "    return (Math.abs(sample.hitRateChange(reading.hitRate)) >= RESTART_THRESHOLD)\n"
-     "        && !isShielded() && !isParkTest() && !isReturnTest();\n  }\n",
-     "  private boolean isWorkloadShift(Reading reading) {\n"
-     "    double threshold = PRICEDSHIFT\n"
-     "        ? Math.min(3 * RESTART_THRESHOLD, Math.max(RESTART_THRESHOLD, rates.noiseBand()))\n"
-     "        : RESTART_THRESHOLD;\n"
-     "    return (Math.abs(sample.hitRateChange(reading.hitRate)) >= threshold)\n"
-     "        && !isShielded() && !isParkTest() && !isReturnTest();\n  }\n"),
+     "    private boolean isWorkloadShift(Reading reading) {\n"
+     "      return (Math.abs(reading.hitRateChange) >= RESTART_THRESHOLD)\n"
+     "          && !isShielded() && !isParkTest() && !isReturnTest();\n"
+     "    }\n",
+     "    private boolean isWorkloadShift(Reading reading) {\n"
+     "      double threshold = PRICEDSHIFT\n"
+     "          ? Math.min(3 * RESTART_THRESHOLD, Math.max(RESTART_THRESHOLD, rates.noiseBand()))\n"
+     "          : RESTART_THRESHOLD;\n"
+     "      return (Math.abs(reading.hitRateChange) >= threshold)\n"
+     "          && !isShielded() && !isParkTest() && !isReturnTest();\n"
+     "    }\n"),
 
     ("noreturncover", W,
-     "  private boolean isReturnTest() {\n"
-     "    return (retreatLeft > 0) || ((anchor.retestClaim >= 0) && !anchor.returning);\n  }\n",
-     "  private boolean isReturnTest() {\n"
-     "    return !NORETURNCOVER\n"
-     "        && (((retreatLeft > 0) && (!NOWIDECOVER || anchor.held))\n"
-     "            || ((anchor.retestClaim >= 0) && !anchor.returning));\n  }\n"),
+     "    private boolean isReturnTest() {\n"
+     "      return (retreatLeft > 0) || ((anchor.retestClaim >= 0) && !anchor.returning);\n"
+     "    }\n",
+     "    private boolean isReturnTest() {\n"
+     "      return !NORETURNCOVER\n"
+     "          && (((retreatLeft > 0) && (!NOWIDECOVER || anchor.held))\n"
+     "              || ((anchor.retestClaim >= 0) && !anchor.returning));\n"
+     "    }\n"),
 
     # the discarding stand-down's site (the isWorkloadShift one; the retest's discard in
     # retestReturn is deliberately not wired): the top-corner residual's latency-face candidate
     ("rearm", W,
-     "      rates.reset();\n    }\n    updateRateReferences(reading);\n",
-     "      rates.reset();\n"
-     "      if (REARM && (!REARMHELD || parkedAtShift)) {\n"
-     "        if (REARMRESET) {\n          auditClock.reset();\n"
-     "        } else {\n          auditClock.waitSamples = AuditClock.AUDIT_WAIT_FIRST;\n"
-     "          if (REARMSTILL) {\n            auditClock.stillSamples = 0;\n          }\n        }\n"
-     "        if (REARMCOLD) {\n          audit.reset();\n        }\n      }\n"
-     "    }\n    updateRateReferences(reading);\n"),
+     "        rates.reset();\n"
+     "      }\n"
+     "      updateRateReferences(reading);\n",
+     "        rates.reset();\n"
+     "        if (REARM && (!REARMHELD || parkedAtShift)) {\n"
+     "          if (REARMRESET) {\n"
+     "            auditClock.reset();\n"
+     "          } else {\n"
+     "            auditClock.waitSamples = AuditClock.AUDIT_WAIT_FIRST;\n"
+     "            if (REARMSTILL) {\n"
+     "              auditClock.stillSamples = 0;\n"
+     "            }\n"
+     "          }\n"
+     "          if (REARMCOLD) {\n"
+     "            audit.reset();\n"
+     "          }\n"
+     "        }\n"
+     "      }\n"
+     "      updateRateReferences(reading);\n"),
 
     # the hold is released by the stand-down, so the held-park gate reads it before
     ("rearm-held", W,
-     "    ageRetreatCover();\n\n    var reading = new Reading(",
-     "    ageRetreatCover();\n    boolean parkedAtShift = anchor.held;\n\n    var reading = new Reading("),
+     "      ageRetreatCover();\n",
+     "      ageRetreatCover();\n"
+     "      boolean parkedAtShift = anchor.held;\n"),
 
     ("rearm-retest", W,
-     "      rates.reset();\n    }\n  }\n",
-     "      rates.reset();\n"
-     "      if (REARMBOTH) {\n        auditClock.reset();\n        audit.reset();\n      }\n"
-     "    }\n  }\n"),
+     "        rates.reset();\n"
+     "        anchor.standDown(reading);\n",
+     "        rates.reset();\n"
+     "        anchor.standDown(reading);\n"
+     "        if (REARMBOTH) {\n"
+     "          auditClock.reset();\n"
+     "          audit.reset();\n"
+     "        }\n"),
 
 
     ("noaudit-holdoraudit", W,
-     "    return auditClock.isDue() ? armEquilibriumAudit(reading) : holdInRefractory(reading);\n",
-     "    return (AUDITS && auditClock.isDue())\n"
-     "        ? armEquilibriumAudit(reading) : holdInRefractory(reading);\n"),
+     "      return auditClock.isDue() ? armEquilibriumAudit(reading) : holdInRefractory(reading);\n",
+     "      return (AUDITS && auditClock.isDue())\n"
+     "          ? armEquilibriumAudit(reading) : holdInRefractory(reading);\n"),
 
     ("mode-armprobe", W,
-     "    var armed = armProbe(reading, reading.shouldProbeDown(), /* isAudit= */ false);\n",
-     "    var armed = armProbe(reading, reading.shouldProbeDown(), /* isAudit= */ false);\n"
-     "    dbgMode = \"ARM\" + (armed.down ? \"dn\" : \"up\");\n"),
+     "      var armed = armProbe(reading, reading.shouldProbeDown(), /* isAudit= */ false);\n",
+     "      var armed = armProbe(reading, reading.shouldProbeDown(), /* isAudit= */ false);\n"
+     "      dbgMode = \"ARM\" + (armed.down ? \"dn\" : \"up\");\n"),
 
     ("mode-armaudit", W,
-     "    auditClock.restart();\n",
-     "    auditClock.restart();\n    dbgMode = \"AUDIT\" + (armed.down ? \"dn\" : \"up\");\n"),
+     "      auditClock.restart();\n",
+     "      auditClock.restart();\n"
+     "      dbgMode = \"AUDIT\" + (armed.down ? \"dn\" : \"up\");\n"),
 
     ("precrash-ladder", W,
-     "    var ladder = isAudit ? audit : starvation;\n",
-     "    var ladder = (isAudit && !PRECRASH) ? audit : starvation;\n"),
+     "      var ladder = isAudit ? audit : starvation;\n",
+     "      var ladder = (isAudit && !PRECRASH) ? audit : starvation;\n"),
 
     ("precrash-stride", W,
-     "    } else if (walk.isAudit && (walk.belowBarStreak > 0)) {\n",
-     "    } else if (walk.isAudit && !PRECRASH && (walk.belowBarStreak > 0)) {\n"),
+     "      } else if (walk.isAudit && (walk.belowBarStreak > 0)) {\n",
+     "      } else if (walk.isAudit && !PRECRASH && (walk.belowBarStreak > 0)) {\n"),
 
     ("starvwrite", W,
-     "        refractoryLeft = 0;\n        return ProbeEnding.CONFIRMED;\n",
-     "        refractoryLeft = 0;\n"
-     "        if (STARVWRITE) {\n          auditClock.waitSamples = AuditClock.AUDIT_WAIT_INITIAL;\n        }\n"
-     "        return ProbeEnding.CONFIRMED;\n"),
+     "          refractoryLeft = 0;\n"
+     "          return ProbeEnding.CONFIRMED;\n",
+     "          refractoryLeft = 0;\n"
+     "          if (STARVWRITE) {\n"
+     "            auditClock.waitSamples = AuditClock.AUDIT_WAIT_INITIAL;\n"
+     "          }\n"
+     "          return ProbeEnding.CONFIRMED;\n"),
 
     ("precrash-reschedule", W,
-     "      auditClock.reschedule(failed, crashed, audit.rung);\n",
-     "      // precrash: the pre-fix schedule off the shared ladder, where a streak-escalated crash\n"
-     "      // reached the failure-doubling branch through the shared `failed` flag\n"
-     "      auditClock.reschedule(PRECRASH ? failed : (failed && !crashed),\n"
-     "          /* crashed= */ false, walk.ladder.rung);\n"),
+     "        auditClock.reschedule(failed, crashed, audit.rung);\n",
+     "        // precrash: the pre-fix schedule off the shared ladder, where a streak-escalated crash\n"
+     "        // reached the failure-doubling branch through the shared `failed` flag\n"
+     "        auditClock.reschedule(PRECRASH ? failed : (failed && !crashed),\n"
+     "            /* crashed= */ false, walk.ladder.rung);\n"),
 
     ("auditbar", W,
      "      return isAudit\n          ? Math.min(RESTART_THRESHOLD, AUDIT_BAR_FRACTION * baseHitRate)\n          : Math.min(PROBE_BAR_CAP * RESTART_THRESHOLD,\n",
@@ -633,6 +691,21 @@ EDITS = [
     ("marginal-node-field", P,
      "    int weight;\n    @Nullable Node prev;\n",
      "    int weight;\n    boolean inWindowTail;\n    @Nullable Node prev;\n"),
+
+    ("trace-fields", W,
+     "    long undoRemaining;\n",
+     "    String dbgMode = \"\";\n"
+     "    long dbgSample;\n"
+     "    long undoRemaining;\n"),
+
+    ("react4x-period", W,
+     "      if (!isSlowAdapting(maximum)) {\n",
+     "      if (REACT_4X) {\n"
+     "        long period = DensityClimber.SAMPLE_MULTIPLIER * maximum;\n"
+     "        return ((period / DensityClimber.SAMPLE_MULTIPLIER) != maximum)\n"
+     "            ? sketchSampleSize : Math.min(period, sketchSampleSize);\n"
+     "      }\n"
+     "      if (!isSlowAdapting(maximum)) {\n"),
 
 ]
 

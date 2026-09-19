@@ -4,9 +4,12 @@ Adjudicated mechanisms and their scope. Most are accepted behavior; entries that
 repaired mechanism are marked as historical. Use the reason and current code, not an earlier
 review's outcome.
 
-**When to read this**: Phase 1.5, after your own findings are written down, alongside
+**When to read this for an audit**: Phase 1.5, after your own findings are written down, alongside
 `design-decisions.md`. Never before Phase 1 analysis. Read your module's section plus
 *Standing principles*; the rest is not yours.
+
+Optimization experiments read *Performance* before selecting hypotheses, to avoid repeating
+adjudicated experiments. This does not change the independent first pass of an audit.
 
 **What a match means**: label the finding "ruled out: <entry>" and **keep it in the report**.
 A ruling is about a mechanism and a consequence. If you have the same mechanism with a
@@ -61,6 +64,32 @@ These dispose of whole families. Check them first.
 - **Lossy and approximate by design.** Read-buffer drops, sketch counter saturation,
   eventual consistency of weight and size. Sub-1% hit-rate deltas on a probabilistic sketch
   are noise, not signal.
+
+---
+
+## Performance
+
+These rulings concern an optimization mechanism and its evidence, not a permanent claim about
+which code can become faster. Add a confirmed negative result with its affected path/configurations,
+observations, reason for rejection, and the evidence that would justify reopening it. Include
+enough detail to assess the ruling without local artifacts; raw runs stay in the experiment
+workspace, and no `.local/` path is a durable evidence reference. Keep inconclusive measurements
+labelled inconclusive rather than turning absence of a signal into a dead-code claim.
+
+- **Caller-side relocation of constant-foldable expiration conditions is not demonstrated removed
+  work.** `BoundedLocalCache.expireAfterUpdate` returns zero when variable expiry is disabled;
+  `exceedsWriteTimeTolerance` returns false when write expiry, refresh, and variable expiry are
+  absent. Duplicating those conditions in `put` changes compilation shape, but the disabled paths
+  already have constant results. The source transformation and a better stress score do not
+  establish useful work eliminated by C2. Reopen only with native-code evidence of an executed
+  cost and paired confirmation across the affected read/write cells, not another source-layout
+  sweep. A compiler-directed improvement with that evidence is a different claim.
+- **Resident overwrite throughput does not establish write-queue contention.** In the size-only,
+  strong-reference `GetPutBenchmark` configuration, existing unchanged-weight updates in `put`
+  reach `afterRead`, without submitting an `UpdateTask`. Sharding the MPSC write queue cannot
+  remove cost from an operation that does not enqueue there. Reopen for a workload that exercises
+  actual write-buffer traffic, such as insertion or weight/expiry updates, with queue-specific
+  contention or backpressure evidence. This does not rule out write-queue improvements generally.
 
 ---
 
@@ -292,6 +321,9 @@ These dispose of whole families. Check them first.
 - Refresh discard notification using the discarded value; refresh commit failure not
   surfaced on the future; `discardRefresh`'s `containsKey` prescreen missing a CHM
   `computeIfAbsent` reservation; `discardRefresh` invalidating a newer refresh generation.
+- A rejected reload notifying again for the captured old instance after its removal. Returning
+  that instance offers it for retention again, so rejection disposes of the new offer. Disposal
+  after a throwing user weigher/expiry aborts installation is outside the cache's responsibilities.
 - A successful refresh completion discarding a successor that registered after it published the
   new value, so that successor's reload is declined and the value waits for the next refresh.
   Every bounded update of an existing entry has that overlap between publishing its value and
@@ -307,6 +339,11 @@ These dispose of whole families. Check them first.
   inline refresh load on the same key (measured 2004 ms). It is a light `ConcurrentHashMap`
   wrapper and CHM's `put` is pessimistic regardless, so the bounded cache's prescreen is not
   a repair to port.
+- Removing the bounded `discardRefresh`'s `containsKey` prescreen as redundant work. `remove`
+  reaches CHM's `replaceNode`, which returns without locking only when the target bin is empty,
+  so an absent key that collides into an occupied bin still takes the bin monitor and walks the
+  chain. The lock-free probe buys that miss, and on a hit it is not wasted either, since it warms
+  the bin `remove` then touches. The `RedundantCollectionOperation` suppression is deliberate.
 - A same-instance refresh leaking the completed future in `refreshes`.
 - A user-initiated `LocalLoadingCache.refresh` lacking the `getWriteTime() == writeTime` ABA
   guard.
@@ -487,6 +524,9 @@ Read `jsr107-conformance.md`'s topic sections with this section.
 - `CacheManagerImpl.getCache(String)` not throwing IAE for typed caches (relaxed in 1.1.1),
   and `getCacheNames()`'s iterator throwing UOE rather than ISE on `remove()` (relaxed).
 - `LoadingCacheProxy.getAll` skipping access-expiry on loaded entries, unlike `get`.
+- Read-through `get`/`getAll` finding a concurrent insertion or replacement on the loading
+  lookup and skipping one JCache access-policy call. Native expiry still applies; includes
+  `getOrLoad`'s expired-wrapper recovery. See [access expiry](jsr107-conformance.md#access-expiry).
 - `CacheProxy.EntryIterator.hasNext` skipping expired entries without firing EXPIRED
   (requirement removed in 1.1.1).
 - `JCacheLoaderAdapter.expireTimeMillis` returning `Long.MAX_VALUE` when the `ExpiryPolicy`

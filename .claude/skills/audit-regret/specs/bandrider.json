@@ -1,0 +1,40 @@
+{
+  "max": 8192,
+  "seed": 1093,
+  "repeat": 1,
+  "members": {
+    "core": {
+      "kind": "zipf",
+      "n": 0.45,
+      "alpha": 0.82
+    },
+    "near_band": {
+      "kind": "pairs",
+      "d": 0.15,
+      "k": 2
+    },
+    "far_band": {
+      "kind": "pairs",
+      "d": 0.67,
+      "k": 2
+    }
+  },
+  "segments": [
+    {
+      "samples": 256,
+      "shares": {
+        "core": 0.45,
+        "near_band": {
+          "share": 0.2,
+          "mod": {
+            "kind": "sine",
+            "period": 7.5,
+            "amp": 0.95,
+            "phase": 0
+          }
+        },
+        "far_band": 0.2
+      }
+    }
+  ]
+}

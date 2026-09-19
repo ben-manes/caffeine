@@ -191,8 +191,8 @@ a configured duration in milliseconds, so a smaller one becomes `Duration.ZERO`.
 
 ### Access expiry
 
-`getAccessExpireTime` evaluates the policy; `setAccessExpireTime` writes the held wrapper's
-timestamp on every access path. Only lock-free reads call `setVariableExpiration` to update the
+`getAccessExpireTime` evaluates the policy; `setAccessExpireTime` writes the resulting deadline
+to the held wrapper. Only lock-free reads call `setVariableExpiration` to update the
 native timer by key, after writing the wrapper: any core read re-derives the native deadline from
 the wrapper through `ExpirableToExpiry`, so one landing between the two writes would otherwise
 restore the older deadline. Pin: `JCacheAccessExpiryTest.get_concurrentRead_extendsNativeExpiration`.
@@ -214,6 +214,13 @@ by identity and continues with a live replacement that the removal kept: a key r
 captured deadline was never absent. The removal also rechecks the captured wrapper's deadline at
 the read's clock, so a wrapper that another read extended meanwhile is kept as well, `containsKey`'s
 removal included. `LoadingCacheProxy.getOrLoad` reaches the same answer by looking the key up again.
+That lookup can find a concurrent insertion or replacement and return it without another
+`ExpiryPolicy.getExpiryForAccess()` call, as can `getAll`'s lookup of initially missing keys.
+Native expiry still applies; `ExpirableToExpiry` mirrors the wrapper's stored creation/update
+deadline. Skipping this one access adjustment is an accepted read-through race. Do not add a
+special expired-wrapper recovery fix for the same miss-then-insertion pattern. Pinned by
+`CacheProxyTest.getLoading_replacedBeforeExpiry_skipsAccessExpiry`, with
+`get_replacedBeforeExpiry_appliesAccessExpiry` as the plain-read control.
 `containsKey` and `EntryIterator.hasNext` are last-value and may still skip it. A read whose thread
 stalls across its own deadline between the two writes still loses its extension, because
 `setExpiresAfter` refuses an expired node; closing that needs the per-read key lock declined above.
@@ -303,7 +310,7 @@ Coherence indirectly reads its length. Normal omitted varargs remain an empty no
 Pins: `CacheProxyTest.invoke_nullArgumentsArray_forwarded` and
 `invokeAll_nullArgumentsArray_forwarded`.
 
-Two spec-aligned differences from the RI retain coverage gaps: remove then getValue returns
+Two spec-aligned differences from the RI retain coverage gaps: getValue on a DELETED entry returns
 null without loading, and a null read-through load remains consumed as absent rather than
 reloading on each getValue. Existing remove/read tests have no loader; repeated reads after a
 null load lack a dedicated API regression test.
@@ -517,8 +524,10 @@ propagation. Listener `Error` is logged and rethrown unchanged, not wrapped. Ord
 failure travels as a chain result so it does not break subsequent same-key delivery;
 `awaitSynchronous` throws the first failure and suppresses extras. Exceptional executor futures
 also become `CacheEntryListenerException`. Async/quiet failures are logged because there is no
-synchronous caller. Mutation remains committed. Spec, RI, cache2k, Hazelcast, and Infinispan
-support propagation; recorded Ehcache 3 and Coherence implementations swallow/log instead.
+synchronous caller. Mutation remains committed. Spec, RI, cache2k, and recorded Infinispan sources
+support propagation. Ehcache 3.12.0, Hazelcast 5.7.0's member event path, and the recorded Coherence
+implementation log failures. Hazelcast's listener adaptor releases its completion latch in finally and
+`StripedExecutor` catches the failure; the waiting cache proxy has no listener-exception result.
 
 Pins: `EventDispatcherTest.put_syncListenerThrows_propagatesToCaller`,
 `publishCreated_asyncListenerThrows_swallowed`,

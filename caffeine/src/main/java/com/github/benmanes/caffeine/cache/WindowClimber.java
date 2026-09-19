@@ -46,7 +46,7 @@ final class WindowClimber {
    * rate.
    *
    * [1] The Adaptive Window, From the Ground Up
-   * https://htmlpreview.github.io/?https://github.com/ben-manes/caffeine/blob/master/wiki/adaptive-window.html
+   * https://ben-manes.github.io/caffeine/wiki/adaptive-window.html
    */
 
   /** The change in hit rate large enough to trigger adaptation to a new workload. */

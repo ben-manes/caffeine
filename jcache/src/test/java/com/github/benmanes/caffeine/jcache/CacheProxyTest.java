@@ -1142,6 +1142,45 @@ final class CacheProxyTest {
   }
 
   @Test
+  void get_replacedBeforeExpiry_appliesAccessExpiry() throws IOException {
+    try (CloseableCacheLoader loader = Mockito.mock();
+        CloseableExpiryPolicy expiry = Mockito.mock();
+        var fixture = jcacheFixture(loader, Mockito.mock(), expiry)) {
+      when(expiry.getExpiryForAccess()).thenReturn(Duration.ZERO);
+      replaceWhenCheckedForExpiry(fixture.jcache(),
+          fixture.currentTime().plus(EXPIRY_DURATION).toMillis(),
+          () -> fixture.jcache().put(KEY_1, VALUE_2));
+
+      assertThat(fixture.jcache().get(KEY_1)).isEqualTo(VALUE_2);
+      verifyNoInteractions(loader);
+      verify(expiry).getExpiryForAccess();
+      assertThat(fixture.jcache().containsKey(KEY_1)).isFalse();
+    }
+  }
+
+  @Test
+  void getLoading_replacedBeforeExpiry_skipsAccessExpiry() throws IOException {
+    try (CloseableCacheLoader loader = Mockito.mock();
+        CloseableExpiryPolicy expiry = Mockito.mock();
+        var fixture = jcacheFixture(loader, Mockito.mock(), expiry)) {
+      when(expiry.getExpiryForAccess()).thenReturn(Duration.ZERO);
+      replaceWhenCheckedForExpiry(fixture.jcacheLoading(),
+          fixture.currentTime().plus(EXPIRY_DURATION).toMillis(),
+          () -> fixture.jcacheLoading().put(KEY_1, VALUE_2));
+
+      assertThat(fixture.jcacheLoading().get(KEY_1)).isEqualTo(VALUE_2);
+      verifyNoInteractions(loader);
+      verify(expiry).getExpiryForUpdate();
+      verify(expiry, never()).getExpiryForAccess();
+      assertThat(fixture.jcacheLoading().containsKey(KEY_1)).isTrue();
+
+      assertThat(fixture.jcacheLoading().get(KEY_1)).isEqualTo(VALUE_2);
+      verify(expiry).getExpiryForAccess();
+      assertThat(fixture.jcacheLoading().containsKey(KEY_1)).isFalse();
+    }
+  }
+
+  @Test
   void get_replacedByExpired() {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       long expireTimeMillis = fixture.currentTime().plus(EXPIRY_DURATION).toMillis();
