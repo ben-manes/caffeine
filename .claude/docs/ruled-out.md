@@ -398,7 +398,7 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   block-on-in-flight contract.
 - View bulk-removal infinite-looping with a write-back removal listener.
 - A prefetched iterator cursor returning an entry a fresh traversal skips.
-- `Map.getOrDefault` not being overridden, so the JDK default makes two calls.
+- `ConcurrentMap.getOrDefault` not being overridden; the inherited default performs one `get` call.
 - `ConcurrentMap.remove(k, null)` returning false rather than throwing NPE.
 - `entrySet().add` throwing UOE rather than putting through. It matches
   `ConcurrentSkipListMap` and pre-v8 CHM; CHM's put-through violates `Set.add` by returning
@@ -407,6 +407,9 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   the Guava facade's `asMap()`) stored without synchronization, so racing first callers can
   receive distinct, equivalent instances (1 to 6 trials in 50,000). `ConcurrentHashMap.keySet()`
   and Guava's cache `keySet()` publish the same way; Guava's `asMap()` is the cache itself.
+  Capture each lazy holder once and return that local or the newly created instance. Final-field
+  initialization protects a view's backing state, but does not make repeated plain holder reads
+  coherent; a second read could return null after the check observed a peer's initialized view.
 - `Policy.hottest`/`coldest` map overloads collapsing equal-but-distinct weak keys.
 - `Policy` snapshots pairing a value with a weight from another moment. The snapshot reports the
   policy's weight under `evictionLock` while writers publish values under the node's monitor, so

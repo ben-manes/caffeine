@@ -139,7 +139,8 @@ abstract class LocalAsyncLoadingCache<K, V>
 
   @Override
   public LoadingCache<K, V> synchronous() {
-    return (cacheView == null) ? (cacheView = new LoadingCacheView<>(this)) : cacheView;
+    var cv = cacheView;
+    return (cv == null) ? (cacheView = new LoadingCacheView<>(this)) : cv;
   }
 
   /* --------------- Synchronous views --------------- */

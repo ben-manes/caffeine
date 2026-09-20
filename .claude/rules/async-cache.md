@@ -24,7 +24,9 @@ paths:
   its value materializes; it does not reserve the old weight or preserve update classification.
   Finalization is a dependent action, so a caller can read the value while `Policy` reports weight
   0, and a `Weigher` or `Expiry` that throws there is logged, counted as a load failure, and
-  removes the mapping the caller already received.
+  removes the mapping the caller already received. Single-key `handleCompletion` leaves the
+  completed loader future successful. Bulk finalization continues through the proxies and fails
+  the aggregate `getAll` future if it encounters an error.
   Failure cleanup preserves a distinct successor future in both single and bulk completions;
   the two `AsyncCacheTest.*weigherFails_preservesConcurrentReplacement` methods pin that boundary.
   Reinserting the same future creates no separate cleanup owner; its earlier failing finalizer

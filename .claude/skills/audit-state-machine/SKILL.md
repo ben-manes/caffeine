@@ -45,13 +45,14 @@ inline-assist path runs — what is the next state and who drives it? Then attac
 
 ## Machine 2: Node lifecycle
 
-States: alive (has value) → retired (marked) → dead (unlinked). Strictly
-unidirectional. Sites: `makeDead`, the retire paths, `isAlive`/`isRetired`/`isDead`
-(on the generated `Node`), and the `resurrect` path in `remap`/compute.
+States: alive → retired → dead. Strictly unidirectional. Sites: `makeDead`, the retire
+paths, generated `isAlive`/`isRetired`/`isDead`, eviction cancellation in `evictEntry`, and
+reuse of expired-but-alive nodes in `remap`/compute.
 
-1. Can any path move `dead → retired`, `dead → alive`, or `retired → alive` *except*
-   the sanctioned resurrection (which re-creates within the same `synchronized(node)`)?
-   Resurrection that observes a node already made dead is the bug to hunt.
+1. Can any path move `dead → retired`, `dead → alive`, or `retired → alive`?
+   `evictEntry`'s `resurrect` flag declines eviction before retirement. `remap`/compute may
+   reuse an expired-but-alive node under `synchronized(node)`; neither permits reversing
+   a retired or dead state.
 2. On every exception or early-return in the compute and eviction paths, does the node
    land in a legal terminal state — never stuck `retired` with no one left to finish
    `makeDead`?

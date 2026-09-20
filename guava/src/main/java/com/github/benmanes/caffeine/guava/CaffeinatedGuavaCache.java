@@ -149,7 +149,8 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
 
   @Override
   public ConcurrentMap<K, V> asMap() {
-    return (mapView == null) ? (mapView = new AsMapView()) : mapView;
+    var mv = mapView;
+    return (mv == null) ? (mapView = new AsMapView()) : mv;
   }
 
   @Override
@@ -204,13 +205,16 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
       delegate().forEach(action);
     }
     @Override public Set<K> keySet() {
-      return (keySet == null) ? (keySet = new KeySetView()) : keySet;
+      var ks = keySet;
+      return (ks == null) ? (keySet = new KeySetView()) : ks;
     }
     @Override public Collection<V> values() {
-      return (values == null) ? (values = new ValuesView()) : values;
+      var vs = values;
+      return (vs == null) ? (values = new ValuesView()) : vs;
     }
     @Override public Set<Entry<K, V>> entrySet() {
-      return (entrySet == null) ? (entrySet = new EntrySetView()) : entrySet;
+      var es = entrySet;
+      return (es == null) ? (entrySet = new EntrySetView()) : es;
     }
     @Override protected ConcurrentMap<K, V> delegate() {
       return cache.asMap();

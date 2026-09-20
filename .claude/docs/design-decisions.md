@@ -274,11 +274,11 @@ worth not flagging:
 The hardening companion to this: `ReactiveClimber.samplePeriod` guards the small-cache
 `ratio` against a `0/0` NaN (when both the maximum and step size are zero). The NaN would
 otherwise zero the effective sample size, defeat the sample guard, and poison
-`sample.previousHitRate`. Decay never produces the state (a positive step size never rounds
-to exactly `0.0`), but construction does: with `maximumSize(0)` the constructor's
-`setMaximumSize(0)` early-returns on `maximum == maximum()` (the field default), leaving
-`step.size` at its `0.0` default. The guard is live for that configuration — covered by
-`adapt_smallCache_zeroMagnitudeDoesNotPoisonHitRate` — not just defense-in-depth.
+`sample.previousHitRate`. Neither construction nor reactive decay reaches that state.
+Generated constructors call `WindowClimber.resized(maximum())`, which seeds a step of at least
+`2.0`, including for `maximumSize(0)`; decay never rounds it to exactly `0.0`. Keep the guard
+as defensive hardening. `BoundedLocalCacheTest.adapt_smallCache_zeroMagnitudeDoesNotPoisonHitRate`
+explicitly forces the zero step.
 
 **The climber commands in `double`; the cache applies `(long)` of the command, truncated
 toward zero once at publication.** Positions, region maxima, and the walk's base are `long`, and
@@ -2054,9 +2054,7 @@ accidentally disabling eviction is accepted.
 `executor`, `scheduler`, and custom `StatsCounter` suppliers.** Threads and
 executors are runtime state, not serializable configuration; the deserialized
 cache uses the defaults (common pool, disabled scheduler, default counter),
-matching Guava's proxy behavior. Don't propose capturing them — the actionable
-gap is only the `Caffeine` class javadoc, which overstates "retain all the
-configuration properties."
+matching Guava's proxy behavior. Don't propose capturing them.
 
 **Serialization is same-version only, and that is not a gap to close** (ruled
 2026-08-15). The library never promises cross-version compatibility, and neither

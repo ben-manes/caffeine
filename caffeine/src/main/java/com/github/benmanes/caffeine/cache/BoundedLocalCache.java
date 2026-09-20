@@ -4395,11 +4395,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     @Override
     public final Policy<K, V> policy() {
-      if (policy == null) {
+      @Var var p = policy;
+      if (p == null) {
         Function<@Nullable V, @Nullable V> identity = v -> v;
-        policy = new BoundedPolicy<>(cache, identity, cache.isWeighted);
+        p = new BoundedPolicy<>(cache, identity, cache.isWeighted);
+        policy = p;
       }
-      return policy;
+      return p;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
@@ -4467,41 +4469,47 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       return Collections.unmodifiableMap(new HashMap<>(castedRefreshes));
     }
     @Override public Optional<Eviction<K, V>> eviction() {
-      return cache.evicts()
-          ? (eviction == null) ? (eviction = Optional.of(new BoundedEviction())) : eviction
-          : Optional.empty();
+      if (!cache.evicts()) {
+        return Optional.empty();
+      }
+      var e = eviction;
+      return (e == null) ? (eviction = Optional.of(new BoundedEviction())) : e;
     }
     @Override public Optional<FixedExpiration<K, V>> expireAfterAccess() {
       if (!cache.expiresAfterAccess()) {
         return Optional.empty();
       }
-      return (afterAccess == null)
+      var e = afterAccess;
+      return (e == null)
           ? (afterAccess = Optional.of(new BoundedExpireAfterAccess()))
-          : afterAccess;
+          : e;
     }
     @Override public Optional<FixedExpiration<K, V>> expireAfterWrite() {
       if (!cache.expiresAfterWrite()) {
         return Optional.empty();
       }
-      return (afterWrite == null)
+      var e = afterWrite;
+      return (e == null)
           ? (afterWrite = Optional.of(new BoundedExpireAfterWrite()))
-          : afterWrite;
+          : e;
     }
     @Override public Optional<VarExpiration<K, V>> expireVariably() {
       if (!cache.expiresVariable()) {
         return Optional.empty();
       }
-      return (variable == null)
+      var e = variable;
+      return (e == null)
           ? (variable = Optional.of(new BoundedVarExpiration()))
-          : variable;
+          : e;
     }
     @Override public Optional<FixedRefresh<K, V>> refreshAfterWrite() {
       if (!cache.refreshAfterWrite()) {
         return Optional.empty();
       }
-      return (refreshes == null)
+      var r = refreshes;
+      return (r == null)
           ? (refreshes = Optional.of(new BoundedRefreshAfterWrite()))
-          : refreshes;
+          : r;
     }
 
     final class BoundedEviction implements Eviction<K, V> {
@@ -4979,25 +4987,29 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     @Override
     public ConcurrentMap<K, CompletableFuture<V>> asMap() {
-      return (mapView == null) ? (mapView = new AsyncAsMapView<>(this)) : mapView;
+      var mv = mapView;
+      return (mv == null) ? (mapView = new AsyncAsMapView<>(this)) : mv;
     }
 
     @Override
     public Cache<K, V> synchronous() {
-      return (cacheView == null) ? (cacheView = new CacheView<>(this)) : cacheView;
+      var cv = cacheView;
+      return (cv == null) ? (cacheView = new CacheView<>(this)) : cv;
     }
 
     @Override
     public Policy<K, V> policy() {
-      if (policy == null) {
+      @Var var p = policy;
+      if (p == null) {
         @SuppressWarnings("unchecked")
         var castCache = (BoundedLocalCache<K, V>) cache;
         Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
         @SuppressWarnings("unchecked")
         var castTransformer = (Function<@Nullable V, @Nullable V>) transformer;
-        policy = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
+        p = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
+        policy = p;
       }
-      return policy;
+      return p;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
@@ -5036,20 +5048,23 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     @Override
     public ConcurrentMap<K, CompletableFuture<V>> asMap() {
-      return (mapView == null) ? (mapView = new AsyncAsMapView<>(this)) : mapView;
+      var mv = mapView;
+      return (mv == null) ? (mapView = new AsyncAsMapView<>(this)) : mv;
     }
 
     @Override
     public Policy<K, V> policy() {
-      if (policy == null) {
+      @Var var p = policy;
+      if (p == null) {
         @SuppressWarnings("unchecked")
         var castCache = (BoundedLocalCache<K, V>) cache;
         Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
         @SuppressWarnings("unchecked")
         var castTransformer = (Function<@Nullable V, @Nullable V>) transformer;
-        policy = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
+        p = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
+        policy = p;
       }
-      return policy;
+      return p;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {

@@ -1223,11 +1223,13 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public final Policy<K, V> policy() {
-      if (policy == null) {
+      @Var var p = policy;
+      if (p == null) {
         Function<@Nullable V, @Nullable V> identity = v -> v;
-        policy = new UnboundedPolicy<>(cache, identity);
+        p = new UnboundedPolicy<>(cache, identity);
+        policy = p;
       }
-      return policy;
+      return p;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
@@ -1360,12 +1362,14 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public ConcurrentMap<K, CompletableFuture<V>> asMap() {
-      return (mapView == null) ? (mapView = new AsyncAsMapView<>(this)) : mapView;
+      var mv = mapView;
+      return (mv == null) ? (mapView = new AsyncAsMapView<>(this)) : mv;
     }
 
     @Override
     public Cache<K, V> synchronous() {
-      return (cacheView == null) ? (cacheView = new CacheView<>(this)) : cacheView;
+      var cv = cacheView;
+      return (cv == null) ? (cacheView = new CacheView<>(this)) : cv;
     }
 
     @Override
@@ -1375,9 +1379,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
       @SuppressWarnings("unchecked")
       var castTransformer = (Function<@Nullable V, @Nullable V>) transformer;
-      return (policy == null)
+      var p = policy;
+      return (p == null)
           ? (policy = new UnboundedPolicy<>(castCache, castTransformer))
-          : policy;
+          : p;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
@@ -1418,7 +1423,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public ConcurrentMap<K, CompletableFuture<V>> asMap() {
-      return (mapView == null) ? (mapView = new AsyncAsMapView<>(this)) : mapView;
+      var mv = mapView;
+      return (mv == null) ? (mapView = new AsyncAsMapView<>(this)) : mv;
     }
 
     @Override
@@ -1428,9 +1434,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
       @SuppressWarnings("unchecked")
       var castTransformer = (Function<@Nullable V, @Nullable V>) transformer;
-      return (policy == null)
+      var p = policy;
+      return (p == null)
           ? (policy = new UnboundedPolicy<>(castCache, castTransformer))
-          : policy;
+          : p;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {

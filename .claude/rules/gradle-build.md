@@ -66,9 +66,9 @@ reproduce. Gradle never generated them; the OSSRH staging API synthesized them s
 
 ## Project Version
 
-The released version is `version` in `gradle.properties`, which Gradle applies to every project.
-`base.caffeine` appends `-SNAPSHOT` unless the build is given `-Pversion.release=true`, which is what
-`release.yml` passes.
+`base.caffeine` sets an unset project version from `version.major`, `version.minor`, and
+`version.patch` in `gradle.properties`. It appends `-SNAPSHOT` unless the build is given
+`-Pversion.release=true`, which `release.yml` passes.
 
 ## Isolated Projects
 

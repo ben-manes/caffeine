@@ -808,7 +808,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public ConcurrentMap<K, V> asMap() {
-      return (asMapView == null) ? (asMapView = new AsMapView<>(asyncCache().cache())) : asMapView;
+      var mv = asMapView;
+      return (mv == null) ? (asMapView = new AsMapView<>(asyncCache().cache())) : mv;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
@@ -1217,17 +1218,20 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public Set<K> keySet() {
-      return (keys == null) ? (keys = new KeySet()) : keys;
+      var ks = keys;
+      return (ks == null) ? (keys = new KeySet()) : ks;
     }
 
     @Override
     public Collection<V> values() {
-      return (values == null) ? (values = new Values()) : values;
+      var vs = values;
+      return (vs == null) ? (values = new Values()) : vs;
     }
 
     @Override
     public Set<Entry<K, V>> entrySet() {
-      return (entries == null) ? (entries = new EntrySet()) : entries;
+      var es = entries;
+      return (es == null) ? (entries = new EntrySet()) : es;
     }
 
     /** See {@link BoundedLocalCache#equals(Object)} for semantics. */

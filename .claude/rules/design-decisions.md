@@ -60,9 +60,10 @@ Details: [eviction](../docs/design-decisions.md#eviction),
   `hasExpired`'s load-load fence and generated `setValue`'s store-store fence. Probe async
   readiness using a value loaded after an expired verdict, and only where it is consumed.
   Do not reuse readiness across observations: completion or obtrusion may intervene.
-- The async expiry sentinel also means accounting is deferred. Both read-extension paths
-  preserve it. Completion checks readiness before installation and quiet replacement checks
-  the sentinel again, so a creation is neither skipped nor charged again as an update.
+- The async expiry sentinel also means accounting is deferred. Both `expireAfterRead` and
+  `tryExpireAfterRead` preserve it. Completion checks readiness before installation and quiet
+  replacement checks the sentinel again, so a creation is neither skipped nor charged again as
+  an update.
 - Weak/soft references' `keyReference` accessors are opaque, not plain or volatile. Preserve
   the fence between publishing a replacement value reference and clearing the old one.
 - Outside `evictionLock`, use `maximumAcquire` / `weightedSizeAcquire`. Plain long reads can
