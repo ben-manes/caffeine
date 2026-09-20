@@ -836,8 +836,8 @@ public final class Caffeine<K, V> {
    * <p>
    * Automatic refreshes are performed when the first stale request for an entry occurs. The request
    * triggering the refresh will make a synchronous call to {@link AsyncCacheLoader#asyncReload} to
-   * obtain a future of the new value. If the returned future is already complete, it is returned
-   * immediately. Otherwise, the old value is returned.
+   * obtain a future of the new value. If the returned future is already complete with a value,
+   * that value is returned immediately. Otherwise, the old value is returned.
    * <p>
    * <b>Note:</b> <i>all exceptions thrown during refresh will be logged and then swallowed</i>.
    *
@@ -860,8 +860,8 @@ public final class Caffeine<K, V> {
    * <p>
    * Automatic refreshes are performed when the first stale request for an entry occurs. The request
    * triggering the refresh will make a synchronous call to {@link AsyncCacheLoader#asyncReload} to
-   * obtain a future of the new value. If the returned future is already complete, it is returned
-   * immediately. Otherwise, the old value is returned.
+   * obtain a future of the new value. If the returned future is already complete with a value,
+   * that value is returned immediately. Otherwise, the old value is returned.
    * <p>
    * <b>Note:</b> <i>all exceptions thrown during refresh will be logged and then swallowed</i>.
    * <p>
@@ -981,7 +981,8 @@ public final class Caffeine<K, V> {
   /**
    * Specifies a listener instance that caches should notify each time an entry is removed for any
    * {@linkplain RemovalCause reason}. The cache will invoke this listener on the configured
-   * {@link #executor(Executor)} after the entry's removal operation has completed. In the case of
+   * {@link #executor(Executor)} after the entry's removal operation has completed. If the executor
+   * rejects a notification, the listener is invoked on the calling thread. In the case of
    * expiration or reference collection, the entry may be pending removal and will be discarded as
    * part of the routine maintenance described in the class documentation above. For a more prompt
    * notification on expiration a {@link #scheduler(Scheduler)} may be configured. An

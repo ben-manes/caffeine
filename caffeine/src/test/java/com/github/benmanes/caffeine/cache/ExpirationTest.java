@@ -26,6 +26,8 @@ import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.Pacer.TOLERANCE;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPIRED;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
@@ -56,9 +58,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
@@ -77,7 +81,9 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.CacheSpec.StartTime;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ArrayListMultimap;
@@ -2418,6 +2424,52 @@ final class ExpirationTest {
     assertThat(cache.policy().getIfPresentQuietly(context.firstKey())).isNotNull();
     context.ticker().advance(Duration.ofMinutes(10));
     assertThat(cache.policy().getIfPresentQuietly(context.firstKey())).isNull();
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine,
+      compute = Compute.SYNC, keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      stats = Stats.DISABLED, maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      loader = Loader.IDENTITY, executor = CacheExecutor.DIRECT,
+      removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED,
+      expiry = CacheExpiry.DISABLED, refreshAfterWrite = Expire.DISABLED,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE},
+      expireAfterAccess = {Expire.DISABLED, Expire.FOREVER},
+      expireAfterWrite = {Expire.DISABLED, Expire.FOREVER})
+  void getEntryIfPresentQuietly_concurrentWrite_saturatedExpiration(CacheContext context) {
+    var snapshotThread = new AtomicReference<Thread>();
+    var sampled = new AtomicBoolean();
+    var released = new AtomicBoolean();
+    context.caffeine().ticker = () -> {
+      long now = context.ticker().read();
+      if ((Thread.currentThread() == snapshotThread.get()) && sampled.compareAndSet(false, true)) {
+        await().untilTrue(released);
+      }
+      return now;
+    };
+    var cache = context.build(Loader.IDENTITY);
+    Int key = context.absentKey();
+    Int replacement = intern(context.absentValue().add(1));
+    cache.put(key, context.absentValue());
+    var snapshot = CompletableFuture.supplyAsync(() -> {
+      snapshotThread.set(Thread.currentThread());
+      return cache.policy().getEntryIfPresentQuietly(key);
+    }, executor);
+    try {
+      await().untilTrue(sampled);
+      // Publish newer timestamps after the snapshot sampled its clock.
+      context.ticker().advance(Duration.ofSeconds(2));
+      cache.put(key, replacement);
+    } finally {
+      released.set(true);
+    }
+    await().until(snapshot::isDone);
+
+    var entry = requireNonNull(snapshot.join());
+    assertThat(entry.getValue()).isEqualTo(replacement);
+    assertThat(cache.policy().getIfPresentQuietly(key)).isEqualTo(replacement);
+    assertThat(entry.expiresAfter()).isEqualTo(Duration.ofNanos(Long.MAX_VALUE));
   }
 
   @SuppressWarnings({"TypeParameterUnusedInFormals", "unchecked"})

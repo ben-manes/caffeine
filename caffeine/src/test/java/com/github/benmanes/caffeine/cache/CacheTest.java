@@ -23,6 +23,8 @@ import static com.github.benmanes.caffeine.cache.CacheSpec.Expiration.AFTER_WRIT
 import static com.github.benmanes.caffeine.cache.CacheSubject.assertThat;
 import static com.github.benmanes.caffeine.cache.RemovalCause.EXPLICIT;
 import static com.github.benmanes.caffeine.cache.RemovalCause.REPLACED;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Nullness.nullCollection;
@@ -33,6 +35,8 @@ import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -61,13 +65,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -85,6 +92,7 @@ import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
 import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
@@ -230,6 +238,48 @@ final class CacheTest {
     Int value = cache.get(key, k -> context.absentValue());
     assertThat(value).isEqualTo(context.absentValue());
     assertThat(context).stats().hits(0).misses(1).success(1).failures(0);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.SYNC,
+      population = Population.EMPTY, stats = Stats.ENABLED,
+      maximumSize = { Maximum.DISABLED, Maximum.UNREACHABLE })
+  void get_absent_concurrent(Cache<Int, Int> cache, CacheContext context) {
+    Int key = context.absentKey();
+    Int value = context.absentValue();
+    var started = new AtomicBoolean();
+    var released = new AtomicBoolean();
+    var invocations = new AtomicInteger();
+    var waiterThread = new AtomicReference<@Nullable Thread>();
+    Function<Int, Int> loader = k -> {
+      invocations.incrementAndGet();
+      started.set(true);
+      await().untilTrue(released);
+      return value;
+    };
+
+    var leader = CompletableFuture.supplyAsync(() -> cache.get(key, loader), executor);
+    CompletableFuture<Int> waiter;
+    try {
+      await().untilTrue(started);
+      waiter = CompletableFuture.supplyAsync(() -> {
+        waiterThread.set(Thread.currentThread());
+        return cache.get(key, loader);
+      }, executor);
+      var threadState = EnumSet.of(BLOCKED, WAITING);
+      await().until(() -> {
+        var thread = waiterThread.get();
+        return (thread != null) && !waiter.isDone() && threadState.contains(thread.getState());
+      });
+    } finally {
+      released.set(true);
+    }
+
+    await().until(() -> leader.isDone() && waiter.isDone());
+    assertThat(leader.join()).isEqualTo(value);
+    assertThat(waiter.join()).isEqualTo(value);
+    assertThat(invocations.get()).isEqualTo(1);
+    assertThat(context).stats().hits(1).misses(1).success(1).failures(0);
   }
 
   @ParameterizedTest

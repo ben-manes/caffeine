@@ -659,7 +659,10 @@ raw-config keys or the old deregistration-key mismatch. Dispatch does not consul
 but retains its live mutable listener-setting leaves. This accepted shallow-immutability reading
 is stricter than the RI's live mutable configuration and comparable to Ehcache 3's shared leaves.
 Dispatch is insulated by Registration's own copy; leaf mutation can affect reporting and later
-deregistration matching. TCK only pins isolation from changes to the original create configuration.
+deregistration matching.
+`ConfigurationTest.testModifyingConfigurationAfterCreateCacheDoesNotModifyCacheConfiguration`
+pins key/value type isolation from changes to the original create configuration; that test does not
+cover listener-setting leaf isolation.
 
 Copying every leaf was built and rejected: MCELC's instanceof-based equals did not match a
 user-implemented original configuration, while it matched Registration's copy. Deregister then

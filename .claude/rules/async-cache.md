@@ -65,13 +65,13 @@ paths:
   `tryComputeRefresh` cannot make progress; `AsyncLoadingCacheTest.refresh_bulkAbsentKey`
   pins refresh of an unfulfilled bulk key.
 - `fillProxies` fills a batch's proxies one at a time on the thread running the completer, and
-  each completion runs that proxy's non-async dependent actions before the next proxy is filled.
-  A dependent that waits for a sibling proxy, directly or through a `synchronous()` read of its
-  key, waits on its own completer, so the batch stalls until that wait ends or the sibling is
-  completed elsewhere. Every `CompletableFuture` completion method runs dependents inline, so no
-  fill order avoids it; it is the hazard of blocking in a non-async stage, which `thenCombine` or
-  an async stage avoids. Filling proxies through the executor would isolate them, but moves every
-  caller's dependents off the completing thread and adds a task per proxy.
+  each completion can run that proxy's non-async dependent actions before the next proxy is filled.
+  A dependent running inline in this loop that waits for a sibling proxy, directly or through a
+  `synchronous()` read of its key, waits on its own completer. The batch stalls until that wait
+  ends or the sibling is completed elsewhere. No fill order avoids this hazard of blocking in a
+  non-async stage. Use `thenCombine` or an async stage with an executor that runs it off-thread.
+  Filling proxies in separate off-thread tasks would decouple their completions, but changes
+  dependent execution and adds a task per proxy.
 - `handleCompletion` suppresses logging for bare `CancellationException`/`TimeoutException`.
   Do not unwrap a `CompletionException` from a user stage such as `orTimeout().thenApply(...)`:
   it is indistinguishable from a timeout thrown by loader code, which must remain reportable.

@@ -30,6 +30,10 @@ map (live-fetch recipes, RI/ecosystem class locations for every domain below), t
 differential methodology, the parity-test pattern, and the catalogue of
 already-resolved divergences (do not re-flag those).
 
+For this skill, the reference and its standing rulings are read before analysis, overriding the
+auditor's Phase 1.5 reading order for that document. Verify applicable rulings against current
+contracts and source before using them to adjudicate a finding.
+
 ## When to run
 
 - After any change to `jcache/src/main` touching `CacheProxy`, `LoadingCacheProxy`,

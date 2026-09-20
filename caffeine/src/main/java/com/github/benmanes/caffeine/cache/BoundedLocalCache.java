@@ -3519,21 +3519,21 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Var long expiresAfter = Long.MAX_VALUE;
     if (expiresAfterAccess()) {
       expiresAfter = Math.min(expiresAfter,
-          expiresAfterAccessNanos() - (now - node.getAccessTime()));
+          expiresAfterAccessNanos() - Math.max(0L, now - node.getAccessTime()));
     }
     if (expiresAfterWrite()) {
       expiresAfter = Math.min(expiresAfter,
-          expiresAfterWriteNanos() - (toWriteTime(now) - writeTimeOf(node)));
+          expiresAfterWriteNanos() - Math.max(0L, toWriteTime(now) - writeTimeOf(node)));
     }
     if (expiresVariable()) {
       expiresAfter = node.getVariableTime() - now;
     }
 
-    long refreshableAt = refreshAfterWrite()
-        ? writeTimeOf(node) + refreshAfterWriteNanos()
-        : now + Long.MAX_VALUE;
+    long refreshableAfter = refreshAfterWrite()
+        ? refreshAfterWriteNanos() - Math.max(0L, now - writeTimeOf(node))
+        : Long.MAX_VALUE;
     return SnapshotEntry.forEntry(key, value, now,
-        isWeighted ? weight : 1, now + expiresAfter, refreshableAt);
+        isWeighted ? weight : 1, now + expiresAfter, now + refreshableAfter);
   }
 
   /** Mutable context for passing state between a lambda and the caller. */

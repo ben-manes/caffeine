@@ -30,17 +30,17 @@ import com.google.errorprone.annotations.Immutable;
  * Cache statistics are incremented according to the following rules:
  * <ul>
  *   <li>When a cache lookup encounters an existing cache entry {@code hitCount} is incremented.
- *   <li>When a cache lookup first encounters a missing cache entry, a new entry is loaded.
+ *   <li>When a cache lookup finds no entry without loading one, {@code missCount} is incremented.
+ *   <li>When a cache lookup attempts to load a new entry:
  *   <ul>
  *     <li>After successfully loading an entry {@code missCount} and {@code loadSuccessCount} are
  *         incremented, and the total loading time, in nanoseconds, is added to
  *         {@code totalLoadTime}.
- *     <li>When an exception is thrown while loading an entry or if the loaded value is {code null},
+ *     <li>When an exception is thrown while loading an entry or if the loaded value is {@code null},
  *         {@code missCount} and {@code loadFailureCount} are incremented, and the total loading
  *         time, in nanoseconds, is added to {@code totalLoadTime}.
- *     <li>Cache lookups that encounter a missing cache entry that is still loading will wait
- *         for loading to complete (whether successful or not) and then increment {@code missCount}.
  *   </ul>
+ *   <li>Cache lookups that reuse a value loaded by a concurrent lookup increment {@code hitCount}.
  *   <li>When an entry is computed through the {@linkplain Cache#asMap asMap} the
  *       {@code loadSuccessCount} or {@code loadFailureCount} is incremented.
  *   <li>When an entry is evicted from the cache, {@code evictionCount} is incremented and the
@@ -50,8 +50,9 @@ import com.google.errorprone.annotations.Immutable;
  *       {@linkplain Cache#asMap asMap} view of the cache.
  * </ul>
  * <p>
- * A lookup is specifically defined as an invocation of one of the methods
- * {@link LoadingCache#get(Object)}, {@link Cache#get(Object, java.util.function.Function)}, or
+ * Lookups include calls to {@link Cache#getIfPresent(Object)},
+ * {@link Cache#getAllPresent(Iterable)}, {@link Cache#get(Object, java.util.function.Function)},
+ * {@link Cache#getAll(Iterable, java.util.function.Function)}, {@link LoadingCache#get(Object)}, and
  * {@link LoadingCache#getAll(Iterable)}.
  * <p>
  * This is a <em>value-based</em> class; use of identity-sensitive operations (including reference
@@ -155,9 +156,7 @@ public final class CacheStats {
 
   /**
    * Returns the number of times {@link Cache} lookup methods have returned an uncached (newly
-   * loaded) value, or null. Multiple concurrent calls to {@link Cache} lookup methods on an absent
-   * value can result in multiple misses, all returning the results of a single cache load
-   * operation.
+   * loaded) value, or null.
    *
    * @return the number of times {@link Cache} lookup methods have returned an uncached (newly
    *         loaded) value, or null
@@ -171,9 +170,7 @@ public final class CacheStats {
    * {@code missCount / requestCount}, or {@code 0.0} when {@code requestCount == 0}.
    * Note that {@code hitRate + missRate =~ 1.0}. Cache misses include all requests which
    * weren't cache hits, including requests which resulted in either successful or failed loading
-   * attempts, and requests which waited for other threads to finish loading. It is thus the case
-   * that {@code missCount >= loadSuccessCount + loadFailureCount}. Multiple
-   * concurrent misses for the same key will result in a single load operation.
+   * attempts. It is thus the case that {@code missCount >= loadSuccessCount + loadFailureCount}.
    *
    * @return the ratio of cache requests which were misses
    */
@@ -201,8 +198,7 @@ public final class CacheStats {
    * Returns the number of times {@link Cache} lookup methods have successfully loaded a new value.
    * This is always incremented in conjunction with {@link #missCount}, though {@code missCount}
    * is also incremented when an exception is encountered during cache loading (see
-   * {@link #loadFailureCount}). Multiple concurrent misses for the same key will result in a
-   * single load operation.
+   * {@link #loadFailureCount}). A load shared by multiple concurrent lookups is counted only once.
    *
    * @return the number of times {@link Cache} lookup methods have successfully loaded a new value
    */
@@ -214,8 +210,8 @@ public final class CacheStats {
    * Returns the number of times {@link Cache} lookup methods failed to load a new value, either
    * because no value was found or an exception was thrown while loading. This is always incremented
    * in conjunction with {@code missCount}, though {@code missCount} is also incremented when cache
-   * loading completes successfully (see {@link #loadSuccessCount}). Multiple concurrent misses for
-   * the same key will result in a single load operation.
+   * loading completes successfully (see {@link #loadSuccessCount}). A load shared by multiple
+   * concurrent lookups is counted only once.
    *
    * @return the number of times {@link Cache} lookup methods failed to load a new value
    */

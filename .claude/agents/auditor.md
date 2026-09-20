@@ -323,7 +323,9 @@ For each such finding, before writing the report:
 
 1. **Build the witness.** A JUnit method, a `jshell` snippet, or a `main` compiled against
    `caffeine/build/libs/caffeine-*.jar` (use the jar, not `build/classes` — the jar carries
-   the generated node classes). Run it. A witness that does not reproduce is the finding's
+   the generated node classes). Before using a prebuilt artifact, verify that the class under test
+   matches the source being audited, for example with `javap`; timestamps or checks of another
+   class are insufficient. Run it. A witness that does not reproduce is the finding's
    answer. Take the sub-agent's measured numbers as the result; do not restate your prediction
    as though it were the measurement.
 2. **Run it on the configuration a user gets**: `Ticker.systemTicker()` and the common

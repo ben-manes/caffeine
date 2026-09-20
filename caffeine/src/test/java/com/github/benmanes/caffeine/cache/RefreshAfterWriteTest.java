@@ -72,6 +72,7 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.CacheSpec.StartTime;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
 import com.github.benmanes.caffeine.testing.ExpectedError;
 import com.github.benmanes.caffeine.testing.Int;
@@ -1937,6 +1938,81 @@ final class RefreshAfterWriteTest {
   void ageOf_absent(CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     assertThat(refreshAfterWrite.ageOf(context.absentKey())).isEmpty();
     assertThat(refreshAfterWrite.ageOf(context.absentKey(), TimeUnit.SECONDS)).isEmpty();
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine,
+      compute = Compute.SYNC, keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      stats = Stats.DISABLED, maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      loader = Loader.IDENTITY, executor = CacheExecutor.DIRECT,
+      removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED,
+      expiry = CacheExpiry.DISABLED, expireAfterAccess = Expire.FOREVER,
+      expireAfterWrite = Expire.FOREVER, refreshAfterWrite = Expire.ONE_MINUTE,
+      startTime = StartTime.ONE_MINUTE_FROM_MAX)
+  void getEntryIfPresentQuietly_refreshMetadata_wraparound(CacheContext context) {
+    // Align the write time so the refresh marker does not affect the expected precision.
+    context.ticker().advance(Duration.ofNanos(1));
+    var cache = context.build(Loader.IDENTITY);
+    cache.put(context.absentKey(), context.absentValue());
+
+    context.ticker().advance(Duration.ofSeconds(30));
+    @Var var entry = requireNonNull(cache.policy().getEntryIfPresentQuietly(context.absentKey()));
+    assertThat(entry.refreshableAfter()).isEqualTo(Duration.ofSeconds(30));
+    assertThat(entry.expiresAfter())
+        .isEqualTo(Duration.ofNanos(Long.MAX_VALUE).minusSeconds(30));
+
+    context.ticker().advance(Duration.ofSeconds(45));
+    assertThat(context.ticker().read()).isLessThan(0L);
+    entry = requireNonNull(cache.policy().getEntryIfPresentQuietly(context.absentKey()));
+    assertThat(entry.getValue()).isEqualTo(context.absentValue());
+    assertThat(entry.refreshableAfter()).isEqualTo(Duration.ofSeconds(-15));
+    assertThat(entry.expiresAfter())
+        .isEqualTo(Duration.ofNanos(Long.MAX_VALUE).minusSeconds(75));
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine,
+      compute = Compute.SYNC, keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      stats = Stats.DISABLED, maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DISABLED,
+      loader = Loader.IDENTITY, executor = CacheExecutor.DIRECT,
+      removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED,
+      expiry = CacheExpiry.DISABLED, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, refreshAfterWrite = Expire.FOREVER)
+  void getEntryIfPresentQuietly_concurrentWrite_saturatedRefresh(CacheContext context) {
+    var snapshotThread = new AtomicReference<Thread>();
+    var sampled = new AtomicBoolean();
+    var released = new AtomicBoolean();
+    context.caffeine().ticker = () -> {
+      long now = context.ticker().read();
+      if ((Thread.currentThread() == snapshotThread.get()) && sampled.compareAndSet(false, true)) {
+        await().untilTrue(released);
+      }
+      return now;
+    };
+    var cache = context.build(Loader.IDENTITY);
+    Int key = context.absentKey();
+    Int replacement = intern(context.absentValue().add(1));
+    cache.put(key, context.absentValue());
+    var snapshot = CompletableFuture.supplyAsync(() -> {
+      snapshotThread.set(Thread.currentThread());
+      return cache.policy().getEntryIfPresentQuietly(key);
+    }, executor);
+    try {
+      await().untilTrue(sampled);
+      // Publish a newer write time after the snapshot sampled its clock.
+      context.ticker().advance(Duration.ofSeconds(2));
+      cache.put(key, replacement);
+    } finally {
+      released.set(true);
+    }
+    await().until(snapshot::isDone);
+
+    var entry = requireNonNull(snapshot.join());
+    assertThat(entry.getValue()).isEqualTo(replacement);
+    assertThat(cache.policy().getIfPresentQuietly(key)).isEqualTo(replacement);
+    assertThat(entry.refreshableAfter()).isEqualTo(Duration.ofNanos(Long.MAX_VALUE));
   }
 
   @ParameterizedTest

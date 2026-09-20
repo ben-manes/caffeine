@@ -172,8 +172,15 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   `(pIndex - cIndex) < bufferCapacity` does not suffice because `producerLimit` stores the
   same wrapping sum, and rolling the index back strands the consumer, which is worse.
 - `StripedBuffer.offer` treating `FULL` as success and expanding only on `FAILED`. A failed
-  CAS is contention, which striping fixes; a full buffer means the drain is behind, which it
-  does not. The `FULL` return is the signal that tells `afterRead` to drain.
+  CAS is a contention hint and may be spurious; a full buffer means the drain is behind, which
+  striping does not fix. The `FULL` return is the signal that tells `afterRead` to drain.
+- Replacing the read buffer's weak CAS solely because it can fail spuriously. No correctness
+  failure or material cost was established; stronger CAS needs a measured benefit, not an
+  assumption that its cost is identical on every architecture.
+- A producer spinning on another producer's write-queue resize, including from an inline removal
+  listener holding `evictionLock`. The resizer needs no cache lock and clears the marker before
+  scheduling maintenance, so this is an owner-progress stall, not a lock cycle. Growth ends at
+  maximum capacity; `onSpinWait()` would retain the dependency and has no demonstrated benefit.
 - A thread's starting stripe never moving. `ThreadLocalRandom.getProbe`/`advanceProbe` are
   package-private to `java.util.concurrent`, so the permanent-move search is unavailable.
   The only alternative is a `ThreadLocal` on the read hot path.
@@ -229,7 +236,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
 - `Pacer.calculateSchedule`'s 0L sentinel collision.
 - `Pacer.schedule`'s reschedule arm must call `cancel()`, not `future.cancel(...)`: the
   immediate-scheduler recursion guard is `future == null && nextFireTime != 0L` and only
-  `cancel()` reaches it. Do not simplify it back.
+  `cancel()` reaches it. Do not simplify it back. For a custom scheduler executing through an
+  inline executor, recursion must terminate; autonomous rearming of a deadline discovered inside
+  that callback is not guaranteed. This includes a scheduler that honors the requested delay.
+  Later independent scheduling can recover; synchronous scheduling is not itself a contract violation.
 - `Pacer` skipping its re-arm when the scheduler fires before the cache ticker reaches
   `nextFireTime`. The executing future still appears pending, so maintenance waits for the next
   operation. A one-second-granularity ticker reproduces; `systemTicker` and a one-millisecond
@@ -239,6 +249,14 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
 - `Pacer` self-poison ordering (`nextFireTime` committed before `scheduler.schedule()`).
   User schedulers get `GuardedScheduler`'s no-throw/no-null guarantee; built-ins satisfy it
   directly. Do not add a catch for an unreachable synchronous scheduler failure.
+- `forScheduledExecutorService` allowing a standalone shutdown-race rejection to escape. Its
+  factory description states the task-drop policy, not blanket exception suppression;
+  `guardedScheduler` supplies that guarantee and configured caches already use it. The shutdown
+  precheck avoids log noise during orderly shutdown (#1449), without making submission atomic.
+- A nested wheel sweep transiently cancelling the pacer while a bucket is detached. The normal
+  outer pass recomputes scheduling, and listener/counter exceptions cannot bypass that step because
+  they are caught. No supported escaping callback was established; broken keys, hostile futures
+  and JVM failures remain within the standing exception exclusions.
 - `TimerWheel.Traverser` detecting concurrent modification via `nanos` rather than a
   `modCount`, unlike the deque-backed `Policy` families. The "spins forever holding
   `evictionLock`" consequence is a frozen-ticker artifact: `advance()` sets
@@ -483,6 +501,8 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   loader maps giving inconsistent diagnostics across `getAll` paths.
   `NullMapCompletionException` is an internal marker translated to
   `NullPointerException("null map")`; the sync path's JEP 358 helpful NPE names the variable.
+  Preserve `LoadingCache.getAll`'s existing exception wording; adding a partial-commit
+  qualification was declined.
 - `loadAll` retaining the caller's mutable `Set` across the async boundary.
 - A dropped or hung async load leaving a permanent in-flight mapping. The remedy is to cancel
   the future, which `async-cache.md` documents.
@@ -490,6 +510,14 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   absence check and its load, without calling the loader. A refresh of an absent key is a
   `get(key)`, which adopts the mapping it finds, and a load in that race could equally have been
   discarded by the write.
+- An overlapping refresh adopting an older failed future while its original caller is still
+  registering the absent-key load. Conditional registry cleanup preserves newer cached mappings
+  and distinct refresh tokens; refresh does not promise the newest cached future or an immediate
+  retry. Cleanup runs when the original invocation resumes; this is not permanent token poisoning.
+- Overlapping `getAll` calls sharing a per-key proxy and its failure or omitted result. Each loader
+  owns only the proxies it installed; aggregates retain shared futures even after cache removal.
+  A caller that owns additional missing keys records its own bulk load, not another load for the
+  shared keys. Outcome sharing is the accepted coalescing policy, not a bulk-atomicity guarantee.
 - The synchronous view's `asMap()` being equal to no other map while a load is in flight, and a
   `ConcurrentHashMap` or an unbounded cache comparing equal to it in one direction only. See
   [iteration](design-decisions.md#iteration).

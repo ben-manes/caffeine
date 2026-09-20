@@ -39,12 +39,9 @@ public interface StatsCounter {
   void recordHits(int count);
 
   /**
-   * Records cache misses. This should be called when a cache request returns a value that was not
-   * found in the cache. This method should be called by the loading thread and by threads blocking
-   * on the load. Multiple concurrent calls to {@link Cache} lookup methods with the same key on an
-   * absent value should result in a single call to either {@code recordLoadSuccess} or
-   * {@code recordLoadFailure} and multiple calls to this method, despite all being served by the
-   * results of a single load operation.
+   * Records cache misses. This should be called when a cache request finds no cached value or
+   * initiates a load. A request that reuses a value loaded by a concurrent request should be
+   * recorded as a hit.
    *
    * @param count the number of misses to record
    */
@@ -53,8 +50,8 @@ public interface StatsCounter {
   /**
    * Records the successful load of a new entry. This method should be called when a cache request
    * causes an entry to be loaded (such as by {@link Cache#get} or {@link Map#computeIfAbsent}) and
-   * the loading completes successfully. In contrast to {@link #recordMisses}, this method should
-   * only be called by the loading thread.
+   * the loading completes successfully. This method should be called once per load, regardless
+   * of the number of concurrent requests sharing it.
    *
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    */
@@ -63,8 +60,8 @@ public interface StatsCounter {
   /**
    * Records the failed load of a new entry. This method should be called when a cache request
    * causes an entry to be loaded (such as by {@link Cache#get} or {@link Map#computeIfAbsent}), but
-   * an exception is thrown while loading the entry or the loading function returns null. In
-   * contrast to {@link #recordMisses}, this method should only be called by the loading thread.
+   * an exception is thrown while loading the entry or the loading function returns null. This
+   * method should be called once per load, regardless of the number of concurrent requests sharing it.
    *
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    *        prior to discovering the value doesn't exist or an exception being thrown

@@ -41,8 +41,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @param <K> the type of keys
  * @param <V> the type of values. A loader may return null values if and only if it declares a
- *     nullable value type. A cache may return null values if and only if its loader does. (Null
- *     values are still never <i>stored</i> in the cache.)
+ *     nullable value type. (Null values are still never <i>stored</i> in the cache.)
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NullMarked

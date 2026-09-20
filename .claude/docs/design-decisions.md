@@ -851,8 +851,8 @@ master is identical. Don't harden it: `(pIndex - cIndex) < bufferCapacity` does 
 newBuffer` strands the consumer, which is worse than the spin.
 
 **`StripedBuffer.offer` treats `FULL` as success and only expands on `FAILED`.** A failed CAS is
-evidence of real contention between threads, which striping fixes; a full buffer only means the
-drain is behind, which it does not. Routing `FULL` into `expandOrRetry` would let one thread's
+a contention hint; weak CAS can also fail spuriously. A full buffer only means the drain is behind,
+which striping does not fix. Routing `FULL` into `expandOrRetry` would let one thread's
 routinely-full buffer grow the table and allocate stripes nobody contends for. So a `FULL` home
 stripe returns `FULL` without probing a sibling, which is what makes a stalled stripe skip that
 thread's reads until it drains. Both are intended: the `FULL` return is the signal that tells

@@ -61,8 +61,9 @@ lambda — which holds only the bin lock, no node monitor — e.g.
 | metadata | plain | plain | evictionLock |
 
 `getPolicyWeight` reads two plain fields, its own and `metadata`, so an unlocked reader can
-see them from different moments. Every caller holds `evictionLock`, including the `Policy`
-snapshot, which clamps the result into the `int` range for `CacheEntry.weight`. That is the policy's
+see them from different moments. Maintenance callers hold `evictionLock`. A `Policy` snapshot's
+caller holds it through the mapping function; parallel workers do not acquire it themselves.
+The snapshot clamps the result into the `int` range for `CacheEntry.weight`. That is the policy's
 view, not what a writer last published under the node's monitor, so a concurrent update can pair a
 value with an older weight; the snapshot is best effort rather than synchronizing every node. A
 replayed update can also leave the policy weight negative or beyond the `int` range, a weight no
@@ -121,6 +122,9 @@ pins the parked state deliberately. Don't add a recovery path for a broken execu
 
 ## User Callback Invocation Points
 
+The lock contexts below describe locks acquired by each cache path; callbacks can also inherit
+locks held by their callers.
+
 ### notifyEviction — INSIDE synchronized(node)
 Irrevocable. In `remap()` and `doComputeIfAbsent()` it precedes the mapping function, weigher,
 and expiry callbacks; `put()` calls its weigher (outside all locks) and `expireAfterCreate` first.
@@ -137,8 +141,7 @@ still held (but outside synchronized(node) and CHM bin lock).
 thread, and if `executor.execute(task)` throws (such as `RejectedExecutionException`) the task is
 invoked inline (`task.run()`). From `evictEntry`/`removeNode` that caller thread is holding
 `evictionLock`, so the user's `RemovalListener` runs synchronously under the eviction lock. A
-listener that re-enters the cache via a write can deadlock in that path. (The default
-`ForkJoinPool.commonPool` rejects when shutting down.)
+listener that re-enters the cache via a write can deadlock in that path.
 
 ### Mapping functions (compute, merge, etc.)
 Lock context depends on path:
@@ -159,6 +162,20 @@ Lock context depends on path:
 - **compute/merge (existing node)**: INSIDE CHM bin lock + synchronized(node)
 - **New node creation**: varies by call site
 Can throw (caught by catch-commit-rethrow in compute paths).
+
+### StatsCounter
+`LocalCache.statsAware` records misses and load outcomes inside the computation, under its
+CHM bin lock and, for an existing bounded node, its node monitor. During maintenance,
+`recordEviction` runs under `evictionLock`. `GuardedStatsCounter` suppresses exceptions; it
+does not defer these calls.
+
+### CompletableFuture dependent actions
+Non-async actions may run inline on a thread invoking a completion method, or on the
+registering thread when the future is already complete. They inherit any locks that thread
+holds. `LocalAsyncCache.handleCompletion` can remove the mapping or finalize its weight and
+expiration, so completing a cached future inside a mapping function can recursively modify
+the cache. `AsyncBulkCompleter.fillProxies` acquires no surrounding lock before completing
+proxies, but its caller may already hold one.
 
 ### CacheLoader.load
 Lock context depends on path:
@@ -194,8 +211,8 @@ Synchronous. Re-entrant cache operations risk deadlock.
 ### Other user components under evictionLock
 These also run while `evictionLock` is held: `Scheduler.schedule` (through `Pacer`),
 `Executor.execute` (the maintenance task and eviction's removal notifications),
-`StatsCounter.recordEviction`, and `Ticker.read`. One that blocks stalls maintenance, then
-writers once the write buffer fills.
+`StatsCounter.recordEviction`, `Ticker.read`, and `Policy` snapshot mapping functions (after
+maintenance). One that blocks stalls maintenance, then writers once the write buffer fills.
 
 ## Buffer Semantics
 
