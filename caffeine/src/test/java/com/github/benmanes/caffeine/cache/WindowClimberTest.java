@@ -723,6 +723,29 @@ final class WindowClimberTest {
   }
 
   @Test
+  void auditClock_overflow_remainsDue() {
+    var climber = makeClimber();
+    var density = (DensityClimber) climber.tier;
+    var clock = density.auditClock;
+    long band = WindowClimber.Reading.stableBand(MAXIMUM);
+    clock.tick(/* windowMax= */ 2000, band);
+
+    // Accelerate to the boundary; stationary samples must leave the audit due without wrapping.
+    clock.stillSamples = Integer.MAX_VALUE - 1;
+    assertThat(clock.isDue()).isTrue();
+    clock.tick(/* windowMax= */ 2000, band);
+    assertThat(clock.stillSamples).isEqualTo(Integer.MAX_VALUE);
+
+    clock.tick(/* windowMax= */ 2000, band);
+    assertThat(clock.stillSamples).isEqualTo(Integer.MAX_VALUE);
+    assertThat(clock.isDue()).isTrue();
+
+    clock.tick(/* windowMax= */ 4000, band);
+    assertThat(clock.stillSamples).isEqualTo(Integer.MAX_VALUE - 1);
+    assertThat(clock.isDue()).isTrue();
+  }
+
+  @Test
   void guardRail_noAnchorSeedWhileProbing() {
     // a probe's transient window paired with an EMA earned elsewhere is a phantom claim; the
     // seed waits until the walk resolves

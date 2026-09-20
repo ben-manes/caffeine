@@ -1221,7 +1221,9 @@ final class WindowClimber {
      */
     void tick(long windowMax, long band) {
       boolean samePlace = (lastWindow < 0) || (Math.abs(windowMax - lastWindow) <= band);
-      stillSamples = samePlace ? (stillSamples + 1) : Math.max(0, stillSamples - 1);
+      stillSamples = samePlace
+          ? (Math.min(Integer.MAX_VALUE - 1, stillSamples) + 1)
+          : Math.max(0, stillSamples - 1);
       lastWindow = windowMax;
     }
 

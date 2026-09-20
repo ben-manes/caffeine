@@ -154,7 +154,12 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   positive.
 - Transient negative `weightedSize`, and transient negative `policyWeight` over-shifting the
   climb transfer quotas or region caps. Convergence is via the telescoping sum; verify that
-  instead.
+  instead. Confirming at a negative window can leave an anchor held but unplanted under its
+  sentinel test. This lies outside the fuzzer's bounded geometry; no distinct harmful adaptation
+  consequence was established, so the flag pairing alone does not justify a policy change.
+- `DENSITY_EPSILON` attenuating proportional steering at extreme weight maxima. Production
+  consumers use the verdict's sign; `steeringError()` contains no epsilon. Floating-point
+  rounding can tie sufficiently close densities, but no harmful reachable tie was established.
 - Weight=0 entries are a user-facing pinning feature.
 - In-flight async entries are uncounted by any bound (weight 0 plus `ASYNC_EXPIRY`).
 - The eviction-listener same-key mutation "corrupting or silently losing the write".
@@ -183,7 +188,9 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   task is not lost: `scheduleAfterWrite` runs after `offer` returns and re-arms. Where a
   weak-memory interleaving defeats that re-arm (the IDLE strand below), the task waits in the
   buffer for the next write, `cleanUp`, or a read that fills a stripe.
-- `clear()`'s write-buffer drain loop being unbounded under `evictionLock`.
+- `clear()`'s write-buffer drain loop being unbounded under `evictionLock`. Its `AddTask`s can
+  accumulate sample observations without `climb`, so sample counters have no all-history bound;
+  no practical long-counter overflow or impact was established.
 - The write buffer's backpressure is a capacity limit, not a CAS.
 - The constructor's read-buffer and access-policy conditions not naming `expiresVariable()`.
   Variable expiry shares the `A` classes with access expiry, and their `expiresAfterAccess()`
@@ -397,6 +404,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
 - `AsMapView.KeySet.remove(k)`, `removeAll`, `removeIf` and `retainAll` bypassing the
   block-on-in-flight contract.
 - View bulk-removal infinite-looping with a write-back removal listener.
+- `clear()` / `invalidateAll()` preserving nodes recreated after its snapshot. Identity-checked
+  removal targets the captured node and avoids reprocessing listener write-backs (#872).
+  The by-key straggler pass and `invalidateAll(keys)` can remove newer mappings; these operations
+  need not remove the same generation during concurrent writes.
 - A prefetched iterator cursor returning an entry a fresh traversal skips.
 - `ConcurrentMap.getOrDefault` not being overridden; the inherited default performs one `get` call.
 - `ConcurrentMap.remove(k, null)` returning false rather than throwing NPE.
