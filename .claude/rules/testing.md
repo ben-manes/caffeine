@@ -22,6 +22,9 @@
   (`TimerWheelTest`, `BoundedBufferTest`) asserts the mechanism but shows nobody what the change
   buys, and it is the wrong artifact to hand to a reviewer. Add the internal pin only for a case
   the API cannot reach, and say which case that is.
+- During maintainer-led repair triage, put the reproducer in the repository before presenting
+  a proposed fix. Include the test method and exact command so the maintainer can run and debug
+  it. Report-only audits retain their own file-edit restrictions.
 - **Match the conventions of the file you are editing.** Reuse its `@MethodSource` shape, its
   fixtures, and its naming rather than importing a different style (a static direction table, a
   `named(...)` `Consumer` source) that the file does not already use. A reviewer who has to

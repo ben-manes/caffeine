@@ -428,6 +428,86 @@ final class CacheProxyTest {
   }
 
   @Test
+  void iterator_remove_listenerFails_doesNotRemoveReplacement() {
+    CacheEntryRemovedListener<Integer, Integer> listener = Mockito.mock();
+    var failure = new CacheEntryListenerException("listener");
+    doThrow(failure).doNothing().when(listener).onRemoved(anyIterable());
+    try (var fixture = JCacheFixture.builder().build();
+        var cache = fixture.jcache()) {
+      cache.registerCacheEntryListener(new MutableCacheEntryListenerConfiguration<>(
+          () -> listener, /* filterFactory= */ null,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+      cache.put(KEY_1, VALUE_1);
+      var iterator = cache.iterator();
+      iterator.next();
+
+      // Listener failure leaves the removal committed and consumes its one removal opportunity.
+      assertThat(assertThrows(CacheEntryListenerException.class, iterator::remove))
+          .isSameInstanceAs(failure);
+      assertThat(cache.containsKey(KEY_1)).isFalse();
+
+      cache.put(KEY_1, VALUE_2);
+      assertThrows(IllegalStateException.class, iterator::remove);
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_2);
+      verify(listener).onRemoved(anyIterable());
+    }
+  }
+
+  @Test
+  void iterator_remove_listenerFails_doesNotDeleteTwice() throws IOException {
+    CacheEntryRemovedListener<Integer, Integer> listener = Mockito.mock();
+    var failure = new CacheEntryListenerException("listener");
+    doThrow(failure).when(listener).onRemoved(anyIterable());
+    try (CloseableCacheWriter writer = Mockito.mock();
+        var fixture = JCacheFixture.builder().configure(config -> {
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(true);
+        }).build();
+        var cache = fixture.jcache()) {
+      cache.registerCacheEntryListener(new MutableCacheEntryListenerConfiguration<>(
+          () -> listener, /* filterFactory= */ null,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+      cache.put(KEY_1, VALUE_1);
+      var iterator = cache.iterator();
+      iterator.next();
+
+      assertThat(assertThrows(CacheEntryListenerException.class, iterator::remove))
+          .isSameInstanceAs(failure);
+      assertThat(cache.containsKey(KEY_1)).isFalse();
+      verify(writer).delete(KEY_1);
+
+      assertThrows(IllegalStateException.class, iterator::remove);
+      verify(writer).delete(KEY_1);
+      verify(listener).onRemoved(anyIterable());
+    }
+  }
+
+  @Test
+  void iterator_remove_writerFails_remainsRetryable() throws IOException {
+    try (CloseableCacheWriter writer = Mockito.mock();
+        var fixture = JCacheFixture.builder().configure(config -> {
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(true);
+        }).build();
+        var cache = fixture.jcache()) {
+      var failure = new CacheWriterException("writer");
+      doThrow(failure).doNothing().when(writer).delete(KEY_1);
+      cache.put(KEY_1, VALUE_1);
+      var iterator = cache.iterator();
+      iterator.next();
+
+      assertThat(assertThrows(CacheWriterException.class, iterator::remove))
+          .isSameInstanceAs(failure);
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+
+      iterator.remove();
+      assertThat(cache.containsKey(KEY_1)).isFalse();
+      assertThrows(IllegalStateException.class, iterator::remove);
+      verify(writer, Mockito.times(2)).delete(KEY_1);
+    }
+  }
+
+  @Test
   void iterator_remove_valueChangedConcurrently_removesByKey() {
     // EntryIterator.remove removes the last-returned key unconditionally (weakly-consistent
     // iterator, RI/BLC/ULC/CHM parity), even when the value was replaced between next() and remove()

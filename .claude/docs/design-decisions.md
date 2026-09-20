@@ -479,7 +479,10 @@ configured duration.
 finalizes an entry with a same-instance quiet `replace`, which lands on the update path.
 For a future that was in flight when it was inserted that is the entry's first and only
 evaluation, since the install stored the sentinel and `AsyncExpiry` routes it back to
-`expireAfterCreate`. A future that was **already complete** when inserted was weighed and
+`expireAfterCreate`. This includes an incomplete future replacing a ready value: it begins a
+pending lifecycle, then receives creation expiry on materialization. `AsyncTest.asyncExpiry_pending`
+pins a pending update discarding a real prior duration; `asyncExpiry_completion` pins the
+subsequent creation callback. A future that was **already complete** when inserted was weighed and
 dated by that write, so finalizing it again charged the creation as an update: the user's
 `expireAfterCreate` ran at the install and their `expireAfterUpdate` a moment later, and
 the update's duration is the one the entry kept. Measured with an `Expiry` of 1h on create
@@ -1892,6 +1895,15 @@ quiet write preserves the expiration because the first handler already cleared t
 sentinel, so the user's `Expiry` sees one creation rather than a creation and an update.
 The load is still counted once per handler. Pinned by
 `AsyncCacheTest.put_reregisteredInstance_completionRegisteredTwice`.
+
+**Failure cleanup is scoped to the future, not to each insertion.** A deferred finalizer that
+fails its weigher or expiry removes `(key, future)` conditionally. If the same completed future
+was removed and reinserted meanwhile, that cleanup can remove it again: reinsertion does not
+create a new computation or cleanup owner. A distinct successor survives, as pinned by
+`AsyncCacheTest.handleCompletion_weigherFails_preservesConcurrentReplacement` and its `getAll`
+twin. Do not add an insertion-generation token for the same-future case. Repurposing that future
+with `obtrudeValue` does not establish an independent computation lifetime either; use a distinct
+future for that. This does not change the intentional bulk-proxy obtrusion below.
 
 **A cancelled bulk proxy stays mapped, and the completer re-asserts its lifecycle.**
 `getAll` installs a proxy per absent key and gives its lifecycle to `AsyncBulkCompleter`

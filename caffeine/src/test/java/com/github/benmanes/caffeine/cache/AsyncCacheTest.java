@@ -63,6 +63,7 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -81,8 +82,10 @@ import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.LocalAsyncCache.AsyncBulkCompleter.NullMapCompletionException;
@@ -1314,6 +1317,46 @@ final class AsyncCacheTest {
     assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
   }
 
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(population = Population.EMPTY, stats = Stats.ENABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.MOCKITO)
+  void getAll_weigherFails_preservesConcurrentReplacement(
+      AsyncCache<Int, Int> cache, CacheContext context) throws InterruptedException {
+    var entered = new CountDownLatch(1);
+    var release = new CountDownLatch(1);
+    var error = new IllegalStateException();
+    when(context.weigher().weigh(any(), any())).thenAnswer(invocation -> {
+      entered.countDown();
+      assertThat(release.await(10, TimeUnit.SECONDS)).isTrue();
+      throw error;
+    }).thenReturn(99);
+
+    var key = context.absentKey();
+    var replacement = intern(Int.valueOf(99)).toFuture();
+    var loader = new CompletableFuture<Map<Int, Int>>();
+    var result = cache.getAll(Set.of(key), (keys, executor) -> loader);
+    var completion = CompletableFuture.runAsync(
+        () -> loader.complete(Map.of(key, context.absentValue())), ConcurrentTestHarness.executor);
+    try {
+      assertThat(entered.await(10, TimeUnit.SECONDS)).isTrue();
+      cache.put(key, replacement);
+    } finally {
+      release.countDown();
+      await().until(completion::isDone);
+    }
+    assertThat(completion).succeedsWithNull();
+    assertThat(result).isDone();
+    assertThat(result).failsWith(CompletionException.class)
+        .hasCauseThat().isSameInstanceAs(error);
+
+    cache.synchronous().cleanUp();
+    assertThat(cache.asMap().get(key)).isSameInstanceAs(replacement);
+    assertThat(cache).containsExactlyEntriesIn(Map.of(key, Int.valueOf(99)));
+    assertThat(context).hasWeightedSize(99);
+    assertThat(context).stats().hits(0).misses(1).success(0).failures(1);
+  }
+
   /* --------------- put --------------- */
 
   @ParameterizedTest
@@ -1667,6 +1710,44 @@ final class AsyncCacheTest {
 
     verify(context.removalListener(), never()).onRemoval(
         any(Int.class), any(Int.class), any(RemovalCause.class));
+  }
+
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(population = Population.EMPTY, stats = Stats.ENABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.MOCKITO)
+  void handleCompletion_weigherFails_preservesConcurrentReplacement(
+      AsyncCache<Int, Int> cache, CacheContext context) throws InterruptedException {
+    var entered = new CountDownLatch(1);
+    var release = new CountDownLatch(1);
+    var error = new IllegalStateException();
+    when(context.weigher().weigh(any(), any())).thenAnswer(invocation -> {
+      entered.countDown();
+      assertThat(release.await(10, TimeUnit.SECONDS)).isTrue();
+      throw error;
+    }).thenReturn(99);
+
+    var key = context.absentKey();
+    var replacement = intern(Int.valueOf(99)).toFuture();
+    var future = new CompletableFuture<Int>();
+    cache.put(key, future);
+    var completion = CompletableFuture.runAsync(
+        () -> future.complete(context.absentValue()), ConcurrentTestHarness.executor);
+    try {
+      assertThat(entered.await(10, TimeUnit.SECONDS)).isTrue();
+      cache.put(key, replacement);
+    } finally {
+      release.countDown();
+      await().until(completion::isDone);
+    }
+    assertThat(completion).succeedsWithNull();
+    assertThat(future).succeedsWith(context.absentValue());
+
+    cache.synchronous().cleanUp();
+    assertThat(cache.asMap().get(key)).isSameInstanceAs(replacement);
+    assertThat(cache).containsExactlyEntriesIn(Map.of(key, Int.valueOf(99)));
+    assertThat(context).hasWeightedSize(99);
+    assertThat(context).stats().hits(0).misses(0).success(0).failures(1);
   }
 
   @ParameterizedTest

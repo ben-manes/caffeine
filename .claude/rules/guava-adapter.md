@@ -75,6 +75,10 @@ The two `build` overloads bridge different contracts:
   pending when Guava has already installed the result. `Runnable::run` gives Guava's timing.
   Present-key refresh matches: the adapter must call `reload` on the caller to obtain its
   future, even when that reload performs asynchronous work.
+  Slow reloads serialize colliding refresh registrations under the accepted CHM-bin rule.
+  A reload waiting for another thread's cache operation is still a prohibited cache dependency,
+  even when its own body makes no cache call; Guava's different lock granularity does not
+  establish an independent-progress guarantee for the facade.
 - **Failed synchronous loads are retried by waiters.** Guava shares one
   `LoadingValueReference` failure. Core `computeIfAbsent` serializes waiters at the bin lock,
   each retrying the failed load: three waiting callers can make three calls and receive

@@ -582,12 +582,20 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public boolean remove(K key) {
+    return removeEntry(key, /* iterator= */ null);
+  }
+
+  /** Removes the entry, consuming an iterator's removal before waiting for listeners. */
+  private boolean removeEntry(K key, @Nullable EntryIterator iterator) {
     requireOperable();
     requireNonNull(key);
 
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
     V value = removeNoCopyOrAwait(key, /* publishToWriter= */ true);
+    if (iterator != null) {
+      iterator.current = null;
+    }
     var listenerFailure = awaitSynchronousFailure();
     if (value != null) {
       statistics.recordRemovals(1L);
@@ -1536,8 +1544,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if (current == null) {
         throw new IllegalStateException();
       }
-      CacheProxy.this.remove(current.getKey());
-      current = null;
+      removeEntry(current.getKey(), this);
     }
   }
 

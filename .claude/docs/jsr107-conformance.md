@@ -846,10 +846,16 @@ Explicit clear removals do not notify listeners/writers: JCache uses core's evic
 not removalListener. Natively expired residents are the previously documented exception because
 their cause is EXPIRED rather than EXPLICIT; do not claim clear is unconditionally event-silent.
 
-iterator.remove delegates to remove(K), removing the last-returned key even if its value was
+iterator.remove shares remove(K)'s removal path, removing the last-returned key even if its value was
 replaced since next. It checks closure and expiry through that operation: an entry expired in
 between emits EXPIRED/eviction, not REMOVED/removal. cache2k, Infinispan, Coherence, and Hazelcast
 also delegate; RI retains an unconditional inline REMOVED path (source comparison 2026-07-20).
+
+The iterator consumes its removal opportunity after the backing removal succeeds, before
+awaiting listeners. A post-commit listener failure must not permit another removal without
+`next()`, while a writer failure before commit leaves the original entry and retry opportunity.
+Pins: `CacheProxyTest.iterator_remove_listenerFails_doesNotRemoveReplacement`,
+`iterator_remove_listenerFails_doesNotDeleteTwice`, and `iterator_remove_writerFails_remainsRetryable`.
 
 `next()` copies an entry before recording it, so one that fails to copy is skipped without counting
 a hit or becoming the entry `remove()` deletes; the RI likewise converts before remembering its

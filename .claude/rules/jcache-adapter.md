@@ -71,6 +71,8 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   rethrow it. Suppress a listener failure onto the operation's own failure. Do not broaden this
   into a `Throwable` catch: listener `Error` propagates unchanged. See
   [listener failures](../docs/jsr107-conformance.md#listener-failures).
+  Consume an iterator's removal after the backing operation succeeds, before awaiting listeners;
+  a precommit writer failure keeps it retryable.
 - Loader, writer, expiry-policy, and copier boundaries catch `Exception`, suppressing
   `CatchingUnchecked`: another JVM language can throw a checked exception through these
   interfaces undeclared, and it takes the runtime failure's path, so a partial batch write still

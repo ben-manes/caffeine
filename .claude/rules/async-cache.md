@@ -20,9 +20,15 @@ paths:
 
 - In-flight futures have weight 0 and `ASYNC_EXPIRY` (~220 years). Completion finalizes only
   deferred weight/expiry work; a future already complete at insertion was weighed and dated then.
+  An incomplete replacement releases its predecessor's weight and receives creation expiry when
+  its value materializes; it does not reserve the old weight or preserve update classification.
   Finalization is a dependent action, so a caller can read the value while `Policy` reports weight
   0, and a `Weigher` or `Expiry` that throws there is logged, counted as a load failure, and
   removes the mapping the caller already received.
+  Failure cleanup preserves a distinct successor future in both single and bulk completions;
+  the two `AsyncCacheTest.*weigherFails_preservesConcurrentReplacement` methods pin that boundary.
+  Reinserting the same future creates no separate cleanup owner; its earlier failing finalizer
+  may still remove it. Do not add per-insertion generation tracking for that case.
 - Read `handleCompletion`'s `deferred` flag **before storing the future**. A later readiness
   check could miss completion after insertion and leave weight 0 and the sentinel indefinitely.
   The flag is conservative: the future can complete before insertion reads it, so a quiet

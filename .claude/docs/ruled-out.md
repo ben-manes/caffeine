@@ -457,6 +457,9 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   This limited cleanup does not establish recovery from broken clocks, keys, or cleanup itself.
 - Async `put(k, future)` completion-handler registration not being contained. For any
   spec-abiding `CompletableFuture`, `whenComplete` never throws at the registration site.
+- A failing async finalizer removing a later reinsertion of the same completed future.
+  Cleanup is conditional on the future object, not an insertion generation; a distinct
+  successor is preserved. See [async re-registration](design-decisions.md#async-put-re-registration).
 - A `loadAll` returning a map with null keys or values causing a partial commit, and null
   loader maps giving inconsistent diagnostics across `getAll` paths.
   `NullMapCompletionException` is an internal marker translated to
@@ -476,6 +479,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   return nothing that needs the loaded value. `asMap().put` and `remove(k)` store first and then
   wait for the displaced value they return; the wait is `join`'s, uninterruptible with the
   interrupt status kept, and a load that fails during it yields null.
+  Callers occupying every worker of the load executor while waiting create thread starvation,
+  even when the executor accepts and queues tasks correctly. That application dependency is
+  covered by the executor-responsibility rule; the synchronous view promises no independent
+  progress or finite wait for the load.
 - `synchronous().get(k)`, `get(k, fn)` and `getAll` waiting on a load in flight without responding
   to interruption, the interrupt status kept. A synchronous cache's caller waits the same way at the
   bin lock for another thread's load, as Guava's does; only a thread running an interruptible
@@ -510,6 +517,10 @@ Read `jsr107-conformance.md`'s topic sections with this section.
 - `CacheProxy.close()` calling `executor.shutdown()` and `tryClose`. Spec-silent rather than
   spec-required; defensible as a cache-owned resource.
 - A jcache proxy "leaking" when abandoned without `close()`.
+- Lifecycle-changing reentry from a user resource's `close()`, including creating another
+  cache while its manager closes or reentering provider lifecycle under manager close. These
+  user-created shutdown dependencies fall under the callback-trigger boundary; this does not
+  classify an ordinary CompletionListener manager lookup as invalid.
 - `CacheFactory` construction orphaning an owned executor, expiry, writer, loader or
   listeners when a later config validation throws. The trigger is a config error plus a user
   factory creating an owned resource. The centralize-ownership refactor was built, verified
