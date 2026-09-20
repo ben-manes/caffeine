@@ -38,6 +38,9 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
 - `EntryProcessorEntry.Action` tracks NONE, READ, CREATED, UPDATED, LOADED, or DELETED.
   `getValue()` may load. CREATED then remove resets to NONE; LOADED then remove calls the
   writer's delete. Removing absence calls the writer but records no removal or REMOVED event.
+  Its loader call normalizes exceptions to `CacheLoaderException` before the processor can catch
+  them, preserving existing CLE and restoring direct interruption. Consume the loader only after
+  successful return, including null; keep copying, expiry and events in postProcess.
   Forward an explicitly null varargs array unchanged.
 - `invoke` reconciles a lazily expired prior **before** the processor: publish EXPIRED, count
   eviction, and present absence. If the processor or writer throws any `Throwable`, commit that

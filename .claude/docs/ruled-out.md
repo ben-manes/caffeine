@@ -283,6 +283,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   report of what weak-key users expect. Match Guava's observable behavior before proposing identity
   semantics for a bulk path; the facade's `IdentityHashMap` copy of a loader's result does that for
   the extras Guava stores.
+- Weak/soft value wrappers allegedly reaching their reference queue before the bookkeeping key
+  is initialized. No supported-runtime null-key dequeue or cache failure has been established;
+  the abstract construction window alone does not justify a change. Reconsider on a concrete
+  runtime witness. This is separate from the fixed predecessor-clear ordering issue (#1820).
 - Weak-key lookups allocating a `LookupKeyReference` (24 B/op). A thread-local mutable
   wrapper pins the instance to the thread, rejected in #294 for virtual threads and
   classloader pinning. Young-gen allocation is the better trade.
@@ -309,9 +313,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   just-retired node; the completion-path ABA guards (`currentValue == oldValue` plus
   `(node.getWriteTime() & ~1L) == writeTime`) discard the result. The rare spurious loader
   call is accepted to keep the fast path lock-free.
-- `LoadingCache.refresh`'s "exceptions logged and swallowed" javadoc when `asyncReload`
-  throws synchronously. The promise is about the *future's result*; a throw while producing
-  the future is a distinct, real caller bug.
+- The "exceptions logged and swallowed" Javadocs on `LoadingCache.refresh` and the loader
+  `asyncReload` methods when producing the future throws synchronously. The notes describe the
+  refresh itself, not producing its future. Preserve the Javadocs; a construction-time throw
+  remains a distinct caller failure.
 - The `refreshes` to `data` lock inversion deadlock.
 - `LocalAsyncLoadingCache.refresh(key)` retrying without bound or backoff. Each pass rereads,
   so a retry needs the entry to change between the two probes. The exception was a completed
@@ -495,8 +500,9 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   `get(K, BiFunction)`, which a lambda allocation does not justify.
 - `synchronous().get(k, fn)` surfacing the cause of a `CompletionException` that the function threw
   itself, where the synchronous cache rethrows it unchanged. `supplyAsync` stores a thrown
-  `CompletionException` as the wrapper it would otherwise add, so `resolve` cannot tell them apart,
-  and both throw the `RuntimeException` that `Cache.get` promises.
+  `CompletionException` as the wrapper it would otherwise add, so `resolve` cannot tell them apart.
+  The view rethrows a `RuntimeException` or `Error` cause and otherwise retains the wrapper;
+  a user-supplied wrapper therefore does not preserve its identity or exception category.
 
 ---
 
@@ -514,6 +520,9 @@ Read `jsr107-conformance.md`'s topic sections with this section.
 - Operations racing `close()`. The spec explicitly permits a closed cache to retain
   contents, governs only *future* use, and punts concurrent behaviour to implementation
   dependent. Local in-memory means no OS resource leaks.
+- Manager close holding its monitor while awaiting child close, so an ordinary completion
+  callback's manager lookup can wait for the ten-second child timeout. Accepted bounded
+  shutdown delay, not an unbounded deadlock or a promised callback-disposal barrier.
 - `CacheProxy.close()` calling `executor.shutdown()` and `tryClose`. Spec-silent rather than
   spec-required; defensible as a cache-owned resource.
 - A jcache proxy "leaking" when abandoned without `close()`.
@@ -563,8 +572,9 @@ Read `jsr107-conformance.md`'s topic sections with this section.
 
 - Guava-facade exception-translation divergences.
 - Guava-facade statistics divergences, under the best-effort-stats rule.
-- `CacheLoader.asyncReloading` fooling `hasLoadAll`, so `getAll` throws where native Guava
-  falls back to per-key.
+- `CacheLoader.asyncReloading` making a scalar loader appear bulk-capable. Unsupported bulk
+  loading falls back to direct per-key loader calls, followed by bulk insertion. It can duplicate
+  concurrent loads or replace concurrent writes; these follow the adapter's bulk semantics.
 - `caffeinate()`'s `ExternalBulkLoader` returning the loader's map uncopied, so a lazy view is
   evaluated more than once. Core tries to evaluate once, but Guava promises no single evaluation
   and itself evaluates twice in rare cases.
@@ -648,9 +658,12 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
   tests run there.
 - `configureondemand` is intentional.
 - Dependency verification is not wanted; the egress allowances are intentional.
-- `coverage` and `test-results` skipping after a failed `tests-minimum` matrix (the shards stay
-  red), the cacheable `jmh` task behind the benchmark gists, `analysis.yml`'s SARIF merge keeping
-  only the first input's `tool`, the `git diff` metadata freshness check missing a deleted file,
+- `coverage` and `test-results` skipping after a failed `tests-minimum` matrix. The failed shard
+  makes the Build fail; fix that failure. Keep downstream summaries skipped, since publishing
+  partial results lowers test counts and coverage. Do not add an always-running downstream result
+  gate solely because the required summary checks accept a skipped conclusion.
+- The cacheable `jmh` task behind the benchmark gists, `analysis.yml`'s SARIF merge keeping only
+  the first input's `tool`, the `git diff` metadata freshness check missing a deleted file,
   and the opt-in `-Pjfr` profile (JDK 16+ event settings, no declared recording output).
 
 ---

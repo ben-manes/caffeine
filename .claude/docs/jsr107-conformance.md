@@ -289,7 +289,15 @@ re-read the clock or restore an expiry check there. Pins:
 `EventDispatcherTest.invoke_expiredAndProcessorThrows_retainsListenerFailure` and
 `invoke_expiredAndProcessorThrowsError_retainsListenerFailure`.
 
-Failures inside processor invocation, including write-through, are wrapped in
+Read-through `MutableEntry.getValue()` normalizes the direct loader call before returning control
+to the processor: existing `CacheLoaderException` passes through, other `Exception`s are wrapped
+in it, and a direct `InterruptedException` first restores interruption. `Error` propagates unchanged.
+A processor can therefore catch the loader failure and store a fallback. Keep this guard local;
+the storage-oriented loader adapter would duplicate copying, expiry and event publication.
+Pins: `CacheLoaderTest.invoke_loaderFailure_canRecover`,
+`invoke_loaderInterrupted_restoresInterruptStatus`, and `invoke_loaderError_propagates`.
+
+Exceptions escaping processor invocation, including write-through failures, surface as
 `EntryProcessorException`; the spec's “Exceptions in EntryProcessors” section includes failures
 from the caching implementation itself. Single-key writer failure therefore surfaces as
 `EntryProcessorException(CacheWriterException)`. The RI exposes a raw writer exception because
@@ -310,10 +318,12 @@ Coherence indirectly reads its length. Normal omitted varargs remain an empty no
 Pins: `CacheProxyTest.invoke_nullArgumentsArray_forwarded` and
 `invokeAll_nullArgumentsArray_forwarded`.
 
-Two spec-aligned differences from the RI retain coverage gaps: getValue on a DELETED entry returns
-null without loading, and a null read-through load remains consumed as absent rather than
-reloading on each getValue. Existing remove/read tests have no loader; repeated reads after a
-null load lack a dedicated API regression test.
+`getValue` on a DELETED entry returns null without loading. A successful null read-through load
+is consumed rather than retried by another `getValue` in the same invocation. A failed load
+leaves the loader available for a processor that catches the failure and retries. Keep loader
+consumption and LOADED assignment after successful return, not in a finally block. Pins:
+`CacheLoaderTest.invoke_removedEntry_doesNotLoad`, `invoke_nullLoad_consumed`, and
+`invoke_loaderFailure_canRetry`, each covering `invoke` and `invokeAll`.
 
 ## Read-through and event ordering
 
@@ -810,6 +820,12 @@ awaits outside it; an awaited listener that reads the configuration would otherw
 timeout. Pins: `CacheProxyTest.loadAll_loaderFailure_notifiesListener`,
 `loadAll_storeFailsMidway_notifiesAfterSynchronousListeners`, and
 `close_awaitsListenerReadingConfiguration`.
+
+Manager close still holds its monitor across child close. A CompletionListener that looks up
+a cache through that manager can therefore wait until the child's ten-second timeout. This
+bounded shutdown delay is accepted: neither shutdown latency nor a general callback-disposal
+barrier is promised. The cache-level configuration-monitor repair does not establish a broader
+manager-close guarantee, and ordinary lookup is not classified as invalid lifecycle reentry.
 
 Native background refresh is best-effort and is not added to inFlight or awaited through
 `policy().refreshes()`. Blocking close on arbitrary user-executor refresh work was rejected.

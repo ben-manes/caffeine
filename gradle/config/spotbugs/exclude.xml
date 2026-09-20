@@ -496,6 +496,11 @@
     <Method name="saturatedAdd"/>
     <Bug pattern="NS_NON_SHORT_CIRCUIT"/>
   </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry"/>
+    <Method name="getValue"/>
+    <Bug pattern="BC_IMPOSSIBLE_INSTANCEOF"/>
+  </Match>
 
   <!-- Simulator -->
   <Match>

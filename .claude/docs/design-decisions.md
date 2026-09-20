@@ -890,7 +890,10 @@ being reordered before the publication of the new reference. Without the fence, 
 reader that re-reads the same reference and observes a cleared referent cannot
 distinguish "the clear was already committed" from "the clear's store buffer is
 ahead of the new reference's publication" — breaking the `getValue` re-check loop
-invariant. `setRelease` alone orders the new reference's constructor writes before
+invariant. The reader's `loadLoadFence` pairs with that ordering through the observed clear;
+this does not require first acquiring the replacement reference. See
+[RA fences and their specializations](https://gee.cs.oswego.edu/dl/html/j9mm.html).
+`setRelease` alone orders the new reference's constructor writes before
 the publication, but does not constrain the subsequent `ref.clear()` against any
 racing reader (#1820, confirmed on aarch64 M3 Max via JCStress IntermittentNull test).
 

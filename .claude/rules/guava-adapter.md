@@ -51,7 +51,10 @@ The two `build` overloads bridge different contracts:
   in Guava, but no entry in the facade. `getAll` promises no prefix retention; retry reloads it.
   Moving fallback into the facade's `getAll` would count request hits/misses twice, with no
   counter API to compensate. The external `caffeinate()` loader has no cache handle to install
-  a prefix at all.
+  a prefix at all. Fallback also retains bulk concurrency semantics: loads can duplicate a
+  concurrent scalar load, and the later bulk insertion can replace a concurrent write. These
+  are accepted adapter limits; routing the helper through cache gets would still leave core's
+  unconditional bulk insertion afterward.
 - **Statistics are best-effort.** `asMap().computeIfAbsent` records request hits/misses where
   Guava does not, and counts a null result as a load failure. With an existing key, an absent
   key, then a null result, Guava reports hit/miss/success/failure = 0/0/1/0; the facade reports

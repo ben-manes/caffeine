@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Optional;
 
 import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CacheLoaderException;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.MutableEntry;
 
@@ -59,14 +60,24 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
   }
 
   @Override
-  @SuppressWarnings("ConstantValue")
+  @SuppressWarnings({"CatchingUnchecked", "ConstantValue",
+      "PMD.AvoidInstanceofChecksInCatchClause"})
   public @Nullable V getValue() {
     if (action != Action.NONE) {
       return value;
     } else if (value != null) {
       action = Action.READ;
     } else if (cacheLoader.isPresent()) {
-      value = cacheLoader.orElseThrow().load(key);
+      try {
+        value = cacheLoader.orElseThrow().load(key);
+      } catch (CacheLoaderException e) {
+        throw e;
+      } catch (Exception e) {
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
+        throw new CacheLoaderException(e);
+      }
       cacheLoader = Optional.empty();
       if (value != null) {
         action = Action.LOADED;

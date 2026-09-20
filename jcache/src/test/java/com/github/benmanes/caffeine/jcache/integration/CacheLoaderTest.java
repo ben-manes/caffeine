@@ -18,12 +18,14 @@ package com.github.benmanes.caffeine.jcache.integration;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -49,6 +51,7 @@ import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
+import javax.cache.processor.EntryProcessor;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -297,6 +300,165 @@ final class CacheLoaderTest {
       for (int key : keys) {
         assertThat(fixture.jcacheLoading().containsKey(key)).isFalse();
       }
+    }
+  }
+
+  @ParameterizedTest @MethodSource("processorFailures")
+  void invoke_loaderFailure_canRecover(boolean bulk, Exception failure) {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(1)).thenAnswer(invocation -> { throw failure; });
+    try (var fixture = jcacheFixture(expiry, loader);
+         var cache = fixture.jcacheLoading()) {
+      EntryProcessor<Integer, Integer, Integer> processor = (entry, args) -> {
+        try {
+          return entry.getValue();
+        } catch (CacheLoaderException e) {
+          if (failure instanceof CacheLoaderException) {
+            assertThat(e).isSameInstanceAs(failure);
+          } else {
+            assertThat(e).hasCauseThat().isSameInstanceAs(failure);
+          }
+          entry.setValue(-1);
+          return -1;
+        }
+      };
+      if (bulk) {
+        var results = cache.invokeAll(Set.of(1), processor);
+        assertThat(requireNonNull(results.get(1)).get()).isEqualTo(-1);
+      } else {
+        assertThat(cache.invoke(1, processor)).isEqualTo(-1);
+      }
+      assertThat(cache.get(1)).isEqualTo(-1);
+      verify(loader).load(1);
+    }
+  }
+
+  @ParameterizedTest @MethodSource("processorOperations")
+  void invoke_loaderInterrupted_restoresInterruptStatus(boolean bulk) {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    var failure = new InterruptedException();
+    when(loader.load(1)).thenAnswer(invocation -> { throw failure; });
+    try (var fixture = jcacheFixture(expiry, loader);
+         var cache = fixture.jcacheLoading()) {
+      EntryProcessor<Integer, Integer, Integer> processor = (entry, args) -> {
+        try {
+          return entry.getValue();
+        } catch (CacheLoaderException e) {
+          assertThat(e).hasCauseThat().isSameInstanceAs(failure);
+          assertThat(Thread.currentThread().isInterrupted()).isTrue();
+          entry.setValue(-1);
+          return -1;
+        }
+      };
+      boolean interrupted;
+      try {
+        if (bulk) {
+          var results = cache.invokeAll(Set.of(1), processor);
+          assertThat(requireNonNull(results.get(1)).get()).isEqualTo(-1);
+        } else {
+          assertThat(cache.invoke(1, processor)).isEqualTo(-1);
+        }
+      } finally {
+        interrupted = Thread.interrupted();
+      }
+      assertThat(interrupted).isTrue();
+      assertThat(cache.get(1)).isEqualTo(-1);
+      verify(loader).load(1);
+    }
+  }
+
+  @ParameterizedTest @MethodSource("processorOperations")
+  void invoke_loaderError_propagates(boolean bulk) {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    var failure = new AssertionError();
+    when(loader.load(1)).thenThrow(failure);
+    try (var fixture = jcacheFixture(expiry, loader);
+         var cache = fixture.jcacheLoading()) {
+      var error = assertThrows(AssertionError.class, () -> {
+        if (bulk) {
+          cache.invokeAll(Set.of(1), (entry, args) -> entry.getValue());
+        } else {
+          cache.invoke(1, (entry, args) -> entry.getValue());
+        }
+      });
+      assertThat(error).isSameInstanceAs(failure);
+      assertThat(cache.containsKey(1)).isFalse();
+      verify(loader).load(1);
+    }
+  }
+
+  @ParameterizedTest @MethodSource("processorOperations")
+  void invoke_nullLoad_consumed(boolean bulk) {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(1)).thenReturn(nullRef(), -1);
+    try (var fixture = jcacheFixture(expiry, loader);
+         var cache = fixture.jcacheLoading()) {
+      EntryProcessor<Integer, Integer, Integer> processor = (entry, args) -> {
+        assertThat(entry.getValue()).isNull();
+        assertThat(entry.getValue()).isNull();
+        assertThat(entry.exists()).isFalse();
+        return -1;
+      };
+      if (bulk) {
+        var results = cache.invokeAll(Set.of(1), processor);
+        assertThat(requireNonNull(results.get(1)).get()).isEqualTo(-1);
+      } else {
+        assertThat(cache.invoke(1, processor)).isEqualTo(-1);
+      }
+      assertThat(cache.containsKey(1)).isFalse();
+      verify(loader).load(1);
+    }
+  }
+
+  @ParameterizedTest @MethodSource("processorOperations")
+  void invoke_removedEntry_doesNotLoad(boolean bulk) {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(1)).thenReturn(-1);
+    try (var fixture = jcacheFixture(expiry, loader);
+         var cache = fixture.jcacheLoading()) {
+      cache.put(1, 2);
+      EntryProcessor<Integer, Integer, Integer> processor = (entry, args) -> {
+        entry.remove();
+        assertThat(entry.getValue()).isNull();
+        assertThat(entry.getValue()).isNull();
+        assertThat(entry.exists()).isFalse();
+        return -1;
+      };
+      if (bulk) {
+        var results = cache.invokeAll(Set.of(1), processor);
+        assertThat(requireNonNull(results.get(1)).get()).isEqualTo(-1);
+      } else {
+        assertThat(cache.invoke(1, processor)).isEqualTo(-1);
+      }
+      assertThat(cache.containsKey(1)).isFalse();
+      verify(loader, never()).load(any());
+    }
+  }
+
+  @ParameterizedTest @MethodSource("processorOperations")
+  void invoke_loaderFailure_canRetry(boolean bulk) {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(1)).thenThrow(new IllegalStateException()).thenReturn(-1);
+    try (var fixture = jcacheFixture(expiry, loader);
+         var cache = fixture.jcacheLoading()) {
+      EntryProcessor<Integer, Integer, Integer> processor = (entry, args) -> {
+        assertThrows(RuntimeException.class, entry::getValue);
+        return entry.getValue();
+      };
+      if (bulk) {
+        var results = cache.invokeAll(Set.of(1), processor);
+        assertThat(requireNonNull(results.get(1)).get()).isEqualTo(-1);
+      } else {
+        assertThat(cache.invoke(1, processor)).isEqualTo(-1);
+      }
+      assertThat(cache.get(1)).isEqualTo(-1);
+      verify(loader, times(2)).load(1);
     }
   }
 
@@ -759,5 +921,15 @@ final class CacheLoaderTest {
         arguments((Consumer<Cache<Integer, Integer>>) cache -> cache.get(1), Set.of(1)),
         arguments((Consumer<Cache<Integer, Integer>>) cache -> cache.getAll(Set.of(1, 2)),
             Set.of(1, 2)));
+  }
+
+  static Stream<Boolean> processorOperations() {
+    return Stream.of(false, true);
+  }
+
+  static Stream<Arguments> processorFailures() {
+    return processorOperations().flatMap(bulk -> Stream.of(
+        new IllegalStateException(), new Exception(), new CacheLoaderException())
+        .map(failure -> arguments(bulk, failure)));
   }
 }
