@@ -56,6 +56,9 @@ a new view, a new feature with sync+async variants):
 - C2: `values().contains(v)` vs `containsValue(v)`
 - C3: `entrySet()` iteration vs `forEach()` vs `keySet()` + `get(k)` per key
 - C4: `size()` vs `entrySet().size()` vs counting via iterator
+- C5: `keySet().remove(k)` / `entrySet().remove(entry)` vs the corresponding map removal
+  — mapping outcome, blocking, and pending-load disposition, accounting for different return
+  contracts
 
 **Group D — bulk vs single-key**
 - D1: `getAllPresent(keys)` vs N×`getIfPresent(k)`
@@ -101,7 +104,7 @@ a new view, a new feature with sync+async variants):
   `UncheckedExecutionException` / `ExecutionError` by checked-ness), bulk partial results.
 - G4: Guava facade vs real Guava — the executable oracle for G3: run the SAME
   guava-testlib suite (matched feature flags) and operation sequences against the facade
-  and a real Guava `CacheBuilder` cache; any divergence is a drop-in-compatibility bug.
+  and a real Guava `CacheBuilder` cache; adjudicate differences against Guava's contract and the accepted facade limits.
 
 If a new feature has a sync and async variant not listed above, add it as group H
 before launching. When auditing the simulator, add reader-vs-sibling-reader (shared
@@ -152,6 +155,9 @@ For each pair in your group:
 - Predict the 2-3 most likely categories of divergence (different access
   mode, different listener cause, different exception handling, ordering of
   notifications, in-flight value visibility, weight accounting, etc.).
+- For blocking differences, identify which thread completes the awaited work. If executor
+  capacity affects progress, compare one explicitly sized executor with a spare-worker control;
+  distinguish application dependency cycles from a violated cache progress guarantee.
 
 # Phase 1: Trace each side
 For each pair:
@@ -184,6 +190,10 @@ can construct a path through the code that resolves the divergence (e.g.,
 the second path also fires the listener through a different route you
 missed), drop the finding. Be ruthless — the user wants high-precision
 findings, not volume.
+
+For differing guards, compare reachable callers and preconditions on both paths. One path may
+establish the condition elsewhere or never reach the guarded state; its safety does not make
+the other path's guard redundant, and the difference need not imply a bug on either side.
 
 # Phase 4: Output
 For each surviving finding, output:
@@ -248,12 +258,19 @@ findings the reviewer confirms.
 Read `.claude/docs/design-decisions.md` and
 `.claude/rules/design-decisions.md`. For each surviving finding, classify:
 
-- **confirmed-divergence** — not explained by design docs; treat as a bug
+- **confirmed-divergence** — a concrete supported witness violates the stated joint contract
+  or invariant; an unexplained difference alone is insufficient
 - **intentional-divergence** — documented design decision (e.g., async
   listener delivery is intentionally different from sync; weight=0 entries
   are pinned across all paths); keep in the report under "explained"
-- **documentation-gap** — the divergence is intentional but not documented
-  anywhere a fresh reader could find it; flag as a docs fix
+- **documentation-gap** — intentional behavior with a useful, supported wording clarification;
+  check existing guidance and respect prior decisions declining that same disclosure or wording
+
+When several explained differences affect the same entry lifetime, check at most one concrete
+sequence combining them per group. Compare its observable outcome with the joint contract and
+the ruling's mechanism, consequence, trigger, and scope. Combining accepted behavior does not
+itself reopen a ruling. If reachability or the contract remains unresolved, retain the precise
+question under Residual risk rather than forcing a bug or documentation-gap label.
 
 ## Step 5: Triage and report
 
@@ -293,8 +310,8 @@ Format:
 ## Intentional divergences (documented)
 - [pair] — link to design doc that explains the difference
 
-## Documentation gaps (intentional but undocumented)
-- [pair] — what a fresh reader would conclude vs the actual intent
+## Documentation clarifications
+- [pair] — the useful clarification and the existing guidance or prior wording decision checked
 
 ## Coverage summary
 - Group A: [pairs inspected, methods traced, dismissals]

@@ -25,10 +25,8 @@ import com.github.benmanes.caffeine.cache.Async.AsyncEvictionListener;
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
 import com.github.benmanes.caffeine.cache.Async.AsyncRemovalListener;
 import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
-import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalAsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalManualCache;
 import com.github.benmanes.caffeine.cache.LocalAsyncCache.AbstractCacheView;
-import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalManualCache;
 import com.google.common.testing.SerializableTester;
 import com.google.common.truth.FailureMetadata;
@@ -91,50 +89,42 @@ public final class ReserializableSubject extends Subject {
       check("valid").about(asyncCache()).that(copy).isValid();
       check("empty").about(asyncCache()).that(copy).isEmpty();
     }
-    if (actual instanceof LocalAsyncLoadingCache<?, ?>) {
-      var original = (LocalAsyncLoadingCache<?, ?>) actual;
-      var copy = (LocalAsyncLoadingCache<?, ?>) reserialized;
-      check("cacheLoader").that(copy.cacheLoader).isEqualTo(original.cacheLoader);
-    }
-    if (actual instanceof AbstractCacheView<?, ?>) {
+    if (actual instanceof LocalAsyncCache<?, ?>) {
+      checkLocalAsyncCache((LocalAsyncCache<?, ?>) actual, (LocalAsyncCache<?, ?>) reserialized);
+    } else if (actual instanceof AbstractCacheView<?, ?>) {
       var original = ((AbstractCacheView<?, ?>) actual).asyncCache();
       var copy = ((AbstractCacheView<?, ?>) reserialized).asyncCache();
-      if (original instanceof BoundedLocalAsyncLoadingCache<?, ?>) {
-        checkBoundedAsyncLocalLoadingCache(
-            (BoundedLocalAsyncLoadingCache<?, ?>) original,
-            (BoundedLocalAsyncLoadingCache<?, ?>) copy);
-      } else if (original instanceof UnboundedLocalAsyncLoadingCache<?, ?>) {
-        checkUnboundedAsyncLocalLoadingCache(
-            (UnboundedLocalAsyncLoadingCache<?, ?>) original,
-            (UnboundedLocalAsyncLoadingCache<?, ?>) copy);
-      }
+      checkLocalAsyncCache(original, copy);
     }
-    if (actual instanceof BoundedLocalAsyncLoadingCache<?, ?>) {
-      var original = (BoundedLocalAsyncLoadingCache<?, ?>) actual;
-      var copy = (BoundedLocalAsyncLoadingCache<?, ?>) reserialized;
-      checkBoundedLocalCache(original.cache, copy.cache);
+  }
+
+  private void checkLocalAsyncCache(LocalAsyncCache<?, ?> original, LocalAsyncCache<?, ?> copy) {
+    if (original instanceof LocalAsyncLoadingCache<?, ?>) {
+      var originalLoading = (LocalAsyncLoadingCache<?, ?>) original;
+      var copyLoading = (LocalAsyncLoadingCache<?, ?>) copy;
+      check("cacheLoader").that(copyLoading.cacheLoader).isEqualTo(originalLoading.cacheLoader);
     }
-    if (actual instanceof UnboundedLocalAsyncLoadingCache<?, ?>) {
-      var original = (UnboundedLocalAsyncLoadingCache<?, ?>) actual;
-      var copy = (UnboundedLocalAsyncLoadingCache<?, ?>) reserialized;
-      checkUnboundedLocalCache(original.cache, copy.cache);
+    var originalCache = original.cache();
+    var copyCache = copy.cache();
+    if (originalCache instanceof BoundedLocalCache<?, ?>) {
+      checkBoundedLocalCache((BoundedLocalCache<?, ?>) originalCache,
+          (BoundedLocalCache<?, ?>) copyCache);
+    } else {
+      checkUnboundedLocalCache((UnboundedLocalCache<?, ?>) originalCache,
+          (UnboundedLocalCache<?, ?>) copyCache);
     }
   }
 
   /* --------------- Bounded --------------- */
-
-  private void checkBoundedAsyncLocalLoadingCache(
-      BoundedLocalAsyncLoadingCache<?, ?> original,
-      BoundedLocalAsyncLoadingCache<?, ?> copy) {
-    check("cacheLoader").that(copy.cacheLoader).isEqualTo(original.cacheLoader);
-    checkBoundedLocalCache(original.cache, copy.cache);
-  }
 
   private void checkBoundedLocalCache(
       BoundedLocalCache<?, ?> original, BoundedLocalCache<?, ?> copy) {
     check("isRecordingStats").that(copy.isRecordingStats()).isEqualTo(original.isRecordingStats());
     check("nodeFactory").that(copy.nodeFactory).isInstanceOf(original.nodeFactory.getClass());
     check("isAsync").that(copy.isAsync).isEqualTo(original.isAsync);
+    // A serializable lambda may deserialize to a different implementation class.
+    check("expirationTicker()").that(copy.expirationTicker())
+        .isInstanceOf(SerializableTester.reserialize(original.expirationTicker()).getClass());
     checkEviction(original, copy);
     checkExpiresAfterAccess(original, copy);
     checkExpiresAfterWrite(original, copy);
@@ -255,13 +245,6 @@ public final class ReserializableSubject extends Subject {
   }
 
   /* --------------- Unbounded --------------- */
-
-  private void checkUnboundedAsyncLocalLoadingCache(
-      UnboundedLocalAsyncLoadingCache<?, ?> original,
-      UnboundedLocalAsyncLoadingCache<?, ?> copy) {
-    check("cacheLoader").that(copy.cacheLoader).isEqualTo(original.cacheLoader);
-    checkUnboundedLocalCache(original.cache, copy.cache);
-  }
 
   private void checkUnboundedLocalCache(
       UnboundedLocalCache<?, ?> original, UnboundedLocalCache<?, ?> copy) {

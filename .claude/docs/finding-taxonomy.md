@@ -12,6 +12,10 @@ auditor agent and all `/audit-*` and `/review-change` skills.
 | medium | Correctness preserved but fragile | Works only because of current CHM implementation detail |
 | low | Style or robustness concern | Missing null check on code path unreachable today |
 
+State the affected configuration separately from the harm within it. Being non-default or in a
+lower-priority module does not establish a severity ceiling; apply the module's stated use-case
+scope and price the demonstrated impact.
+
 ## Categories
 
 | Category | Scope |
@@ -43,12 +47,13 @@ production:
   same scenario throws. The wedge was an artifact of the instrument.
 - **`executor(Runnable::run)` or `CacheExecutor.DIRECT`.** Inline maintenance removes the
   coalescing that hides per-operation cost and turns an asynchronous drain into a re-entrant one.
-  It is the right tool for determinism and the wrong one for pricing.
+  Use it to control scheduling; its timings do not price default-executor behavior.
 
 Before assigning `high` or `critical`, re-run the witness with the defaults a user gets: the
-system ticker and the common pool. If the impact only appears under a test instrument, say so in
-the finding and drop the severity accordingly. A mechanism that is real and an impact that is
-reachable are two separate claims, and the second is the one severity encodes.
+system ticker and the common pool. If the impact depends on harness effects absent from the
+claimed user configuration, identify those effects and do not attribute them to that configuration.
+A mechanism that is real and an impact that is reachable are two separate claims, and the second
+is the one severity encodes.
 
 ## Confidence
 

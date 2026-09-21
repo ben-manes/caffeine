@@ -14,8 +14,9 @@ For adjudication, also read your module's section of [ruled-out](../docs/ruled-o
 - Weight 0 pins entries. Transient negative `weightedSize` and `policyWeight` are accepted;
   verify convergence through the telescoping sum. `makeDead` subtracts `getWeight`, and late
   `UpdateTask`s must run even on dead nodes. Keep these together.
-- Policy weight is 64 bits, packed between `policyWeight` and `metadata`. Truncation leaves a
-  permanent region-size residue; a sign guard cannot detect every wrap.
+- Policy weight uses a signed 62-bit payload returned as a `long`, packed between `policyWeight`
+  and `metadata`. Truncation leaves a permanent region-size residue; a sign guard cannot detect
+  every wrap.
 - Expiration evicts at most `EXPIRATION_THRESHOLD` (1000) per cycle. Reference draining polls
   at most `REFERENCE_THRESHOLD` (1000) per queue. Preserve `PROCESSING_TO_REQUIRED` re-arms.
   These caps limit eviction/reference work per lock hold, not a waiter's latency on the
@@ -99,9 +100,9 @@ Details: [expiration](../docs/design-decisions.md#expiration),
 - Value-bearing callbacks propagate failures; fire-and-forget callbacks are guarded. Do not
   add broad containment for broken tickers, equality, hostile futures, or JVM errors.
   A maintenance throw defers buffered work; it does not require forcing `REQUIRED`.
-- `Caffeine.toUnchecked` restores interruption when converting `InterruptedException`.
-  Functional interfaces can throw checked exceptions from other JVM languages. The absent-key
-  and unbounded paths propagate unchanged rather than converting.
+- `Caffeine.toUnchecked` restores the current thread's interrupt status when converting
+  `InterruptedException`. Functional interfaces can throw checked exceptions from other JVM
+  languages. The absent-key and unbounded paths propagate unchanged rather than converting.
 - Concurrent standard-future obtrusion reads as not-ready. Keep `Async.getIfReady`'s narrow
   cancellation/completion catch; a later obtrusion need not remove the physical entry.
 - Automatic refresh stays lock-free. Commit requires the captured node alive, the same value,

@@ -221,6 +221,17 @@ final class TypesafeConfigurationTest {
   }
 
   @Test
+  void configSource_file_notAbsolute_throwsConfigException() {
+    // a non-absolute file: URI makes `new File(uri)` throw IllegalArgumentException, which must
+    // surface as a ConfigException (like the jar: branch's MalformedURLException) rather than
+    // escaping uncaught from getCache/createCache far from its actual cause
+    var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
+    var error = assertThrows(ConfigException.BadPath.class, () ->
+        configSource().get(URI.create("file:relative.conf"), classloader));
+    assertThat(error).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   void defaults() {
     CaffeineConfiguration<Integer, Integer> defaults =
         TypesafeConfigurator.defaults(ConfigFactory.load());
@@ -264,6 +275,34 @@ final class TypesafeConfigurationTest {
     var error = assertThrows(CacheException.class,
         () -> TypesafeConfigurator.from(config, "malformed"));
     assertThat(error).hasCauseThat().isInstanceOf(ConfigException.BadPath.class);
+  }
+
+  @Test
+  void from_negativeDuration_throwsConfigException() {
+    // new Duration(...) throws IllegalArgumentException for a negative amount, which must
+    // surface as a ConfigException like other malformed settings rather than an unadapted IAE
+    var config = ConfigFactory.parseString(
+        "caffeine.jcache { negative-duration { policy.lazy-expiration.creation = -5s } }")
+        .withFallback(ConfigFactory.load());
+
+    var error = assertThrows(CacheException.class,
+        () -> TypesafeConfigurator.from(config, "negative-duration"));
+    assertThat(error).hasCauseThat().isInstanceOf(ConfigException.BadValue.class);
+  }
+
+  @Test
+  void from_maximumSizeAndWeight_throwsIllegalArgument() {
+    // maximum.size and maximum.weight are mutually exclusive; the prior behavior deferred this
+    // to Caffeine's builder at getCache time, surfacing an unhelpful ISE with no cache name.
+    // Consistent with the sibling maximumWeight-without-weigher case, this is not wrapped in
+    // CacheException.
+    var config = ConfigFactory.parseString(
+        "caffeine.jcache { conflicting { policy.maximum { size = 10, weight = 20 } } }")
+        .withFallback(ConfigFactory.load());
+
+    var error = assertThrows(IllegalArgumentException.class,
+        () -> TypesafeConfigurator.from(config, "conflicting"));
+    assertThat(error).hasMessageThat().contains("conflicting");
   }
 
   @Test

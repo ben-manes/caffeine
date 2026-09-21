@@ -39,9 +39,11 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
@@ -57,7 +59,12 @@ import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.configuration.MutableConfiguration;
+import javax.cache.event.CacheEntryCreatedListener;
+import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryExpiredListener;
+import javax.cache.event.CacheEntryRemovedListener;
+import javax.cache.event.CacheEntryUpdatedListener;
+import javax.cache.event.EventType;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.integration.CacheWriter;
@@ -97,6 +104,22 @@ final class CacheWriterTest {
           config.setCacheWriterFactory(() -> writer);
           config.setWriteThrough(true);
           config.setStatisticsEnabled(true);
+        }).build();
+  }
+
+  /** A fixture that publishes mutation events synchronously to {@code listener}. */
+  private static JCacheFixture eventFixture(
+      CloseableCacheWriter writer, RecordingMutationListener listener) {
+    var listenerConfig = new MutableCacheEntryListenerConfiguration<>(
+        /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+    return JCacheFixture.builder()
+        .configure(config -> {
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(true);
+          config.setStatisticsEnabled(true);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.addCacheEntryListenerConfiguration(listenerConfig);
         }).build();
   }
 
@@ -549,10 +572,34 @@ final class CacheWriterTest {
          var cache = fixture.jcache()) {
       cache.putAll(ENTRIES);
 
+      // Prove the entries are actually stored first: a regression that made putAll's own
+      // non-clearing writer treatment a no-op would otherwise satisfy the isFalse() check below
+      // vacuously, since an empty cache also reports every key absent.
+      for (var key : ENTRIES.keySet()) {
+        assertThat(cache.containsKey(key)).isTrue();
+      }
+
       cache.removeAll(ENTRIES.keySet());
 
       for (var key : ENTRIES.keySet()) {
         assertThat(cache.containsKey(key)).isFalse();
+      }
+    }
+  }
+
+  @Test
+  void putAll_nonClearingWriter_stillStores() {
+    // The putAll twin of removeAll_nonClearingWriter_stillEmptiesCache: a CacheWriter.writeAll
+    // that does not remove the written entries from the passed collection (as a naive or mock
+    // writer will not) is treated as a full success, so putAll stores every entry. This is the
+    // same code shape and rationale as the deleteAll ruling above, applied to writeAll.
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = jcacheFixture(writer);
+         var cache = fixture.jcache()) {
+      cache.putAll(ENTRIES);
+
+      for (var entry : ENTRIES.entrySet()) {
+        assertThat(cache.get(entry.getKey())).isEqualTo(entry.getValue());
       }
     }
   }
@@ -577,6 +624,31 @@ final class CacheWriterTest {
       assertThrows(CacheException.class, () -> op.accept(cache));
 
       assertThat(getStatistics(cache).getCachePuts()).isEqualTo(puts);
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+    }
+  }
+
+  /**
+   * The counter-only sibling of {@code writeOp_failingWriter_noPutsRecorded}: every writer call
+   * precedes its mutation-event publication, so a live writer failure must suppress the CREATED
+   * or UPDATED event too, not merely the put counter. No prior test installed a mutation listener
+   * while a writer rejected a write.
+   */
+  @ParameterizedTest
+  @MethodSource("updateOps")
+  void writeOp_failingWriter_suppressesMutationEvent(Consumer<Cache<Integer, Integer>> op) {
+    CloseableCacheWriter writer = Mockito.mock();
+    var listener = new RecordingMutationListener();
+    try (var fixture = eventFixture(writer, listener);
+         var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      listener.events.clear();
+
+      doThrow(CacheWriterException.class).when(writer).write(any());
+      doThrow(CacheWriterException.class).when(writer).writeAll(any());
+      assertThrows(CacheException.class, () -> op.accept(cache));
+
+      assertThat(listener.events).isEmpty();
       assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
     }
   }
@@ -659,6 +731,30 @@ final class CacheWriterTest {
       assertThrows(CacheException.class, () -> op.accept(cache));
 
       assertThat(getStatistics(cache).getCacheRemovals()).isEqualTo(removals);
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+    }
+  }
+
+  /**
+   * The event-publication sibling of {@code removeOp_failingWriter_noRemovalsRecorded}: a live
+   * writer failure must suppress the REMOVED event too, since the writer call precedes
+   * publication on every removal path.
+   */
+  @ParameterizedTest
+  @MethodSource("removalOps")
+  void removeOp_failingWriter_suppressesMutationEvent(Consumer<Cache<Integer, Integer>> op) {
+    CloseableCacheWriter writer = Mockito.mock();
+    var listener = new RecordingMutationListener();
+    try (var fixture = eventFixture(writer, listener);
+         var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      listener.events.clear();
+
+      doThrow(CacheWriterException.class).when(writer).delete(any());
+      doThrow(CacheWriterException.class).when(writer).deleteAll(any());
+      assertThrows(CacheException.class, () -> op.accept(cache));
+
+      assertThat(listener.events).isEmpty();
       assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
     }
   }
@@ -785,4 +881,24 @@ final class CacheWriterTest {
   }
 
   private interface CloseableCacheWriter extends CacheWriter<Integer, Integer>, Closeable {}
+
+  /** Records the event type of every CREATED/UPDATED/REMOVED mutation event delivered. */
+  private static final class RecordingMutationListener implements
+      CacheEntryCreatedListener<Integer, Integer>, CacheEntryUpdatedListener<Integer, Integer>,
+      CacheEntryRemovedListener<Integer, Integer> {
+    final List<EventType> events = new ArrayList<>();
+
+    @Override public void onCreated(
+        Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> evts) {
+      evts.forEach(event -> events.add(event.getEventType()));
+    }
+    @Override public void onUpdated(
+        Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> evts) {
+      evts.forEach(event -> events.add(event.getEventType()));
+    }
+    @Override public void onRemoved(
+        Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> evts) {
+      evts.forEach(event -> events.add(event.getEventType()));
+    }
+  }
 }

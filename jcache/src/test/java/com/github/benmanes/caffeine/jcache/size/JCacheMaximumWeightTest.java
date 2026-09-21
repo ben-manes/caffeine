@@ -66,4 +66,27 @@ final class JCacheMaximumWeightTest {
       assertThat(removedWeight.get()).isEqualTo(MAXIMUM / 2);
     }
   }
+
+  @Test
+  void evict_countsEntryNotRemovalOrWeight() {
+    // The eviction counter is one per evicted mapping, distinct from a removal, and independent
+    // of the removed weight: a single put whose own weight exceeds the maximum evicts itself
+    // once, regardless of how large that weight is
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setStatisticsEnabled(true);
+          config.setMaximumWeight(OptionalLong.of(MAXIMUM));
+          config.setWeigherFactory(Optional.of(() -> (key, value) -> value));
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+        }).build();
+        var jcache = fixture.jcache()) {
+      var stats = JCacheFixture.getStatistics(jcache);
+
+      jcache.put(1, 2 * MAXIMUM);
+
+      assertThat(stats.getCachePuts()).isEqualTo(1L);
+      assertThat(stats.getCacheEvictions()).isEqualTo(1L);
+      assertThat(stats.getCacheRemovals()).isEqualTo(0L);
+    }
+  }
 }

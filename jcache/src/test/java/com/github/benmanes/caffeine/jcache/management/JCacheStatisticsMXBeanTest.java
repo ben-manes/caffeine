@@ -63,6 +63,36 @@ final class JCacheStatisticsMXBeanTest {
   }
 
   @Test
+  void clear_thenRepopulated_freshAverages() {
+    // A zero average after clear() is also produced by a regression that resets only the
+    // counters (or only the timers): both operands must reach zero together. Repopulating with
+    // distinct, unequal counts and time totals per operation discriminates a partial reset, since
+    // a leftover counter or timer from before the clear would not divide out to these means.
+    var stats = new JCacheStatisticsMXBean();
+    stats.enable(true);
+    stats.recordHits(1);
+    stats.recordPuts(1);
+    stats.recordRemovals(1);
+    stats.recordGetTime(TimeUnit.MILLISECONDS.toNanos(5));
+    stats.recordPutTime(TimeUnit.MILLISECONDS.toNanos(5));
+    stats.recordRemoveTime(TimeUnit.MILLISECONDS.toNanos(5));
+
+    stats.clear();
+
+    stats.recordHits(2);
+    stats.recordMisses(1); // 3 gets
+    stats.recordPuts(2);
+    stats.recordRemovals(1);
+    stats.recordGetTime(TimeUnit.MICROSECONDS.toNanos(9)); // 9 us / 3 gets = 3 us
+    stats.recordPutTime(TimeUnit.MICROSECONDS.toNanos(8)); // 8 us / 2 puts = 4 us
+    stats.recordRemoveTime(TimeUnit.MICROSECONDS.toNanos(7)); // 7 us / 1 removal = 7 us
+
+    assertThat(stats.getAverageGetTime()).isEqualTo(3F);
+    assertThat(stats.getAveragePutTime()).isEqualTo(4F);
+    assertThat(stats.getAverageRemoveTime()).isEqualTo(7F);
+  }
+
+  @Test
   void record_disabledOrZero_isNoOp() {
     var stats = new JCacheStatisticsMXBean();
 

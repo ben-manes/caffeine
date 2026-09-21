@@ -224,6 +224,13 @@ special expired-wrapper recovery fix for the same miss-then-insertion pattern. P
 `containsKey` and `EntryIterator.hasNext` are last-value and may still skip it. A read whose thread
 stalls across its own deadline between the two writes still loses its extension, because
 `setExpiresAfter` refuses an expired node; closing that needs the per-read key lock declined above.
+The reverse ordering is the same accepted race from the other side: `removeExpired`'s
+`computeIfPresent` re-reads the wrapper's volatile deadline at removal time, so a renewal already
+written before that check runs is respected and the removal backs off. But if the check has
+already passed and unlinked the wrapper before the renewal's write lands, that write reaches an
+object no longer reachable from the map — a lost update, not a stale read, since the renewing
+`get` already returned its value at the linearizable point before the removal. Closing this needs
+the same declined per-read key lock.
 Pinned by `CacheProxyTest.get_replacedBeforeExpiry`, `getAll_replacedBeforeExpiry`,
 `containsKey_extendedBeforeExpiry`, `get_extendedBeforeExpiry`, and `getAll_extendedBeforeExpiry`.
 
@@ -235,6 +242,16 @@ The iterator stamps access expiry in `hasNext()` when staging the entry. Deferri
 widens its expiry hole or makes `hasNext()` promise an unavailable entry; the iterator contract
 already allows `next()` to return null after expiry. Calling `hasNext()` without `next()` extends
 one entry's deadline, an accepted cost. TCK: `CacheExpiryTest.iteratorNextShouldCallGetExpiryForAccessedEntry`.
+
+`CacheProxy.get` always takes a fresh `ticker.read()` to derive the clock it checks `hasExpired`
+against. `LoadingCacheProxy.getOrLoad` instead reuses the statistics start timestamp
+(`nanosToMillis((start == 0L) ? ticker.read() : start)`) when statistics are enabled, so enabling
+statistics changes which reading its expiry check uses while `get`'s is unaffected. This is
+intentional-enough, not a bug: the reused stamp is taken earlier in the method, so it can only
+make the check see an *older* clock, which can only judge an entry live that a fresh read might
+have judged expired — expiration is a maximum lifetime, and both readings satisfy that. The same
+reuse appears in `remove(K,V)`, `replace(K,V,V)`, and the other `compute`-based write sites, all of
+which take their stamp before entering the remapping function rather than reading fresh inside it.
 
 ## Native extensions
 
@@ -388,9 +405,17 @@ and reload-before-prior-expiry as the same accepted design choice, not independe
   put/putAll, create/update, and statistics enabled/disabled.
 - `CacheGets = hits + misses`. Caffeine divides each average duration by its own operation
   counter; the RI's three averages all divide by gets, a known RI bug to avoid copying.
+- `recordHits`/`recordMisses` and the conditional pairs that call them (`replace(K,V,V)`,
+  batch hit/miss splits) are unconditional `LongAdder.add`, unlike `recordPuts`/`recordGetTime`/
+  `recordPutTime`/`recordRemoveTime`, which also gate on a nonzero count. The asymmetry is
+  accepted: a zero-guard would still touch the same `LongAdder` cell, so it buys nothing under
+  best-effort statistics.
 - `invoke`, conditional `remove`, and iterator yields count gets without timing them, and an
   empty `getAll` times no gets. The RI times the first three and not the last; these populations
-  stay unaligned under best-effort statistics.
+  stay unaligned under best-effort statistics. The same mismatch reaches `invoke`'s put and
+  removal counters: `postProcess` calls `recordPuts`/`recordRemovals` for CREATED/LOADED/UPDATED/
+  REMOVED actions but never opens a timing scope, so `getAveragePutTime` and
+  `getAverageRemoveTime` are diluted by `invoke` traffic the same way `getAverageGetTime` is.
 
 ### Commit and failure accounting
 
@@ -405,7 +430,10 @@ record the required counters/timers using the operation's existing start-state r
 copying in getAndRemove/getAndReplace happens after accounting, as in getAndPut, so copier failure
 does not erase the committed effect. The spec does not prescribe this ordering against listener
 failure; required counters and sibling parity justify it. This covers the specified listener
-exception, not arbitrary `Error`; enable/disable races remain spec-undefined. Pins:
+exception, not arbitrary `Error`; enable/disable races remain spec-undefined. When a synchronous
+listener throws an `Error`, `awaitSynchronousFailure` does not capture it, so the statistics block
+is skipped: the committed mutation is retained but its counters are not recorded for that
+operation. The mutation is not rolled back. Pins:
 `EventDispatcherTest.synchronousListenerFailure_committedMutationRetainsStatistics` and
 `synchronousExpiredListenerFailure_retainsGetStatistics`.
 
@@ -428,10 +456,12 @@ loop per-key through their persistence SPIs. Do not replace batching with per-ke
 solely for RI parity. The Integration contract also bounds write-through guarantees to the cache
 being the application's only writer to the external resource.
 
-Treat a non-throwing deleteAll as full success. Honor its residual collection only on a partial
-failure, when it identifies entries that failed. The RI's residual-on-success interpretation
-made removeAll a no-op for non-clearing writers and was rejected. Pin:
-`CacheWriterTest.removeAll_nonClearingWriter_stillEmptiesCache`.
+Treat a non-throwing `writeAll` (`putAll`) or `deleteAll` (`removeAll`) as full success. Honor a
+writer's residual collection only on a partial failure, when it identifies entries that failed.
+The RI's residual-on-success interpretation made both `putAll` and `removeAll` a no-op for a
+non-clearing writer and was rejected for both. Pins:
+`CacheWriterTest.removeAll_nonClearingWriter_stillEmptiesCache` and
+`putAll_nonClearingWriter_stillStores`.
 
 A partial batch failure reconciles the same way whatever the writer throws, including a checked
 exception thrown undeclared by another JVM language. Pins:
@@ -457,7 +487,12 @@ suppressed, not replaced. Pin: `CacheProxyTest.putAll_writerPartiallyFails_store
 
 No-argument removeAll delegates to the native map key set, which filters natively expired entries.
 Those expired-but-unreaped keys are omitted from deleteAll, unlike the RI. This remains an
-accepted reading of an existing mapping, with no TCK assertion resolving it.
+accepted reading of an existing mapping, with no TCK assertion resolving it. The opposite half of
+the same method has the opposite outcome: a key that is JCache-expired but still natively live is
+present in that key set, so it is still passed to `writer.deleteAll` before being reaped as EXPIRED
+plus an eviction — not REMOVED. Both halves are defensible reads of `CacheWriter.deleteAll`'s
+"only invoked for keys that exist in the cache" against the two clocks; both are recorded together
+here rather than only the natively-expired half.
 
 ## Events and callbacks
 
@@ -498,6 +533,14 @@ Bulk operations must drain already-published events even when the loop fails. pu
 now happens before any commit, covered by
 `EventDispatcherTest.putAll_copierFails_abortsBeforeAnyCommit`; the earlier mid-loop copier test
 was removed, but later failures still require draining.
+
+`invoke`'s outer catch discards rather than awaits the pending synchronous future
+(`ignoreSynchronous()`) before rethrowing. That choice rests on every `postProcess` branch calling
+`publishToCacheWriter` before its `publish*`, so a throwing writer aborts before anything is
+published and there is nothing pending to leak. This ordering premise is not restated at the catch
+site; a future edit that publishes before the writer would silently leak a synchronous future here
+without a failing test, since the accepted native-extension and `Error` boundaries are a separate,
+already-scoped exception to the same rule.
 
 An accepted report described duplicate EXPIRED, but exactly-once eviction counts, when a listener
 ran before executor rejection aborted a reap. It predates dependent-stage publication. Preserve
@@ -572,10 +615,16 @@ listeners receive their events, so do not broaden it merely for symmetry. `Cache
 forbids side effects, so a filter whose cache call deadlocks the evicting thread, which holds the
 eviction lock and the entry's locks, is outside the contract.
 
-The spec permits implementation-specific deadlock detection. Two accepted hazards remain:
-cross-cache listener cycles and a synchronous listener dispatched on another thread that operates
-on its own key, chains behind itself, then awaits itself. The latter was reproduced with the gate
-both enabled and disabled; moving execution outside compute did not create it. Do not extend the
+The spec permits implementation-specific deadlock detection. Three accepted hazards remain:
+cross-cache listener cycles, a synchronous listener dispatched on another thread that operates
+on its own key, chains behind itself, then awaits itself, and the same shape across two distinct
+keys in one cache: two threads concurrently mutate keys A and B under one synchronous
+registration, and if that listener reciprocally writes the other key from the dispatch thread, the
+resulting per-key futures form an unbreakable cycle (A's future awaits B's, B's future awaits
+A's). Distinct keys are not a safety guarantee here; the mechanism is identical to the other two
+hazards; not marking dispatch threads is what admits all three, so it is not a separate boundary
+to name or a new decision to make. The own-key case was reproduced with the gate both enabled and
+disabled; moving execution outside compute did not create it. Do not extend the
 mark to dispatch threads. Pins: `EventDispatcherTest.publish_listenerUsesTheCache_isRejected`
 and `invoke_processorUsesTheCache_isRejected`. The probe included a positive control and found
 no re-entry in the then 493 TCK / 603 unit tests.
@@ -594,7 +643,11 @@ contextual `CacheLoaderException`, including the TCK-required wrapping. Pin:
 
 A replacement copies its new value only once the entry is known to be present, as `replace(K,V,V)`
 does, so `replace(K,V)` and `getAndReplace` on an absent key return `false` or `null` without
-copying. Pin: `CacheProxyTest.replace_absent_copierFails_isNoOp`.
+copying. Pin: `CacheProxyTest.replace_absent_copierFails_isNoOp`. The same rule governs
+`putIfAbsent`: it copies the new value inside `compute` only on the branch that stores it, unlike
+`put`, which has no branch to not take and copies unconditionally before compute. This follows
+from `putIfAbsent` being specified as `if (!containsKey) put(...)`: not copying on an untaken
+branch is the contract-faithful reading, not an inconsistency to fix.
 
 `JavaSerializationCopier` reports nonserializable values as CacheException, matching its
 deserialize path and the cache API. Do not restore `UncheckedIOException` or follow the RI's
@@ -812,16 +865,21 @@ its `Scheduler` interface documents.
 `inFlight` tracks explicit asynchronous loadAll work, including its CompletionListener
 notification, with a bounded 10-second close await. `loadAllAndNotify` returns the notification
 future; admission, synchronous submission-failure handling, and retirement stay in loadAll.
+Synchronous executor rejection preserves notification-before-retirement in `loadAll`, ensuring
+`close()` awaits `listener.onException` as it does on accepted paths.
 Compose every outcome onto `dispatcher.chainSynchronous()`, so a failed load, a loader `Error` or
 checked exception included, is notified after its committed entries' synchronous listeners, with
 a listener failure suppressed onto the load's. Do not move it to an untracked continuation or
 join the chain in the load body: a single-thread executor must be released to run the listener
-dispatch. A stuck listener can exhaust the timeout, reported as TimeoutException. The bounded
-await does not promise that timed-out work has stopped. `close()` sets the closed flag and
-deregisters under the configuration monitor, which admission and registration also check, and
-awaits outside it; an awaited listener that reads the configuration would otherwise wait out the
-timeout. Pins: `CacheProxyTest.loadAll_loaderFailure_notifiesListener`,
-`loadAll_storeFailsMidway_notifiesAfterSynchronousListeners`, and
+dispatch. A stuck listener, or a CompletionListener that invokes `close()` directly or indirectly
+(self-close), waits out the ten-second timeout, reported as TimeoutException. An `Error` from
+`executor.execute` is governed by standing executor/JVM-Error principles; the bounded await ensures
+it does not hang indefinitely. The bounded await does not promise that timed-out work has stopped.
+`close()` sets the closed flag and deregisters under the configuration monitor, which admission and
+registration also check, and awaits outside it; an awaited listener that reads the configuration
+would otherwise wait out the timeout. Pins: `CacheProxyTest.loadAll_loaderFailure_notifiesListener`,
+`loadAll_storeFailsMidway_notifiesAfterSynchronousListeners`,
+`close_awaitsInFlightLoadAll`, `close_awaitsRejectedLoadAllNotification`, and
 `close_awaitsListenerReadingConfiguration`.
 
 Manager close still holds its monitor across child close. A CompletionListener that looks up

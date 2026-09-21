@@ -36,6 +36,7 @@ import static org.slf4j.event.Level.TRACE;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
@@ -48,13 +49,19 @@ import java.util.function.Function;
 
 import org.junit.jupiter.params.ParameterizedTest;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.CacheSpec.StartTime;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.ImmutableList;
@@ -72,6 +79,64 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 final class ExpireAfterAccessTest {
 
   /* --------------- Cache --------------- */
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine,
+      compute = Compute.ASYNC, keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      stats = Stats.DISABLED, maximumSize = {Maximum.DISABLED, Maximum.UNREACHABLE},
+      weigher = {CacheWeigher.DISABLED, CacheWeigher.ZERO}, loader = Loader.IDENTITY,
+      executor = CacheExecutor.DEFAULT, removalListener = Listener.CONSUMING,
+      evictionListener = Listener.DISABLED, expiry = CacheExpiry.DISABLED,
+      expireAfterAccess = Expire.ONE_MINUTE, expireAfterWrite = Expire.DISABLED,
+      refreshAfterWrite = Expire.DISABLED)
+  void quietCompletion_staleOrder_defersPhysicalExpiration(CacheContext context) {
+    var tasks = new ArrayDeque<Runnable>();
+    context.caffeine().executor(tasks::add);
+    var cache = context.buildAsync(Loader.IDENTITY);
+    Runnable drain = () -> {
+      while (!tasks.isEmpty()) {
+        tasks.removeFirst().run();
+      }
+    };
+    var keys = context.absentKeys().iterator();
+    Int a = keys.next();
+    Int b = keys.next();
+    Int c = keys.next();
+    var future = new CompletableFuture<Int>();
+
+    cache.put(a, future);
+    context.ticker().advance(Duration.ofSeconds(6));
+    cache.put(b, b.toFuture());
+    context.ticker().advance(Duration.ofSeconds(24));
+    future.complete(a);
+    context.ticker().advance(Duration.ofSeconds(6));
+    cache.put(c, c.toFuture());
+    context.ticker().advance(Duration.ofSeconds(36));
+    drain.run();
+    cache.synchronous().cleanUp();
+    drain.run();
+
+    assertThat(cache.synchronous().policy().getIfPresentQuietly(b)).isNull();
+    boolean sameWeight = (context.maximum() == Maximum.DISABLED) || context.isZeroWeighted();
+    assertThat(cache.synchronous().estimatedSize()).isEqualTo(sameWeight ? 3 : 2);
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(sameWeight ? Map.of() : Map.of(b, b)).exclusively();
+
+    context.ticker().advance(Duration.ofSeconds(18));
+    cache.synchronous().cleanUp();
+    drain.run();
+    assertThat(cache.synchronous().estimatedSize()).isEqualTo(1);
+    assertThat(cache.synchronous().policy().getIfPresentQuietly(c)).isEqualTo(c);
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(Map.of(a, a, b, b)).exclusively();
+
+    context.ticker().advance(Duration.ofSeconds(6));
+    cache.synchronous().cleanUp();
+    drain.run();
+    assertThat(cache).isEmpty();
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(Map.of(a, a, b, b, c, c)).exclusively();
+  }
 
   @ParameterizedTest
   @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },

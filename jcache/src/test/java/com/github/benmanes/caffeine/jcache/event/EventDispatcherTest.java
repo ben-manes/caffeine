@@ -53,6 +53,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -1006,6 +1007,95 @@ final class EventDispatcherTest {
       assertThat(e).hasMessageThat().isEqualTo("weigher");
       assertThat(e.getSuppressed()).hasLength(1);
       assertThat(JCacheFixture.getDispatcher(cache).pending.get()).isEmpty();
+    }
+  }
+
+  @Test
+  void loadingGet_copierError_retainsPrimaryFailure() {
+    // A read-through load commits (endComputation runs, CREATED is published), then the output
+    // copy throws. The Error must drain the pending list before propagating so that the next
+    // same-thread operation does not inherit this operation's listener failure.
+    var copierError = new AssertionError("copy failed");
+    var outputArmed = new AtomicBoolean();
+    var matches = new AtomicInteger();
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        // The identity loader returns a value equal to the key, so a get(KEY_1) copies a value
+        // equal to KEY_1 three times: once as the load's input key, once inside the loader
+        // adapter as the value it commits and publishes CREATED with (both before
+        // endComputation runs), and once as the output copy in LoadingCacheProxy.get (after).
+        // Only the third, output copy must fail, so that endComputation has already run and the
+        // listener failure is pending when it does.
+        if (outputArmed.get() && Objects.equals(object, KEY_1) && (matches.incrementAndGet() == 3)) {
+          throw copierError;
+        }
+        return object;
+      }
+    };
+    var listenerFailure = new IllegalStateException("listener");
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      throw listenerFailure;
+    };
+    var jcacheFixture = syncListenerFixture(listener, config -> {
+      config.setStoreByValue(true);
+      config.setCopierFactory(() -> copier);
+    });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcacheLoading()) {
+      outputArmed.set(true);
+      var e = assertThrows(AssertionError.class, () -> cache.get(KEY_1));
+      // The exact Error propagates, not a wrapped form
+      assertThat(e).isSameInstanceAs(copierError);
+      // The listener failure was suppressed onto the Error (pending list drained)
+      assertThat(e.getSuppressed()).hasLength(1);
+      assertThat(e.getSuppressed()[0]).hasCauseThat().isSameInstanceAs(listenerFailure);
+
+      // Disarm copier; the next same-thread operation must succeed without inheriting the old
+      // listener failure — it should not throw a CacheEntryListenerException for KEY_2
+      outputArmed.set(false);
+      assertThrows(CacheEntryListenerException.class, () -> cache.get(KEY_2));
+    }
+  }
+
+  @Test
+  void loadingGetAll_copierError_retainsPrimaryFailure() {
+    // Mirror of loadingGet_copierError_retainsPrimaryFailure for the bulk path.
+    var copierError = new AssertionError("copy failed");
+    var outputArmed = new AtomicBoolean();
+    var matches = new AtomicInteger();
+    var copier = new Copier() {
+      @Override public <T> T copy(T object, ClassLoader classLoader) {
+        // The identity loader returns a value equal to the key, so getAll(Set.of(KEY_1)) copies
+        // a value equal to KEY_1 four times: once as the load's input key and once inside the
+        // loader adapter as the committed value (both before endComputation runs), then once
+        // each for the result map's key and value via copyMap (after). Only the fourth,
+        // output-value copy must fail, so that the listener failure is already pending when it
+        // does.
+        if (outputArmed.get() && Objects.equals(object, KEY_1) && (matches.incrementAndGet() == 4)) {
+          throw copierError;
+        }
+        return object;
+      }
+    };
+    var listenerFailure = new IllegalStateException("listener");
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {
+      throw listenerFailure;
+    };
+    var jcacheFixture = syncListenerFixture(listener, config -> {
+      config.setStoreByValue(true);
+      config.setCopierFactory(() -> copier);
+    });
+    try (var fixture = jcacheFixture.build();
+         var cache = fixture.jcacheLoading()) {
+      outputArmed.set(true);
+      var e = assertThrows(AssertionError.class, () -> cache.getAll(Set.of(KEY_1)));
+      assertThat(e).isSameInstanceAs(copierError);
+      assertThat(e.getSuppressed()).hasLength(1);
+      assertThat(e.getSuppressed()[0]).hasCauseThat().isSameInstanceAs(listenerFailure);
+
+      // The pending list is cleared; the next operation receives only its own listener failure
+      outputArmed.set(false);
+      assertThrows(CacheEntryListenerException.class, () -> cache.getAll(Set.of(KEY_2)));
     }
   }
 

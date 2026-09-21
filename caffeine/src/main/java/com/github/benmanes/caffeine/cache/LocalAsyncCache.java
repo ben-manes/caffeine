@@ -451,8 +451,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override public @Nullable CompletableFuture<V> putIfAbsent(K key, CompletableFuture<V> value) {
       boolean deferred = !Async.isReady(value);
       CompletableFuture<V> prior = asyncCache.cache().putIfAbsent(key, value);
-      long startTime = asyncCache.cache().statsTicker().read();
       if (prior == null) {
+        long startTime = asyncCache.cache().statsTicker().read();
         asyncCache.handleCompletion(key, value, startTime, deferred, /* computed= */ false);
       }
       return prior;
@@ -460,8 +460,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override public @Nullable CompletableFuture<V> put(K key, CompletableFuture<V> value) {
       boolean deferred = !Async.isReady(value);
       CompletableFuture<V> prior = asyncCache.cache().put(key, value);
-      long startTime = asyncCache.cache().statsTicker().read();
       if (prior != value) {
+        long startTime = asyncCache.cache().statsTicker().read();
         asyncCache.handleCompletion(key, value, startTime, deferred, /* computed= */ false);
       }
       return prior;
@@ -473,8 +473,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override public @Nullable CompletableFuture<V> replace(K key, CompletableFuture<V> value) {
       boolean deferred = !Async.isReady(value);
       CompletableFuture<V> prior = asyncCache.cache().replace(key, value);
-      long startTime = asyncCache.cache().statsTicker().read();
       if ((prior != null) && (prior != value)) {
+        long startTime = asyncCache.cache().statsTicker().read();
         asyncCache.handleCompletion(key, value, startTime, deferred, /* computed= */ false);
       }
       return prior;
@@ -483,8 +483,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     public boolean replace(K key, CompletableFuture<V> oldValue, CompletableFuture<V> newValue) {
       boolean deferred = !Async.isReady(newValue);
       boolean replaced = asyncCache.cache().replace(key, oldValue, newValue);
-      long startTime = asyncCache.cache().statsTicker().read();
       if (replaced && (newValue != oldValue)) {
+        long startTime = asyncCache.cache().statsTicker().read();
         asyncCache.handleCompletion(key, newValue, startTime, deferred, /* computed= */ false);
       }
       return replaced;
@@ -529,7 +529,6 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return compute(key, (k, oldValue) ->
           (oldValue == null) ? null : remappingFunction.apply(k, oldValue));
     }
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     @Override public @Nullable CompletableFuture<V> compute(K key,
         BiFunction<? super K, ? super @Nullable CompletableFuture<V>,
             ? extends @Nullable CompletableFuture<V>> remappingFunction) {
@@ -537,21 +536,20 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       var deferred = new boolean[1];
       @SuppressWarnings({"rawtypes", "unchecked"})
-      @Nullable CompletableFuture<V>[] result = new CompletableFuture[1];
-      @SuppressWarnings({"rawtypes", "unchecked"})
       @Nullable CompletableFuture<V>[] prior = new CompletableFuture[1];
       long startTime = asyncCache.cache().statsTicker().read();
-      asyncCache.cache().compute(key, (K k, @Nullable CompletableFuture<V> oldValue) -> {
-        result[0] = remappingFunction.apply(k, oldValue);
-        deferred[0] = !Async.isReady(result[0]);
-        prior[0] = oldValue;
-        return result[0];
-      }, asyncCache.cache().expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
+      CompletableFuture<V> result = asyncCache.cache().compute(
+          key, (K k, @Nullable CompletableFuture<V> oldValue) -> {
+            var computed = remappingFunction.apply(k, oldValue);
+            deferred[0] = !Async.isReady(computed);
+            prior[0] = oldValue;
+            return computed;
+          }, asyncCache.cache().expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
 
-      if ((result[0] != null) && (result[0] != prior[0])) {
-        asyncCache.handleCompletion(key, result[0], startTime, deferred[0], /* computed= */ true);
+      if ((result != null) && (result != prior[0])) {
+        asyncCache.handleCompletion(key, result, startTime, deferred[0], /* computed= */ true);
       }
-      return result[0];
+      return result;
     }
     @Override public @Nullable CompletableFuture<V> merge(K key, CompletableFuture<V> value,
         BiFunction<? super CompletableFuture<V>, ? super CompletableFuture<V>,
@@ -751,10 +749,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       } catch (NullMapCompletionException e) {
         throw new NullPointerException("null map");
       } catch (CompletionException e) {
-        if (e.getCause() instanceof RuntimeException) {
-          throw (RuntimeException) e.getCause();
-        } else if (e.getCause() instanceof Error) {
-          throw (Error) e.getCause();
+        var cause = e.getCause();
+        if (cause instanceof RuntimeException) {
+          throw (RuntimeException) cause;
+        } else if (cause instanceof Error) {
+          throw (Error) cause;
         }
         throw e;
       }
@@ -1332,9 +1331,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       }
 
       @Override
-      @SuppressWarnings("RedundantCollectionOperation")
       public boolean remove(@Nullable Object o) {
-        return delegate.keySet().remove(o);
+        return (delegate.remove(o) != null);
       }
 
       @Override

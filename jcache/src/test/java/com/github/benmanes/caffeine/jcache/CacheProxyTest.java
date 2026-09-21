@@ -61,6 +61,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -76,6 +77,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
@@ -108,6 +110,7 @@ import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CacheWriterException;
 import javax.cache.integration.CompletionListener;
 import javax.cache.integration.CompletionListenerFuture;
+import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
 
@@ -716,6 +719,28 @@ final class CacheProxyTest {
       assertThat(stats.getCachePuts()).isEqualTo(0L);
       assertThat(stats.getCacheMisses()).isEqualTo(1L);
       assertThat(stats.getCacheHits()).isEqualTo(0L);
+    }
+  }
+
+  @Test
+  void invoke_processorInterrupted_restoresInterruptStatus() {
+    // A processor running in another JVM language can throw InterruptedException undeclared
+    // through the non-throwing EntryProcessor interface (sneaky-throw). processorFailure wraps
+    // it in EntryProcessorException but must first restore the interrupt flag, consistent with
+    // the loader, writer, and expiry-policy boundaries that the rule file documents.
+    EntryProcessor<Integer, Integer, Object> processor = Mockito.mock();
+    when(processor.process(any())).thenAnswer(invocation -> {
+      throw new InterruptedException();
+    });
+    try (var fixture = JCacheFixture.builder().build()) {
+      boolean interrupted;
+      try {
+        assertThrows(EntryProcessorException.class,
+            () -> fixture.jcache().invoke(KEY_1, processor));
+      } finally {
+        interrupted = Thread.interrupted();
+      }
+      assertThat(interrupted).isTrue();
     }
   }
 
@@ -1567,6 +1592,48 @@ final class CacheProxyTest {
     }
   }
 
+  @Test @Tag("isolated")
+  void statisticsToggle_stopsAndResumesCollection() {
+    // Discriminates "counters frozen while disabled and resumed on re-enable" from a regression
+    // that unregisters the MXBean while collection continues, or that resets counters on toggle
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setStatisticsEnabled(true);
+          config.setMaximumSize(OptionalLong.of(1L));
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+        }).build();
+        var jcache = fixture.jcache()) {
+      var stats = getStatistics(jcache);
+
+      jcache.put(KEY_1, VALUE_1);
+      assertThat(jcache.get(KEY_2)).isNull();
+      assertThat(stats.getCachePuts()).isEqualTo(1L);
+      assertThat(stats.getCacheMisses()).isEqualTo(1L);
+      assertThat(stats.getCacheGets()).isEqualTo(1L);
+
+      jcache.enableStatistics(false);
+
+      // All performed while disabled: puts that force native evictions under maximumSize(1),
+      // a removal, and a miss. None of this may be visible after re-enabling.
+      for (int key = 0; key < 10; key++) {
+        jcache.put(key, key);
+      }
+      assertThat(jcache.remove(KEY_3)).isFalse();
+      assertThat(jcache.get(KEY_2)).isNull();
+
+      jcache.enableStatistics(true);
+
+      // The single get() below is the only enabled-period activity; it must be the only one
+      // reflected in the resumed counters
+      assertThat(jcache.get(KEY_2)).isNull();
+      assertThat(stats.getCachePuts()).isEqualTo(1L);
+      assertThat(stats.getCacheRemovals()).isEqualTo(0L);
+      assertThat(stats.getCacheEvictions()).isEqualTo(0L);
+      assertThat(stats.getCacheMisses()).isEqualTo(2L);
+      assertThat(stats.getCacheGets()).isEqualTo(2L);
+    }
+  }
+
   @Test
   void postProcess_none() {
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
@@ -1946,6 +2013,19 @@ final class CacheProxyTest {
 
       requireNonNull(cache.iterator().next().getValue()).setValue(VALUE_2);
       assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
+
+      // The getAnd* trio returns a copy of the prior value too, the one output-copy surface the
+      // above three left unpinned: mutating what they return must not alter what the same call
+      // just committed.
+      requireNonNull(cache.getAndPut(KEY_1, new MutableInt(VALUE_2))).setValue(VALUE_3);
+      assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_2));
+
+      requireNonNull(cache.getAndReplace(KEY_1, new MutableInt(VALUE_1))).setValue(VALUE_3);
+      assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
+
+      requireNonNull(cache.getAndRemove(KEY_1)).setValue(VALUE_3);
+      cache.put(KEY_1, new MutableInt(VALUE_2));
+      assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_2));
     }
   }
 
@@ -2119,6 +2199,53 @@ final class CacheProxyTest {
       }
     } finally {
       executor.shutdownNow();
+    }
+  }
+
+  @Test
+  void close_awaitsRejectedLoadAllNotification() throws InterruptedException {
+    Executor rejecting = task -> { throw new RejectedExecutionException("rejected"); };
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    var onExceptionStarted = new CountDownLatch(1);
+    var letOnExceptionFinish = new CountDownLatch(1);
+    var listenerFinished = new AtomicBoolean();
+
+    var listener = new CompletionListener() {
+      @Override public void onCompletion() {}
+      @Override public void onException(Exception e) {
+        onExceptionStarted.countDown();
+        try {
+          letOnExceptionFinish.await();
+        } catch (InterruptedException ex) {
+          Thread.currentThread().interrupt();
+        }
+        listenerFinished.set(true);
+      }
+    };
+
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExecutorFactory(() -> rejecting);
+          config.setCacheLoaderFactory(() -> loader);
+        }).build()) {
+      var loadAllThread = new Thread(() ->
+          fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, listener));
+      loadAllThread.start();
+
+      onExceptionStarted.await();
+
+      var closeThread = new Thread(() -> fixture.jcache().close());
+      closeThread.start();
+
+      var blocked = EnumSet.of(BLOCKED, WAITING, TIMED_WAITING);
+      await().until(() -> blocked.contains(closeThread.getState()));
+      assertThat(closeThread.isAlive()).isTrue();
+      assertThat(listenerFinished.get()).isFalse();
+
+      letOnExceptionFinish.countDown();
+      closeThread.join();
+      loadAllThread.join();
+      assertThat(listenerFinished.get()).isTrue();
     }
   }
 
@@ -2370,6 +2497,25 @@ final class CacheProxyTest {
       assertThat(requireNonNull(results.get(goodKey)).get()).isEqualTo(VALUE_1);
       // The store-by-value copy failure of the bad key is isolated to its own result.
       assertThrows(EntryProcessorException.class, () -> requireNonNull(results.get(badKey)).get());
+    }
+  }
+
+  @Test
+  void invokeAll_nullKeyElement_rejectedBeforeProcessing() {
+    var calls = new AtomicInteger();
+    try (var fixture = JCacheFixture.builder().build()) {
+      var keys = new LinkedHashSet<Integer>();
+      keys.add(KEY_1);
+      keys.add(nullRef());
+      fixture.jcache().put(KEY_1, VALUE_1);
+
+      assertThrows(NullPointerException.class, () -> fixture.jcache().invokeAll(
+          keys, (entry, args) -> { calls.incrementAndGet(); return entry.getValue(); }));
+
+      // Caffeine's stronger behavior: the null element is prevalidated, so no processor call
+      // happens for the valid key either, and the map is left unchanged.
+      assertThat(calls.get()).isEqualTo(0);
+      assertThat(fixture.jcache().get(KEY_1)).isEqualTo(VALUE_1);
     }
   }
 

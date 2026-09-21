@@ -103,6 +103,71 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 final class ExpirationTest {
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine,
+      compute = Compute.SYNC, keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      stats = Stats.DISABLED, maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
+      loader = Loader.DISABLED, executor = CacheExecutor.DIRECT,
+      removalListener = Listener.MOCKITO, evictionListener = Listener.DISABLED,
+      expiry = CacheExpiry.DISABLED, expireAfterAccess = Expire.ONE_MINUTE,
+      expireAfterWrite = Expire.DISABLED, refreshAfterWrite = Expire.DISABLED)
+  void expireAfterAccess_removalListener_removesScanTail(
+      Cache<Int, Int> cache, CacheContext context) {
+    var keys = context.absentKeys().iterator();
+    Int a = keys.next();
+    Int b = keys.next();
+    Int c = keys.next();
+    Int d = keys.next();
+    doAnswer(invocation -> {
+      Int key = invocation.getArgument(0);
+      RemovalCause cause = invocation.getArgument(2);
+      if (a.equals(key) && (cause == EXPIRED)) {
+        assertThat(cache.getIfPresent(b)).isEqualTo(b);
+        assertThat(cache.getIfPresent(c)).isEqualTo(c);
+        cache.invalidate(d);
+        cache.cleanUp();
+      }
+      return null;
+    }).when(context.removalListener()).onRemoval(any(), any(), any());
+
+    cache.put(a, a);
+    context.ticker().advance(Duration.ofSeconds(30));
+    cache.put(b, b);
+    cache.put(c, c);
+    context.ticker().advance(Duration.ofSeconds(15));
+    cache.put(d, d);
+    context.ticker().advance(Duration.ofSeconds(16));
+    var cleanup = CompletableFuture.runAsync(cache::cleanUp, executor);
+    try {
+      await().until(cleanup::isDone);
+    } catch (RuntimeException | Error failure) {
+      if (!cleanup.isDone()) {
+        try {
+          // Release a scan stuck reordering renewed entries, retaining its original timeout.
+          context.ticker().advance(Duration.ofNanos(Long.MAX_VALUE));
+          cache.put(b, b);
+          await().until(cleanup::isDone);
+        } catch (RuntimeException | Error recoveryFailure) {
+          failure.addSuppressed(recoveryFailure);
+        }
+      }
+      throw failure;
+    }
+    cleanup.join();
+
+    assertThat(cache).containsExactlyEntriesIn(Map.of(b, b, c, c));
+    verify(context.removalListener()).onRemoval(a, a, EXPIRED);
+    verify(context.removalListener()).onRemoval(d, d, EXPLICIT);
+    verifyNoMoreInteractions(context.removalListener());
+
+    context.ticker().advance(Duration.ofSeconds(61));
+    cache.cleanUp();
+    assertThat(cache).isEmpty();
+    verify(context.removalListener()).onRemoval(b, b, EXPIRED);
+    verify(context.removalListener()).onRemoval(c, c, EXPIRED);
+    verifyNoMoreInteractions(context.removalListener());
+  }
+
+  @ParameterizedTest
   @CheckMaxLogLevel(WARN)
   @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },

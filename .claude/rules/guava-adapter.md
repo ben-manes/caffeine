@@ -92,3 +92,54 @@ The two `build` overloads bridge different contracts:
   core's write-through entries, which follow `ConcurrentHashMap`: after another write to the key,
   `setValue` returns the entry's captured value where Guava returns the value its `put` replaced.
   Both install the new value.
+- **`asMap().computeIfAbsent` does not restart the write clock on a hit.** Guava's
+  `Segment.compute` hit branch calls `recordWrite`, resetting write time (and, symmetrically,
+  suppressing a due refresh) even though nothing was replaced; core's fast path returns after
+  `afterRead` without touching write time. Guava's own `expireAfterWrite` contract is "after the
+  entry's creation, or the most recent replacement of its value" — a `computeIfAbsent` hit
+  replaces nothing, so the facade's reading is the one the contract text supports and Guava's
+  `recordWrite` is the implementation artifact. `compute`/`computeIfPresent`/`merge` all advance
+  the write time through their remap on both sides; the divergence is specific to
+  `computeIfAbsent`'s hit branch.
+- **A rejecting executor makes `refresh` throw instead of logging and swallowing.** The
+  absent-key path submits through `CompletableFuture.supplyAsync(..., executor)`, so a
+  synchronous submission rejection (`RejectedExecutionException`) is thrown by `execute` itself
+  and never becomes the completion failure that the refresh machinery logs and consumes; it
+  propagates out of the void `refresh` call. This is the standing **a broken or misconfigured
+  executor is user error** principle applied to the load-submission boundary rather than to
+  `load`/`reload` itself: `Cache.get`'s maintenance submission has the same exposure with the
+  same executor, and Guava has no injected executor to reject in the same way.
+- **`getAll` rejects a null element before loading anything; its bulk siblings filter it.**
+  `getAll`'s eager `ImmutableList.copyOf(keys)` throws `NullPointerException` on a null element
+  before any load runs, leaving the cache exactly as before the call; Guava's null-tolerant
+  lookup instead loads and installs every other key first, then throws
+  `InvalidCacheLoadException` for the null. `getAllPresent` and `invalidateAll(Iterable)` both
+  filter nulls with `Iterables.filter(keys, Objects::nonNull)` and never reach `loadAll` with one.
+  The facade's shape is also the safer one on the one measurable sub-difference: a bulk loader
+  written against Guava has been receiving null keys through the request iterable, and the
+  facade never hands it one. Eager rejection is retained; a caller who wants Guava's
+  partial-installation behaviour should pre-filter the key iterable.
+- **The views' `removeIf` does not retry a lost race; Guava's does.** `EntrySet`/`Values`
+  removal is conditional on the entry's captured value (see *Iteration* in
+  [design-decisions](../docs/design-decisions.md)), so a concurrent write to the same key
+  between the predicate's test and the removal makes that single removal attempt fail and the
+  entry survive. Guava's `removeIf` instead re-reads and re-tests the key in a loop until the
+  removal wins or the predicate stops matching. `ConcurrentHashMap`'s own bulk views behave as
+  the facade does — no retry — so Guava is the outlier here, not the facade; the aggregate
+  returned boolean can be `false` even when other entries were removed. The key set's `removeIf`
+  is unaffected: Guava does not override it either, so both sides fall back to the JDK's
+  iterator-loop default.
+- **`cleanUp()` is not a removal-notification barrier under the default executor.** Guava's
+  `cleanUp` runs pending removal notifications inline; core always hands every notification to
+  the configured executor (`ForkJoinPool.commonPool()` by default), so nothing on the `cleanUp`
+  path joins those tasks. `Caffeine.executor(Runnable::run)` (or
+  `MoreExecutors.directExecutor()`) restores Guava's synchronous, barrier-like delivery exactly —
+  but that workaround does not survive a serialization round trip, which always rebuilds with the
+  default executor.
+- **`invalidate` racing an in-flight load reverses which value survives.** Under Guava,
+  `invalidate(k)` issued while `k` is loading returns immediately and is lost: the load still
+  installs its result afterward. Under the facade the same call blocks on the bin lock for the
+  whole load and then wins, removing the loaded value with `RemovalCause.EXPLICIT`. Neither
+  behaviour is uniformly better — a cache-aside "write through, then invalidate" pattern relies
+  on tolerating Guava's shape, and the facade reverses it — so this is recorded as a neutral
+  migration note rather than a preference.

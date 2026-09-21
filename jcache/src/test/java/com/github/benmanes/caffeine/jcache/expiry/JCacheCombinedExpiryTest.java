@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -64,16 +65,38 @@ final class JCacheCombinedExpiryTest {
         }).build();
   }
 
+  /**
+   * A fixture that publishes synchronously to {@code listener}, for pinning the EXPIRED event
+   * stream (and any subsequent CREATED) alongside the end state that the sibling fixture checks.
+   */
+  private static JCacheFixture jcacheFixture(RecordingListener listener) {
+    var listenerConfig = new MutableCacheEntryListenerConfiguration<>(
+        /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+    return JCacheFixture.builder()
+        .configure(config -> {
+          config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(
+              new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION.toMillis())));
+          config.setExpireAfterWrite(OptionalLong.of(Long.MAX_VALUE));
+          config.setStatisticsEnabled(true);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.addCacheEntryListenerConfiguration(listenerConfig);
+        }).build();
+  }
+
   /* --------------- containsKey --------------- */
 
   @Test
   void containsKey_expired() {
-    try (var fixture = jcacheFixture()) {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
+      listener.events.clear();
 
       assertThat(fixture.jcache().containsKey(KEY_1)).isFalse();
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+      assertThat(listener.events).containsExactly(EventType.EXPIRED);
     }
   }
 
@@ -81,12 +104,15 @@ final class JCacheCombinedExpiryTest {
 
   @Test
   void get_expired() {
-    try (var fixture = jcacheFixture()) {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
+      listener.events.clear();
 
       assertThat(fixture.jcache().get(KEY_1)).isNull();
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+      assertThat(listener.events).containsExactly(EventType.EXPIRED);
     }
   }
 
@@ -104,12 +130,15 @@ final class JCacheCombinedExpiryTest {
 
   @Test
   void getAll_expired() {
-    try (var fixture = jcacheFixture()) {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
+      listener.events.clear();
 
       assertThat(fixture.jcache().getAll(Set.of(KEY_1))).isEmpty();
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+      assertThat(listener.events).containsExactly(EventType.EXPIRED);
     }
   }
 
@@ -117,16 +146,52 @@ final class JCacheCombinedExpiryTest {
 
   @Test
   void put_expired() {
-    try (var fixture = jcacheFixture()) {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
+      listener.events.clear();
 
       fixture.jcache().put(KEY_1, VALUE_2);
       Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
       assertThat(expirable).isNotNull();
       assertThat(expirable.getExpireTimeMillis())
           .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+      assertThat(listener.events).containsExactly(EventType.EXPIRED, EventType.CREATED).inOrder();
+    }
+  }
 
+  @Test
+  void getAndPut_expired() {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
+      listener.events.clear();
+
+      assertThat(fixture.jcache().getAndPut(KEY_1, VALUE_2)).isNull();
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.get()).isEqualTo(VALUE_2);
+      assertThat(listener.events).containsExactly(EventType.EXPIRED, EventType.CREATED).inOrder();
+    }
+  }
+
+  /* --------------- putAll --------------- */
+
+  @Test
+  void putAll_expired() {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
+      listener.events.clear();
+
+      fixture.jcache().putAll(Map.of(KEY_1, VALUE_2));
+      Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(expirable.get()).isEqualTo(VALUE_2);
+      assertThat(listener.events).containsExactly(EventType.EXPIRED, EventType.CREATED).inOrder();
     }
   }
 
@@ -134,9 +199,11 @@ final class JCacheCombinedExpiryTest {
 
   @Test
   void putIfAbsent_expired() {
-    try (var fixture = jcacheFixture()) {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
       assertThat(fixture.jcache().putIfAbsent(KEY_1, VALUE_1)).isTrue();
       fixture.advancePastExpiry();
+      listener.events.clear();
 
       assertThat(fixture.jcache().putIfAbsent(KEY_1, VALUE_2)).isTrue();
       Expirable<Integer> expirable = getExpirable(fixture.jcache(), KEY_1);
@@ -144,6 +211,7 @@ final class JCacheCombinedExpiryTest {
       assertThat(expirable.get()).isEqualTo(VALUE_2);
       assertThat(expirable.getExpireTimeMillis())
           .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
+      assertThat(listener.events).containsExactly(EventType.EXPIRED, EventType.CREATED).inOrder();
     }
   }
 
@@ -151,9 +219,11 @@ final class JCacheCombinedExpiryTest {
 
   @Test
   void remove_expired() {
-    try (var fixture = jcacheFixture()) {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
+      listener.events.clear();
 
       var stats = JCacheFixture.getStatistics(fixture.jcache());
       long removalsBefore = stats.getCacheRemovals();
@@ -162,14 +232,17 @@ final class JCacheCombinedExpiryTest {
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
       assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore);
       assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
+      assertThat(listener.events).containsExactly(EventType.EXPIRED);
     }
   }
 
   @Test
   void removeConditionally_expired() {
-    try (var fixture = jcacheFixture()) {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
+      listener.events.clear();
 
       var stats = JCacheFixture.getStatistics(fixture.jcache());
       long removalsBefore = stats.getCacheRemovals();
@@ -178,6 +251,7 @@ final class JCacheCombinedExpiryTest {
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
       assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore);
       assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
+      assertThat(listener.events).containsExactly(EventType.EXPIRED);
     }
   }
 
@@ -185,34 +259,88 @@ final class JCacheCombinedExpiryTest {
 
   @Test
   void replace_expired() {
-    try (var fixture = jcacheFixture()) {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
+      listener.events.clear();
 
       assertThat(fixture.jcache().replace(KEY_1, VALUE_2)).isFalse();
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+      assertThat(listener.events).containsExactly(EventType.EXPIRED);
     }
   }
 
   @Test
   void replaceConditionally_expired() {
-    try (var fixture = jcacheFixture()) {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
+      listener.events.clear();
 
       assertThat(fixture.jcache().replace(KEY_1, VALUE_1, VALUE_2)).isFalse();
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+      assertThat(listener.events).containsExactly(EventType.EXPIRED);
     }
   }
 
   @Test
   void getAndReplace_expired() {
-    try (var fixture = jcacheFixture()) {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
+      listener.events.clear();
 
       assertThat(fixture.jcache().getAndReplace(KEY_1, VALUE_2)).isNull();
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+      assertThat(listener.events).containsExactly(EventType.EXPIRED);
+    }
+  }
+
+  /* --------------- getAndRemove --------------- */
+
+  @Test
+  void getAndRemove_expired() {
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
+      listener.events.clear();
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long removalsBefore = stats.getCacheRemovals();
+      long evictionsBefore = stats.getCacheEvictions();
+      assertThat(fixture.jcache().getAndRemove(KEY_1)).isNull();
+      assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+      assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore);
+      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
+      assertThat(listener.events).containsExactly(EventType.EXPIRED);
+    }
+  }
+
+  /* --------------- removeAll --------------- */
+
+  @Test
+  void removeAll_setOverload_expired() {
+    // jcache.136: the set overload shares removeNoCopyOrAwait with the single-key removes, so a
+    // lazily expired prior must publish EXPIRED (not REMOVED) and add no removal, the same as
+    // remove_expired, rather than the no-argument overload's own native-key-set-filtered path
+    var listener = new RecordingListener();
+    try (var fixture = jcacheFixture(listener)) {
+      fixture.jcache().put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
+      listener.events.clear();
+
+      var stats = JCacheFixture.getStatistics(fixture.jcache());
+      long removalsBefore = stats.getCacheRemovals();
+      long evictionsBefore = stats.getCacheEvictions();
+      fixture.jcache().removeAll(Set.of(KEY_1));
+      assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
+      assertThat(stats.getCacheRemovals()).isEqualTo(removalsBefore);
+      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
+      assertThat(listener.events).containsExactly(EventType.EXPIRED);
     }
   }
 

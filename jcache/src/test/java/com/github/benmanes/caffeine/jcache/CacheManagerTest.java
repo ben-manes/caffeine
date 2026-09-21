@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache;
 
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.await;
+import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.lang.Thread.State.BLOCKED;
@@ -42,6 +43,7 @@ import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
+import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.configuration.MutableConfiguration;
 import javax.cache.spi.CachingProvider;
 import javax.management.ObjectName;
@@ -94,6 +96,16 @@ final class CacheManagerTest {
   void jmxBeanIsRegistered_getCache() throws OperationsException {
     try (var fixture = JCacheFixture.builder().build()) {
       checkConfigurationJmx(requireNonNull(fixture.cacheManager().getCache("test-cache")));
+    }
+  }
+
+  @Test
+  void getCache_nullValueType_throwsNullPointer() {
+    // keyType and valueType are validated independently; a non-null keyType with a null
+    // valueType must still reach and fail its own check
+    try (var fixture = JCacheFixture.builder().build()) {
+      assertThrows(NullPointerException.class, () ->
+          fixture.cacheManager().getCache("test-cache", Integer.class, nullRef()));
     }
   }
 
@@ -161,6 +173,31 @@ final class CacheManagerTest {
     };
     try (var fixture = JCacheFixture.builder().build()) {
       assertThat(fixture.cacheManager().createCache("minimal", config)).isNotNull();
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void createCache_configurationIsSnapshotted() {
+    // resolveConfigurationFor copies the caller's MutableConfiguration; mutating the original
+    // afterwards must not retroactively change the created cache's own configuration
+    var listenerConfig = new MutableCacheEntryListenerConfiguration<Integer, Integer>(
+        /* listenerFactory= */ Mockito::mock, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+    var config = new MutableConfiguration<Integer, Integer>()
+        .setTypes(Integer.class, Integer.class)
+        .setReadThrough(false)
+        .setStatisticsEnabled(false);
+    try (var fixture = JCacheFixture.builder().build();
+         var cache = fixture.cacheManager().createCache("snapshotted", config)) {
+      config.setReadThrough(true);
+      config.setStatisticsEnabled(true);
+      config.addCacheEntryListenerConfiguration(listenerConfig);
+
+      var resolved = cache.getConfiguration(CompleteConfiguration.class);
+      assertThat(resolved.isReadThrough()).isFalse();
+      assertThat(resolved.isStatisticsEnabled()).isFalse();
+      assertThat(resolved.getCacheEntryListenerConfigurations()).isEmpty();
     }
   }
 

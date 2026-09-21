@@ -51,6 +51,7 @@ import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -74,6 +75,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
@@ -85,13 +87,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
+import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.CacheSpec.StartTime;
+import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
 import com.github.benmanes.caffeine.testing.Int;
 import com.google.common.collect.HashBiMap;
@@ -961,6 +967,100 @@ final class ExpireAfterVarTest {
   void computeIfAbsent_nullValue(Map<Int, Int> map, CacheContext context) {
     map.computeIfAbsent(context.absentKey(), key -> null);
     verifyNoInteractions(context.expiry());
+  }
+
+  @ParameterizedTest
+  @SuppressWarnings("unchecked")
+  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine,
+      compute = Compute.SYNC, keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      stats = Stats.DISABLED, maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
+      loader = Loader.DISABLED, executor = CacheExecutor.DIRECT,
+      removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      refreshAfterWrite = Expire.DISABLED)
+  void computeIfAbsent_recoversLive_readExpiryZero(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong())).thenReturn(0L);
+    Int key = context.absentKey();
+    Int replacement = intern(context.absentValue().add(1));
+    cache.put(key, context.absentValue());
+    var localCache = (BoundedLocalCache<Int, Int>) cache.asMap();
+    var node = requireNonNull(localCache.data.get(localCache.nodeFactory.newLookupKey(key)));
+    var reader = new AtomicReference<@Nullable Thread>();
+    var mappings = new AtomicInteger();
+    context.ticker().advance(Duration.ofMinutes(2));
+
+    CompletableFuture<Int> result;
+    synchronized (node) {
+      result = CompletableFuture.supplyAsync(() -> {
+        reader.set(Thread.currentThread());
+        return cache.get(key, k -> {
+          mappings.incrementAndGet();
+          return context.absentValue();
+        });
+      }, executor);
+      await().until(() -> {
+        var thread = reader.get();
+        return (thread != null) && (thread.getState() == BLOCKED);
+      });
+      cache.put(key, replacement);
+      clearInvocations(context.expiry());
+    }
+    await().until(result::isDone);
+
+    assertThat(result).succeedsWith(replacement);
+    assertThat(mappings.get()).isEqualTo(0);
+    verify(context.expiry()).expireAfterRead(eq(key), eq(replacement), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+    assertThat(cache.policy().getIfPresentQuietly(key)).isNull();
+  }
+
+  @ParameterizedTest
+  @SuppressWarnings("unchecked")
+  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine,
+      compute = Compute.SYNC, keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      stats = Stats.DISABLED, maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
+      loader = Loader.DISABLED, executor = CacheExecutor.DIRECT,
+      removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      refreshAfterWrite = Expire.DISABLED)
+  void computeIfAbsent_recoversLive_readExpiryThrows(Cache<Int, Int> cache, CacheContext context) {
+    var failure = new ExpirationException();
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong())).thenThrow(failure);
+    Int key = context.absentKey();
+    Int replacement = intern(context.absentValue().add(1));
+    cache.put(key, context.absentValue());
+    var localCache = (BoundedLocalCache<Int, Int>) cache.asMap();
+    var node = requireNonNull(localCache.data.get(localCache.nodeFactory.newLookupKey(key)));
+    var reader = new AtomicReference<@Nullable Thread>();
+    var mappings = new AtomicInteger();
+    context.ticker().advance(Duration.ofMinutes(2));
+
+    CompletableFuture<Int> result;
+    synchronized (node) {
+      result = CompletableFuture.supplyAsync(() -> {
+        reader.set(Thread.currentThread());
+        return cache.get(key, k -> {
+          mappings.incrementAndGet();
+          return context.absentValue();
+        });
+      }, executor);
+      await().until(() -> {
+        var thread = reader.get();
+        return (thread != null) && (thread.getState() == BLOCKED);
+      });
+      cache.put(key, replacement);
+      clearInvocations(context.expiry());
+    }
+    await().until(result::isDone);
+
+    var thrown = assertThrows(CompletionException.class, result::join);
+    assertThat(thrown).hasCauseThat().isSameInstanceAs(failure);
+    assertThat(mappings.get()).isEqualTo(0);
+    verify(context.expiry()).expireAfterRead(eq(key), eq(replacement), anyLong(), anyLong());
+    verifyNoMoreInteractions(context.expiry());
+    assertThat(cache.policy().getIfPresentQuietly(key)).isEqualTo(replacement);
   }
 
   @ParameterizedTest

@@ -217,6 +217,11 @@
     <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AbstractCacheView"/>
+    <Method name="resolve"/>
+    <Bug pattern="ITC_INHERITANCE_TYPE_CHECKING"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsyncBulkCompleter"/>
     <Method name="error"/>
     <Bug pattern="
@@ -499,6 +504,11 @@
   <Match>
     <Class name="com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry"/>
     <Method name="getValue"/>
+    <Bug pattern="BC_IMPOSSIBLE_INSTANCEOF"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.event.GuardedCacheEntryEventFilter"/>
+    <Method name="evaluate"/>
     <Bug pattern="BC_IMPOSSIBLE_INSTANCEOF"/>
   </Match>
 

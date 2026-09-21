@@ -843,10 +843,10 @@ Non-starved samples are the pure density step. The additions:
    `step = min(-0.0, floor − window)` directly (the negative zero keeps a wall-blocked restart
    striding into the wall rather than flipping upward off positive zero's sign), so a
    floor-blocked down-walk zeroes its step, re-seeds into the wall each sample, and is
-   re-clamped, burning budget in place (the stall note under State); and a
-   refractory (blind-corner, starved, waiting) sample **is** a hold unless the audit clock is due,
-   in which case the re-test takes the sample: it decrements the countdown
-   and returns without a steering step (only the below-floor lift, item 7 — one definition,
+   re-clamped, burning budget in place (the stall note under State); and
+   only samples routed to the blind-corner refractory hold decrement its countdown.
+   A due audit takes the sample without decrementing it. The hold returns without a steering
+   step (only the below-floor lift, item 7 — one definition,
    `Reading.atLeastFloor`, shared with the steering step so the two cannot drift apart). It used to fall
    through to the density arm, which is what the dead-phase rider exploited — a handful of
    window hits in an otherwise blank sample authorized the maximum step while the probe

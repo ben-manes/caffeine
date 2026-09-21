@@ -17,6 +17,10 @@ A ruling is about a mechanism and a consequence. If you have the same mechanism 
 does not cover, that is a new finding and the entry does not dispose of it. Say which part
 differs.
 
+Check claimed public wording mismatches against the public text as well as the implementation
+ruling. Acceptance of behavior does not establish that the public text describes it, but silence
+alone is not a contradiction. Preserve explicit decisions not to add qualifications or warnings.
+
 Rulings can be overturned. Address the stated reason when new evidence changes the consequence,
 trigger, or configuration.
 
@@ -626,18 +630,16 @@ Read `jsr107-conformance.md`'s topic sections with this section.
   NPE is deliberate null-hostility on a direct query.
 - A loader that loads another key, deadlocking two threads on the bin lock or failing with
   CHM's `Recursive update`, where native Guava releases its segment lock before loading.
-  Guava refuses recursive loading too, just at a different granularity:
-  `LocalCache.waitForLoadingValue` guards with `checkState(!Thread.holdsLock(e), "Recursive
-  load of: %s", key)`, added by Ben after it used to deadlock. So the difference is per-entry
-  against per-bin, not permitted against forbidden, and "but Guava supports it" is not
-  available as a counter-argument.
-  `LoadingCache.get`'s own javadoc is the ruling: the computation "must not modify this cache
-  during the computation", and the documented `IllegalStateException` is scoped to a
-  **detectably** recursive update, which leaves the undetectable cases unpromised rather than
-  broken. Recursive loading is an implementation hole left undefined, not a contract, and
-  Guava never promised it either. Drop-in compatibility is about honoring their API contracts,
-  not reproducing their implementation: Guava is not linearizable and Caffeine does not give
-  that up to match. Migrating users do hit it. A `reload` that refreshes its own key fails the
+  Caffeine's `LoadingCache.get` forbids modifying this cache during the computation, and its
+  documented `IllegalStateException` covers only detectably recursive updates. The facade
+  retains this restriction as an accepted compatibility limit, including a loader or `Callable`
+  that writes or invalidates its own key. Detection is best-effort, not a safety guarantee.
+  Guava's `LoadingCache.get` and `Cache.get(Callable)` do not state Caffeine's prohibition.
+  Guava does detect some same-entry recursive loads: `LocalCache.waitForLoadingValue` checks
+  `Thread.holdsLock(e)` and throws `Recursive load of: ...` when the caller holds that entry's
+  monitor. This does not reject a different key solely for sharing a segment, and plain `put`
+  does not use that loading path. Guava's successful cases do not change the facade's accepted
+  restriction. Migrating users do hit it. A `reload` that refreshes its own key fails the
   same way, because the facade calls `reload` inside the refresh registration, while native
   Guava's loading reference turns the nested refresh into a no-op.
 

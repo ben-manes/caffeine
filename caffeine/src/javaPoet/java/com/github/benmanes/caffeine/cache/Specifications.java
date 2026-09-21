@@ -51,11 +51,8 @@ public final class Specifications {
   public static final TypeName referenceKeyType = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
 
-  public static final ParameterSpec keySpec = ParameterSpec.builder(kTypeVar, "key").build();
   public static final ParameterSpec keyRefSpec =
       ParameterSpec.builder(Object.class, "keyReference").build();
-  public static final ParameterSpec keyRefQueueSpec =
-      ParameterSpec.builder(kRefQueueType, "keyReferenceQueue").build();
 
   public static final ParameterSpec valueSpec = ParameterSpec.builder(vTypeVar, "value").build();
   public static final ParameterSpec valueRefQueueSpec =

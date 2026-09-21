@@ -55,6 +55,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   }
 
   @Override
+  @SuppressWarnings("PMD.IdenticalCatchBranches")
   public @Nullable V get(K key) {
     requireOperable();
     V value;
@@ -67,6 +68,9 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       var error = new CacheException(e);
       awaitAndSuppressFailure(error);
       throw error;
+    } catch (Throwable t) {
+      awaitAndSuppressFailure(t);
+      throw t;
     }
     rethrowListenerFailure(awaitSynchronousFailure());
     return value;
@@ -121,6 +125,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   }
 
   @Override
+  @SuppressWarnings("PMD.IdenticalCatchBranches")
   public Map<K, V> getAll(Set<? extends K> keys) {
     requireOperable();
     boolean statsEnabled = statistics.isEnabled();
@@ -163,6 +168,9 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       var error = new CacheException(e);
       awaitAndSuppressFailure(error);
       throw error;
+    } catch (Throwable t) {
+      awaitAndSuppressFailure(t);
+      throw t;
     }
     rethrowListenerFailure(awaitSynchronousFailure());
     return result;

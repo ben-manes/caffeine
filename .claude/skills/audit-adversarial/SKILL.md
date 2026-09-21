@@ -123,9 +123,15 @@ testing (Fray, LinCheck, JCStress) rather than guessing.
 
 ## Step 5: Adjudicate against design docs
 
-NOW read `.claude/docs/design-decisions.md` and `.claude/rules/design-decisions.md`.
-For each finding, check: is this an intentional trade-off? Reclassify as:
-- **confirmed** — not explained by design docs
+NOW read `.claude/docs/design-decisions.md`, `.claude/rules/design-decisions.md`,
+the relevant module rules, and `.claude/docs/ruled-out.md`'s standing principles
+and module section. For JCache, consult the relevant topic in
+`.claude/docs/jsr107-conformance.md` and verify surviving conformance claims
+against its JSR-107 1.1.1 specification and API sources. State any normative
+source that was not consulted. For each finding, check whether it is an
+intentional trade-off and reclassify it:
+- **confirmed** — supported evidence violates an applicable contract or invariant;
+  absence of a design explanation alone is insufficient
 - **intentional** — documented design decision, not a defect
 - **ambiguous** — needs more evidence or maintainer input
 

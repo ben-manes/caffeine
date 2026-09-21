@@ -235,7 +235,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
         // readers from prematurely scheduling another reload
         boolean owned = (cache.refreshes().get(keyReference) == reloading);
         if (owned && (currentValue == oldValue)) {
-          return (currentValue == null) && (newValue == null) ? null : newValue;
+          return newValue;
         }
         // When a successor refresh owns the registration, leave it intact so a stale
         // completion's by-key discard cannot steal the successor's token (its fresh value

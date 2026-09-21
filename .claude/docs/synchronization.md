@@ -222,7 +222,7 @@ maintenance). One that blocks stalls maintenance, then writers once the write bu
 - Drained under evictionLock during maintenance (single consumer)
 
 ### Write buffer (MpscGrowableArrayQueue)
-- Guaranteed delivery: if offer fails after retries, acquires evictionLock
+- Guaranteed delivery: if offer fails, acquires evictionLock
   and runs maintenance inline
 - Tasks: AddTask, UpdateTask, RemovalTask
 - Drained under evictionLock during maintenance (single consumer)

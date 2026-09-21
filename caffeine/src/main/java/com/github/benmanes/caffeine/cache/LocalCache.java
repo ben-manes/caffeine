@@ -203,8 +203,8 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
         statsCounter().recordLoadFailure(statsTicker().read() - startTime);
         throw t;
       }
-      long loadTime = statsTicker().read() - startTime;
       if (recordLoad) {
+        long loadTime = statsTicker().read() - startTime;
         if (value == null) {
           statsCounter().recordLoadFailure(loadTime);
         } else {
@@ -227,7 +227,7 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
       BiFunction<? super T, ? super U, ? extends @Nullable R> statsAware(
           BiFunction<? super T, ? super U, ? extends @Nullable R> remappingFunction,
           boolean recordLoad, boolean recordLoadFailure) {
-    if (!isRecordingStats()) {
+    if (!isRecordingStats() || (!recordLoad && !recordLoadFailure)) {
       return remappingFunction;
     }
     return (t, u) -> {
@@ -241,8 +241,8 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
         }
         throw e;
       }
-      long loadTime = statsTicker().read() - startTime;
       if (recordLoad) {
+        long loadTime = statsTicker().read() - startTime;
         if (result == null) {
           statsCounter().recordLoadFailure(loadTime);
         } else {

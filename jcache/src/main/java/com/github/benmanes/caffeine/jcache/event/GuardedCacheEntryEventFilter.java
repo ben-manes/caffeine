@@ -42,6 +42,7 @@ final class GuardedCacheEntryEventFilter<K, V> implements CacheEntryEventFilter<
   }
 
   @Override
+  @SuppressWarnings("PMD.AvoidInstanceofChecksInCatchClause")
   public boolean evaluate(CacheEntryEvent<? extends K, ? extends V> event) {
     try {
       return delegate.evaluate(event);
@@ -49,6 +50,9 @@ final class GuardedCacheEntryEventFilter<K, V> implements CacheEntryEventFilter<
       logger.log(Level.WARNING, "", e);
       return false;
     } catch (Throwable t) {
+      if (t instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       logger.log(Level.ERROR, "", t);
       return false;
     }

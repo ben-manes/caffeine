@@ -56,7 +56,7 @@ referent around each lookup, which pins that instance to the thread. That idea w
 rejected in issue #294 over virtual threads, where an instance per virtual thread is unbounded,
 and over classloader pinning. A young-generation allocation is the accepted trade.
 
-**The policy weight is 64 bits, packed into the node's `metadata` word.** Reordered update tasks
+**Policy weight uses a signed 62-bit payload returned as a `long`.** Reordered update tasks
 are normal: the value is written under the node monitor but the task is queued after it is
 released, so a second writer can queue first. The node's own field then walks past the true value
 and back, which the design tolerates. What it cannot tolerate is truncation. Once the intermediate
@@ -67,10 +67,11 @@ nothing replays that copy: the node settles at its real weight while `windowWeig
 drains it every cycle, and every later arrival goes straight to probation, so the admission window
 is dead for the life of the cache. The released 3.2.4 and 3.2.5 reproduce it, so it is not new.
 A sign test on the transfer does not close it: half the wraps land positive, where the value is a
-plausible weight. The excursion is bounded by the buffered tasks for one node, so about
-`WRITE_BUFFER_MAX x Integer.MAX_VALUE`, or 2^45; 34 bits was the most a witness reached.
-`policyWeight` therefore holds the low half and `metadata`'s spare bits the high half, which costs
-nothing in layout (JOL over all 147 node classes is unchanged, where a plain `long` field grows the
+plausible weight. The write buffer bounds queued contributions, but not writers paused before
+publishing their updates, including inside inline removal listeners. The historical witness
+reached 34 bits; no practically reachable overflow of the packed payload has been demonstrated.
+`policyWeight` holds the low 32 bits and `metadata`'s spare 30 bits the signed high portion, at no
+extra layout cost (JOL over all 147 node classes is unchanged, where a plain `long` field grows the
 16 strong-value weighted classes by 8 bytes). Pinned by
 `BoundedLocalCacheTest.put_reorderedUpdates_leaveNoRegionResidue`, which orders two writers through
 a removal listener on a direct executor. Don't re-narrow the field, and don't guard the transfer
@@ -246,6 +247,9 @@ worth not flagging:
   candidate (e.g. `quota = 1` while all entries weigh 100), the loop moves nothing and
   re-stores the same value, so the window stays put until a real sample overwrites
   `adjustment`. The window genuinely cannot grow by a fraction of an indivisible heavy entry.
+  `increaseWindow` may already have demoted protected entries against its provisional cap.
+  Giving back the quota restores the caps, not those entries' positions; later promotion depends
+  on accesses and available protected capacity.
 - **Probation is the implicit slack region.** The transfer draws from both probation and
   protected but only decrements `mainProtectedWeightedSize` for protected moves, so probation
   absorbs the difference between the window-maximum shift and the protected weight moved
@@ -317,11 +321,14 @@ admission frequency and window-attributed one synthetic, write-buffer-lossless h
 measured at up to −38.6pp (w50) on the density climber and −12.7pp (corda+loop stress @ 512) on
 the reactive climber. A
 material quiet update (weight changed, or the write time moved beyond the 1s tolerance) routes
-through the UpdateTask and still reorders the deques; an immaterial one (same weight, within
-tolerance — the common fast completion) skips policy work entirely, which is sound because the
-entry's position and write time are at most tolerance-stale from its insertion. User-initiated
-writes remain loud by design. Don't re-add access recording to the completion path, and don't
-flag the immaterial-completion skip as a missing reorder/refresh.
+through the UpdateTask and still reorders the deques; an immaterial one skips policy work.
+With access expiry alone, a slow same-weight completion can leave a live head ahead of older
+expired entries when the tail is newer. Cleanup can defer reaping those entries until the head
+is reordered or expires; reads still filter them. This is the same accepted delayed reaping as
+when a read-buffer reorder is dropped. User-initiated writes remain loud by design. Don't re-add
+access recording to the completion path, and don't flag the immaterial-completion skip as a
+missing reorder/refresh. Pinned by
+`ExpireAfterAccessTest.quietCompletion_staleOrder_defersPhysicalExpiration`.
 
 The `refreshIfNeeded` completion's remap is quiet the same way (`RemapHints.quietly`, honored at
 `remap`'s update dispatch): the triggering read already recorded its access, so a loud reload
@@ -644,11 +651,11 @@ would otherwise evict the whole backlog under `evictionLock`, stalling any write
 overflows the write buffer and assists (post "Assist maintenance directly when the write buffer is full"). The work isn't reduced, only
 sliced, and since eviction runs async by default the slicing keeps a single cycle from
 blocking a thread too long. The **timer wheel** rewinds `nanos` to `previousTimeNanos` when
-its budget is exhausted (reusing the exception-rewind path) and re-links the unprocessed
-bucket remainder in place (mirroring the catch block, but from `next` since the evicted node
-is gone), so the next advance reprocesses the backlog — already-drained buckets rescan
-cheaply, and the eviction check keeps non-expired nodes from being evicted early. A capped
-cycle can briefly leave expired entries counting toward `weightedSize`, so a same-cycle
+its budget is exhausted and restores the unprocessed bucket remainder, so the next advance
+reprocesses the backlog. Empty buckets rescan cheaply, but a large advance can cause
+rescheduled survivors to be revisited after a rewind. The eviction check keeps non-expired
+nodes from being evicted early. A capped cycle can briefly leave expired entries counting
+toward `weightedSize`, so a same-cycle
 `evictEntries` could pick a live victim over an expired one; negligible — frequency-based
 selection favors the cold expired entries and it self-corrects next cycle. Don't flag the
 cap as under-expiring, and don't remove the `PROCESSING_TO_REQUIRED` re-arm.
@@ -672,7 +679,7 @@ Skipping is the correct action, not a fallback: `transfer` appends with `offerLa
 entry is already at its target's MRU end with nothing stale to repair. `expireAfterWriteEntries`
 needs only the `contains` half, since the write-order links are exclusive to the one write-order
 deque. Pinned by `BoundedLocalCacheTest.maintenance_recursive_accessOrder` / `_writeOrder` and
-`expireAfterAccess_transferredDuringScan`. Don't reduce either scan back to a bare `moveToBack`,
+`expireAfterAccess_promotedDuringScan`. Don't reduce either scan back to a bare `moveToBack`,
 and don't drop the queue-type argument as redundant with `contains`.
 
 **Expiration scans re-check their captured tail after callbacks.** A nested cycle can remove or
@@ -750,11 +757,12 @@ describes costs a weight swing that telescopes back to zero. It ends with
 **Checked-exception conversion restores interruption.** Kotlin, Scala, and Groovy callbacks
 can throw `InterruptedException` through `Function`, `BiFunction`, or `CacheLoader`; checked
 exceptions are a javac rule, not a JVM constraint. `Caffeine.toUnchecked` rethrows `Error`,
-returns `RuntimeException` by identity, restores the interrupt for `InterruptedException`
-(JDK interruptible waits clear it when throwing), and otherwise wraps in `CompletionException`.
-Conversion is used by loader chains, catch-commit-rethrow for COLLECTED/EXPIRED recomputation, and
-`AsyncBulkCompleter`. Absent-key paths and `UnboundedLocalCache` propagate unchanged and
-need no conversion-side repair.
+returns `RuntimeException` by identity, restores the current thread's interrupt status for
+`InterruptedException` (JDK interruptible waits clear it when throwing), and otherwise wraps in
+`CompletionException`. The default `CacheLoader.asyncLoad` converts inside its supplier, on
+whichever thread the executor uses. Conversion is used by loader chains, catch-commit-rethrow
+for COLLECTED/EXPIRED recomputation, and `AsyncBulkCompleter`. Absent-key paths and
+`UnboundedLocalCache` propagate unchanged and need no conversion-side repair.
 
 **Catch-commit-rethrow pattern** in `doComputeIfAbsent` and `remap`. Both catch
 `Throwable`, not just RuntimeException. When user code
@@ -791,12 +799,12 @@ predicate; the exit that skips the work is the one that says so.
 user `compute`/`merge` remapping function returns the same value instance as the
 current value, `setValue` is skipped, but `weight`, `accessTime`, `variableTime`,
 and `writeTime` still update. This is intentional: `compute` is a mutation API,
-so a same-value return is still treated as a write for eviction-policy purposes
-(the entry's age/weight/access are refreshed). The only documented full no-op is
-the explicit `preserveTimestamps` path. A reader expecting
-`compute(k, (k, v) -> v)` to leave eviction ordering undisturbed would be
-surprised; the source does not call this out, so this entry is the canonical
-place the behavior is documented (preferred over a source comment).
+so a same-value return is still treated as a write for expiration, refresh eligibility,
+and eviction policy, subject to timestamp tolerance. The only documented full no-op is the
+explicit `preserveTimestamps` path. A reader expecting `compute(k, (k, v) -> v)` to leave eviction
+ordering and expiration deadlines unchanged would be surprised; the source does not call this
+out, so this entry is the canonical place the behavior is documented (preferred over a source
+comment).
 
 **Value-bearing user callbacks propagate; fire-and-forget callbacks are guarded.**
 `Ticker`, `Weigher`, `Expiry`, and loaders return information the cache needs, with no safe
@@ -968,6 +976,9 @@ but updated at different times — this is intentional for the telescoping sum t
 being deliberately dead-guard-free are a **matched pair**: a late-applied `UpdateTask` adds back
 exactly the δ that `makeDead` over-subtracted. Don't add an `isDead` guard to `UpdateTask` and
 don't switch `makeDead` to `policyWeight` — either one alone breaks the cancellation.
+Both `retire()` and `die()` preserve the queue-type bits, so late updates use the same region
+classification as `makeDead`. The same reconciliation applies to global and regional weighted
+sizes; until late updates arrive, a region counter need not equal its deque's policy-weight sum.
 Because racing updates offer their `UpdateTask`s outside the node lock, out-of-order
 drains can leave a live node's `policyWeight` transiently negative; the climb transfer
 loops then charge that weight to their quota and over-shift the region caps beyond the
@@ -988,11 +999,12 @@ The field is plain (not volatile), guarded by evictionLock.
 
 **No recursive computations.** Writing to the cache from inside an atomic
 compute/computeIfAbsent/merge callback violates ConcurrentHashMap's contract; this is
-not a Caffeine bug. Detection is best-effort, not guaranteed: only recursion that lands
-on an empty bin's ReservationNode reliably throws `IllegalStateException("Recursive
-update")` (surfaced raw, unwrapped). Recursion into a populated or treeified bin is
-undetected and can silently corrupt (lost inserts, double count updates, clobbered
-writes). Never rely on the ISE as a safety net. During a refresh completion this can
+not a Caffeine bug. Detection is best-effort: encountering an empty bin's ReservationNode
+throws `IllegalStateException("Recursive update")` (surfaced raw, unwrapped), as does a
+recursive append detected by `compute` or `computeIfAbsent` in a populated linked bin.
+Other recursive updates, including tree-bin operations, can go undetected and silently
+corrupt (lost inserts, double count updates, clobbered writes). Never rely on the ISE as a
+safety net. During a refresh completion this can
 orphan the key's `refreshes` token (suppressing its auto-refresh) only if `data.compute`
 throws *before* `remap`'s lambda — a broken `hashCode` or a rare cross-bin ISE (same-key
 recursion silently re-enters a populated bin instead); in-lambda throws self-clean on the
@@ -1228,10 +1240,11 @@ would leave `ConcurrentHashMap` itself asymmetric.
 
 **Read paths nudge `scheduleDrainBuffers()` when they observe an expired/collected
 entry** (`getIfPresent`, `containsKey`, `containsValue`, `getAllPresent`, the iterator,
-and the key/value/entry spliterators), so lazily-detected garbage is reclaimed promptly;
-the nudge is skipped on a plain miss and is a cheap flag check when maintenance is
-already running. On a caller-runs executor the nudge runs maintenance **inline**, so an
-in-progress scan of `data.values()` can have a node reaped underneath it — e.g.
+and the key/value/entry spliterators), so lazily-detected garbage is reclaimed promptly.
+On a plain miss, `getIfPresent` still assists when the status is `REQUIRED`; `getAllPresent`
+and membership reads have no corresponding absent-entry assist. The nudge is a cheap flag
+check when maintenance is already running. On a caller-runs executor it runs maintenance **inline**,
+so an in-progress scan of `data.values()` can have a node reaped underneath it — e.g.
 `containsValue` is an O(n) scan and the internal `LocalCacheSubject` validator calls it
 *per node* while iterating `data.values()`; a weak key collected mid-scan is then
 drained, correctly removing and killing a node the weakly-consistent iterator still
@@ -1604,10 +1617,11 @@ the earlier removal does not discharge disposal of this new offer. Do not suppre
 with the captured old argument. Disposal after a user `Weigher` or `Expiry` throws during
 installation is outside the cache's responsibilities; keep the existing failure cleanup.
 
-The one exception is a **query-style no-op**, flagged with `RemapHints.preserveRefresh`:
-`putIfAbsent` on a present key, a non-matching conditional `remove`/`replace`, or a
-same-instance `compute` return routed through the async synchronous view. These don't
-actually mutate the entry, so they leave a racing refresh intact. Both
+The one exception is an internal **query-style no-op**, flagged with `RemapHints.preserveRefresh`:
+`putIfAbsent` on a present key, a non-matching conditional `remove`/`replace`, or an async-view
+retry that returns an unfinished future without invoking the user's remapping function. Public
+remapping functions cannot set these hints; returning the same user value is still a write.
+These internal no-op paths leave a racing refresh intact. Both
 `BoundedLocalCache.remap` and `UnboundedLocalCache.remap` honor the hint (a same-instance
 return with `preserveRefresh` set skips `discardRefresh`); a real mutation still discards.
 The unbounded cache used to drop the hint and cancel the reload — the sibling caches must

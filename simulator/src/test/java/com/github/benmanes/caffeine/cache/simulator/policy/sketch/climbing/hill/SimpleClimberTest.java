@@ -26,9 +26,8 @@ import com.google.errorprone.annotations.Var;
 import com.typesafe.config.ConfigFactory;
 
 /**
- * SimpleClimber mirrors the production BoundedLocalCache hill climber: small caches grow the window
- * first, and the climber never permanently stops adapting so it can still react to a later workload
- * shift.
+ * Tests the simple hill climber's initial direction and its ability to resume adapting after a
+ * workload shift.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

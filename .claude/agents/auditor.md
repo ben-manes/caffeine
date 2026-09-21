@@ -164,9 +164,10 @@ found against what you predicted — any mismatch is a signal to investigate.
 observation as high-confidence, medium-confidence, or "would classify as by-design
 but cannot confirm from source alone." Report all three in their own labeled
 sections. If a suspicion resembles a known design decision, explicitly note which
-rule it matches — but still surface it as a documentation gap if the source code
-alone would not make the intent clear to a fresh reader. The user adjudicates; your
-job is not to pre-filter.
+rule it matches and retain the observation. During adjudication, propose a documentation
+clarification only when it adds useful information beyond existing guidance; respect prior
+decisions declining that same disclosure or wording. The user adjudicates; an intentional-looking
+observation still belongs in the report.
 
 **Existing tests are evidence of intent, not validation of correctness.** When
 you find a candidate finding and there is a test in the same area, do not
@@ -290,6 +291,11 @@ Agent(subagent_type=general-purpose, model="opus"):
    3. ASSUMPTION ATTACKS: For each assumption in the reflection, determine whether
       it is actually guaranteed by the code or could be violated.
 
+   Challenge the witnesses too: do their configurations and comparison arms reach
+   the intended paths, and can the assertions observe the claimed difference?
+   Check whether the oracle is independent of the implementation and whether the
+   conclusions match the logs and the matrix actually exercised.
+
    Output a prioritized list of specific challenges — areas to re-examine,
    scenarios to test, and gaps to fill.
 
@@ -306,10 +312,9 @@ After receiving the evaluator's challenges, address each one:
 
 ### Phase 3.5: Price the finding
 
-**No finding leaves this audit rated `high` or `critical` on a source read alone.** Every
-refutation and every confirmation that has survived scrutiny came from a repro or an A/B,
-not from tracing the code. A mechanism you can see in the source and an impact a user can
-reach are two separate claims, and severity encodes the second one.
+**No finding leaves this audit rated `high` or `critical` on a source read alone.** A mechanism
+you can see in the source and an impact a user can reach are two separate claims, and severity
+encodes the second one.
 
 **Delegate the witness to a sub-agent, with `model: "opus"`.** Building and running a repro is
 mechanical work that does not need the discovery model, and it is a real share of a run. One
@@ -328,11 +333,12 @@ For each such finding, before writing the report:
    class are insufficient. Run it. A witness that does not reproduce is the finding's
    answer. Take the sub-agent's measured numbers as the result; do not restate your prediction
    as though it were the measurement.
-2. **Run it on the configuration a user gets**: `Ticker.systemTicker()` and the common
-   pool. If it only reproduces under a `FakeTicker`, `executor(Runnable::run)`, or
-   `CacheExecutor.DIRECT`, the impact is an instrument artifact. Say so in the finding and
-   drop the severity. See `finding-taxonomy.md`, *Severity must be priced on a realistic
-   configuration*.
+2. **Use the default ticker and executor as controls**: `Ticker.systemTicker()` and the common
+   pool. If a supported non-default configuration is required, reproduce and price that
+   configuration and state its scope; absence on defaults alone is not disproof. Attribute timing
+   or scheduling effects introduced by the harness instead of generalizing them to other user
+   configurations. Retain the standing exclusions for contract-violating user components.
+   See `finding-taxonomy.md`, *Severity must be priced on a realistic configuration*.
 3. **Price a performance claim with percentiles, not a maximum.** Over >=20k samples, with
    repeated trials. A single `max` reading has previously looked like an 8x tail spike and
    been a GC outlier. Report the measured number; a magnitude taken from a tight artificial
@@ -441,7 +447,8 @@ and unread-by-you does not make the write optional.
 - **High-confidence findings** (classified per `.claude/docs/finding-taxonomy.md`)
 - **Medium-confidence suspicions** — labeled separately; do not suppress
 - **Would classify as by-design but cannot confirm from source alone** —
-  documentation gaps where a fresh reader couldn't tell intent from the code
+  observations requiring adjudication; distinguish missing intent evidence from a useful
+  documentation proposal, and record relevant prior rulings
 - Any new findings from Phase 3 (evaluator-prompted)
 - For each evaluator challenge: how it was resolved
 - Confirmed invariants that survived all phases (with the mechanism protecting each)

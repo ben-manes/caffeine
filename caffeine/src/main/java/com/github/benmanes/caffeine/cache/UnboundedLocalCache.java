@@ -301,13 +301,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
     @Nullable V[] oldValue = (V[]) new Object[1];
-    boolean[] replaced = new boolean[1];
     V nv = data.computeIfPresent(key, (K k, V value) -> {
       BiFunction<? super K, ? super V, ? extends @Nullable V> function = statsAware(
           remappingFunction, /* recordLoad= */ true, /* recordLoadFailure= */ true);
       try {
         V newValue = function.apply(k, value);
-        replaced[0] = (newValue != null);
         if (newValue != value) {
           oldValue[0] = value;
         }
@@ -319,8 +317,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         throw t;
       }
     });
-    if (replaced[0]) {
-      notifyOnReplace(key, oldValue[0], requireNonNull(nv));
+    if (nv != null) {
+      notifyOnReplace(key, oldValue[0], nv);
     } else if (oldValue[0] != null) {
       notifyRemoval(key, oldValue[0], RemovalCause.EXPLICIT);
     }
@@ -363,7 +361,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
     @Nullable V[] oldValue = (@Nullable V[]) new Object[1];
-    boolean[] replaced = new boolean[1];
     V nv = data.compute(key, (K k, @Nullable V value) -> {
       if ((value == null) && !computeIfAbsent) {
         return null;
@@ -378,7 +375,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
           return null;
         }
 
-        replaced[0] = (newValue != null);
         if (newValue != value) {
           oldValue[0] = value;
         }
@@ -398,8 +394,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         throw t;
       }
     });
-    if (replaced[0]) {
-      notifyOnReplace(key, oldValue[0], requireNonNull(nv));
+    if (nv != null) {
+      notifyOnReplace(key, oldValue[0], nv);
     } else if (oldValue[0] != null) {
       notifyRemoval(key, oldValue[0], RemovalCause.EXPLICIT);
     }

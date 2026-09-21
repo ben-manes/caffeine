@@ -278,9 +278,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
             future.complete(null);
           });
     } catch (RuntimeException e) {
-      inFlight.remove(future);
-      future.complete(null);
-      listener.onException(new CacheLoaderException(e));
+      try {
+        listener.onException(new CacheLoaderException(e));
+      } finally {
+        inFlight.remove(future);
+        future.complete(null);
+      }
     }
   }
 
@@ -1048,6 +1051,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     } else if (e instanceof EntryProcessorException) {
       return (EntryProcessorException) e;
     }
+    restoreInterrupt(e);
     return new EntryProcessorException(e);
   }
 

@@ -51,6 +51,7 @@ import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,6 +70,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -83,10 +85,15 @@ import org.mockito.Mockito;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
+import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
+import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.LocalAsyncCache.AsyncBulkCompleter.NullMapCompletionException;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
@@ -1466,6 +1473,45 @@ final class AsyncCacheTest {
     assertThat(cache).hasSize(context.initialSize() + 1);
     assertThat(context).stats().hits(0).misses(0).success(0).failures(0);
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine,
+      compute = Compute.ASYNC, keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      stats = Stats.DISABLED, maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.TEN,
+      loader = Loader.IDENTITY, executor = CacheExecutor.DEFAULT,
+      removalListener = Listener.DISABLED, evictionListener = Listener.DISABLED,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      refreshAfterWrite = Expire.DISABLED)
+  void put_completesBeforeRegistration_finalizesMetadata(CacheContext context) {
+    var future = new CompletableFuture<Int>();
+    var completedOnSubmit = new AtomicBoolean();
+    var dependentsAtCompletion = new AtomicInteger(-1);
+    context.caffeine().executor(task -> {
+      if (completedOnSubmit.compareAndSet(false, true)) {
+        dependentsAtCompletion.set(future.getNumberOfDependents());
+        future.complete(context.absentValue());
+      }
+      task.run();
+    });
+    var cache = context.buildAsync(Loader.IDENTITY);
+    cache.put(context.absentKey(), future);
+    cache.synchronous().cleanUp();
+
+    assertThat(completedOnSubmit.get()).isTrue();
+    assertThat(dependentsAtCompletion.get()).isEqualTo(0);
+    assertThat(future).succeedsWith(context.absentValue());
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+    assertThat(cache.synchronous().policy().eviction().orElseThrow().weightedSize()).hasValue(10);
+    assertThat(cache.synchronous().policy().expireVariably().orElseThrow()
+        .getExpiresAfter(context.absentKey())).hasValue(Duration.ofMinutes(1));
+    verify(context.expiry()).expireAfterCreate(any(), any(), anyLong());
+    verify(context.expiry(), never()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    cache.synchronous().cleanUp();
+    assertThat(cache).isEmpty();
   }
 
   @CheckNoStats

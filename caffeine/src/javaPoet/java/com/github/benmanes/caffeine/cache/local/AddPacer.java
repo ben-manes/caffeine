@@ -37,8 +37,9 @@ public final class AddPacer implements Rule<LocalCacheContext> {
 
   @Override
   public void execute(LocalCacheContext context) {
-    context.constructor.addStatement("this.pacer = ($1L == $2L)\n? null\n: new Pacer($1L)",
-        "builder.getScheduler()", "Scheduler.disabledScheduler()");
+    context.constructor.addStatement("Scheduler scheduler = builder.getScheduler()");
+    context.constructor.addStatement("this.pacer = (scheduler == Scheduler.disabledScheduler())"
+        + "\n? null\n: new Pacer(scheduler)");
     context.classSpec.addField(FieldSpec.builder(PACER, "pacer", Modifier.FINAL).build());
     context.classSpec.addMethod(MethodSpec.methodBuilder("pacer")
         .addModifiers(context.publicFinalModifiers())

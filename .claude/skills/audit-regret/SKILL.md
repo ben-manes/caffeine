@@ -346,14 +346,16 @@ prediction per spec: the class it targets, the state variable it expects to see 
 argument (why the static curve has a better window than the machine will find), and the regret it
 expects. The prediction is the finding's hypothesis; a spec whose regret appears for a different
 reason than predicted is a new finding, not a confirmation.
+Write each spec and its prediction together before screening that spec.
 
 - The **blind lane** gets `WindowClimber.java`, `hill-climber.md` §2 and §4 (the machine), the
   member/segment grammar, and the class table above. Nothing about §3, §5, or the gate table.
   Fresh eyes on the mechanism find shapes the recorded families anchor a sighted reader away
   from.
-- The **sighted lane** additionally gets §3, the gate table and §5's "do not re-explore" list,
-  with the instruction that every proposal must name the nearest recorded family and state what
-  differs, and must not rebuild anything §5 killed.
+- The **sighted lane** additionally gets §3 and the directions carried from earlier rounds below.
+  Point it to §5 and the gate table by heading rather than copying both into its brief. It must
+  consult the relevant entries, name the nearest recorded family and state what differs, and
+  must not rebuild anything §5 killed.
 
 Give each lane a target count (six to eight specs), a class quota when the argument names one,
 and the mechanism-directed prompt: for each class, "construct the workload that maximizes this
@@ -630,6 +632,9 @@ not read prior reports. Strike a line when it is done or dead.
 - A gap under 2.5pp needs eight seeded, paired runs; a bimodal cell is read seed by seed and never
   from a mean; seeded arms pair by seed (`regret.py`), unseeded comparisons rotate arms inside
   each run (`gate.py`), and neither compares across sweeps.
+  Ladder rungs used to establish a classification threshold need the same eight admission
+  seeds as classification cells. Read them seed by seed; a one-seed screen does not establish
+  the boundary.
 - A trace holds `requests / (4 × max)` decisions; classify nothing under 40 and re-check any
   finding at `repeat` ×2 before calling it steady state.
   Repetition restarts the segment-local modulation clock, so it can introduce a phase jump.

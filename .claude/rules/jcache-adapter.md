@@ -76,11 +76,13 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   [listener failures](../docs/jsr107-conformance.md#listener-failures).
   Consume an iterator's removal after the backing operation succeeds, before awaiting listeners;
   a precommit writer failure keeps it retryable.
-- Loader, writer, expiry-policy, and copier boundaries catch `Exception`, suppressing
+- Loader, writer, expiry-policy, copier, and processor boundaries catch `Exception`, suppressing
   `CatchingUnchecked`: another JVM language can throw a checked exception through these
   interfaces undeclared, and it takes the runtime failure's path, so a partial batch write still
   reconciles and expiry still falls back to its default. An `InterruptedException` first restores
-  the thread's interrupt status, as core's `Caffeine.toUnchecked` does.
+  the thread's interrupt status, as core's `Caffeine.toUnchecked` does. The filter boundary
+  catches `Throwable` and returns false; an `InterruptedException` there is not re-thrown, so
+  restoration is still required to preserve the flag on the calling thread.
 
 ## Event dispatch and re-entry
 
@@ -99,10 +101,12 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   bulk failures. See [dispatch and commit](../docs/jsr107-conformance.md#dispatch-and-commit).
 - Public operations use `requireOperable()`. While the publishing thread is marked, refuse
   callback re-entry, including reads (lazy expiry may compute). Do not mark dispatch threads:
-  cross-cache cycles and an asynchronously dispatched synchronous listener accessing its own key
-  are accepted residual hazards. Maintenance-thread filters remain unmarked unless maintenance
-  is inline inside an already marked computation. Batch writer callbacks outside the per-key
-  loop are also unmarked. See [callback re-entry](../docs/jsr107-conformance.md#callback-re-entry).
+  cross-cache cycles, an asynchronously dispatched synchronous listener accessing its own key, and
+  the same reciprocal-future cycle across two distinct keys in one cache (each listener writes the
+  other's key) are accepted residual hazards from the same root cause. Maintenance-thread filters
+  remain unmarked unless maintenance is inline inside an already marked computation. Batch writer
+  callbacks outside the per-key loop are also unmarked.
+  See [callback re-entry](../docs/jsr107-conformance.md#callback-re-entry).
 - Throwing vendor `Weigher`/native `Expiry` callbacks can abort storage after writer/event
   publication. This accepted misuse boundary differs from standard `ExpiryPolicy`, whose
   exceptions, checked ones included, are caught. Do not move publication outside `compute` to

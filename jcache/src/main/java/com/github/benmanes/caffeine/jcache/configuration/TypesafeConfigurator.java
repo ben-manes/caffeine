@@ -191,10 +191,14 @@ public final class TypesafeConfigurator {
         .setClassLoader(classloader)
         .setAllowMissing(false);
     if ((uri.getScheme() != null) && uri.getScheme().equalsIgnoreCase("file")) {
-      return ConfigFactory.defaultOverrides(classloader)
-          .withFallback(ConfigFactory.parseFile(new File(uri), options))
-          .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader))
-          .resolve();
+      try {
+        return ConfigFactory.defaultOverrides(classloader)
+            .withFallback(ConfigFactory.parseFile(new File(uri), options))
+            .withFallback(ConfigFactory.defaultReferenceUnresolved(classloader))
+            .resolve();
+      } catch (IllegalArgumentException e) {
+        throw new ConfigException.BadPath(uri.toString(), "Failed to load cache configuration", e);
+      }
     } else if ((uri.getScheme() != null) && uri.getScheme().equalsIgnoreCase("jar")) {
       try {
         return ConfigFactory.defaultOverrides(classloader)
@@ -237,11 +241,13 @@ public final class TypesafeConfigurator {
     final Config customized;
     final Config merged;
     final Config root;
+    final String cacheName;
 
     Configurator(Config config, String cacheName) {
       this.root = requireNonNull(config);
+      this.cacheName = requireNonNull(cacheName);
       this.configuration = new CaffeineConfiguration<>();
-      this.customized = root.getConfig(cachePath(requireNonNull(cacheName)));
+      this.customized = root.getConfig(cachePath(cacheName));
       this.merged = customized.withFallback(root.getConfig("caffeine.jcache.default"));
     }
 
@@ -374,6 +380,10 @@ public final class TypesafeConfigurator {
         return Duration.ETERNAL;
       }
       long millis = merged.getDuration(path, MILLISECONDS);
+      if (millis < 0) {
+        throw new ConfigException.BadValue(merged.origin(), path,
+            "Duration must not be negative: " + millis + "ms");
+      }
       return new Duration(MILLISECONDS, millis);
     }
 
@@ -403,6 +413,10 @@ public final class TypesafeConfigurator {
 
     /** Adds the maximum size and weight bounding settings. */
     private void addMaximum() {
+      if (isSet("policy.maximum.size") && isSet("policy.maximum.weight")) {
+        throw new IllegalArgumentException(
+            "maximum.size and maximum.weight cannot be combined for cache " + cacheName);
+      }
       if (isSet("policy.maximum.size")) {
         configuration.setMaximumSize(OptionalLong.of(merged.getLong("policy.maximum.size")));
       }
