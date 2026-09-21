@@ -73,7 +73,8 @@ final class Issue298Test {
 
     // Ran expireAfterCreate (expire: infinite -> create)
     flags.doCreate.set(true);
-    await().until(() -> policy.getExpiresAfter(TEST_KEY).orElseThrow().toNanos() <= EXPIRE_NS);
+    await().until(() -> policy.getExpiresAfter(TEST_KEY)
+        .filter(duration -> duration.toNanos() <= EXPIRE_NS).isPresent());
     await().untilTrue(flags.startedRead);
 
     // Ran reader (expire: create -> ?)
