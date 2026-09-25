@@ -307,7 +307,7 @@ public final class EventDispatcher<K, V> {
     CompletableFuture<@Nullable CacheEntryListenerException> future =
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
             .thenApply(new Function<@Nullable Void, @Nullable CacheEntryListenerException>() {
-              @Override @SuppressWarnings({"NullAway", "UnnamedVariable"})
+              @Override @SuppressWarnings("UnnamedVariable")
               public @Nullable CacheEntryListenerException apply(@Nullable Void unused) {
                 return futures.stream()
                     .map(CompletableFuture::join)

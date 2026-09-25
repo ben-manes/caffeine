@@ -1424,7 +1424,7 @@ final class BoundedLocalCacheTest {
   }
 
   @Test
-  @SuppressWarnings({"NullAway", "PMD.LooseCoupling"})
+  @SuppressWarnings("PMD.LooseCoupling")
   void drainWriteBuffer_unpublishedTask() {
     var cache = asBoundedLocalCache(Caffeine.newBuilder()
         .executor(Runnable::run)

@@ -84,7 +84,6 @@ public final class CacheContextSubject extends Subject {
     actual.cache().policy().eviction().ifPresentOrElse(policy -> {
       check("weightedSize()").that(policy.weightedSize()).hasValue(expectedSize);
     }, () -> {
-      @SuppressWarnings("NullAway")
       long weight = actual.cache().asMap().entrySet().stream()
           .mapToLong(entry -> actual.weigher().weigh(entry.getKey(), entry.getValue()))
           .sum();
@@ -99,7 +98,6 @@ public final class CacheContextSubject extends Subject {
       check("weightedSize()").that(policy.weightedSize()).isPresent();
       check("weightedSize()").that(policy.weightedSize().orElseThrow()).isLessThan(other);
     }, () -> {
-      @SuppressWarnings("NullAway")
       long weight = actual.cache().asMap().entrySet().stream()
           .mapToLong(entry -> actual.weigher().weigh(entry.getKey(), entry.getValue()))
           .sum();
