@@ -1507,8 +1507,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   /** An iterator to safely expose the cache entries. */
   final class EntryIterator implements Iterator<Cache.Entry<K, V>> {
-    // NullAway does not yet understand the @NonNull annotation in the return type of asMap.
-    @SuppressWarnings("NullAway")
     final Iterator<Map.Entry<K, Expirable<V>>> delegate = cache.asMap().entrySet().iterator();
 
     Map.@Nullable Entry<K, Expirable<V>> current;

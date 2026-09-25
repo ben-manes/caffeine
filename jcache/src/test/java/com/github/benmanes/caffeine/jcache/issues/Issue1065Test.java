@@ -73,7 +73,7 @@ final class Issue1065Test {
   private static final int NUM_THREADS = 5;
 
   @Test
-  @SuppressWarnings({"NullAway", "ResultOfMethodCallIgnored"})
+  @SuppressWarnings("ResultOfMethodCallIgnored")
   void deadlock() throws Exception {
     var executor = Executors.newWorkStealingPool(NUM_THREADS);
     try (var fixture = JCacheFixture.builder().build();
