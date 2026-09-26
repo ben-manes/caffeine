@@ -29,6 +29,16 @@ Consider:
 - Performance problems in the build
 - Security issues (dependency vulnerabilities, secret exposure)
 - Bad practices that could cause false confidence
+- Retry and re-run paths (in-job retry loops, `workflow_run` re-runners) and what each treats
+  as infrastructure. A job that exceeds `timeout-minutes` concludes `cancelled`, not `failure`,
+  and a hung test reaches CI that way
+- Matrix legs that name a JDK distribution: without a vendor constraint, toolchain resolution
+  may pick another detected JDK of the same version
 
 Report only issues that could cause incorrect artifacts, missing
 failures, or false confidence in test results.
+
+Price a CI finding against live history, not only the YAML: `gh api` for the ruleset and
+check-run conclusions, `gh run view <id> --log` (with `--attempt`/`--job`) for what a green run
+actually hid. A mechanism in a workflow and a run that concealed a failure are separate claims.
+Read-only queries only.

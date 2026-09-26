@@ -19,9 +19,11 @@ import static com.github.benmanes.caffeine.cache.simulator.admission.Admission.C
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
@@ -54,8 +56,8 @@ public final class MiniSimClimber implements HillClimber {
   private final int samplingRate;
   private final int period;
 
-  private int sample;
   private boolean filled;
+  private int sample;
 
   public MiniSimClimber(double percentMain, Config config) {
     var settings = new MiniSimSettings(config);
@@ -63,24 +65,14 @@ public final class MiniSimClimber implements HillClimber {
         "minisim records only a sampled subset of the accesses, so it cannot use the "
             + "clairvoyant sketch");
     int cacheSize = Math.toIntExact(settings.maximumSize());
-    samplingRate = Math.max(1, (cacheSize / 1000) > 100 ? 1000 : (cacheSize / 100));
+    samplingRate = samplingRate(cacheSize);
     int miniSize = cacheSize / samplingRate;
-    var simulationSettings = new WindowTinyLfuSettings(ConfigFactory
-        .parseString("maximum-size = " + miniSize)
-        .withFallback(config));
     this.period = settings.minisimPeriod();
     var targets = targets(cacheSize, miniSize, percentMain, settings.percentMainProtected());
-    this.minis = new WindowTinyLfuPolicy[targets.size()];
-    this.targetWindows = new long[targets.size()];
+    this.minis = miniatures(targets, miniSize, config);
+    this.targetWindows = targets.stream().mapToLong(target -> target.full().maximumWindow())
+        .toArray();
     this.prevMisses = new long[minis.length];
-
-    for (int i = 0; i < minis.length; i++) {
-      var target = targets.get(i);
-      var miniature = target.miniature();
-      minis[i] = WindowTinyLfuPolicy.withSegmentSizes(
-          miniature.maximumWindow(), miniature.maximumProtected(), Set.of(), simulationSettings);
-      targetWindows[i] = target.full().maximumWindow();
-    }
   }
 
   @Override
@@ -105,7 +97,7 @@ public final class MiniSimClimber implements HillClimber {
       sample++;
     }
 
-    if (Math.floorMod(hasher.hashLong(key).asInt(), samplingRate) < 1) {
+    if (isSampled(key, samplingRate)) {
       var event = AccessEvent.forKey(key);
       for (WindowTinyLfuPolicy policy : minis) {
         policy.record(event);
@@ -145,18 +137,46 @@ public final class MiniSimClimber implements HillClimber {
   @SuppressFBWarnings("FE_FLOATING_POINT_EQUALITY")
   static Adaptation adaptToward(long targetWindow, double windowSize) {
     checkState(windowSize == Math.rint(windowSize), "Window size must be integral: %s", windowSize);
-    return Adaptation.adaptBy((double) (targetWindow - (long) windowSize));
+    double amount = targetWindow - (long) windowSize;
+    return Adaptation.adaptBy(amount);
+  }
+
+  /** Returns the sampling rate: the miniatures see one request in this many. */
+  static int samplingRate(int cacheSize) {
+    return Math.max(1, (cacheSize / 1000) > 100 ? 1000 : (cacheSize / 100));
+  }
+
+  /** Returns whether the key belongs to the sample replayed into the miniatures. */
+  static boolean isSampled(long key, int samplingRate) {
+    return Math.floorMod(hasher.hashLong(key).asInt(), samplingRate) < 1;
+  }
+
+  /** Returns a miniature cache for each target, sized to hold the sampled keys. */
+  static WindowTinyLfuPolicy[] miniatures(Collection<Target> targets, int miniSize, Config config) {
+    var settings = new WindowTinyLfuSettings(ConfigFactory
+        .parseString("maximum-size = " + miniSize)
+        .withFallback(config));
+    return targets.stream()
+        .map(target -> WindowTinyLfuPolicy.withSegmentSizes(target.miniature().maximumWindow(),
+            target.miniature().maximumProtected(), Set.of(), settings))
+        .toArray(WindowTinyLfuPolicy[]::new);
   }
 
   static List<Target> targets(
       int cacheSize, int miniSize, double percentMain, double percentMainProtected) {
+    return targets(cacheSize, miniSize, percentMain, percentMainProtected,
+        IntStream.rangeClosed(0, 80).boxed().toList());
+  }
+
+  static List<Target> targets(int cacheSize, int miniSize, double percentMain,
+      double percentMainProtected, List<Integer> percentWindows) {
     var fullInitial = initialSegments(cacheSize, percentMain, percentMainProtected);
     var miniInitial = initialSegments(miniSize, percentMain, percentMainProtected);
     var targetsByMiniature = new LinkedHashMap<SegmentSizes, Target>();
     var incumbent = scaleTargetSegments(
         cacheSize, miniSize, fullInitial, miniInitial.maximumProbation());
     targetsByMiniature.put(incumbent, new Target(fullInitial, incumbent));
-    for (int percentWindow = 0; percentWindow <= 80; percentWindow++) {
+    for (int percentWindow : percentWindows) {
       var full = targetSegments(cacheSize, percentWindow, fullInitial.maximumProbation());
       var miniature = scaleTargetSegments(
           cacheSize, miniSize, full, miniInitial.maximumProbation());

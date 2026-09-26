@@ -13,13 +13,16 @@ and Caffeine's alignment with the Java Collections Framework.
 
 The JavaDoc is silent or ambiguous on the behaviors that actually bite (null inside a bulk
 collection arg, `containsAll(self)`, `equals` across map types, the *optional* NPE points,
-default-method bodies). **WebFetch the real source and read the method body** before
-asserting a contract. Track `master` (latest) — we stay pragmatically current, not pinned
-to a JDK version. Fetch the raw form (`raw.githubusercontent.com/openjdk/jdk/master/src/
-java.base/share/classes/…`), not the `blob` page. These files are large (CHM ~6500 lines)
-and WebFetch answers a *prompt* over the content with a small model, so a generic "dump the
-file" truncates — **prompt for the specific method** ("quote the exact body of
-`CollectionView.containsAll`"), one method per fetch:
+default-method bodies). **Read the real source and the method body** before asserting a
+contract. Track `master` (latest) — we stay pragmatically current, not pinned to a JDK
+version. Use the raw form (`raw.githubusercontent.com/openjdk/jdk/master/src/
+java.base/share/classes/…`), not the `blob` page. **Download the large files with `curl -sS -o`
+into a scratch directory outside the source tree and grep them.** WebFetch truncates its input
+before answering the prompt: on CHM (~6400 lines) it returned the map-level `equals`,
+`containsValue` and `replace`, but the cut falls before `CollectionView`, the three view
+classes, `MapEntry` and `BaseIterator`, so a method-scoped prompt such as "quote
+`CollectionView.containsAll`" reports the method as absent. One method per prompt still works
+for a short file such as `AbstractSet`. The files:
 
 - **ConcurrentHashMap** — the primary reference; `asMap()` is a `ConcurrentMap` and closest
   to CHM:
@@ -80,7 +83,10 @@ NPE'd; and the CHMv8 `entrySet().add` history was non-obvious):
 
 - Classpath: the **built jar** `caffeine/build/libs/caffeine-*.jar` (it has the generated
   node classes like `SSMS`; `build/classes/java/main` does NOT → factory reflection throws),
-  plus real guava from `~/.gradle/caches/**/guava-*.jar`.
+  plus real guava from `~/.gradle/caches/**/guava-*.jar`. The `CaffeinatedGuava` facade is a
+  third jar, `guava/build/libs/guava-<caffeine version>.jar`, named like Guava's; without it a
+  "Guava" column built from `CacheBuilder` measures the reference the facade copies, not the
+  facade. Check each jar against the source with `javap` before trusting it.
 - Run under **JDK 26** (`~/.gradle/jdks/*26*/**/bin/java`) — the classes are that bytecode level.
 - Gotcha: a `timeout … | grep` pipeline reports *grep's* exit code, not gradle's — read the
   `BUILD` line.

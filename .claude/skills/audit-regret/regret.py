@@ -8,11 +8,16 @@ hit rate. Anchors, all from one static sweep of `sketch.WindowTinyLfu` plus `lin
            --windows adds points to the swept ten and caches them, for a dense re-sweep around a
            peak between two swept windows or a cliff the linear interpolation misreads
   LRU      the floor ("better than doing nothing"), and Belady with --belady (structural limit)
+  ghost    the simulator's miniature leader (`minisim-leader`, 17 arms, full-size copies up to
+           20,000 entries): an online policy that sees each target window's hit rate, so its lead
+           over the climber is a prize an online policy demonstrably reached; not a bound. Its
+           copies' misses per sample are also the teacher's reference (below)
 Per arm:
   gap      ceiling - cache (pp; the number gate rows are barred on)
   headroom ceiling - start (pp; the prize the climber exists to win; ~0 means a HOLD cell)
   closed   (cache - start) / headroom: the fraction of the prize captured (negative: moving hurt)
   missx    (miss_cache - miss_ceiling) / miss_ceiling: relative extra misses a user pays
+  ghost_gap ghost - cache (pp; what the online reference earned that the climber did not)
 With a harness tree (`climber-gate/harness.py apply`) the run also yields the per-sample
 trajectory, from which the gap is decomposed and the machine's signature is read:
   position regret  mean over samples of ceiling - static(window_s), split at the settle point into
@@ -24,6 +29,10 @@ trajectory, from which the gap is decomposed and the machine's signature is read
                    extremes, floor/top occupancy, movement and sign flips, post-undo deficit
   hints            candidate failure classes from the signature (SKILL.md's table); the agent
                    adjudicates, the script only points
+  teacher          each sample's static-window copies (the ghost's arms) give that sample's best
+                   window; the climber's loss to the best copy, per sample, marks the costly
+                   samples, grouped into episodes, each read against what the climber's own law
+                   wanted there and what mode held it
 
 Usage:
   regret.py <trace.lirs | spec.json> --size N [--seeds 1,2,..,8 | --runs N] [--variants hybrid]
@@ -45,6 +54,12 @@ import workload as W     # noqa: E402
 FLOOR, TOP = 0.024, 0.75          # at-floor and at-the-upper-corner window fractions
 PLATEAU_PP = 0.5                  # within this of the ceiling counts as arrived
 SHORT_SAMPLES = 40                # fewer decisions than this prices convergence, not the machine
+COSTLY_PP = 1.0                   # a sample losing this much to its best copy is costly
+GHOST = "sketch.HillClimberWindowTinyLfu (minisim_leader 1%)"
+GHOST_WINDOWS = list(range(5, 81, 5))  # the ghost's arms beside the initial window, in percent
+GHOST_MINIATURE = 20000               # the fewest entries per miniature: full size up to this
+GHOST_CONFIG = (f"windows={','.join(map(str, GHOST_WINDOWS))} miniature={GHOST_MINIATURE} "
+                "trace=misses")
 FIELDS = ["label", "trace", "size", "variant", "seeds", "n", "lru", "belady", "start_hr",
           "ceiling", "ceiling_w", "peak_edge", "cache", "cache_min", "cache_max", "gap", "headroom",
           "closed", "missx", "structural", "pos_regret", "pos_transient", "pos_steady", "settle",
@@ -54,7 +69,7 @@ FIELDS = ["label", "trace", "size", "variant", "seeds", "n", "lru", "belady", "s
           "max_wait", "held_frac", "early_confirm", "undo_deficit", "rest_err", "law", "needed",
           "pos_l3", "win_l3", "wstar", "progress", "quiet_l3", "bad_veto", "revisits", "repeat_arms",
           "settled", "resid_sd", "block_flips", "wander",
-          "seed_hints", "hints"]
+          "seed_hints", "hints", "ghost", "ghost_gap", "cf_loss", "cf_best", "law_agree"]
 
 
 # ----------------------------------------------------------------------------- traces & anchors
@@ -73,10 +88,34 @@ def resolve_trace(path, traces_dir, max_override, seed_override):
     return out, spec
 
 
+def ghost(trace, size, fmt):
+    """The miniature leader's hit rate and, per density sample, each target's hit rate as
+    [window fraction, pp] pairs; (None, []) where the tree has no `minisim-leader` strategy or the
+    trace is weighted (the host policy is key-only, so the simulator drops it)."""
+    leader = "-Dcaffeine.simulator.hill-climber-window-tiny-lfu.minisim-leader"
+    r = R.gradle(size, trace, [
+        "-Dcaffeine.simulator.policies.0=sketch.HillClimberWindowTinyLfu",
+        "-Dcaffeine.simulator.hill-climber-window-tiny-lfu.strategy.0=minisim-leader",
+        "-Dcaffeine.simulator.hill-climber-window-tiny-lfu.percent-main.0=0.99",
+        f"{leader}.miniature-size={GHOST_MINIATURE}", f"{leader}.trace=true",
+        *[f"{leader}.percent-windows.{i}={w}" for i, w in enumerate(GHOST_WINDOWS)]], fmt)
+    hr = next((float(ln.split(",")[1]) for ln in r.stdout.splitlines()
+               if ln.startswith(GHOST + ",")), None)
+    samples = []
+    for ln in r.stderr.splitlines():
+        if ln.startswith("ghost "):
+            d = dict(kv.split("=", 1) for kv in ln.split()[1:])
+            n = max(1, int(d["n"]))
+            samples.append([[int(w) / size, 100.0 * (1 - int(m) / n)]
+                            for w, m in (pair.split(":") for pair in d["misses"].split(","))])
+    return hr, samples
+
+
 def anchors(trace, size, fmt, belady, windows=None):
-    """LRU, the static curve {pct: hr}, and Belady (or None), cached beside the trace. Extra
-    windows (fractions) not yet in the cache are swept and merged, so a dense re-sweep around a
-    peak or a cliff sharpens the ceiling and the position regret without a second tool."""
+    """LRU, the static curve {pct: hr}, Belady (or None), and the ghost's (hit rate, samples),
+    cached beside the trace. Extra windows (fractions) not yet in the cache are swept and merged,
+    so a dense re-sweep around a peak or a cliff sharpens the ceiling and the position regret
+    without a second tool."""
     side = f"{trace}.anchors.{size}.json"
     data = {}
     if os.path.exists(side):
@@ -100,10 +139,17 @@ def anchors(trace, size, fmt, belady, windows=None):
                 data["belady"] = float(ln.split(",")[1])
         if "belady" not in data:
             sys.stderr.write("!! Belady run produced no result\n" + r.stdout[-1500:] + r.stderr[-1500:])
+    if data.get("ghost_config") != GHOST_CONFIG:
+        hr, ghost_samples = ghost(trace, size, fmt)
+        for key in ("ghost", "ghost_windows", "ghost_samples", "ghost_config"):
+            data.pop(key, None)
+        if hr is not None:
+            data.update({"ghost": hr, "ghost_samples": ghost_samples, "ghost_config": GHOST_CONFIG})
     with open(side, "w") as f:
         json.dump(data, f)
     static = {int(k): v for k, v in data["static"].items()}
-    return data["lru"], static, data.get("belady")
+    ghost_run = (data.get("ghost"), data.get("ghost_samples", []))
+    return data["lru"], static, data.get("belady"), ghost_run
 
 
 class Curve:
@@ -187,7 +233,7 @@ def longest_run(flags):
     return best
 
 
-def analyze(rows, size, curve, gap, lru, headroom=None):
+def analyze(rows, size, curve, gap, lru, headroom=None, ghost_samples=()):
     """Decompose one arm's gap with its trajectory and read the machine's signature."""
     n = len(rows)
     win = [int(r["win"]) / size for r in rows]
@@ -331,8 +377,60 @@ def analyze(rows, size, curve, gap, lru, headroom=None):
         "longest_hold": longest_run([m == "hold" for m in modes]),
         "blocks": blocks,
     }
+    sig.update(teach(rows, size, win, hr, modes, list(ghost_samples)[:n], err))
     sig["hints"] = hints(sig, gap, curve, headroom)
     return sig
+
+
+def teach(rows, size, win, hr, modes, samples, err):
+    """The teacher: the climber against each sample's best static-window copy. The copies
+    bracket the climber's window only as finely as the ghost's grid, so the loss is taken against
+    the climber's own hit rate rather than a value interpolated at its window. Returns the mean
+    loss and best copy, the best window's block profile, the costly loss's share by mode, how
+    often the climber's law pointed toward the best window on the costly samples, and the
+    costliest episodes."""
+    if not samples:
+        return {}
+    loss, best, best_hr = [], [], []
+    for i, copies in enumerate(samples):
+        best_w, top = max(copies, key=lambda c: c[1])
+        loss.append(top - 100.0 * hr[i])
+        best.append(best_w)
+        best_hr.append(top)
+    costly = [i for i, x in enumerate(loss) if x >= COSTLY_PP]
+
+    def toward(i):
+        e = err(rows[i])
+        law = 0 if abs(e) < 0.15 else (1 if e > 0 else -1)
+        return law != 0 and law == (1 if best[i] > win[i] else -1)
+
+    episodes = []
+    for i in costly:
+        if episodes and i - episodes[-1][-1] <= 2:
+            episodes[-1].append(i)
+        else:
+            episodes.append([i])
+    top = []
+    for ep in sorted(episodes, key=lambda e: -sum(loss[i] for i in e))[:3]:
+        groups = [modes[i] for i in ep]
+        top.append({
+            "start": ep[0], "end": ep[-1], "cost": statistics.mean(loss[i] for i in ep),
+            "win": statistics.mean(win[i] for i in ep), "best": statistics.median(best[i] for i in ep),
+            "agree": sum(toward(i) for i in ep) / len(ep),
+            "mode": max(set(groups), key=groups.count)})
+    by_mode = {}
+    for i in costly:
+        by_mode[modes[i]] = by_mode.get(modes[i], 0.0) + loss[i]
+    k = len(best)
+    return {
+        "cf_loss": statistics.mean(loss), "cf_best": statistics.mean(best_hr),
+        "by_mode": {m: v / sum(by_mode.values()) for m, v in by_mode.items()},
+        "best_blocks": [statistics.mean(best[i * k // 6:(i + 1) * k // 6] or [best[-1]])
+                        for i in range(6)],
+        "costly": len(costly),
+        "law_agree": (sum(toward(i) for i in costly) / len(costly)) if costly else None,
+        "episodes": top,
+    }
 
 
 def hints(s, gap, curve, headroom=None):
@@ -421,7 +519,7 @@ def measure(trace, size, fmt, variants, seeds, runs, extra, dump_dir, label):
 
 
 def fmt_row(label, trace, size, v, seeds, lru, belady, start_hr, curve, hrs, sig, gap, headroom,
-            closed, missx):
+            closed, missx, ghost_hr=None):
     row = {k: "" for k in FIELDS}
     row.update({
         "label": label, "trace": os.path.basename(trace), "size": size, "variant": v,
@@ -434,6 +532,8 @@ def fmt_row(label, trace, size, v, seeds, lru, belady, start_hr, curve, hrs, sig
         "closed": f"{closed:.2f}" if closed is not None else "",
         "missx": f"{missx:.3f}",
         "structural": f"{belady - curve.ceiling:.2f}" if belady is not None else "",
+        "ghost": f"{ghost_hr:.2f}" if ghost_hr is not None else "",
+        "ghost_gap": f"{ghost_hr - statistics.mean(hrs):.2f}" if ghost_hr is not None else "",
     })
     if sig:
         for k in FIELDS:
@@ -522,7 +622,7 @@ def evaluate_cell(trace, spec, size, fmt, variants, seeds, runs, start, belady, 
     """Anchors, product runs (unless `results` is supplied), decomposition and report for one
     cell; returns one CSV row per arm. Shared by regret.py and search.py so the two cannot drift."""
     extra = [] if abs(start - 0.01) < 1e-9 else [f"-Dcaffeine.climber.startwin={start}"]
-    lru, static, bel = anchors(trace, size, fmt, belady, windows)
+    lru, static, bel, (ghost_hr, ghost_samples) = anchors(trace, size, fmt, belady, windows)
     curve = Curve(static)
     start_hr = curve.at(100.0 * start)
     headroom = curve.ceiling - start_hr
@@ -531,6 +631,7 @@ def evaluate_cell(trace, spec, size, fmt, variants, seeds, runs, start, belady, 
     print(f"anchors @{size}: LRU={lru:.2f}  start({start:.0%})={start_hr:.2f}  "
           f"ceiling={curve.ceiling:.2f}@{curve.ceiling_w}%"
           + (f"  Belady={bel:.2f}" if bel is not None else "")
+          + (f"  ghost={ghost_hr:.2f}" if ghost_hr is not None else "  ghost=n/a")
           + ("  [peak at the swept edge]" if curve.ceiling_w >= curve.hi_w else ""), flush=True)
     if results is None:
         results = measure(trace, size, fmt, variants, seeds, runs, extra, dump_dir, label)
@@ -542,11 +643,11 @@ def evaluate_cell(trace, spec, size, fmt, variants, seeds, runs, start, belady, 
         gap = curve.ceiling - cache
         closed = ((cache - start_hr) / headroom) if headroom >= 1.0 else None
         missx = ((100 - cache) - (100 - curve.ceiling)) / max(1e-9, 100 - curve.ceiling)
-        sigs = per_seed(dumps, hrs, size, curve, lru, headroom)
+        sigs = per_seed(dumps, hrs, size, curve, lru, headroom, ghost_samples)
         sig = representative(sigs, hrs, cache)
-        report_arm(v, trace, size, lru, bel, start_hr, curve, hrs, sig, seeds, sigs)
+        report_arm(v, trace, size, lru, bel, start_hr, curve, hrs, sig, seeds, sigs, ghost_hr)
         row = fmt_row(label, trace, size, v, seeds, lru, bel, start_hr, curve, hrs,
-                      sig, gap, headroom, closed, missx)
+                      sig, gap, headroom, closed, missx, ghost_hr)
         if sigs:
             row["seed_hints"] = seed_hints(sigs)
             row["hints"] = "|".join(vote_hints(sigs))
@@ -558,12 +659,13 @@ def evaluate_cell(trace, spec, size, fmt, variants, seeds, runs, start, belady, 
     return rows_out
 
 
-def per_seed(dumps, hrs, size, curve, lru, headroom):
+def per_seed(dumps, hrs, size, curve, lru, headroom, ghost_samples=()):
     """One signature per dump, each judged against its own run's hit rate."""
     sigs = []
     for hr, lines in zip(hrs, dumps):
         if lines:
-            sigs.append(analyze(parse(lines), size, curve, curve.ceiling - hr, lru, headroom))
+            sigs.append(analyze(parse(lines), size, curve, curve.ceiling - hr, lru, headroom,
+                                ghost_samples))
         else:
             sigs.append(None)
     return [x for x in sigs if x]
@@ -591,7 +693,8 @@ def seed_hints(sigs):
     return " ; ".join(",".join(sg["hints"]) for sg in sigs)
 
 
-def report_arm(v, trace, size, lru, belady, start_hr, curve, hrs, sig, seeds=None, sigs=None):
+def report_arm(v, trace, size, lru, belady, start_hr, curve, hrs, sig, seeds=None, sigs=None,
+               ghost_hr=None):
     cache = statistics.mean(hrs)
     gap = curve.ceiling - cache
     headroom = curve.ceiling - start_hr
@@ -600,7 +703,8 @@ def report_arm(v, trace, size, lru, belady, start_hr, curve, hrs, sig, seeds=Non
     missx = ((100 - cache) - (100 - curve.ceiling)) / max(1e-9, 100 - curve.ceiling)
     print(f"  {v:9s} hr={cache:6.2f}{spread}  gap={gap:+.2f}  headroom={headroom:.2f}  {closed}  "
           f"missx={missx:+.1%}  vsLRU={cache - lru:+.2f}"
-          + (f"  structural={belady - curve.ceiling:.2f}" if belady is not None else ""))
+          + (f"  structural={belady - curve.ceiling:.2f}" if belady is not None else "")
+          + (f"  ghost_gap={ghost_hr - cache:+.2f}" if ghost_hr is not None else ""))
     if len(hrs) > 1:
         print("            per-seed " + " ".join(f"{h:.2f}" for h in hrs))
     if not sig:
@@ -629,6 +733,19 @@ def report_arm(v, trace, size, lru, belady, start_hr, curve, hrs, sig, seeds=Non
           f"repeat_arms={s['repeat_arms']} undo_deficit={s['undo_deficit']:+.2f} "
           f"(hr scatter {s['resid_sd']:.2f})  "
           f"hints: {', '.join(s['hints'])}")
+    if "cf_loss" in s:
+        agree = (f"law toward the best window on {s['law_agree']:.0%} of {s['costly']} costly samples"
+                 if s["law_agree"] is not None else "no costly sample")
+        print(f"            teacher: loses {s['cf_loss']:.2f} per sample to its best copy "
+              f"(best copies average {s['cf_best']:.2f}); best-window blocks "
+              + " ".join(f"{b:.2f}" for b in s["best_blocks"]) + f"; {agree}")
+        if s["by_mode"]:
+            print("              costly loss by mode: " + ", ".join(
+                f"{m} {v:.0%}" for m, v in sorted(s["by_mode"].items(), key=lambda kv: -kv[1])))
+        for e in s["episodes"]:
+            print(f"              s{e['start']}-{e['end']}: costs {e['cost']:.2f} at window "
+                  f"{e['win']:.2f} against {e['best']:.2f}; law toward it {e['agree']:.0%}, "
+                  f"mostly {e['mode']}")
     if sigs and len(sigs) > 1:
         tags = [f"s{x}" for x in seeds] if seeds else [f"r{i}" for i in range(len(sigs))]
         for tag, h, sg in zip(tags, hrs, sigs):

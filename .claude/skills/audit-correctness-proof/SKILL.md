@@ -14,6 +14,12 @@ replace, size, clear):
 1. State the method's specification: preconditions, postconditions,
    concurrent behavior promises.
 2. Identify the synchronization protocol ensuring the postcondition.
+   For an expiring entry the clock is part of that state: place each
+   ticker read that dates the entry or judges its expiry relative to the
+   linearization point. A read taken before a step that can block (a
+   hash-bin lock, a node monitor, a user callback) dates or judges
+   against a stale clock, so check the paths that create an entry as
+   well as the ones that test it.
 3. Write a proof sketch:
    a. Assume the precondition holds
    b. Identify the critical section(s)

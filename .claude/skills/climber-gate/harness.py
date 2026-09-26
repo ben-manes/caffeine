@@ -568,8 +568,11 @@ EDITS = [
      "      boolean tolerant = isAudit && !PRECRASH && ladder.hasCrashed();\n"),
 
     ("hardreset", W,
-     "      stillSamples = samePlace ? (stillSamples + 1) : Math.max(0, stillSamples - 1);\n",
-     "      stillSamples = samePlace ? (stillSamples + 1)\n"
+     "      stillSamples = samePlace\n"
+     "          ? (Math.min(Integer.MAX_VALUE - 1, stillSamples) + 1)\n"
+     "          : Math.max(0, stillSamples - 1);\n",
+     "      stillSamples = samePlace\n"
+     "          ? (Math.min(Integer.MAX_VALUE - 1, stillSamples) + 1)\n"
      "          : (HARDRESET ? 0 : Math.max(0, stillSamples - 1));\n"),
 
     ("flatroom", W,

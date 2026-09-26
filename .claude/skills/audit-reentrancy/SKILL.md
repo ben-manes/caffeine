@@ -34,3 +34,19 @@ For each callback:
 
 For each defect: state the callback, re-entrant method, locks involved,
 call stack, and observable incorrect behavior.
+
+Treat the executor as a matrix dimension. A read nudges maintenance, and an executor that runs
+the drain on the caller (`Runnable::run`, a direct executor, a saturated `CallerRunsPolicy` pool)
+runs the whole cycle inside whatever callback performed the read. Analyze each read cell under
+the default executor and under caller-runs separately.
+
+Witness notes:
+- Under a caller-runs executor, any view access or read of an expired entry before the operation
+  under test (printing `asMap()`, iterating) reaps it inline and removes the precondition. Print
+  diagnostics only afterwards.
+- With the default executor, let the pool's maintenance task finish (`cleanUp()` or
+  `ForkJoinPool.commonPool().awaitQuiescence`) before advancing a controllable ticker, or that task
+  reaps the entry the scenario depends on.
+- Judge a lost write with an oracle that does not filter expired entries: a distinct value object
+  per write, then check whether that value is ever notified after time advances and the key is
+  overwritten.

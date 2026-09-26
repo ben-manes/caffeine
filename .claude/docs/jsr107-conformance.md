@@ -269,7 +269,8 @@ solve invoke. These repairs were rejected.
 A throwing extension `Weigher` (`setWeigherFactory` / `setMaximumWeight`) or native `Expiry`
 (`setExpiryFactory` / `ExpiryAdapter`) runs in core after the adapter's remapping
 function has written through and published the event, so it can abort storage after those
-effects. Standard `ExpiryPolicy` is different: the adapter catches all of its exceptions.
+effects. Standard `ExpiryPolicy` is different: the adapter catches every `Exception` it throws
+and uses the default duration, while an `Error` propagates.
 The extension case remains accepted misuse of callbacks whose core contract forbids throwing.
 Notifications/writer effects cannot be rolled back, and core has no post-metadata hook. Attempted
 creation/update notifications are accepted; store/cache discrepancies need external reconciliation.
@@ -297,7 +298,9 @@ table's wording is inconsistent. TCK covers remove-on-present only. For a read-t
 pin the miss/no-put behavior with `CacheProxyTest.invoke_readThroughLoad_recordsMissNotPut`.
 
 `invoke` reconciles a lazily expired prior before the processor: publish EXPIRED, count eviction,
-and expose absence. If the processor or writer then throws any `Throwable`, commit removal of
+and expose absence. (A prior that core has already expired natively is instead reaped by core
+with the quiet EXPIRED of [dispatch and commit](#dispatch-and-commit), which the caller does not
+await.) If the processor or writer then throws any `Throwable`, commit removal of
 that expired prior, await its synchronous listener, and rethrow after compute via
 `processorFailure` (`Error` unchanged; other failures as `EntryProcessorException`), with a
 listener failure suppressed onto either. Otherwise the already-published expiry would be orphaned
@@ -361,8 +364,10 @@ diverges from those promises: loader publication precedes core bulk storage, so 
 precede EXPIRED for an expired prior even without a concurrent writer. Single-key loading first
 discards the expired entry. Do not describe the contract itself as lacking an ordering promise.
 
-Recorded evidence: on 2026-09-10 the default executor produced the inversion in 11 of 20 runs;
-the direct executor ordered it because `getAllPresent` reaped inline. The accepted rationale is
+Recorded evidence: the inversion occurs when the reload lands before the timer wheel has swept
+the prior's bucket, whichever executor runs maintenance. On 2026-09-24 a `getAll` about 100 ms
+after a 50 ms deadline inverted in 17 of 20 runs on the direct executor and 16 of 20 on the
+common pool, and in none at about 1.25 s. The accepted rationale is
 the timing/transport behavior of distributed providers, while preserving the contract difference:
 Hazelcast 5.7's per-entry cache-event factories did not set the publication order key (bulk
 removal used the key-set hash); Coherence localcache dispatched EXPIRED before loading, but its
@@ -551,10 +556,13 @@ Native size/weight eviction publishes quiet REMOVED; native EXPIRED publishes qu
 Refresh reload publishes quiet UPDATED, EXPIRED for zero update expiry, or REMOVED on a miss.
 Quiet means no synchronous caller await: it informs resource-tracking listeners without blocking
 the evicting/refresh thread. Lazy expiry mostly arrives this way on the system ticker: the native
-mirror hides an expired entry from reads, except in the sub-millisecond gap between the wrapper's
-millisecond deadline and the native one, so a read that finds it expired publishes and counts
-nothing, and its EXPIRED and eviction wait for a maintenance cycle after a wheel tick, which an
-idle cache without a `Scheduler` does not run. The ecosystem generally omits eviction events (RI
+mirror hides an expired entry from reads, and a read in the sub-millisecond gap between the
+wrapper's millisecond deadline and the native one re-derives the native deadline from the expired
+wrapper, so `removeExpired` finds the entry natively expired. A read, or a `computeIfPresent`-based
+replace or conditional remove, that finds an entry expired therefore publishes and counts nothing,
+and its EXPIRED and eviction wait for a maintenance cycle after a wheel tick, which an idle cache
+without a `Scheduler` does not run. The adapter's own read-side reap runs only when a vendor
+native expiry outlives the JCache deadline. The ecosystem generally omits eviction events (RI
 never evicts).
 Clearing natively expired residents can produce quiet EXPIRED and eviction counts through core's
 removal cause, even though ordinary explicit clear removals are silent. Closed-cache delivery is
@@ -831,7 +839,8 @@ RI's serializing converter holds it weakly as well.
 
 ### Management
 
-JMX ObjectName sanitization replaces `[,:=\n*?]` with a dot, following the RI. Distinct names or
+JMX ObjectName sanitization replaces `[,:=\n*?"]` with a dot. The RI replaces only `,:=\n`, so it
+fails `createCache` for a name containing `*`, `?` or `"`. Distinct names or
 manager URIs can collide (a:b and a=b both become a.b): the second registration is skipped by
 isRegistered and destroying either unregisters the shared name. This accepted consequence is
 also present in RI's `MBeanServerRegistrationUtility`. A registration that loses the race between

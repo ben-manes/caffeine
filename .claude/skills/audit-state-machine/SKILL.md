@@ -78,4 +78,7 @@ For each finding: the interleaving (thread-by-thread), the illegal or missed
 transition, the observable consequence (wedged cache, lost notification, stranded
 future, resurrected dead node), and a Verification. Verify each interleaving is
 JMM-legal, not merely sequentially consistent. If a transition cannot be resolved
-statically, ESCALATE with a Fray skeleton — the drain machine is a prime Fray target.
+statically, ESCALATE with a skeleton for the tool that `.claude/docs/testing.md` §*Choosing the
+Dynamic Tool* selects. Fray explores the drain machine's sync-point interleavings but only
+sequentially consistent ones. A store-buffering hypothesis needs jcstress, for example the
+writer's publish-then-read of the status against the maintainer's store-then-drain.

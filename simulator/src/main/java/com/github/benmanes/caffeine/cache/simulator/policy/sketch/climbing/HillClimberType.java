@@ -29,6 +29,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.hill.
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.hill.TrustRegionEwmaClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.inference.IndicatorClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.sim.MiniSimClimber;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.sim.MiniSimLeaderClimber;
 import com.typesafe.config.Config;
 
 /**
@@ -52,6 +53,7 @@ public enum HillClimberType {
 
   // simulation
   MINISIM(MiniSimClimber::new),
+  MINISIM_LEADER(MiniSimLeaderClimber::new),
 
   // inference
   INDICATOR(IndicatorClimber::new);

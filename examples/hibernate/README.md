@@ -25,7 +25,7 @@ caffeine.jcache {
   default-update-timestamps-region {}
 
   # Hibernate application caches
-  com.github.benmanes.caffeine.examples.hibernate.User {}
+  "com.github.benmanes.caffeine.examples.hibernate.User" {}
 }
 ```
 

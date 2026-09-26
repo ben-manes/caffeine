@@ -5,7 +5,7 @@
 #   .github/scripts/run-audits.sh                 # everything not already done
 #   .github/scripts/run-audits.sh --dry-run       # print the plan, run nothing
 #   .github/scripts/run-audits.sh --smoke         # one cheap run per lane; wiring only, no consolidation
-#   .github/scripts/run-audits.sh --lanes opus-5  # one lane
+#   .github/scripts/run-audits.sh --lanes opus    # one lane
 #   .github/scripts/run-audits.sh --skills audit-jmm,audit-liveness
 #   .github/scripts/run-audits.sh --consolidate   # only the consolidation pass
 #   .github/scripts/run-audits.sh --status        # what is banked and what is outstanding
@@ -99,7 +99,7 @@ SKILLS_DEFAULT=(
 # lane := <report-dir>|<engine>|<model>|<effort>
 LANES_DEFAULT=(
   "fable-5.1|claude|fable|max"
-  "opus-5|claude|opus|max"
+  "opus-5.5|claude|opus|max"
   "gpt-6-astra|codex||ultra"
 )
 

@@ -273,6 +273,11 @@ spent 38k output tokens, 29% of the whole audit, running its evaluator on the di
 Discovery is where the expensive model earns its keep. Challenging a written report does not
 need it.
 
+**Bound the answer.** Keep the template's size limit. Without one, a `/audit-lifecycle` evaluator
+on a 50 KB report spent three output-token limits on thinking and wrote nothing. Bounded
+replacements, splitting the report between them (priced findings and witnesses in one;
+invariants, assumptions and Phase 1.5 rows in the other), each answered in under ten minutes.
+
 ```
 Agent(subagent_type=general-purpose, model="opus"):
   "You are a hostile evaluator reviewing an audit report of a concurrent Java
@@ -296,8 +301,9 @@ Agent(subagent_type=general-purpose, model="opus"):
    Check whether the oracle is independent of the implementation and whether the
    conclusions match the logs and the matrix actually exercised.
 
-   Output a prioritized list of specific challenges — areas to re-examine,
-   scenarios to test, and gaps to fill.
+   Output a prioritized list of at most ten specific challenges, each in about
+   100 words — areas to re-examine, scenarios to test, and gaps to fill. Keep
+   your reasoning short and write the list early.
 
    Do NOT access any source code files. Work only from the audit report.
 

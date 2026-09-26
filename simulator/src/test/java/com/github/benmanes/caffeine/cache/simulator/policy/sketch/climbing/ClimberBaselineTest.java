@@ -25,17 +25,17 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillC
 import com.typesafe.config.ConfigFactory;
 
 /**
- * The absolute-target climbers (indicator, minisim) derive their starting window from the policy's
- * percent-main. A percent-main sweep builds one policy per element, so each climber must key off
- * its own instance's element rather than the list's first; otherwise every swept instance after the
- * first dead-reckons from the wrong baseline.
+ * The absolute-target climbers (indicator, minisim, minisim-leader) derive their starting window
+ * from the policy's percent-main. A percent-main sweep builds one policy per element, so each
+ * climber must key off its own instance's element rather than the list's first; otherwise every
+ * swept instance after the first dead-reckons from the wrong baseline.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class ClimberBaselineTest {
 
   @ParameterizedTest
-  @EnumSource(names = {"INDICATOR", "MINISIM"})
+  @EnumSource(names = {"INDICATOR", "MINISIM", "MINISIM_LEADER"})
   void baselineFollowsInstanceNotFirstSweepElement(HillClimberType strategy) {
     // The instance uses percent-main 0.5, run two ways: alone (0.5 is also the first element, so
     // the baseline is correct either way) and as the second element of a sweep (a climber keyed off

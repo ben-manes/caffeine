@@ -173,8 +173,14 @@ Crosby, Wallach. USENIX Security 2003.
 causing O(n) degeneration per operation.
 
 **Relevance:** Caffeine delegates to `ConcurrentHashMap` which uses tree bins
-(red-black trees) for collision resistance in JDK 8+. The frequency sketch uses
-a separate hash (`spread`/`rehash` functions) independent of the key's `hashCode()`,
-providing additional resilience. The cache randomly admits ~1% of candidates to make
-frequency estimation attacks non-deterministic. Not a direct implementation influence,
-but informs the threat model.
+(red-black trees) for collision resistance in JDK 8+. The frequency sketch has no such
+resilience: `spread` and `rehash` re-mix the key's `hashCode()` to distribute keys across
+blocks, but they are functions of it, so keys with equal hash codes share all four counters
+and read as one key. The admission filter admits 1 in 128 rejected candidates whose frequency
+is at least 6, which answers a victim whose frequency an attacker has raised. It does not act
+on a candidate whose frequency collisions have raised, since that candidate beats a colder
+victim outright: distinct one-hit keys sharing one `String.hashCode()` enter probation and hold
+it as frequency-15 victims. Measured on a Zipf 0.99 workload with a 10,000-entry cache and the
+default executor, such keys at 1% of traffic cost about 5 points of hit rate, where the same
+volume of distinct-hash one-hit keys cost none; protected was never reached. Not a direct
+implementation influence, but informs the threat model.

@@ -130,10 +130,14 @@ The 38 constants live with the mechanism each tunes, so a knob names its owner:
    plus a *runtime* maximum change via `Policy.eviction.setMaximum` — when `maximum`
    crosses `SLOW_ADAPT_THRESHOLD` in either direction, do the window/main split, the
    `step.size` sign, and the sample state stay mutually consistent?
-6. **Stale `adjustment` consumption**: `climb` calls `determineAdjustment` then
-   `increaseWindow`/`decreaseWindow` off the climber's `adjustment`. When `determineAdjustment`
-   early-returns (uninitialized sketch, sub-sample request count), can a stale
-   `adjustment` from a prior cycle be re-applied?
+6. **Stale `adjustment` and sample memory across the gates**: `climb` calls
+   `determineAdjustment` then `increaseWindow`/`decreaseWindow` off the climber's `adjustment`.
+   The tier is skipped on three paths: an uninitialized sketch (`resetSample`), a sub-period
+   sample, and a cache below half occupancy (`discardSample`, which resets a full sample). Can a
+   stale `adjustment` from a prior cycle be re-applied? The half-full gate is reachable mid-life
+   while the tier's walk, anchor and rates persist, so also check what each path does to the
+   cross-sample `previousHitRate` that the reactive step, the stand-down trigger
+   (`isWorkloadShift`) and the walk's bold driver (`nextStride`) compare against.
 7. **Layer ownership of the ladders, streaks, and schedules** — the highest-yield row, because
    it has produced two real bugs and both were invisible from a single code path.
    `hill-climber.md` §4 carries a **write-owner table** (observation / active walk / starvation

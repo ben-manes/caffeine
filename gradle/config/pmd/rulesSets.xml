@@ -10,6 +10,7 @@
     <exclude name="LooseCoupling"/>
     <exclude name="SystemPrintln"/>
     <exclude name="MissingOverride"/>
+    <exclude name="TypeNameMismatch"/>
     <exclude name="GuardLogStatement"/>
     <exclude name="AvoidReassigningParameters"/>
     <exclude name="LiteralsFirstInComparisons"/>

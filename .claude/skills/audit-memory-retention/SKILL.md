@@ -31,6 +31,8 @@ Trace what happens to references after removal in each data structure:
 9. **jcache EventDispatcher**: per-thread pending synchronous-listener futures —
    is every publish on a thread paired with awaitSynchronous()/ignoreSynchronous()
    (or a Quietly variant), including loads running on executor/refresh threads?
+   Does the drain release the list's capacity as well as its elements, given that
+   a bulk operation pends one future per key before it awaits?
 10. **jcache in-flight futures**: does every async path remove its future from
     the in-flight set on all completion paths, including exceptional ones?
 
@@ -38,6 +40,11 @@ For each retention path:
 - State the reference chain from GC root to retained object
 - State retention duration (bounded by maintenance? unbounded?)
 - Assess severity: transient vs persistent
+
+Retention also includes capacity a drain leaves behind. `ArrayList.clear()` keeps its backing
+array, so a list that one operation grows to its key count stays that size. A thread-local value
+outlives the object that created it: the stale entry holds the value until the thread ends or
+happens to expunge that slot.
 
 Do not report intentional strong references or retention bounded by a single
 maintenance cycle (unless maintenance can be delayed indefinitely).

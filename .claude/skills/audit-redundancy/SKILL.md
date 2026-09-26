@@ -32,7 +32,10 @@ redundancy-flavored suppression left in main source is a pre-built candidate. Gr
 `ConstantValue`, `EmptyMethod`, `StatementWithEmptyBody`, `FieldCanBeFinal` and
 `RedundantSuppression`. A suppression is a candidate, not a finding, and not a rejection either.
 Adjudicate each one in the report from its own source, rather than taking the annotation's word
-for it or this skill's. Exactly one carries a standing ruling, the `discardRefresh` prescreen
+for it or this skill's. Check where it sits as well as whether it is needed: a suppression on a
+local declaration covers only that declaration and its initializer, so a refactor that moves the
+flagged expression into later statements leaves it covering nothing while the warning it was
+written for sits outside it. Exactly one carries a standing ruling, the `discardRefresh` prescreen
 described below, and that ruling is in `ruled-out.md` where Phase 1.5 will reach it.
 
 Do not seed from a prior report. `.local/audits/` is off limits under the auditor's *Evidence
@@ -99,8 +102,11 @@ becomes easier to follow. Then establish all four:
 1. **Every consumer.** Readers, writers, callers, overrides, and generated variants. Check
    reflection, serialization, the generators' emitted references, initialization side effects,
    and external visibility before calling a definition unused. A search with no matches does not
-   settle it when any of those can supply a consumer. Prefer LSP `findReferences` and
-   `goToImplementation` over grep for this, against a populated `caffeine/build/generated/`.
+   settle it when any of those can supply a consumer. The core's internals are package-private,
+   but `jcache`, `guava` and `simulator` are published too, and `jcache` and `simulator` are
+   automatic modules that export every package, so a `public` or `protected` member there can
+   have a consumer outside the repository. Prefer LSP `findReferences` and `goToImplementation`
+   over grep for this, against a populated `caffeine/build/generated/`.
 2. **Every exit.** Normal return, absence/null, early return, exception, and retry. Preserve
    callback count and order, exception identity and propagation, statistics, notifications, and
    cleanup obligations. Name the gate that makes the equivalence hold.

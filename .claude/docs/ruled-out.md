@@ -94,6 +94,44 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   remove cost from an operation that does not enqueue there. Reopen for a workload that exercises
   actual write-buffer traffic, such as insertion or weight/expiry updates, with queue-specific
   contention or backpressure evidence. This does not rule out write-queue improvements generally.
+- **Producer-side MPSC tricks in the read buffer do not help the cache.** Measured on an Apple M3 Max
+  (JDK 27, 128-byte lines) with `GetPutBenchmark`-shaped read_only and readwrite cells, each arm a
+  separate `RingBuffer`/`StripedBuffer` class selected per fork. On a quiet host, five paired rounds
+  put a drain that never reads the write counter, with the array reference on the header's line and
+  the array padded off the write counter's line, at +0.5% [-1.4, +2.5] (read_only) and -0.7%
+  [-3.4, +2.0] (readwrite gets), and a cached consumer index beside the write counter (JCTools'
+  `producerLimit`) at -0.1% [-1.8, +1.6] (readwrite gets). A FastForward slot check in place of the
+  read counter also gained nothing and is lossy under a producer stall. The drain runs in scheduled
+  batches, so the counter lines move once per batch per stripe; in saturation about 98% of offers
+  return `FULL` from L1-resident lines. Only a stress where one producer races a continuously polling
+  consumer rewarded keeping the consumer off the producers' line (offers from 33-54 ns to 4 ns).
+  Reopen for a design that drains continuously against producers.
+- **A different stripe hash only reshuffles which thread ids collide.** A one-multiply Fibonacci hash
+  in place of `mix64` confirmed at +5.5% [+0.4, +10.9] on read_only and +6.3% [+2.2, +10.6] on
+  readwrite gets (10 pairs), but because JMH's worker ids (31-38) share two home stripes under
+  `mix64` and one under the new hash in the 16-stripe table the benchmark settles at. It is not a
+  latency effect: the non-recording offer path moved +0.6% [-4.0, +5.4]. Over arbitrary runs of
+  consecutive ids both hashes collide equally at 16 stripes, and the new hash is worse for
+  power-of-two id strides. Growing the table on the first failed home CAS, which removed every home
+  collision for those ids at 64 stripes, moved readwrite gets +3.0% [-1.1, +7.2] (5 pairs):
+  inconclusive, and it creates more stripes. Reopen with a per-stripe CAS-failure count showing that
+  home collisions cost throughput across thread-id sets, not for one benchmark's ids.
+- **Plain slot clears in `BoundedBuffer.drainTo`.** Clearing each slot with a plain store instead
+  of `setRelease(null)` is correct, since the release store of `readCounter` after the loop orders
+  the clears, and on aarch64 it roughly halves the drain's cost per record: C2 emits each release
+  store as a barrier plus a store, and the barrier waits on the previous element's `onAccess`
+  writes to node lines that readers hold. Rejected anyway: tooling flags plain stores in the ring,
+  and the gain is only maintenance time. When unsaturated, readers are unchanged. When saturated,
+  the cheaper drain records more reads, so GetPut read cells score lower. Don't re-raise without
+  a user-visible cost that the release clears cause.
+- **Avoiding the policy's writes to hot nodes' cache lines.** A hit loads the node's `value`, which
+  shares a line with the access-order links that `moveToBack` rewrites on the node, its neighbors,
+  and the old tail, so a saturated read benchmark pays coherence misses on its hottest keys (the
+  cost was never isolated). Deduplicating reorders within a drain needs a membership structure,
+  such as a set of nodes or key hashes, whose allocation and lookup cost more than the moves; the
+  sequential check is already there (`moveToBack` skips the tail). Moving the links off the node
+  adds a mapping and a structure to size. In applications, the work between reads absorbs the
+  invalidations. Accepted as the cost of LRU ordering.
 
 ---
 
@@ -267,8 +305,16 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   `nanos = currentTimeNanos` unconditionally, so under `systemTicker` a re-entrant operation
   reaching maintenance throws CME. Two do not: `clear()`, whose result is a truncated snapshot,
   and one whose maintenance cycle exhausts the expiration budget, since the rewind restores the
-  `nanos` the traverser captured. Both results fall within the best-effort view the `Policy`
-  snapshot entry under *Views, iteration, and the Map contract* accepts.
+  `nanos` the traverser captured. That second route need not truncate: when the write that reached
+  maintenance rescheduled the node the traverser returned last, as a per-element `setExpiresAfter`
+  does, the walk follows it into its new bucket and yields that bucket again on every
+  budget-exhausting cycle, throwing CME on the first cycle that leaves budget unused. Measured on
+  the system ticker and common pool, with a mapping function calling `setExpiresAfter` per element
+  and 6,000 entries due: 12,294 elements over 2,049 distinct keys (the write buffer's capacity plus
+  one), each six times (the backlog over the 1,000-entry expiration budget), then CME. Both results
+  fall within the best-effort view the `Policy` snapshot entry under *Views, iteration, and the Map
+  contract* accepts, for a computation `Policy` already documents as throwing CME when it
+  detectably writes an entry.
 - `TimerWheel.expire()`'s catch block holding a stale `prev` pointer.
 
 **Node lifecycle and access modes**
@@ -595,9 +641,9 @@ Read `jsr107-conformance.md`'s topic sections with this section.
   `getOrLoad`'s expired-wrapper recovery. See [access expiry](jsr107-conformance.md#access-expiry).
 - `CacheProxy.EntryIterator.hasNext` skipping expired entries without firing EXPIRED
   (requirement removed in 1.1.1).
-- `JCacheLoaderAdapter.expireTimeMillis` returning `Long.MAX_VALUE` when the `ExpiryPolicy`
-  throws, and `getWriteExpireTimeMillis` returning `Long.MIN_VALUE` on a creation-policy
-  exception.
+- `JCacheLoaderAdapter.expireTimeMillis` and `CacheProxy.getWriteExpireTimeMillis` falling back
+  to `Long.MAX_VALUE` (eternal) when `getExpiryForCreation` throws, and to `Long.MIN_VALUE`
+  (unchanged) when `getExpiryForUpdate` throws.
 - The provider's `WeakHashMap` ClassLoader retention. Proven, and not fixable: the value
   chain reaches its own key, and weak values would collect a live manager. JSR-107 provides
   `CachingProvider.close(ClassLoader)` for exactly this. Documentation only.

@@ -6,8 +6,10 @@ appends to a resumable CSV, so an interrupted sweep costs nothing and a spec is 
 twice under one label. Runs are sequential on purpose (one simulator process at a time).
 
   search.py eval <spec.json ... | dir> --csv results.csv [--size N] [--seeds 1] [--variants hybrid]
-      Screen a batch; prints the ranking by gap. A directory means every *.json in it. --size is
-      the maximum the cells RUN at (default: each spec's own); to change a spec's geometry,
+                [--rank gap|ghost_gap]
+      Screen a batch; prints the ranking by gap, or by ghost_gap (what the miniature leader
+      earned that the climber did not). A directory means every *.json in it. --size is the
+      maximum the cells RUN at (default: each spec's own); to change a spec's geometry,
       regenerate it with `mutate --set max=...`.
 
   search.py mutate base.json --set <path>=<v1>,<v2>,... [--set ...] --out DIR [--dry-run]
@@ -156,17 +158,26 @@ def cmd_eval(args):
             continue
         rows = evaluate(sp, args, label)
         for v, r in rows.items():
-            ranking.append((float(r["gap"]), label, v, r))
+            ranking.append((rank_key(r, args.rank), label, v, r))
     if args.csv and os.path.exists(args.csv):
         with open(args.csv) as f:
-            ranking = [(float(r["gap"]), r["label"], r["variant"], r) for r in csv.DictReader(f)]
+            ranking = [(rank_key(r, args.rank), r["label"], r["variant"], r)
+                       for r in csv.DictReader(f)]
     ranking.sort(key=lambda t: -t[0])
-    print("\nranking by gap (pp below the static ceiling):")
-    print(f"{'label':36s} {'size':>7s} {'arm':8s} {'gap':>7s} {'closed':>7s} {'headroom':>8s} "
-          f"{'n':>4s}  hints")
-    for gap, label, v, r in ranking:
-        print(f"{label:36s} {r.get('size', ''):>7s} {v:8s} {gap:7.2f} {r.get('closed', ''):>7s} "
+    print("\nranking by " + ("gap (pp below the static ceiling):" if args.rank == "gap"
+                            else "ghost_gap (pp below the miniature leader):"))
+    print(f"{'label':36s} {'size':>7s} {'arm':8s} {'gap':>7s} {'ghost':>7s} {'closed':>7s} "
+          f"{'headroom':>8s} {'n':>4s}  hints")
+    for _, label, v, r in ranking:
+        print(f"{label:36s} {r.get('size', ''):>7s} {v:8s} {float(r['gap']):7.2f} "
+              f"{r.get('ghost_gap') or '':>7s} {r.get('closed', ''):>7s} "
               f"{r.get('headroom', ''):>8s} {r.get('n', ''):>4s}  {r.get('hints', '')}")
+
+
+def rank_key(row, rank):
+    """The row's ranking value; a row without a ghost sorts last under --rank ghost_gap."""
+    value = row.get(rank) or ""
+    return float(value) if value else float("-inf")
 
 
 def cmd_mutate(args):
@@ -400,6 +411,7 @@ def main():
 
     p = sub.add_parser("eval")
     p.add_argument("specs", nargs="+")
+    p.add_argument("--rank", choices=("gap", "ghost_gap"), default="gap")
     common(p)
     p = sub.add_parser("mutate")
     p.add_argument("base")

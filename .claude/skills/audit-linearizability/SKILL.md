@@ -46,5 +46,9 @@ For each candidate violation:
 - Provide the full interleaving
 - Show the sequential history it violates
 - Verify the interleaving is JMM-legal
+- For a time-based violation (an entry expiring early or late), include a thread that observes
+  the key inside the window. Without one, the operation can linearize anywhere in its interval,
+  including at its own clock read, and the history is legal. Exclude the configurations that
+  allow other removals (a size bound, weak or soft references), since they also explain a miss.
 
 Do not analyze internal consistency, only external observability.

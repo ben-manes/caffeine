@@ -60,7 +60,15 @@ High-yield contract families:
 - **Live vs snapshot views**: a live keySet/values passed to another operation
   observes concurrent mutations; removeAll(null) throws NPE
 - **ORM/config libraries (Hibernate, Typesafe Config)**: session/entity
-  lifecycle and reload semantics the integration assumes
+  lifecycle and reload semantics the integration assumes. In HOCON an unquoted
+  dotted key is a path (nested objects), and Java-properties keys (`-D`,
+  `.properties`) split on every `.` with no quoting, so how the integration
+  addresses a key (literal quoted key or path) decides which user
+  configurations resolve. When that addressing changed, run the example and
+  user-style configurations against the previous release's jar and the current
+  one. Price it on the names the framework actually looks up: Hibernate names
+  a region by the entity's class name by default, and its `region_prefix` and
+  legacy timestamps-region names are dotted even when the user's are not
 
 ## Step 4: Construct the violating scenario
 

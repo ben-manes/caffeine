@@ -26,6 +26,15 @@ Specific areas to examine:
 - accessTime: is opaque access sufficient for expiration?
 - key/value fields: do value reads provide visibility of the object's fields?
 - policyWeight vs weight: correlated but updated at different times
+- check-then-CAS guards: a lock-free path that loads a CAS expectation and later validates
+  another field (an identity or liveness check) before the CAS needs the expectation load ordered
+  before the check. An acquire load does not order an earlier load, so without a load-load fence
+  the expectation can reflect a write the check missed (`tryExpireAfterRead`'s `variableTime`
+  load and value-identity check)
+- third-party timestamp stores: the value-before-timestamp fence pairing covers timestamps stored
+  by the value's writer. A reader that loads the value and then stores a timestamp (read-path
+  `setAccessTime`) is ordered for later readers only on multi-copy-atomic hardware (ARMv8, x86),
+  not on POWER
 
 For each issue:
 - State the specific reordering or visibility failure

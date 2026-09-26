@@ -74,6 +74,23 @@ Every number is relative to anchors from one static sweep (`climber-gate/run.py`
   the shipped machine, the density tier and its goal-metric layer are not earning their keep on
   that cell. It runs the reactive tier at every size, so it has no trajectory and is compared on
   its row alone.
+- **the ghost** (`minisim-leader`, a simulator climber strategy): an online policy that sees the
+  counterfactual. It simulates the start window and every 5% from 5 to 80% (17 arms, probation
+  fixed as the live climber keeps it) as full-size copies up to 20,000 entries, or 20,000-entry
+  miniatures fed a hash sample of the requests above that, discounts each one's misses over
+  64·maximum requests, and moves the window to the one with the fewest. It serves twice. As an
+  anchor it calibrates the static ceiling: its gap to the climber ranks cells almost exactly as
+  `gap` does, so it does not find new cells, but it flags the exceptions (a static ceiling that
+  fixed probation cannot reach, a phased cell where adapting beats every fixed window, a miss both
+  share). As the teacher, its copies' misses at each sample say which window that sample
+  rewarded, which the whole-trace static curve cannot, and the report reads the climber's costly
+  samples against them. Its configuration was measured rather than chosen (`hill-climber.md` §5):
+  fewer arms missed narrow optima, smaller miniatures mis-ranked near neighbors, and more arms
+  added nothing. It is a reference, not a bound: on `DS1` at 2M and 4M it lands below the climber
+  at every size tried, so beating the ghost is not by itself an adaptivity win. It starts at 1%
+  whatever `--start` plants. One extra simulator run per cell, a few seconds at the gate's sizes,
+  cached in the anchor sidecar with its configuration; `n/a` on weighted traces (the simulator
+  drops the key-only host) and on a tree older than the strategy.
 - Anchor fidelity: the reference sketch's aging matches the product's at powers of two and runs up
   to 2× slower elsewhere (`rules/simulator.md`), so prefer power-of-two maxima; the 4097 side of a
   tier straddle carries a small offset in `start` and `headroom` that the 4096 side does not.
@@ -81,9 +98,10 @@ Every number is relative to anchors from one static sweep (`climber-gate/run.py`
 Per arm, `regret.py` reports `gap = ceiling - cache` (the pp number gate rows are barred on),
 `headroom = ceiling - start` (the prize the climber exists to win), `closed = (cache - start) /
 headroom` (the fraction of the prize captured; negative means moving hurt), and `missx`, the
-relative extra misses a user pays (`(miss_cache - miss_ceiling) / miss_ceiling`). Rank cells by
-`gap`; a small gap on a low-hit-rate cell can still be a large `missx`, and `closed` is what
-separates "did nothing" from "did the wrong thing".
+relative extra misses a user pays (`(miss_cache - miss_ceiling) / miss_ceiling`), and
+`ghost_gap = ghost - cache` (what the online reference earned that the climber did not). Rank cells
+by `gap`, and read `ghost_gap` for the exceptions it flags; a small gap on a low-hit-rate cell can
+still be a large `missx`, and `closed` is what separates "did nothing" from "did the wrong thing".
 
 Two cell types, read differently. A **prize cell** has headroom (the start is not the optimum):
 the question is whether and how fast the climber captures it. A **hold cell** has none (the 1%
@@ -99,7 +117,17 @@ at the settle point into transient and steady; `residual = gap - pos_regret` is 
 the moves cost (churn, phase interaction) or won. The static curve is the whole trace's, so on a
 phase-structured workload the split is a blend and the per-sample `hr` against the six-block
 window profile is the finer instrument. `n` is the number of decisions the trace held; under 40
-the cell prices convergence, not the machine, and the row says `SHORT`.
+the cell prices convergence, not the machine, and the row says `SHORT`. The teacher reads the
+same trajectory against the ghost's copies, sample by sample on the same clock (both start when
+the cache is half full): `cf_loss` is the climber's mean loss to each sample's best copy, `cf_best`
+what those best copies earned (above the static ceiling where the phases want different windows),
+and the costly samples, those losing at least 1pp, are grouped into episodes. Each episode names
+the window the copies preferred, how often the climber's law pointed toward it (`law_agree` over
+all costly samples), and the mode that held the climber, and the costly loss is split by mode
+over the whole run (steering, walks, parks, holds). The loss is taken against the climber's
+own hit rate, not a copy's value at its window: the copies sit every 5%, and interpolating
+between them across a cliff invents a cost (`crestpast` parked at 8.6% read 6pp costly that way,
+level with the 10% copy in fact).
 
 Two seeds, kept apart: the spec's `seed` is the trace instance (regenerate with `--seed`, or
 `regret.py --seed-override`, when a verdict is contested, as the gate does with 11/13), and
@@ -150,6 +178,13 @@ the coverage; that is a call to put to Ben, not to make inside a round.
 
 The decision procedure `regret.py` encodes as hints, to be applied by hand on the trajectory:
 
+0. Read the teacher's episodes first: they say when the loss happened and what held the window.
+   An episode whose law pointed away from the preferred window is the rest point or the estimator
+   (1, 3); one whose law pointed toward it while `park`, `hold` or a walk held the climber is the
+   recovery layer (4, 6, 9); a run of audit walks away from a good window is exploration cost. A gap
+   the ghost shares (`ghost_gap < 1` with `gap ≥ 1`) is phases the static ceiling blends over, the
+   miniatures' own miss, or structure (step 4). The teacher says what each sample rewarded, not how
+   to see it; a fix works from signals the shipped cache has, never from miniatures.
 1. Is the window still in the wrong place at the end (`pos_l3` large)? If not, the loss was
    transient: class 2 (or 5 if it never settles).
 2. If it is, what does the steering law want there? `rest_err` is `ln(d_w/d_m)` over the last
@@ -218,15 +253,17 @@ All under this directory unless noted; the runners come from `climber-gate/` (`r
   cell's anchors (cached beside the trace; `--windows` sweeps extra static windows and merges them
   into the sidecar, the dense re-sweep for a peak between two swept points or a cliff the linear
   interpolation misreads), per-arm regret, per-seed trajectory signatures, the aggregate hint
-  vote, and a CSV row. `--traj FILE --static '1:hr,2:hr,...' --lru x` analyzes an existing
-  dump alone. `--variants` (other than `hybrid`), `--start`, `--seeds`, and the trajectory itself
-  are harness knobs; on a stock tree they are silently ignored, so every arm is the shipped machine
-  from 1% and `--seeds` runs are unseeded draws, while the anchors still take `--start` at its
-  word and a stock-tree plant reports `closed` against a start the cache never had.
+  vote, the ghost's hit rate and the teacher's episodes, and a CSV row.
+  `--traj FILE --static '1:hr,2:hr,...' --lru x` analyzes an existing dump alone (no ghost).
+  `--variants` (other than `hybrid`), `--start`, `--seeds`, and the trajectory itself are harness
+  knobs; on a stock tree they are silently ignored, so every arm is the shipped machine from 1%
+  and `--seeds` runs are unseeded draws, while the anchors still take `--start` at its word and a
+  stock-tree plant reports `closed` against a start the cache never had.
   `--variants density` forces the density tier below 4096, a counterfactual for diagnosing a
   straddle, not the shipped machine at that size.
-- **`search.py`**: `eval <specs|dir> --csv` screens a batch and ranks by gap (resumable; a
-  (label, arm, size, seeds) row is never measured twice, so one spec at two maxima is two rows,
+- **`search.py`**: `eval <specs|dir> --csv [--rank gap|ghost_gap]` screens a batch and ranks it
+  by gap or by ghost_gap (resumable; a (label, arm, size, seeds) row is never measured twice, so
+  one spec at two maxima is two rows,
   `--size` runs a geometry at another maximum, which is what a 4096/4097 tier straddle wants, and
   the same cell at a second seed is measured again rather than read from the first seed's row; the
   label is the spec's basename, so keep basenames unique within a round);
@@ -253,8 +290,8 @@ All under this directory unless noted; the runners come from `climber-gate/` (`r
   yields end-to-end regret only (`no trajectory`), which is enough for a screen and useless for a
   classification. Maxima in the millions need `CAF_EXTRA=-PjvmArgs=-Xmx26g` for the eleven-policy
   anchor sweep; the gate's sizes do not.
-- **Cost**: at 8192 a 60-sample cell is 2M requests; anchors plus one product run take ~10 s
-  with a warm daemon, so a 30-spec screen is minutes and a full round with shrink, seeds, and
+- **Cost**: at 8192 a 60-sample cell is 2M requests; anchors, the ghost and one product run take
+  ~15 s with a warm daemon, so a 30-spec screen is minutes and a full round with shrink, seeds, and
   neighborhoods is an hour or two of sequential runs. Runs are sequential by construction; do not
   parallelize simulator processes in one tree, never `killall java`, keep CSVs append-and-resume
   as the tools already do, and prefix long commands with `caffeinate -i`, which is best-effort

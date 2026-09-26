@@ -53,12 +53,20 @@ lambda — which holds only the bin lock, no node monitor — e.g.
 | value (weak/soft) | getAcquire | setRelease + storeStoreFence | synchronized(node); the release store publishes the new reference, and the fence orders it before the old reference's `clear()` and subsequent timestamp stores |
 | key (strong) | getOpaque | set (retire/die only) | synchronized(node) for retire/die; otherwise immutable after construction |
 | key (weak) | plain | set (retire/die only) | synchronized(node) for retire/die; otherwise immutable after construction; getRef uses getOpaque |
+| key reference held in a weak/soft value reference (W/D nodes, which have no key field) | getOpaque, after the value reference's getAcquire | plain in the constructor; `setValue` copies it into the replacement reference; retire/die setOpaque a sentinel on the current reference | synchronized(node); `setValue` runs only after an `isAlive` check, so it never copies a sentinel |
 | accessTime | getOpaque | setOpaque | benign races acceptable |
-| writeTime | getOpaque | setOpaque | synchronized(node) |
+| writeTime | getOpaque | setOpaque; CAS of the low bit | synchronized(node), except `refreshIfNeeded`'s lock-free `casWriteTime` that sets and clears the refresh soft-lock bit; `BoundedLocalCache.setWriteTime` always stores an even value (`toWriteTime`) |
 | variableTime | getOpaque | setOpaque, CAS | synchronized(node), except `tryExpireAfterRead`'s lock-free CAS |
 | weight | plain | plain | synchronized(node); unlocked reads accept staleness |
 | policyWeight | plain | plain | evictionLock; unlocked reads accept staleness |
 | metadata | plain | plain | evictionLock |
+
+`variableTime` has no field of its own. A variable-expiry node stores it in `writeTime` (`…W…`
+classes without refresh) or in `accessTime` (`…A…R` classes, variable expiry plus refresh), and the
+timer-wheel links reuse the write-order or access-order links. `NodeFactory.getClassName` picks
+the class so that the aliased feature is disabled, and `setAccessTime`/`setWriteTime` gate on
+`expiresAfterAccess()`/`expiresAfterWrite() || refreshAfterWrite()`, so two features never write one
+field.
 
 `getPolicyWeight` reads two plain fields, its own and `metadata`, so an unlocked reader can
 see them from different moments. Maintenance callers hold `evictionLock`. A `Policy` snapshot's

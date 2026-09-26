@@ -713,6 +713,18 @@ it. Over 80% of the conceded margin is recoverable inside the reachable window r
 structural ceiling wins nothing. Terrain is concentrated: most of the steering cells are block I/O,
 the family with flat (2–6pp) and sometimes non-convex responses.
 
+**Where the real-trace loss goes, by mechanism.** `/audit-regret`'s teacher splits the climber's
+costly samples (those losing at least 1pp to that sample's best static-window copy) by the mode
+the machine was in. Over seventeen real density-tier cells at one seed, each weighted equally, the
+split is steering 46%, audits 22%, parks and holds 15% and probes 13%, and the families differ.
+On cloud-physics (nine cells) steering is 66%: the average law resting at the wrong window, its
+error pointing away from each sample's best window on most costly samples, with parks holding a
+wrong window on the `w097` family (15–40% of its loss). On the ARC cells, whose optimum is the 1%
+floor, the exploration machinery leaves it: audits 33% and parks or holds 27% on `S3`, audits
+37–45% on `P1` and `P8`, and probes 65% on `DS1` at 1M and 2M. The two problems want different
+repairs, the rest point on block I/O and the exploration price on floor-optimal storage traces.
+`DS1` at 4M is excluded, since its sampled copies score below the climber there.
+
 **Do not tune the audit schedule for this class.** The equilibrium audit exists for a sighted false
 equilibrium, which is exactly this shape, and its cycle costs more samples than these short cells
 have — which invites the conclusion that the clock is too slow. The ablation refutes it: against
@@ -1466,6 +1478,39 @@ rather than a rule for this shape.
   from the host's actual window coordinate. The expensive replicated controller remains rejected.
   Equal RNG seeds still do not give its arms request-indexed common draws, so MiniSim should not be
   described as a fully paired counterfactual oracle.
+- **Learners over sampled miniatures: better on quality, rejected on cost.** A learner over the
+  registered MiniSim miniatures (fixed-probation copies of about 100 entries fed a 1/R key sample)
+  that keeps a discounted miss total per arm over a 64·maximum horizon and moves the host window to
+  the leader gains a median of about 3.7pp over `product.Caffeine` on the gate battery, with no row
+  worse than about 1pp, and 0.5 to 1.1pp on eighteen real density-tier cells (simulator host,
+  unseeded, one to three draws per cell). Five arms at 1/20/40/60/80% keep the gain, so the prize is
+  reaching the right basin rather than resolution. Its real-trace wins are the recorded give-backs:
+  the average law's rest point on frequency-favorable traces (the `cp_w097` family 4 to 6pp, `P8`
+  and `S3` 1 to 2pp) and `cp_w050@123038`'s start path. Its own failure is miniature fidelity: just
+  after `DS1@2M` fills, the miniatures rank a 76% window above 1% where the full cache scores 56.8
+  against 61.9, costing 1 to 2pp there and at 4M. Three variants are dead. Hedge at a static-regret
+  learning rate (H-MC, Ben Mazziane and Zou 2026) cannot follow a regime change: −5.9 on the corda
+  stress at 512, −1.4 and −3.6 on `slowswap`. Its maximal coupling of consecutive picks buys fewer
+  moves and no hit rate over a deterministic leader. The registered per-epoch argmin chases
+  alternation, losing `phases_d050`, `widepin` and `rep_r6` by 6 to 12pp to either learner with
+  memory. Rejected as a product mechanism on costs that grow with the arm count or the maximum:
+  per-entry nodes and an eviction loop for each miniature (only the sketch and a key table can be
+  shared across arms), miniatures sized in proportion to large maxima, and a grid to choose. Kept
+  as `/audit-regret`'s ghost, the simulator's `minisim-leader`, because it is an online policy
+  rather than a hindsight one: it can exceed every fixed window on a phased trace (39.3 against
+  33.5 on the corda stress at 512), and its copies' misses at each sample say which window that
+  sample rewarded, the per-phase reference against which the skill reads the climber's costly
+  episodes. As a gap-finder it adds little: its gap to the climber ranks cells as the static gap
+  does (rank correlation 0.99 over the gate rows, 0.94 over real density-tier cells), and its own
+  window, flat on the traps and dithering among near-equal windows on real traces, localizes
+  nothing. Its configuration is measured. With five arms and MiniSim's ~100-entry miniatures it missed narrow optima
+  (`crestpast` 62.6 against a 64.7 ceiling), and at finer grids the miniatures mis-ranked near
+  neighbors (`moat_h7800` 48.3, where five arms read 49.5); miniature size was the larger lever.
+  Seventeen arms at 5% steps with full-size copies up to 20,000 entries read 64.6, 56.8 and 50.8
+  on `crestpast`, `metronome` and `moat_h7800` (ceilings 64.7, 55.5 and 49.7), sit a median 0.1pp
+  above five arms across eighty cells with one row lower by more than half a point (`widepin`
+  −0.8), and forty-one arms add nothing (a mean 55.60 against 55.63 on the twenty cells where the
+  configurations differed). It lands below the climber on `DS1` at 2M and 4M at every size tried.
 - **Bounded reuse-survival estimator.** A smaller primitive estimator was a credible attempt to
   retain the remote-ranking information without full policies. Its registered realization missed
   both information bars: 0.727pp median winner regret against 0.5pp, and 2.849pp p90 against
