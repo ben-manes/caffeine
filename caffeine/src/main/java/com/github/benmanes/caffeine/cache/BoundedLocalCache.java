@@ -925,7 +925,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if ((now - node.getAccessTime()) < duration) {
         boolean stalePosition = ((last.getAccessTime() - node.getAccessTime()) < 0);
         if (stalePosition || isComputingAsync(node.getValue())) {
-          reorder(accessOrderDeque, node, queueType);
+          accessOrderDeque.moveToBack(node);
           node = next;
           continue;
         }
@@ -933,9 +933,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
       evictEntry(node, RemovalCause.EXPIRED, now);
       remaining--;
-      node = next;
 
-      // Reentrant maintenance can remove the captured tail, preventing termination
+      // Reentrant maintenance can unlink or move any entry, so the scan resumes from the head and
+      // stops if the captured tail that ends the walk left the deque
+      node = (node == last) ? null : accessOrderDeque.peekFirst();
       boolean bounded = (last.getQueueType() == queueType) && accessOrderDeque.contains(last);
       if ((node != null) && !bounded) {
         return 0;
@@ -963,7 +964,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       if ((now - node.getWriteTime()) < duration) {
         boolean stalePosition = ((last.getWriteTime() - node.getWriteTime()) < 0);
         if (stalePosition || isComputingAsync(node.getValue())) {
-          reorder(writeOrderDeque(), node);
+          writeOrderDeque().moveToBack(node);
           node = next;
           continue;
         }
@@ -971,9 +972,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
       evictEntry(node, RemovalCause.EXPIRED, now);
       remaining--;
-      node = next;
 
-      // Reentrant maintenance can remove the captured tail, preventing termination
+      // Reentrant maintenance can unlink or move any entry, so the scan resumes from the head and
+      // stops if the captured tail that ends the walk left the deque
+      node = (node == last) ? null : writeOrderDeque().peekFirst();
       if ((node != null) && !writeOrderDeque().contains(last)) {
         remaining = 0;
         break;
@@ -1935,22 +1937,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     transfer(node, node.getPolicyWeight(), PROBATION, PROTECTED);
   }
 
-  /** Updates the node's location in the policy's deque, unless it moved to a different one. */
-  static <K, V> void reorder(LinkedDeque<Node<K, V>> deque, Node<K, V> node, int queueType) {
-    // The access-order deques share the entry's link fields, so containment cannot distinguish
-    // which one holds it. A reentrant cycle that transferred the entry cannot be detected, so the
-    // scan confirms ownership rather than splicing the deque that now holds it.
-    if (node.getQueueType() == queueType) {
-      reorder(deque, node);
-    }
-  }
-
   /** Updates the node's location in the policy's deque, unless it is no longer linked. */
   static <K, V> void reorder(LinkedDeque<Node<K, V>> deque, Node<K, V> node) {
     // An entry may be scheduled for reordering despite having been removed. This can occur when the
-    // entry was concurrently read while a writer was removing it, or when a reentrant maintenance
-    // cycle unlinked it while an expiration scan held it. If the entry is no longer linked then it
-    // does not need to be processed.
+    // entry was concurrently read while a writer was removing it. If the entry is no longer linked
+    // then it does not need to be processed.
     if (deque.contains(node)) {
       deque.moveToBack(node);
     }

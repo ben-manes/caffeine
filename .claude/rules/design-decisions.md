@@ -79,8 +79,8 @@ Details: [eviction](../docs/design-decisions.md#eviction),
   measurement before replacing `delta <= 0`.
 - `TimerWheel.expire` detaches onto the field-backed, circular `pending` sentinel and re-reads
   its head each iteration. `advance` defers on the explicit `advancing` flag, even when
-  `pending` is empty. Deque scans instead re-check their captured tail after callbacks;
-  access-order checks need both membership and queue type.
+  `pending` is empty. Deque scans instead resume from their head and re-check their captured
+  tail after callbacks; access-order checks need both membership and queue type.
 - `getExpirationDelay` finds the next bucket flush, including cascades. The current bucket
   flushes at offset 1; retain both the main-scan clamp and `peekAhead`'s current-bucket check.
 - `Pacer.schedule` calls `cancel()`, not merely `future.cancel(...)`, before rescheduling.

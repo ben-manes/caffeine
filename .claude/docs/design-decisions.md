@@ -660,36 +660,43 @@ toward `weightedSize`, so a same-cycle
 selection favors the cold expired entries and it self-corrects next cycle. Don't flag the
 cap as under-expiring, and don't remove the `PROCESSING_TO_REQUIRED` re-arm.
 
-**The expiration scans reposition through `reorder`, not `moveToBack`, because a reentrant cycle
-can move the entry they are holding.** Each scan reads its successor into a local, then calls
-`evictEntry`, which delivers the removal notification; under `executor(Runnable::run)` or the
-rejection fallback the listener runs inline, and a `RemovalListener` is permitted to modify the
-cache. A nested `maintenance()` can therefore unlink that successor or transfer it to another
-deque before the scan resumes on it. Reentrancy is not a supported style and cannot be detected
-or refused, so the requirement is only that it not corrupt: the scans confirm the entry is still
-theirs rather than repositioning it blindly. Two guards are needed, because the window,
-probation, and protected deques **share one pair of link fields on the node**, so
-`AccessOrderDeque.contains` answers "linked somewhere", not "linked here":
-- `contains` alone covers an *unlinked* entry. Without it, `unlink` sees both links null, runs
-  `first = next; last = prev`, and discards the whole deque, leaving every entry in it live in
-  `data` and in no eviction queue.
-- `getQueueType()` covers a *transferred* entry, whose links belong to another deque. Without it,
-  `unlink` splices that deque and assigns one of its nodes as this deque's `first`/`last`.
-Skipping is the correct action, not a fallback: `transfer` appends with `offerLast`, so a moved
-entry is already at its target's MRU end with nothing stale to repair. `expireAfterWriteEntries`
-needs only the `contains` half, since the write-order links are exclusive to the one write-order
-deque. Pinned by `BoundedLocalCacheTest.maintenance_recursive_accessOrder` / `_writeOrder` and
-`expireAfterAccess_promotedDuringScan`. Don't reduce either scan back to a bare `moveToBack`,
-and don't drop the queue-type argument as redundant with `contains`.
+**The expiration scans hold no entry across a callback except their captured tail.** `evictEntry`
+delivers the removal notification; under `executor(Runnable::run)` or the rejection fallback the
+listener runs inline, and a `RemovalListener` is permitted to modify the cache, so a nested
+`maintenance()` can unlink, transfer, or reorder any entry before the scan continues. Reentrancy
+is not a supported style and cannot be detected or refused, so the requirement is only that it
+not corrupt or wedge the scan. After `evictEntry` a scan therefore resumes from its deque's head
+rather than the successor it read before the callback, and it repositions with a bare
+`moveToBack`, since the entry it holds is always its deque's head. Without a nested cycle the
+head is that successor, because each step removes the head or moves it behind `last`; an entry
+that `evictEntry` resurrects is examined again. Resuming on the held successor fails three ways:
+- An *unlinked* entry has both links null, so `unlink` runs `first = next; last = prev` and
+  discards the whole deque, leaving every entry in it live in `data` and in no eviction queue.
+- A *transferred* entry carries the links of the deque that now holds it, so `unlink` splices
+  that deque and assigns one of its nodes as this deque's `first`/`last`. The window, probation,
+  and protected deques **share one pair of link fields on the node**, so
+  `AccessOrderDeque.contains` answers "linked somewhere", not "linked here".
+- A successor *moved behind `last`* (a listener that renews entries and runs `cleanUp()`) leaves
+  every entry the walk meets fresher than `last`, so the walk reorders them forever.
+Guarding the reposition with `contains` and the queue type covers only the first two. Counting
+nested cycles would need a field and would see only relinks made by `maintenance()`. Pinned by
+`BoundedLocalCacheTest.maintenance_recursive_accessOrder` / `_writeOrder`,
+`expireAfterAccess_promotedDuringScan`, and
+`ExpirationTest.expire_removalListener_renewsScanSuccessors`, and searched by
+`ReentrancyFuzzer`, which found the relinked-successor loop within a minute of fuzzing from an
+empty corpus. Don't resume a scan on an entry read before `evictEntry`.
 
-**Expiration scans re-check their captured tail after callbacks.** A nested cycle can remove or
-transfer `last`, leaving entries cycling indefinitely under `evictionLock` because reorders do
-not consume the eviction budget. After `evictEntry`, a scan with work remaining checks tail
-membership (including queue type for access order). If absent, it exhausts the budget so
-`PROCESSING_TO_REQUIRED` starts a fresh scan. A scan that reached its own tail needs no re-arm.
-The timer wheel instead uses its field-backed `pending` sentinel and rejects nested advances
-with `advancing`. Pins: `maintenance_recursive_accessOrder_removedTail` and
-`maintenance_recursive_writeOrder_removedTail`.
+**Expiration scans re-check their captured tail after callbacks.** A scan ends once it has
+examined `last`, and reorders do not consume the eviction budget, so a nested cycle that removes
+or transfers `last` leaves entries cycling indefinitely under `evictionLock`. While `last` stays
+linked the walk reaches it, because between evictions every step moves one entry from in front of
+`last` to behind it. After `evictEntry`, a scan with work remaining checks tail membership, and
+for access order the tail's queue type as well, since membership answers only "linked somewhere";
+the write-order links are exclusive to the one write-order deque, so `expireAfterWriteEntries`
+needs only membership. If absent, it exhausts the budget so `PROCESSING_TO_REQUIRED` starts a
+fresh scan. A scan that reached its own tail needs no re-arm. The timer wheel instead uses its
+field-backed `pending` sentinel and rejects nested advances with `advancing`. Pins:
+`maintenance_recursive_accessOrder_removedTail` and `maintenance_recursive_writeOrder_removedTail`.
 
 The wheel budget counts **only evictions**, never the cascade (rescheduling a non-expired
 node to a finer level) — mirroring the deque caps, which count `evictEntry` but not the

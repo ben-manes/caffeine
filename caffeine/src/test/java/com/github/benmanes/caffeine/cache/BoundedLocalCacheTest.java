@@ -496,7 +496,7 @@ final class BoundedLocalCacheTest {
     cache.cleanUp();
 
     // Stage a non-empty probation space so that a node transferred into it during the scan has
-    // live links, which is what makes contains() report it as still being in the window queue.
+    // live links, so that resuming on it would splice probation into the window queue.
     var window = cache.accessOrderWindowDeque();
     var probation = cache.accessOrderProbationDeque();
     for (int i = 0; i < 2; i++) {
@@ -573,7 +573,7 @@ final class BoundedLocalCacheTest {
 
     // Evicting the expired head delivers the notification inline. The listener reads the successor
     // that the scan is holding, and the re-entrant maintenance promotes it to the protected queue
-    // while the tail stays in probation, so the scan resumes on an entry that another queue owns.
+    // while the tail stays in probation, so resuming on it would reposition another queue's entry.
     var promotedKey = requireNonNull(promoted.getKey());
     doAnswer(invocation -> {
       assertThat(cache.get(promotedKey)).isNotNull();

@@ -76,6 +76,10 @@ method.
   target (`:caffeine:fuzzTest`); a class-scoped run never touches the `fuzzTest` source set.
   New climber state must arrive with its invariants in `ClimberInvariants`, or the fuzz run
   proves nothing.
+- Changes to maintenance that a removal listener can re-enter (the expiration and eviction
+  scans, the buffer drains) must ALSO run `:caffeine:fuzzTest --tests ReentrancyFuzzer`. Its
+  listener re-enters the cache inline, and an input fails when it hangs, throws, corrupts the
+  policy, or leaves an entry that never expires; the unit pins cover only the cases found so far.
 - Behavioral regret (does the climber close the gap on a workload) is not the unit suite's job:
   `/climber-gate` holds the known traps and `/audit-regret` searches for new ones, both in the
   simulator against `product.Caffeine`
