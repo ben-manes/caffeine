@@ -1965,6 +1965,15 @@ expiry to an in-flight future. The raced exit is the one place a ready value ski
 (`Cache.get` goes through `computeIfAbsent`, which reads the entry it finds); covering it needs a
 second map read or a remap hint honoured by both caches, for a window between two steps.
 
+**A write or read in the finalization window is accounted as meeting an in-flight load.** The
+view's caller has the loaded value once the future completes, but `handleCompletion`'s quiet
+finalization runs in a dependent that can follow it, and until then the node carries the async
+sentinel. A `put` there is dated by `expireAfterCreate` rather than `expireAfterUpdate`, a read's
+`expireAfterRead` is dropped, and the loaded value's own creation is then skipped or applied over
+the read. Only which `Expiry` leg dates the entry differs; the mapping, listener and weight are
+correct. Telling a delivered value from an in-flight one needs a readiness probe on every write
+and read.
+
 
 
 ## Async Put Re-registration
@@ -2112,6 +2121,15 @@ Partial-drain remainders are **not** affected — `expireVariableEntries` re-arm
 asserts **exact equality** against an oracle scanning every bucket of every wheel. That fuzzy
 assertion was previously vacuous — it guarded the assert with its own condition and compared an
 absolute `variableTime` against a relative delay — which is why the defect survived the fuzzer.
+
+**The `VarExpiration` traversers list wheel 0's current bucket last.** It holds the entries due
+within the current tick and aliases a revolution away, so `oldest()` lists the former after entries
+due up to a minute later, and `youngest()` lists them first. That is accepted under the views'
+"roughly ordered" contract. Starting at the current bucket misplaces the aliases instead, and
+splitting it into two visits must classify each timer once, since a concurrent read can move a
+deadline between the visits and list the entry twice or not at all; the buffering that needs is
+not worth it for a best-guess order. The traversers are also wheel-major and unsorted within a
+bucket, so they can invert two entries by up to one span of the higher wheel.
 
 **Interner `drainKeyReferences` does not need a value-identity check.** Unlike values, keys on
 interned nodes never rebind. Cleared references now compare equal only to themselves. In the old

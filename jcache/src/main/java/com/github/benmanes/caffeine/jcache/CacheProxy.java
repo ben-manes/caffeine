@@ -135,7 +135,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public boolean containsKey(K key) {
     requireOperable();
 
-    Expirable<V> expirable = cache.getIfPresent(key);
+    Expirable<V> expirable = cache.policy().getIfPresentQuietly(key);
     if (expirable == null) {
       return false;
     }

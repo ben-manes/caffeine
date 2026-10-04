@@ -66,8 +66,9 @@ Details: [eviction](../docs/design-decisions.md#eviction),
   Do not reuse readiness across observations: completion or obtrusion may intervene.
 - The async expiry sentinel also means accounting is deferred. Both `expireAfterRead` and
   `tryExpireAfterRead` preserve it. Completion checks readiness before installation and quiet
-  replacement checks the sentinel again, so a creation is neither skipped nor charged again as
-  an update.
+  replacement checks the sentinel again, so the completion neither skips a creation nor charges
+  it again as an update. A write or read that lands on the sentinel after a synchronous-view
+  caller has the value is accounted as meeting an in-flight load.
 - Weak/soft references' `keyReference` accessors are opaque, not plain or volatile. Preserve
   the fence between publishing a replacement value reference and clearing the old one.
 - Outside `evictionLock`, use `maximumAcquire` / `weightedSizeAcquire`. Plain long reads can

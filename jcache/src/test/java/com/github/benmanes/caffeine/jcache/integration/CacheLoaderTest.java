@@ -503,6 +503,38 @@ final class CacheLoaderTest {
   }
 
   @Test
+  void containsKey_refreshAfterWrite_doesNotCallLoader() {
+    ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(1)).thenReturn(-1, -2);
+
+    var updated = new AtomicInteger();
+    CacheEntryUpdatedListener<Integer, Integer> updatedListener =
+        events -> events.forEach(event -> updated.incrementAndGet());
+
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setReadThrough(true);
+          config.setCacheLoaderFactory(() -> loader);
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              () -> updatedListener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        }).build();
+        var cache = fixture.jcacheLoading()) {
+      assertThat(cache.get(1)).isEqualTo(-1);
+      fixture.ticker().advance(java.time.Duration.ofMinutes(2));
+
+      // A read-through cache's containsKey checks only the cache and never calls the loader
+      assertThat(cache.containsKey(1)).isTrue();
+      verify(loader).load(1);
+      assertThat(updated.get()).isEqualTo(0);
+    }
+  }
+
+  @Test
   void reload_nullValue() {
     // A refresh whose reload yields null drops the entry rather than storing null, and publishes
     // REMOVED (symmetric with the UPDATED/EXPIRED a non-null reload fires).

@@ -86,12 +86,7 @@ def evaluate(spec_path, args, label=None):
                                 args.belady, args.dump_dir, label)
     rows = {r["variant"]: r for r in rows_list}
     if args.csv and rows:
-        new = not os.path.exists(args.csv)
-        with open(args.csv, "a", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=G.FIELDS)
-            if new:
-                w.writeheader()
-            w.writerows(rows.values())
+        G.append_csv(args.csv, rows.values())
     return rows
 
 
@@ -437,6 +432,7 @@ def main():
     p.add_argument("--steps", type=int, default=6)
     common(p)
     args = ap.parse_args()
+    G.check_csv(getattr(args, "csv", None))
     if hasattr(args, "seeds") and args.seeds == "":
         args.seeds = None
     {"eval": cmd_eval, "mutate": cmd_mutate, "shrink": cmd_shrink, "bisect": cmd_bisect,

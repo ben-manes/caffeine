@@ -515,6 +515,11 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   snapshot's maintenance pass ends; synchronizing every node to pair them was declined.
   The same replay can hold a weight no entry has, which the snapshot clamps into the `int` range: a
   negative transient reads as 0, and an over-count such as `2W - w` stays within this ruling.
+- `expireAfterAccess().oldest()` misordering an evicting cache's entries. The snapshot merges the
+  window, probation and protected deques by access time, but probation receives window victims and
+  protected demotions out of access order, and a pending async entry's `ASYNC_EXPIRY` access time
+  holds back the rest of its deque until the others are exhausted, after which the entry is
+  filtered out. The order is the policy's best guess; each entry is still listed once.
 - Message-less `requireArgument` on public API.
 
 **Notifications**

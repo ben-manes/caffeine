@@ -545,6 +545,29 @@ def fmt_row(label, trace, size, v, seeds, lru, belady, start_hr, curve, hrs, sig
     return row
 
 
+def check_csv(path):
+    """Validate an existing output's column order and return whether it has a header."""
+    if not path or not os.path.exists(path):
+        return False
+    with open(path, newline="") as f:
+        header = next(csv.reader(f), None)
+    if header is None:
+        return False
+    if header != FIELDS:
+        raise ValueError(f"{path}: incompatible CSV header; use a new --csv path")
+    return True
+
+
+def append_csv(path, rows):
+    """Append measurements with the current schema, initializing an empty output."""
+    has_header = check_csv(path)
+    with open(path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=FIELDS)
+        if not has_header:
+            writer.writeheader()
+        writer.writerows(rows)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("input", nargs="?", help="trace file or workload spec (.json)")
@@ -588,6 +611,7 @@ def main():
 
     if not a.input:
         sys.exit("need a trace or spec (or --traj with --static)")
+    check_csv(a.csv)
     trace, spec = resolve_trace(a.input, a.traces_dir, a.max_override, a.seed_override)
     size = a.size or (int(spec["max"]) if spec else None)
     if size is None:
@@ -609,12 +633,7 @@ def main():
     rows_out = evaluate_cell(trace, spec, size, a.fmt, variants, seeds, a.runs, a.start, a.belady,
                              a.dump_dir, label, results=results, json_path=a.json, windows=windows)
     if a.csv and rows_out:
-        new = not os.path.exists(a.csv)
-        with open(a.csv, "a", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=FIELDS)
-            if new:
-                w.writeheader()
-            w.writerows(rows_out)
+        append_csv(a.csv, rows_out)
 
 
 def evaluate_cell(trace, spec, size, fmt, variants, seeds, runs, start, belady, dump_dir, label,

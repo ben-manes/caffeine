@@ -2,13 +2,13 @@
 #
 # Run the snapshot audit battery across models and bank one report per (model, skill).
 #
-#   .github/scripts/run-audits.sh                 # everything not already done
-#   .github/scripts/run-audits.sh --dry-run       # print the plan, run nothing
-#   .github/scripts/run-audits.sh --smoke         # one cheap run per lane; wiring only, no consolidation
-#   .github/scripts/run-audits.sh --lanes opus    # one lane
+#   .github/scripts/run-audits.sh                  # everything not already done
+#   .github/scripts/run-audits.sh --dry-run        # print the plan, run nothing
+#   .github/scripts/run-audits.sh --smoke          # one cheap run per lane; no consolidation
+#   .github/scripts/run-audits.sh --lanes opus-5.5 # one lane
 #   .github/scripts/run-audits.sh --skills audit-jmm,audit-liveness
-#   .github/scripts/run-audits.sh --consolidate   # only the consolidation pass
-#   .github/scripts/run-audits.sh --status        # what is banked and what is outstanding
+#   .github/scripts/run-audits.sh --consolidate    # only the consolidation pass
+#   .github/scripts/run-audits.sh --status         # what is banked and what is outstanding
 #
 # Reports land in .local/audits/<model>/<skill>.md, per .claude/docs/audit-output.md. A run whose
 # report file is already present is skipped, so the script is resumable: re-run it after a quota
@@ -151,7 +151,7 @@ while [ $# -gt 0 ]; do
       for w in "${want[@]}"; do
         for l in "${LANES_DEFAULT[@]}"; do [ "${l%%|*}" = "$w" ] && sel+=("$l"); done
       done
-      [ ${#sel[@]} -gt 0 ] || die "no lane matched: $arg (have: fable-5.1, opus-5, gpt-6-astra)"
+      [ ${#sel[@]} -gt 0 ] || die "no lane matched: $arg (have: fable-5.1, opus-5.5, gpt-6-astra)"
       LANES=("${sel[@]}") ;;
     --skills)
       [ $# -ge 2 ] || die "--skills needs a value"

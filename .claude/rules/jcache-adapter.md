@@ -50,7 +50,9 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   [entry processors](../docs/jsr107-conformance.md#entry-processors).
 - Query operations returning the same wrapper still count as native writes. Their interaction
   with vendor refresh/native TTL settings is accepted; do not expose a public no-op hint or
-  split an atomic operation to avoid it. See [native extensions](../docs/jsr107-conformance.md#native-extensions).
+  split an atomic operation to avoid it. `containsKey` probes with `getIfPresentQuietly`, so it
+  starts no vendor refresh and records no access. See
+  [native extensions](../docs/jsr107-conformance.md#native-extensions).
 
 ## Writes, loads, and statistics
 

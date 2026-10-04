@@ -85,7 +85,7 @@ final class JCacheAccessExpiryTest {
   void containsKey_expired() {
     try (var fixture = jcacheFixture()) {
       fixture.jcache().put(KEY_1, VALUE_1);
-      fixture.ticker().setAutoIncrementStep(EXPIRY_DURATION.dividedBy(2));
+      fixture.ticker().setAutoIncrementStep(EXPIRY_DURATION);
 
       assertThat(fixture.jcache().containsKey(KEY_1)).isFalse();
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();

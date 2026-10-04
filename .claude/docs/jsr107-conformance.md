@@ -261,6 +261,11 @@ failed conditional writes/processor READ can reset native write time and cancel 
 polling may defer vendor `refresh.after-write` or eager native TTL. This is accepted: JCache
 expiry comes from `ExpiryPolicy`, while those Caffeine settings are optional extensions.
 
+`containsKey` probes with `getIfPresentQuietly`, as keep-existing `loadAll` does. A recording read
+would start a due vendor refresh, which calls the `CacheLoader` that the spec says a read-through
+`containsKey` never calls, and it would count as an access, which the `ExpiryPolicy` table does
+not give `containsKey`. Pin: `CacheLoaderTest.containsKey_refreshAfterWrite_doesNotCallLoader`.
+
 Do not expose `RemapHints` as a public no-op escape. Treating an unchanged value as no write
 would change `asMap().compute` for all users and leave write-deque reorder paired with a stale
 timestamp. A `computeIfAbsent` plus expired fallback splits the atomic operation and does not
