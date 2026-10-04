@@ -86,7 +86,7 @@ final class Async {
     }
 
     @Override
-    @SuppressWarnings("FutureReturnValueIgnored")
+    @SuppressWarnings({"FutureReturnValueIgnored", "PMD.AvoidInstanceofChecksInCatchClause"})
     public void onRemoval(@Nullable K key,
         @Nullable CompletableFuture<@Nullable V> future, RemovalCause cause) {
       if (future != null) {
@@ -96,6 +96,9 @@ final class Async {
               try {
                 delegate.onRemoval(key, value, cause);
               } catch (Throwable t) {
+                if (t instanceof InterruptedException) {
+                  Thread.currentThread().interrupt();
+                }
                 logger.log(Level.WARNING, "Exception thrown by removal listener", t);
               }
             };

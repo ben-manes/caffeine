@@ -358,6 +358,19 @@ request is unspecified by `CacheLoader.loadAll` and the TCK, so it is stored and
 CREATED like any loaded value, even over an existing mapping; a presence check before core's `put`
 would be racy check-then-act.
 
+The overwrite holds under write-through and for a concurrent delete as well. A `put` or `remove` that
+commits through the writer while the bulk load runs is undone when the loaded value is stored: after
+a `put` the store holds the new value and the cache the loaded one, and after a `remove` the deleted
+row is back in the cache. Either way the cache trails its store until the entry expires. This is
+accepted. The spec gives `getAll` per-key happen-before but also has it invoke `loadAll()`, and no
+surveyed provider reconciles the two with a batched load: the RI and Ehcache keep the write by
+loading one key at a time under that key's lock, Ehcache through a single-key `loadAll`. A per-load
+token that every write discards would keep both the batch and the write, at the cost of a hook on
+each adapter write path to make the adapter stricter than any provider; core's own bulk overwrite
+stays as its contract states. `Cache.loadAll` has the same shape, and its consistency row is "N/A".
+An application that needs the write kept can use Caffeine's `AsyncCache.getAll`, whose bulk load does
+not stomp a write to a requested key.
+
 The listener contract does promise per-key event ordering for synchronous and asynchronous
 listeners, and says listeners fire after the cache mutation. The accepted read-through behavior
 diverges from those promises: loader publication precedes core bulk storage, so CREATED can
@@ -800,7 +813,15 @@ CacheException with its cause, as configuration failures through the cache API; 
 Typesafe exceptions or an ignored subtype. A valid JCache name need not fit Typesafe's path grammar,
 so `cachePath` quotes it with `ConfigUtil.joinPath` and resolves it as a literal key. A BadPath can
 then only come from a malformed path within the settings, such as a `listeners` entry, which must
-fail rather than hide the cache as undefined. `defaults`, `cacheNames`, and `CacheFactory`'s read of
+fail rather than hide the cache as undefined. This changed in 3.3.0, deliberately: 3.2.x looked a
+name up as a path, so an unquoted dotted key such as `com.example.Foo { ... }`, which HOCON expands
+into nested objects, resolved, while `cacheNames` listed only its first segment (`com`). Since 3.3.0
+the nested form does not resolve and the cache falls back as unconfigured, so a dotted name must be
+written quoted. A Java properties key (a `-D` override or a `.properties` file) cannot quote, so it
+cannot configure a dotted name at all. Resolving both forms was declined: it restores the phantom
+first-segment cache and makes `createCache`'s externally-configured rejection depend on which form
+matched. Hibernate names entity regions by class, and it logs `HHH90001006` when it creates a
+missing region on the fly. `defaults`, `cacheNames`, and `CacheFactory`'s read of
 the configuration source wrap theirs too, so an unreadable or malformed file surfaces from getCache
 and createCache as CacheException. Pins: `TypesafeConfigurationTest.from_malformedSetting`,
 `from_dottedCacheName`, `from_malformedListenerPath_throwsCacheException`,
@@ -900,7 +921,17 @@ manager-close guarantee, and ordinary lookup is not classified as invalid lifecy
 Native background refresh is best-effort and is not added to inFlight or awaited through
 `policy().refreshes()`. Blocking close on arbitrary user-executor refresh work was rejected.
 Closed-cache event suppression comes from `EventTypeAwareListener.dispatch` checking the source's
-isClosed, independently of this barrier; an owned executor's shutdown also rejects new work.
+isClosed, independently of this barrier. An owned executor's shutdown rejects new work only through
+its rejection handler. With a handler that drops work once the pool is shut down
+(`CallerRunsPolicy`, `DiscardPolicy`, `DiscardOldestPolicy`), an operation admitted before `close()`
+whose synchronous listener dispatch is submitted after the shutdown never has that dispatch run:
+its `put`, read-through `get` or `invoke` waits forever and ignores interrupts, and a `loadAll`
+caught the same way never notifies its CompletionListener while close waits out its timeout. This
+is accepted. The spec defines neither operations racing close nor executor shutdown, the handler is
+the application's choice, and a complete repair needs the operation-versus-close coordination
+rejected below (an `isShutdown()` check before submission only narrows the race). `AbortPolicy`
+surfaces the accepted `CacheEntryListenerException` instead, and a shared plain `Executor` is not
+shut down.
 
 ### Racing operations and shutdown
 

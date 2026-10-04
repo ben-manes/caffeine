@@ -693,7 +693,18 @@ Read `jsr107-conformance.md`'s topic sections with this section.
   does not use that loading path. Guava's successful cases do not change the facade's accepted
   restriction. Migrating users do hit it. A `reload` that refreshes its own key fails the
   same way, because the facade calls `reload` inside the refresh registration, while native
-  Guava's loading reference turns the nested refresh into a no-op.
+  Guava's loading reference turns the nested refresh into a no-op. Three further outcomes are
+  covered by the same acceptance. A nested insert that crosses the map's resize threshold runs
+  the resize on the loading thread and re-enters the held bin, so the resize is abandoned for the
+  life of the map and misplaced keys are iterated but not gettable and survive `invalidateAll()`,
+  leaving a bounded cache with an entry outside the policy and a `weightedSize` below the true
+  weight. JDK 11 livelocks the loading thread in that resize instead. In a size-bounded cache a
+  nested write that finds the write buffer full waits for `evictionLock` while holding the outer
+  bin, which `evictEntry` waits on under that lock, so one thread stops eviction cache-wide. Under
+  `refreshAfterWrite`, Guava's default `reload` runs a `load` that reads other keys inside the
+  refresh registration, so readers can deadlock in the refresh map; `CacheLoader.asyncReloading`
+  avoids it. Supporting nested loads means loading outside the bin lock as Guava does, which would
+  rebuild the facade on another loading model.
 
 ---
 

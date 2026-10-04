@@ -361,6 +361,35 @@ final class ExpirationTest {
   }
 
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expiryTime = Expire.ONE_MINUTE, population = Population.EMPTY,
+      evictionListener = Listener.MOCKITO, weigher = CacheWeigher.DISABLED)
+  void expire_evictionListener_interrupted(Cache<Int, Int> cache, CacheContext context) {
+    // The listener's failure is logged rather than propagated, so a non-Java listener's
+    // InterruptedException must restore the interrupt status of the thread it ran on
+    doAnswer(invocation -> { throw uncheckedThrow(new InterruptedException()); })
+        .when(context.evictionListener()).onRemoval(any(), any(), any());
+    cache.put(context.absentKey(), context.absentValue());
+    context.ticker().advance(Duration.ofMinutes(2));
+    try {
+      cache.put(context.absentKey(), context.absentValue());
+      assertThat(Thread.currentThread().isInterrupted()).isTrue();
+    } finally {
+      Thread.interrupted();
+    }
+    assertThat(logEvents()
+        .withMessage("Exception thrown by eviction listener")
+        .withThrowable(InterruptedException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },

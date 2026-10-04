@@ -426,6 +426,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       try {
         removalListener.onRemoval(key, value, cause);
       } catch (Throwable t) {
+        if (t instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
         logger.log(Level.WARNING, "Exception thrown by removal listener", t);
       }
     };
@@ -446,6 +449,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     try {
       evictionListener.onRemoval(key, value, cause);
     } catch (Throwable t) {
+      if (t instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       logger.log(Level.WARNING, "Exception thrown by eviction listener", t);
     }
   }

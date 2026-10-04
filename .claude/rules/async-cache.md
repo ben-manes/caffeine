@@ -80,7 +80,8 @@ paths:
 
 - `AsyncRemovalListener` chains `thenAccept()` and dispatches through the executor, with inline
   fallback on rejection. It invokes the listener only for a successful, non-null value; listener
-  exceptions are logged at WARNING and swallowed.
+  exceptions are logged at WARNING and swallowed, an `InterruptedException` after restoring the
+  interrupt status.
 - `LocalCache.notifyOnReplace` captures `oldFuture` in `newFuture.whenComplete(...)` to suppress
   notifications when distinct futures resolve to the same value instance (#593). A listener may
   close that value, so early notification is unsafe. This retains predecessors until their

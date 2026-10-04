@@ -778,15 +778,23 @@ describes costs a weight swing that telescopes back to zero. It ends with
 
 ## Exception Handling
 
-**Checked-exception conversion restores interruption.** Kotlin, Scala, and Groovy callbacks
-can throw `InterruptedException` through `Function`, `BiFunction`, or `CacheLoader`; checked
-exceptions are a javac rule, not a JVM constraint. `Caffeine.toUnchecked` rethrows `Error`,
-returns `RuntimeException` by identity, restores the current thread's interrupt status for
-`InterruptedException` (JDK interruptible waits clear it when throwing), and otherwise wraps in
-`CompletionException`. The default `CacheLoader.asyncLoad` converts inside its supplier, on
-whichever thread the executor uses. Conversion is used by loader chains, catch-commit-rethrow
-for COLLECTED/EXPIRED recomputation, and `AsyncBulkCompleter`. Absent-key paths and
-`UnboundedLocalCache` propagate unchanged and need no conversion-side repair.
+**Checked-exception conversion and the listener guards restore interruption.** Kotlin, Scala,
+and Groovy callbacks can throw `InterruptedException` through `Function`, `BiFunction`,
+`CacheLoader`, or `RemovalListener`; checked exceptions are a javac rule, not a JVM constraint.
+`Caffeine.toUnchecked` rethrows `Error`, returns `RuntimeException` by identity, restores the
+current thread's interrupt status for `InterruptedException` (JDK interruptible waits clear it
+when throwing), and otherwise wraps in `CompletionException`. The default
+`CacheLoader.asyncLoad` converts inside its supplier, on whichever thread the executor uses.
+Conversion is used by loader chains, catch-commit-rethrow for COLLECTED/EXPIRED recomputation,
+and `AsyncBulkCompleter`. Absent-key paths and `UnboundedLocalCache` propagate unchanged and need
+no conversion-side repair. The eviction and removal listener guards log the failure instead of
+converting it, so they restore the status before logging: the eviction listener runs on the
+thread doing the eviction, often the caller's own `put` or `compute`, and a removal listener
+runs on the caller under a caller-runs executor or a rejected submission. Later interruptible
+calls on that thread then fail at once, including the listener's for the next entry evicted in
+the same pass; that is the interrupt taking effect, not a cascade to contain. The statistics,
+scheduler, and future-completion guards do not restore, since the callbacks they wrap are not
+expected to wait.
 
 **Catch-commit-rethrow pattern** in `doComputeIfAbsent` and `remap`. Both catch
 `Throwable`, not just RuntimeException. When user code
@@ -1027,16 +1035,19 @@ not a Caffeine bug. Detection is best-effort: encountering an empty bin's Reserv
 throws `IllegalStateException("Recursive update")` (surfaced raw, unwrapped), as does a
 recursive append detected by `compute` or `computeIfAbsent` in a populated linked bin.
 Other recursive updates, including tree-bin operations, can go undetected and silently
-corrupt (lost inserts, double count updates, clobbered writes). Never rely on the ISE as a
-safety net. During a refresh completion this can
-orphan the key's `refreshes` token (suppressing its auto-refresh) only if `data.compute`
-throws *before* `remap`'s lambda — a broken `hashCode` or a rare cross-bin ISE (same-key
-recursion silently re-enters a populated bin instead); in-lambda throws self-clean on the
-exits a completion can reach (the create-branch `finally` and the present-entry `catch`).
-The one exit that *preserves* — an absent-branch **user-function** throw (both siblings; ULC guards its catch with `value != null`) — a refresh completion never
-hits, because its own lambda cannot throw before materialization. Either way the orphan
-self-heals on the next write/removal. Don't add a catch-side `refreshes.remove` — it
-re-throws on the broken-`hashCode` sibling.
+corrupt (lost inserts, double count updates, clobbered writes). A nested insert that crosses
+the resize threshold runs the resize on the computing thread, which re-enters the held bin and
+abandons the resize for the life of the map, leaving misplaced keys that iteration finds, `get`
+misses, and `invalidateAll()` does not remove. Never rely on the ISE as a safety net. During a
+refresh completion this can orphan the key's `refreshes` token (suppressing its auto-refresh)
+only if `data.compute` throws *before* `remap`'s lambda — a broken `hashCode` or a rare
+cross-bin ISE (same-key recursion silently re-enters a populated bin instead); in-lambda throws
+self-clean on the exits a completion can reach (the create-branch `finally` and the
+present-entry `catch`). The one exit that *preserves* — an absent-branch **user-function** throw
+(both siblings; ULC guards its catch with `value != null`) — a refresh completion never hits,
+because its own lambda cannot throw before materialization. Either way the orphan self-heals on
+the next write/removal. Don't add a catch-side `refreshes.remove` — it re-throws on the
+broken-`hashCode` sibling.
 
 The same restriction covers a read inside a computation or eviction listener that triggers an
 inline refresh update or inline maintenance. Two remappers reading each other's stale key can

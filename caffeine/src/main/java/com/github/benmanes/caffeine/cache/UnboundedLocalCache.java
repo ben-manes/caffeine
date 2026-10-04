@@ -184,6 +184,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
+  @SuppressWarnings("PMD.AvoidInstanceofChecksInCatchClause")
   public void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
     var removalListener = removalListener();
     if (removalListener == null) {
@@ -193,6 +194,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       try {
         removalListener.onRemoval(key, value, cause);
       } catch (Throwable t) {
+        if (t instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
         logger.log(Level.WARNING, "Exception thrown by removal listener", t);
       }
     };

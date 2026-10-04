@@ -62,6 +62,8 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   failure as suppressed if the store loop fails. See [write-through](../docs/jsr107-conformance.md#write-through).
 - Read-through `getAll` replaces concurrent writes with loaded values and publishes CREATED;
   `loadAll(replaceExistingValues=false)` keeps existing values. Preserve this contract difference.
+  Under write-through a `put` or `remove` during the load leaves the cache behind its store until
+  expiry; that is accepted, since no provider keeps a batched load and the write together.
   Load-time publication can precede storage and a prior mapping's EXPIRED event. These are
   accepted divergences from the listener contract, which does promise per-key ordering.
   See [read-through and event ordering](../docs/jsr107-conformance.md#read-through-and-event-ordering).
@@ -131,7 +133,9 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   See [classloaders](../docs/jsr107-conformance.md#classloaders).
 - A configured `ExecutorService` is cache-owned and shut down on close. Common-pool shutdown is
   a no-op. Share an executor through a plain `Executor`, e.g. `shared::execute`; do not add a
-  shutdown flag. The spec does not require executor shutdown.
+  shutdown flag. The spec does not require executor shutdown. A handler that drops work after
+  shutdown (`CallerRunsPolicy`) strands an operation racing close forever; that is accepted. See
+  [lifecycle](../docs/jsr107-conformance.md#executor-ownership-and-asynchronous-work).
 - `inFlight` tracks explicit asynchronous work, including `loadAll`'s `CompletionListener`
   continuation. `loadAllAndNotify` returns that future; admission, submission failure handling,
   and retirement stay in `loadAll`. Compose every outcome, a failed load included, with

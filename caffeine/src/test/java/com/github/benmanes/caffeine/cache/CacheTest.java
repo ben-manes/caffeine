@@ -1025,6 +1025,29 @@ final class CacheTest {
   }
 
   @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
+      executor = CacheExecutor.DIRECT, removalListener = Listener.MOCKITO)
+  void removalListener_interrupted(Cache<Int, Int> cache, CacheContext context) {
+    // The listener's failure is logged rather than propagated, so a non-Java listener's
+    // InterruptedException must restore the interrupt status of the thread it ran on
+    doAnswer(invocation -> { throw uncheckedThrow(new InterruptedException()); })
+        .when(context.removalListener()).onRemoval(any(), any(), any());
+    try {
+      cache.invalidateAll();
+      assertThat(Thread.currentThread().isInterrupted()).isTrue();
+    } finally {
+      Thread.interrupted();
+    }
+    assertThat(logEvents()
+        .withMessage("Exception thrown by removal listener")
+        .withThrowable(InterruptedException.class)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
+  }
+
+  @ParameterizedTest
   @CheckMaxLogLevel(ERROR)
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.SINGLETON,
       executor = CacheExecutor.REJECTING, executorFailure = ExecutorFailure.EXPECTED,

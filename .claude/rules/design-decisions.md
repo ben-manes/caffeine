@@ -106,6 +106,8 @@ Details: [expiration](../docs/design-decisions.md#expiration),
 - `Caffeine.toUnchecked` restores the current thread's interrupt status when converting
   `InterruptedException`. Functional interfaces can throw checked exceptions from other JVM
   languages. The absent-key and unbounded paths propagate unchanged rather than converting.
+  The eviction and removal listener guards restore it before logging; the statistics,
+  scheduler, and future-completion guards do not.
 - Concurrent standard-future obtrusion reads as not-ready. Keep `Async.getIfReady`'s narrow
   cancellation/completion catch; a later obtrusion need not remove the physical entry.
 - Automatic refresh stays lock-free. Commit requires the captured node alive, the same value,

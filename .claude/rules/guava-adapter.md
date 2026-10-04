@@ -81,7 +81,9 @@ The two `build` overloads bridge different contracts:
   Slow reloads serialize colliding refresh registrations under the accepted CHM-bin rule.
   A reload waiting for another thread's cache operation is still a prohibited cache dependency,
   even when its own body makes no cache call; Guava's different lock granularity does not
-  establish an independent-progress guarantee for the facade.
+  establish an independent-progress guarantee for the facade. That includes Guava's default
+  `reload`, which calls `load`: under `refreshAfterWrite` a `load` that reads other keys can
+  deadlock readers inside the refresh map. `CacheLoader.asyncReloading` avoids it.
 - **Failed synchronous loads are retried by waiters.** Guava shares one
   `LoadingValueReference` failure. Core `computeIfAbsent` serializes waiters at the bin lock,
   each retrying the failed load: three waiting callers can make three calls and receive
