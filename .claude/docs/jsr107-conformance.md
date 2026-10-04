@@ -148,6 +148,13 @@ both behaviors pass. The parity tests above check the missing event/statistic di
   checked throw: `CacheProxyTest.put_expiryThrowsCheckedException_storesWithDefaultExpiry`. The
   adapter catches `Exception`, so an `Error` propagates; RI, Ehcache 3, Infinispan, and Coherence
   catch `Throwable` around expiry calls, Hazelcast catches `Exception`, and cache2k does not catch.
+  Each write consults the policy before it publishes the attempted write's event, counts its put
+  or, in the put family, publishes an expired prior's EXPIRED, so the `Error` leaves no event for
+  the aborted write, the order Hazelcast and cache2k use. `invoke` instead publishes an expired
+  prior's EXPIRED before its processor and commits that removal if anything throws (see
+  [entry processors](#entry-processors)). Pins:
+  `JCacheCombinedExpiryTest.*_expired_creationExpiryError_expiresOnce` and
+  `JCacheUpdateExpiryTest.writeOp_present_updateExpiryError_publishesNoUpdate`.
 - Update/access returning null or throwing leaves expiry unchanged. The loader helper takes a
   `created` flag; reload translates the update `Long.MIN_VALUE` sentinel to the old wrapper's
   deadline. Do not turn a finite deadline eternal or log an NPE for an ordinary null update.
@@ -265,6 +272,12 @@ expiry comes from `ExpiryPolicy`, while those Caffeine settings are optional ext
 would start a due vendor refresh, which calls the `CacheLoader` that the spec says a read-through
 `containsKey` never calls, and it would count as an access, which the `ExpiryPolicy` table does
 not give `containsKey`. Pin: `CacheLoaderTest.containsKey_refreshAfterWrite_doesNotCallLoader`.
+
+With a vendor `Expiry` beside a JCache `ExpiryPolicy`, the native timer is not a mirror of the
+policy, so its deadline after an access depends on the operation: a read sets it to the JCache
+access duration, a compute-based access (`invoke` READ, a failed conditional, `putIfAbsent` on a
+present key) leaves the vendor's `expireAfterUpdate`, and `containsKey` leaves it unchanged. Every
+read still checks the wrapper's deadline, so only when eager eviction and its EXPIRED happen varies.
 
 Do not expose `RemapHints` as a public no-op escape. Treating an unchanged value as no write
 would change `asMap().compute` for all users and leave write-deque reorder paired with a stale

@@ -25,8 +25,10 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -50,6 +52,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
@@ -91,6 +94,13 @@ final class JCacheUpdateExpiryTest {
    * on the next access.
    */
   private static JCacheFixture zeroUpdateFixture(AtomicInteger updatedEvents) {
+    return updateListenerFixture(new JCacheExpiryPolicy(
+        Duration.ETERNAL, /* update= */ Duration.ZERO, /* access= */ null), updatedEvents);
+  }
+
+  /** A fixture that counts the {@code UPDATED} events that it publishes synchronously. */
+  private static JCacheFixture updateListenerFixture(
+      ExpiryPolicy expiry, AtomicInteger updatedEvents) {
     CacheEntryUpdatedListener<Integer, Integer> listener =
         events -> events.forEach(event -> updatedEvents.incrementAndGet());
     var listenerConfig = new MutableCacheEntryListenerConfiguration<>(
@@ -98,8 +108,7 @@ final class JCacheUpdateExpiryTest {
         /* isOldValueRequired= */ false, /* isSynchronous= */ true);
     return JCacheFixture.builder()
         .configure(config -> {
-          config.setExpiryPolicyFactory(() -> new JCacheExpiryPolicy(
-              Duration.ETERNAL, /* update= */ Duration.ZERO, /* access= */ null));
+          config.setExpiryPolicyFactory(() -> expiry);
           config.setExecutorFactory(MoreExecutors::directExecutor);
           config.setStatisticsEnabled(true);
           config.addCacheEntryListenerConfiguration(listenerConfig);
@@ -114,7 +123,7 @@ final class JCacheUpdateExpiryTest {
    * write here, diverging from the {@code replace}/{@code getAndReplace}/{@code invoke} siblings.
    */
   @ParameterizedTest
-  @MethodSource("zeroUpdateWriteOps")
+  @MethodSource("updateWriteOps")
   void writeOp_present_zeroUpdateExpiry(Consumer<Cache<Integer, Integer>> op) {
     var updatedEvents = new AtomicInteger();
     try (var fixture = zeroUpdateFixture(updatedEvents);
@@ -134,7 +143,31 @@ final class JCacheUpdateExpiryTest {
     }
   }
 
-  static Stream<Arguments> zeroUpdateWriteOps() {
+  /**
+   * An {@link Error} from the update expiry aborts the write, so no update path may publish
+   * {@code UPDATED} or record a put for the mutation that it did not make.
+   */
+  @ParameterizedTest
+  @MethodSource("updateWriteOps")
+  void writeOp_present_updateExpiryError_publishesNoUpdate(Consumer<Cache<Integer, Integer>> op) {
+    var updatedEvents = new AtomicInteger();
+    ExpiryPolicy expiry = Mockito.mock();
+    when(expiry.getExpiryForCreation()).thenReturn(Duration.ETERNAL);
+    when(expiry.getExpiryForUpdate()).thenThrow(new AssertionError("boom"));
+    try (var fixture = updateListenerFixture(expiry, updatedEvents);
+         var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      long putsBeforeUpdate = getStatistics(cache).getCachePuts();
+
+      assertThrows(AssertionError.class, () -> op.accept(cache));
+
+      assertThat(updatedEvents.get()).isEqualTo(0);
+      assertThat(getStatistics(cache).getCachePuts()).isEqualTo(putsBeforeUpdate);
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+    }
+  }
+
+  static Stream<Arguments> updateWriteOps() {
     return Stream.of(
         arguments(named("put", (Consumer<Cache<Integer, Integer>>) c -> c.put(KEY_1, VALUE_2))),
         arguments(named("putAll",

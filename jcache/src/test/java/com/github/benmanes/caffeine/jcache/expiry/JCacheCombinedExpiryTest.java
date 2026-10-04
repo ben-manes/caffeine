@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +32,9 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
+import javax.cache.Cache;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
@@ -43,6 +46,7 @@ import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessorException;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
@@ -519,6 +523,72 @@ final class JCacheCombinedExpiryTest {
 
       // the committed EXPIRED's synchronous listener is awaited before invoke rethrows the failure
       assertThat(expiredCount.get()).isEqualTo(1);
+    }
+  }
+
+  /* --------------- creation expiry error --------------- */
+
+  @Test
+  void put_expired_creationExpiryError_expiresOnce() {
+    assertCreationExpiryErrorExpiresOnce(cache -> cache.put(KEY_1, VALUE_2));
+  }
+
+  @Test
+  void getAndPut_expired_creationExpiryError_expiresOnce() {
+    assertCreationExpiryErrorExpiresOnce(cache -> cache.getAndPut(KEY_1, VALUE_2));
+  }
+
+  @Test
+  void putAll_expired_creationExpiryError_expiresOnce() {
+    assertCreationExpiryErrorExpiresOnce(cache -> cache.putAll(Map.of(KEY_1, VALUE_2)));
+  }
+
+  @Test
+  void putIfAbsent_expired_creationExpiryError_expiresOnce() {
+    assertCreationExpiryErrorExpiresOnce(cache -> cache.putIfAbsent(KEY_1, VALUE_2));
+  }
+
+  @Test
+  void invoke_expired_creationExpiryError_expiresOnce() {
+    assertCreationExpiryErrorExpiresOnce(cache -> cache.invoke(KEY_1, (entry, args) -> {
+      entry.setValue(VALUE_2);
+      return nullRef();
+    }));
+  }
+
+  /**
+   * Asserts that a write over an expired entry, whose creation expiry then throws an {@link Error},
+   * leaves the expiration published and counted once.
+   */
+  private static void assertCreationExpiryErrorExpiresOnce(Consumer<Cache<Integer, Integer>> op) {
+    var listener = new RecordingListener();
+    ExpiryPolicy expiry = Mockito.mock();
+    when(expiry.getExpiryForCreation())
+        .thenReturn(new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION.toMillis()));
+    var listenerConfig = new MutableCacheEntryListenerConfiguration<>(
+        /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExpiryPolicyFactory(() -> expiry);
+          config.setExpireAfterWrite(OptionalLong.of(Long.MAX_VALUE));
+          config.setStatisticsEnabled(true);
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.addCacheEntryListenerConfiguration(listenerConfig);
+        }).build();
+        var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      fixture.advancePastExpiry();
+      listener.events.clear();
+      var stats = JCacheFixture.getStatistics(cache);
+      long evictionsBefore = stats.getCacheEvictions();
+
+      when(expiry.getExpiryForCreation()).thenThrow(new AssertionError("boom"));
+      assertThrows(AssertionError.class, () -> op.accept(cache));
+
+      assertThat(cache.get(KEY_1)).isNull();
+      assertThat(listener.events).containsExactly(EventType.EXPIRED);
+      assertThat(stats.getCacheEvictions()).isEqualTo(evictionsBefore + 1);
     }
   }
 
