@@ -53,12 +53,15 @@ Details: [eviction](../docs/design-decisions.md#eviction),
   expired entry; a fresh-clock check still races. Keep the value-identity guard, which prevents
   applying a read duration to a replacement value, except one that keeps the exact deadline and
   lands between the check and the CAS.
+- `put` dates a new entry from its call, before an insertion that may wait on another thread's bin
+  or node monitor, so the wait shortens the entry's lifetime. Either placement meets the contract.
 - A removal's cause is attributed when that removal happens. `clear()`'s single ticker read
   amortizes the call across the entries it removes under the eviction lock, not a point-in-time
   snapshot; its straggler fallback uses the public per-key `remove`, so cause counts are neither
   comparable across the bulk calls nor stable within one `clear()`.
-- Readers load timestamps before values; writers store values before timestamps. Preserve
-  `hasExpired`'s load-load fence and generated `setValue`'s store-store fence. Probe async
+- Readers load timestamps before values; writers store values before timestamps. Preserve the
+  load-load fences in `hasExpired` and before `tryExpireAfterRead`'s value-identity check, and
+  generated `setValue`'s store-store fence. Probe async
   readiness using a value loaded after an expired verdict, and only where it is consumed.
   Do not reuse readiness across observations: completion or obtrusion may intervene.
 - The async expiry sentinel also means accounting is deferred. Both `expireAfterRead` and
@@ -136,8 +139,9 @@ Details: [exceptions](../docs/design-decisions.md#exception-handling),
 
 - Async synchronous-view queries are logical; size and key removals are physical. Conditional
   value mutations and computes block on in-flight values. Logical reads may return the found
-  future's value after replacement; `get(k, fn)` / `getAll` coalesce rather than recompute.
-  Do not add a double-collect check or route `get` through the map's compute retry loop.
+  future's value after replacement; `get(k, fn)` / `getAll` coalesce rather than recompute,
+  including onto the caller's own failure before its removal runs. Do not add a double-collect
+  check or an eager failure removal, or route `get` through the map's compute retry loop.
 - `EntrySet.removeIf` predicates receive immutable snapshots and removal is conditional.
   Write-through entries belong to iteration, spliteration, and arrays. Preserve this in all
   four views.

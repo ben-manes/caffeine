@@ -1543,9 +1543,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     long tolerance = EXPIRE_TOLERANCE;
     long duration = Math.max(0L, expiry.expireAfterRead(key, value, now, currentDuration));
     long expirationTime = expiresAt(now, duration);
-    if (((duration <= tolerance) || (Math.abs(expirationTime - variableTime) > tolerance))
-        && (node.getValue() == value)) {
-      node.casVariableTime(variableTime, expirationTime);
+    if ((duration <= tolerance) || (Math.abs(expirationTime - variableTime) > tolerance)) {
+      // Load the value after the deadline, so that a replacement whose deadline was loaded fails
+      // the identity check rather than taking this value's read duration
+      VarHandle.loadLoadFence();
+      if (node.getValue() == value) {
+        node.casVariableTime(variableTime, expirationTime);
+      }
     }
   }
 

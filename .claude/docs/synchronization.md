@@ -82,7 +82,8 @@ Note: the expiry read protocol pairs these modes. A rewrite stores the value and
 timestamps, with `setValue`'s trailing `storeStoreFence` holding that order; a lock-free
 reader calls `hasExpired` (timestamps, ending in a `loadLoadFence`) and then loads the value.
 A reader that observes a timestamp written by the rewriting thread is therefore guaranteed that
-thread's value, which closes the tear. It does not follow that an already-announced EXPIRED value
+thread's value, which closes the tear. `tryExpireAfterRead` repeats the reader's half between the
+deadline its CAS expects and its value-identity check. It does not follow that an already-announced EXPIRED value
 is never returned. A reader that judged the entry live at its own clock reading can park in
 `Expiry.expireAfterRead` and land `tryExpireAfterRead`'s CAS after a writer has announced the
 entry's EXPIRED eviction but before it stores the replacement, leaving the announced value looking
@@ -155,7 +156,8 @@ listener that re-enters the cache via a write can deadlock in that path.
 Lock context depends on path:
 - **Existing node**: INSIDE CHM bin lock + synchronized(node)
 - **New node (n == null)**: INSIDE CHM bin lock only (no node to synchronize on)
-Re-entrant cache operations from these callbacks can deadlock.
+Re-entrant cache operations from these callbacks can deadlock, and on a caller-runs executor a
+read that schedules maintenance can silently corrupt the computation.
 
 ### Weigher.weigh
 Lock context depends on path:
@@ -214,7 +216,8 @@ eviction-triggered removals.
   computation completes. That is `ConcurrentHashMap.compute`'s atomicity and what
   `Caffeine.evictionListener` means by "the atomic operation to remove the entry". A listener that
   disposes of the value must tolerate a reader still holding it, as it must after any removal.
-Synchronous. Re-entrant cache operations risk deadlock.
+Synchronous. Re-entrant cache operations risk deadlock or corruption, including a read that runs
+maintenance inline on a caller-runs executor.
 
 ### Other user components under evictionLock
 These also run while `evictionLock` is held: `Scheduler.schedule` (through `Pacer`),

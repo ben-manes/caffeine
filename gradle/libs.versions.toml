@@ -33,7 +33,7 @@ felix-scr = "2.2.18"
 findsecbugs = "1.14.0"
 forbidden-apis = "3.11"
 fray = "0.9.0"
-google-java-format = "1.36.1"
+google-java-format = "1.37.0"
 grpc = "1.84.0"
 guava = "33.7.2-jre"
 guice = "7.0.0"
@@ -105,7 +105,7 @@ versions = "0.64.0"
 xz = "1.12"
 ycsb = "0.17.0"
 zero-allocation-hashing = "2026.0"
-zstd = "1.5.7-20"
+zstd = "1.5.7-21"
 
 [libraries]
 ap-loader = { module = "me.bechberger:ap-loader-all", version.ref = "ap-loader" }

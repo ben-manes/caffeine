@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.concurrent.Executor;
 
 import org.openjdk.jcstress.annotations.Actor;
+import org.openjdk.jcstress.annotations.Arbiter;
 import org.openjdk.jcstress.annotations.Expect;
 import org.openjdk.jcstress.annotations.JCStressTest;
 import org.openjdk.jcstress.annotations.Outcome;
@@ -41,6 +42,11 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * can return a value whose expiration was already announced to the removal listener: it loads the
  * old value, the rewrite installs a fresh write time, and the reader's expiry check then passes
  * against that fresh timestamp.
+ * <p>
+ * A read that extends a variable expiration follows the same pairing: it loads the deadline that
+ * its CAS expects and then checks that the entry still holds the value it computed the read
+ * duration for, so a replacement whose deadline it observed fails that check instead of taking the
+ * old value's read duration.
  * <p>
  * {@snippet lang="shell" :
  * ./gradlew caffeine:jcstress -PjavaVersion=21 --tests ExpiredReadTear --rerun
@@ -147,6 +153,65 @@ public final class ExpiredReadTear {
     public void reader(II_Result r) {
       var value = cache.getIfPresent(KEY);
       r.r2 = (value == null) ? 0 : (value.equals(OLD) ? 1 : 2);
+    }
+  }
+
+  @State
+  @JCStressTest
+  @Outcome(id = "1, 5", expect = Expect.ACCEPTABLE,
+      desc = "Read the old value; the update's deadline")
+  @Outcome(id = "2, 5", expect = Expect.ACCEPTABLE,
+      desc = "Read the new value; the update's deadline replaced its extension")
+  @Outcome(id = "2, 30", expect = Expect.ACCEPTABLE,
+      desc = "Read the new value; extended by its own read duration")
+  @Outcome(id = "1, 60", expect = Expect.FORBIDDEN,
+      desc = "The old value's read duration rebound onto the new value")
+  @Outcome(expect = Expect.FORBIDDEN, desc = "Unexpected state")
+  public static class ReadExtension {
+    private static final String KEY = "key";
+    private static final String OLD = "old";
+    private static final String NEW = "new";
+
+    final Cache<String, String> cache;
+
+    public ReadExtension() {
+      Executor discarding = task -> {};
+      cache = Caffeine.newBuilder()
+          .expireAfter(new Expiry<String, String>() {
+            @Override public long expireAfterCreate(String key, String value, long currentTime) {
+              return Duration.ofMinutes(1).toNanos();
+            }
+            @Override public long expireAfterUpdate(String key, String value,
+                long currentTime, long currentDuration) {
+              return Duration.ofMinutes(5).toNanos();
+            }
+            @Override public long expireAfterRead(String key, String value,
+                long currentTime, long currentDuration) {
+              return Duration.ofMinutes(value.equals(OLD) ? 60 : 30).toNanos();
+            }
+          })
+          .executor(discarding)
+          .ticker(() -> 0L)
+          .build();
+      cache.put(KEY, OLD);
+    }
+
+    @Actor
+    public void writer() {
+      cache.put(KEY, NEW);
+    }
+
+    @Actor
+    public void reader(II_Result r) {
+      var value = cache.getIfPresent(KEY);
+      r.r1 = (value == null) ? 0 : (value.equals(OLD) ? 1 : 2);
+    }
+
+    @Arbiter
+    public void arbiter(II_Result r) {
+      var duration = cache.policy().expireVariably().orElseThrow()
+          .getExpiresAfter(KEY).orElseThrow();
+      r.r2 = Math.toIntExact(duration.toMinutes());
     }
   }
 }

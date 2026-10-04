@@ -463,6 +463,17 @@ The tolerance applies to multiple per-entry timestamps:
   entry under `expireAfterAccess`. When the configured duration is `<= tolerance`
   the skip is bypassed so tiny expiration windows still behave exactly.
 
+**A `put` dates a new entry from its call, not its insertion.** The create path reads the clock
+when it builds the node, before `data.putIfAbsent`, and a retry after a node-monitor wait reuses
+that node. An insertion that waits on another thread's bin (a same-key computation that returns
+null, a bin neighbour's computation, a synchronous eviction listener in maintenance) publishes the
+entry already aged by the wait, so it expires early by that much, or is a miss on the next read
+and an `EXPIRED` notification when the wait outlasts its duration. That is not a defect: the
+contract does not say when the clock starts, and either placement satisfies it. The caller obtained
+the value before the call, so after an hour's wait the value is an hour older, and dating it from
+the call does not overstate its freshness. A computation dates its result after the function
+instead (#191), because the cache produced that value under the lock.
+
 **ASYNC_EXPIRY = ~220 years** (`Async.java`). Computing futures get this sentinel
 duration to prevent expiration during async computation. The `isComputingAsync()`
 check tests both the `isAsync` flag AND whether the future is complete.
@@ -553,11 +564,16 @@ self-heals on the next maintenance. Don't add a *fresh-clock* re-check guard for
 over-stay — it still races a context switch and can't reject an already-expired entry.
 (Distinct from the `node.getValue() == value` value-identity check that `casVariableTime`
 *does* carry: it stops a read duration rebinding onto a *replaced* value and is load-bearing;
-keep it. It covers a replacement during the `expireAfterRead` callback, not one in the few
-instructions between the check and the CAS: an update that keeps the exact deadline, as an
-`expireAfterUpdate` returning `currentDuration` does, leaves the timestamp the CAS compares
-unchanged, so that replacement takes the read's duration, a same-deadline rebind bounded by one
-duration like the over-stay above. The adapter accepts the same race for its native timer.)
+keep it. It covers a replacement during the `expireAfterRead` callback because a `loadLoadFence`
+orders the deadline the CAS expects before the value it checks, pairing with `setValue`'s
+`storeStoreFence` as `hasExpired`'s fence does. Without it, aarch64 satisfied the value load first,
+so a reader saw the replacement's deadline with the old value, passed the check, and gave the
+replacement the old value's read duration, later than its own when that duration is longer
+(`ExpiredReadTear.ReadExtension`). It does not cover a replacement in the few instructions between
+the check and the CAS: an update that keeps the exact deadline, as an `expireAfterUpdate`
+returning `currentDuration` does, leaves the timestamp the CAS compares unchanged, so that
+replacement takes the read's duration, a same-deadline rebind bounded by one duration like the
+over-stay above. The adapter accepts the same race for its native timer.)
 
 **Bulk reads evaluate expiry at a single scan-wide `now`, by design.** `getAllPresent`
 (and `containsValue`) read `expirationTicker()` once and reuse that `now` for every
@@ -609,8 +625,9 @@ save the second: a future can complete, or be obtruded, between the two observat
 **The expiry read protocol pairs timestamp-before-value reads with value-before-timestamp
 writes.** A lock-free read must never return a value whose EXPIRED notification a concurrent
 rewrite already fired. `hasExpired` is therefore timestamp-only and every lock-free reader
-consults it before loading the value; a `loadLoadFence` at the end of `hasExpired` and a
-`storeStoreFence` in the generated `setValue` hold both orders on weak memory, and `put`
+consults it before loading the value; a `loadLoadFence` at the end of `hasExpired` (repeated
+before `tryExpireAfterRead`'s value-identity check) and a `storeStoreFence` in the generated
+`setValue` hold both orders on weak memory, and `put`
 stores the value before `setWriteTime` (the other rewrite sites already did). A reader that
 observes a fresh timestamp therefore observes the rewritten value, closing the LATE direction.
 The EARLY direction (stale timestamp with the fresh value) is one spurious miss that
@@ -1021,11 +1038,21 @@ hits, because its own lambda cannot throw before materialization. Either way the
 self-heals on the next write/removal. Don't add a catch-side `refreshes.remove` — it
 re-throws on the broken-`hashCode` sibling.
 
-The same restriction covers a read inside a computation that triggers an inline refresh
-update. Two remappers reading each other's stale key can deadlock when completed reloads
-commit under the enclosing computations' locks, even with a pure loader and the default
-executor. That is still unsupported recursive modification under the existing mapping-function
-warning; it does not call for a dispatch change or another API warning.
+The same restriction covers a read inside a computation or eviction listener that triggers an
+inline refresh update or inline maintenance. Two remappers reading each other's stale key can
+deadlock when completed reloads commit under the enclosing computations' locks, even with a pure
+loader and the default executor. On an executor that runs tasks on the caller (`Runnable::run`, a
+saturated `CallerRunsPolicy` pool), any read that schedules maintenance runs the whole cycle under
+the locks the callback inherits. Its eviction of the entry under computation or of a bin neighbour
+loses the computed value while the call returns it, notifies the old value twice, drifts the
+weight, or leaves a dead node mapped; from `put`'s eviction listener it takes the bin under the
+node monitor and deadlocks against a concurrent removal or load of that key. Both are still
+unsupported recursive modification under the existing warnings that these callbacks must not
+modify the cache; neither calls for a dispatch change, callback-scope tracking, or another API
+warning. A liveness check after the callback is too late: the nested eviction has already unlinked
+the map's node, so the enclosing compute writes through stale pointers whatever the lambda
+returns. The check could only choose between losing the value silently and throwing, and it
+cannot detect a neighbour's eviction.
 
 The **`evictionListener` runs inside the CHM compute lambda** — `notifyEviction` is called
 within `data.compute`/`computeIfPresent`, holding the entry's bin lock — so it is subject to this
@@ -1258,7 +1285,9 @@ drained, correctly removing and killing a node the weakly-consistent iterator st
 yields. Production readers tolerate a dead node (they check `isAlive`/`getValue`), and
 the validator was made robust to it: it iterates `data.entrySet()` and validates a node
 only if it is still mapped under its key, so a node reaped mid-scan is skipped while a
-node genuinely stuck in the map (a leak) stays mapped and is still caught.
+node genuinely stuck in the map (a leak) stays mapped and is still caught. Inside a
+computation or eviction listener the same inline cycle is unsupported nesting; see
+[ConcurrentHashMap Constraints](#concurrenthashmap-constraints).
 
 **A failed `replace` nudges only when the entry is garbage.** Both overloads signal "did not
 update" by clearing `ReplaceContext.oldValue`, which alone cannot tell a dead or expired entry
@@ -1890,6 +1919,16 @@ linearizability regardless — it "reads the future it found" for computes as we
 reads. Whether coalescing is better or worse is perspective-dependent; the point is only
 that it *differs*. Don't "fix" `get(k, func)` by routing it through
 `AsyncAsMapView.computeIfAbsent`'s retry loop.
+
+The adopted outcome includes the caller's own failure. A failed future stays mapped until its
+completion's dependent logs the failure and removes it, and the caller's `join` can return while
+the completing thread is still in that dependent. An immediate retry, through the view or from a
+dependent on the future, then rethrows the same exception without calling its function, in 85-99%
+of immediate view retries on defaults. Computations are not special here: a future passed to `put`
+that fails is visible to the same reads until its removal runs, which is why the public javadoc
+does not name a failed computation's window. Removing the failure in the view before rethrowing
+was declined: it helps only that caller's retry, since any other call in the window still finds
+the future, and "the mapping is left unestablished" holds once the removal runs.
 
 **Read bookkeeping happens only at the lookup that finds a ready value.** `asMap().putIfAbsent`
 and `computeIfAbsent` record the access (access time, read expiry, frequency) on their first

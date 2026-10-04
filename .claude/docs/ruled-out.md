@@ -186,6 +186,9 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   pending-only relink would not reach weight-0 pinning. Residue that is real and documented:
   under `executor(Runnable::run)` the cost is linear per pending entry, so a burst is quadratic.
 - Recursive and nested maintenance in `afterWrite`.
+- Maintenance that a read inside a computation or eviction listener runs inline on a caller-runs
+  executor, and the corruption or deadlock that follows; see
+  [ConcurrentHashMap Constraints](design-decisions.md#concurrenthashmap-constraints).
 - Expired entries persisting in an idle cache.
 - `FrequencySketch.reset()` sweeping under `evictionLock` (238 ms at 100M). Amortized to
   0.24 ns/read, once per 1e9 reads. Chunking lowers quality; SIMD is the answer.
@@ -375,6 +378,9 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   writer that loses that race has called `Weigher.weigh` and `Expiry.expireAfterCreate` for a node
   it discards (two of each for one installed entry, where `computeIfAbsent` makes one). The node
   must be complete when that call publishes it, and neither callback promises one call per entry.
+  The same placement dates a new entry from the call, so an insertion that waits on another
+  thread's bin or node monitor publishes it aged by the wait; see
+  [expiration](design-decisions.md#expiration).
 - `BoundedLocalCache.replace(K, V, V)` calling the weigher before the oldValue check.
 - `BoundedLocalCache.getIfPresent` casting the lookup `Object` to `K` for
   `tryExpireAfterRead`.
