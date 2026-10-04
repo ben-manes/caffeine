@@ -462,6 +462,9 @@ The tolerance applies to multiple per-entry timestamps:
 - `accessTime` updates on the read path — avoids cache-line true-sharing on a hot
   entry under `expireAfterAccess`. When the configured duration is `<= tolerance`
   the skip is bypassed so tiny expiration windows still behave exactly.
+- `variableTime` updates on the read path — the same saving under an `Expiry`, with the same
+  bypass. Only an extension is skipped: a read that moves the deadline earlier is stored, since
+  skipping it would serve the entry past the deadline the `Expiry` asked for.
 
 **A `put` dates a new entry from its call, not its insertion.** The create path reads the clock
 when it builds the node, before `data.putIfAbsent`, and a retry after a node-monitor wait reuses
@@ -1101,6 +1104,18 @@ mapping function (cache loader) is slow, all other operations on keys in the sam
 bin are blocked. This is the #1 recurring user issue (~20 reports). The answer is
 always: use `AsyncCache` for slow loaders, increase `initialCapacity` to reduce
 collisions, or make loaders faster.
+
+**A refresh commit waits on its bin like any write.** The commit is a `compute` run by the thread
+that sees the reload complete: the `refresh` caller, or the read that triggered an automatic
+refresh, when the reload is already complete; otherwise the thread completing it, such as an
+executor worker. It waits out any computation holding the key's bin. `refresh`'s "asynchronously"
+describes the load. Dispatching the commit with `whenCompleteAsync` would add a task per refresh,
+give up installing a completed reload before `refresh` returns and returning it from the
+triggering read, and still run inline under a caller-runs executor. A load that holds the bin while
+waiting for work on the executor completing the reload deadlocks with the commit, as when Guava's
+`CacheLoader.asyncReloading` shares a single-thread executor with the loader's own fetches; that
+wiring is the application's, under the executor rule in
+[standing principles](ruled-out.md#standing-principles).
 
 **The same doctrine covers a two-map deadlock, not just blocking, including when it wedges an
 innocent thread.** A loader that touches the cache can take the `refreshes` bin monitor and then a

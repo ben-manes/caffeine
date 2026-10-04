@@ -582,7 +582,14 @@ removal cause, even though ordinary explicit clear removals are silent. Closed-c
 separately suppressed by dispatch's closed check. A reload publishes before core decides whether
 it commits, and core reports a reload it discards because the entry changed in flight only to a
 removal listener, which the adapter does not register. That event stands with no mutation, which
-is accepted for a best-effort extension that has no post-commit hook.
+is accepted for a best-effort extension that has no post-commit hook. Native eviction and expiry
+publish the same way, from core's eviction listener inside the eviction's compute on an unmarked
+maintenance thread, so their dispatch is not staged either: a size-evicted entry's REMOVED listener
+can read the mapping back before the removal commits, within microseconds of it, and on a
+caller-runs executor the listener runs inside that compute, where writing its own key fails with
+`ConcurrentHashMap`'s `Recursive update`. An expired entry is hidden from reads, so EXPIRED shows
+nothing stale. Accepted on the same terms: JSR-107 defines no eviction, and staging it would need
+core's post-unmap removal callback to release a gate per eviction.
 
 ### Listener failures
 

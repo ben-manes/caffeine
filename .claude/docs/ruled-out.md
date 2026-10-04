@@ -158,6 +158,16 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   Eager shrink is the published `Policy.Eviction.setMaximum` contract, and the uncapped
   property is load-bearing for the `rescheduleCleanUpIfIncomplete` piggyback: size eviction
   never arms the pacer, so a capped drain would be the one backlog shape with no driver.
+- A `setMaximum` shrink below a resident's weight evicting entries that fit before it reaches
+  that resident. Only the candidate has an oversize check, and every write that grows a weight
+  past the maximum evicts that entry at once, so a shrink is the only trigger. The resident goes
+  when the victim cursor reaches it: in probation when it loses a frequency duel, in protected in
+  LRU order whatever its frequency, so a hot one can outlast the rest of the cache. The eager
+  shrink holds, and weight "has no effect on selecting which entry should be evicted next". With
+  Pareto weights capped at 3% of the old maximum no resident was oversized down to a 3% shrink,
+  and at 2% and 1% the kept weight matched evicting the oversized residents first; only
+  constructed populations flush (20-51 of 500 kept). Mirroring the candidate check on the victim
+  fixes a probation victim only; a protected resident needs an O(n) pass per shrink.
 - Without a `Scheduler`, maintenance is amortized onto callers and a quiesced cache stays
   over `maximumSize`. A `Scheduler` requests prompt expiration; a size-only cache has no pacer. The
   quiesced excess is capped by the write buffer (`estimatedSize() <= maximum + WRITE_BUFFER_MAX`),
@@ -254,7 +264,8 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
 
 - `EXPIRE_TOLERANCE` (1s) inexactness. Expiration is a maximum lifetime, not a minimum hold
   time; entries may expire up to 1s early from timestamp tolerance. Applies to `writeTime` reorder
-  decisions and `accessTime` read-path updates. Read-extension's accepted over-stay is a
+  decisions and read-path `accessTime` and `variableTime` updates; a read that shortens the
+  variable deadline is always stored, so the tolerance never makes an entry expire late. Read-extension's accepted over-stay is a
   separate race described in [expiration](design-decisions.md#expiration).
 - Expiration eviction capped at `EXPIRATION_THRESHOLD` (1000) per cycle, re-armed via
   `PROCESSING_TO_REQUIRED`. The wheel rewinds `nanos` and re-links the remainder, so a

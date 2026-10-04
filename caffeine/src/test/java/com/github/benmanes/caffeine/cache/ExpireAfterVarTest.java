@@ -181,6 +181,24 @@ final class ExpireAfterVarTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)
+  void getIfPresent_shortenedWithinTolerance(Cache<Int, Int> cache, CacheContext context) {
+    when(context.expiry().expireAfterCreate(any(), any(), anyLong()))
+        .thenReturn(Duration.ofMillis(2500).toNanos());
+    cache.put(context.absentKey(), context.absentValue());
+
+    // A read that moves the deadline earlier by less than the timestamp tolerance still sets it,
+    // or the entry is served after the deadline that the expiry asked for
+    when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Duration.ofMillis(1800).toNanos());
+    assertThat(cache.getIfPresent(context.absentKey())).isEqualTo(context.absentValue());
+
+    context.ticker().advance(Duration.ofMillis(2100));
+    assertThat(cache.getIfPresent(context.absentKey())).isNull();
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   void get_absent(LoadingCache<Int, Int> cache, CacheContext context) {
     when(context.expiry().expireAfterCreate(any(), any(), anyLong()))

@@ -48,11 +48,11 @@ Details: [eviction](../docs/design-decisions.md#eviction),
 
 ## Expiration and publication
 
-- The 1s tolerance can expire entries early and is bypassed for durations at or below it.
-  Opaque access-time writes avoid read-path contention. Read-extension can briefly revive an
-  expired entry; a fresh-clock check still races. Keep the value-identity guard, which prevents
-  applying a read duration to a replacement value, except one that keeps the exact deadline and
-  lands between the check and the CAS.
+- The 1s tolerance can expire entries early, never late, and is bypassed for durations at or
+  below it. Opaque access-time writes avoid read-path contention. Read-extension can briefly
+  revive an expired entry; a fresh-clock check still races. Keep the value-identity guard, which
+  prevents applying a read duration to a replacement value, except one that keeps the exact
+  deadline and lands between the check and the CAS.
 - `put` dates a new entry from its call, before an insertion that may wait on another thread's bin
   or node monitor, so the wait shortens the entry's lifetime. Either placement meets the contract.
 - A removal's cause is attributed when that removal happens. `clear()`'s single ticker read

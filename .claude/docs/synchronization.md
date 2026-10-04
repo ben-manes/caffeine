@@ -196,8 +196,14 @@ Lock context depends on path:
 Refresh registration invokes the loader inside a `refreshes.compute*` bin lambda, so the
 loader dispatch (including the default `CompletableFuture.supplyAsync`'s `executor.execute`)
 runs under the **refreshes** bin lock. Two consequences, both bounded to user misuse:
-- **Caller-runs executor** (`Runnable::run` or a synchronous prefix) runs the entire user
-  reload body under that lock — a slow reload stalls other refreshes on the same bin.
+- **Caller-runs executor** (`Runnable::run`, a saturated `CallerRunsPolicy` pool, or a
+  synchronous prefix) runs the entire user reload body under that lock — a slow reload stalls
+  other refreshes on the same bin and every discard of a refresh registered there: a write of
+  that key, `clear()`'s up-front purge of the table, or maintenance evicting or expiring it, which
+  waits holding `evictionLock`, so all writers stall once the write buffer fills. The table cannot be presized. Moving the loader call
+  out of the registration needs a placeholder token, which §*Refresh Internals* rules out, and
+  deferring the discard past the eviction would still stall the thread running maintenance while
+  separating the discard from the write that requires it.
 - The only closing leg of a `refreshes-bin → data-bin` order (which would invert
   `discardRefresh`'s `data-bin → refreshes-bin`) is a user loader re-entering the cache —
   the documented callback-re-entrancy hazard, not an in-library cycle.

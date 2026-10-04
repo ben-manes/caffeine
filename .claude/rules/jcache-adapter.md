@@ -94,7 +94,9 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
 - Append inside `compute`, but stage listener execution until it ends. `beginComputation` marks
   the publishing thread; the first publish lazily creates its gate. `endComputation` releases it
   from `finally`, keeping the mark during release for caller-runs executors. Do not stage a
-  publication outside a computation: an `unwrap` loader has no release point. No listeners means
+  publication outside a computation: an `unwrap` loader has no release point. Native eviction and
+  expiry publish unstaged from the maintenance thread, so a REMOVED listener can briefly read an
+  evicted mapping; that is accepted, as JSR-107 defines no eviction. No listeners means
   no gate allocation; `endComputation` clears the slot with `set(null)`, since `remove()` would
   discard and reallocate the thread-local entry on every computation.
 - Queue append uses atomic `compute`; cleanup uses conditional `remove(key, future)`. The
