@@ -38,6 +38,8 @@ For adjudication, also read your module's section of [ruled-out](../docs/ruled-o
   one at every sketch-initialization site (`AddTask`, `setMaximumSize`, the presized generated
   constructor). Do not restore a sketch check on the hit path: it loads the cache line that
   `size` dirties. A test that initializes the sketch directly must call `recordReads()` too.
+  Keep `readBuffer` volatile: a plain swap is safe only while a new buffer's constructor
+  writes nothing, and race detectors flag it.
 - The shaded JCTools write queue's index overflow after 2^62 offers is accepted; a subtraction
   check alone does not fix the wrapping producer limit, and rollback can strand the consumer.
 

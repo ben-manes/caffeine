@@ -986,10 +986,23 @@ written in exactly one place, the value-checked `casDrainStatus(PROCESSING_TO_ID
 values, no access expiration) starts with the disabled read buffer, so its reads skip the eviction
 policy until the sketch is initialized: at half occupancy, when presized by `initialCapacity`, or
 when `setMaximum` makes the cache half full. Each of those sites calls `recordReads()`, which swaps
-in a `BoundedBuffer` under the eviction lock. Readers see the plain write racily, which is safe
-because a new buffer holds only default state. A test that initializes the sketch directly must call
+in a `BoundedBuffer` under the eviction lock. A test that initializes the sketch directly must call
 `recordReads()` as well; `BoundedLocalCacheTest.fastpath`, `fastpath_presized` and
 `fastpath_setMaximum` pin the three sites.
+
+`readBuffer` is volatile, so the swap is a safe publication. A plain field is also safe: a new
+buffer's constructor writes nothing, and JLS §17.4.4 makes default values visible to every thread.
+But that holds only while `StripedBuffer` stays stateless at construction, plain reads have no
+guarantee of ever observing the swap, and race detectors flag it (a TSAN report, #2020). An
+acquire read, as `drainStatus` uses, would also suffice, but C2 compiles the two identically on
+every port except PPC64, the only one where a volatile load gets a leading `sync`. The volatile
+read was kept because the JLS memory model formally defines it, while the other modes lack a full
+formal specification
+([Lea, JDK 9 memory order modes](https://gee.cs.oswego.edu/dl/html/j9mm.html)). On an Apple M3
+Max, plain and volatile measured within 3% of each other on JDK 11 and 27 in
+`GetPutBenchmark.read_only`, and on 11, 26 and 27 in a harness matching it. A JDK 26 JMH run with
+release-26 bytecode showed volatile 24% faster under identical inlining; it did not reproduce on
+11 or 27, so it is a C2 layout artifact rather than a cheaper read.
 
 The hit path offers to the buffer without testing the sketch. The `skipReadBuffer()` check it
 replaced loaded `sketch.table`, which shares a cache line with `size`, and the maintenance thread

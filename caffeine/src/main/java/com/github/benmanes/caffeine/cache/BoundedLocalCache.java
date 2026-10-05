@@ -261,7 +261,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   final boolean isWeighted;
   final boolean isAsync;
 
-  Buffer<Node<K, V>> readBuffer;
+  volatile Buffer<Node<K, V>> readBuffer;
 
   @Nullable Set<K> keySet;
   @Nullable Collection<V> values;
@@ -1315,7 +1315,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @GuardedBy("evictionLock")
   void recordReads() {
     if (readBuffer == Buffer.<Node<K, V>>disabled()) {
-      // The replacement is published without a fence because a new buffer holds only default state
       readBuffer = new BoundedBuffer<>();
     }
   }
