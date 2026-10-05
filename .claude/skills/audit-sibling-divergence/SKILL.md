@@ -50,6 +50,13 @@ a new view, a new feature with sync+async variants):
   — for each method declared in `Node.java` that has multiple subclass
   implementations, verify all subclasses use consistent access modes,
   lifecycle transitions, and weight discipline
+- B3: Generated `LocalCache` variants vs the builder that selects them — the checkable accessors
+  are `evicts`, `expiresAfterAccess`, `expiresAfterWrite`, `expiresVariable`, `refreshAfterWrite`,
+  `collectKeys`, `collectValues`, `isRecordingStats`, `removalListener()`, the `evictionListener`
+  field, `fastpath`, `pacer`, `expirationTicker`, `statsTicker`, `isWeighted()` and `expiry()`; a
+  builder-driven reflection matrix settles compatibility quickly, but must model refresh restarting
+  the write clock or it reports false expiry failures
+- B4: Reference-strength variants (strong, weak and soft keys and values) for the same operation
 
 **Group C — view consistency**
 - C1: `keySet().contains(k)` vs `containsKey(k)` vs `asMap().get(k) != null`
@@ -59,6 +66,12 @@ a new view, a new feature with sync+async variants):
 - C5: `keySet().remove(k)` / `entrySet().remove(entry)` vs the corresponding map removal
   — mapping outcome, blocking, and pending-load disposition, accounting for different return
   contracts
+- C6: The async cache's future view vs its synchronous view (largely adjudicated in
+  design-decisions §*Async Synchronous View* and ruled-out §*Async*; read them at Phase 1.5)
+- C7: `equals`/`hashCode`/`toString` and `toArray` vs iteration (largely adjudicated in
+  design-decisions §*Iteration* and ruled-out §*Core*; read them at Phase 1.5)
+- C8: `Map.Entry.setValue` on iterator, spliterator and `toArray` entries vs `put(k, v)` —
+  write-through target, refresh discard, notification, and blocking on an in-flight value
 
 **Group D — bulk vs single-key**
 - D1: `getAllPresent(keys)` vs N×`getIfPresent(k)`
@@ -73,6 +86,9 @@ a new view, a new feature with sync+async variants):
 - E3: `putIfAbsent(k, v)` vs `compute(k, (key, val) -> val == null ? v : val)`
 - E4: `AsyncCache.synchronous()` view vs an equivalent sync `Cache` built with
   the same configuration
+- E5: Fixed expiration vs `Expiry.writing`/`accessing`/`creating`, and `Caffeine.from(spec)` vs the
+  equivalent builder
+- E6: `Map` default method formulations vs the `asMap()` overrides
 
 **Group F — internal paths to the same outcome**
 - F1: Read fast path (`getIfPresent` optimistic) vs slow path (under
@@ -81,9 +97,8 @@ a new view, a new feature with sync+async variants):
 - F2: Eviction listener (sync) vs Removal listener (async) for an evicted
   entry — both should fire, with consistent key/value/cause and the same
   set of entries
-- F3: Maintenance task variants (`AddTask`, `UpdateTask`, `RemovalTask`,
-  `RemovedTask`) — weight delta sign convention, telescoping sum
-  preservation across task orderings
+- F3: Maintenance task variants (`AddTask`, `UpdateTask`, `RemovalTask`) — weight
+  delta sign convention, telescoping sum preservation across task orderings
 
 **Group G — adapter conformance** (user-facing: `jcache/`, `guava/`)
 - G1: JCache write-path family — every path that builds an `Expirable<V>` and gates on

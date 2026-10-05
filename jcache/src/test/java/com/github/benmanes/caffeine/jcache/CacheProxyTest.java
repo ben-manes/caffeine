@@ -121,6 +121,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -567,6 +568,17 @@ final class CacheProxyTest {
       fixture.jcache().loadAll(KEYS, /* replaceExistingValues= */ true, listener);
       verify(listener).onCompletion();
       verify(listener, Mockito.never()).onException(any());
+    }
+  }
+
+  @ParameterizedTest @ValueSource(booleans = {false, true})
+  void loadAll_noLoader_notifiesCompletion(boolean replaceExistingValues) throws Exception {
+    try (var fixture = JCacheFixture.builder().build()) {
+      var completionListener = new CompletionListenerFuture();
+      fixture.jcache().loadAll(KEYS, replaceExistingValues, completionListener);
+
+      completionListener.get(5, TimeUnit.SECONDS);
+      assertThat(fixture.jcache().getAll(KEYS)).isEmpty();
     }
   }
 
@@ -2054,6 +2066,12 @@ final class CacheProxyTest {
       });
       invokeValue.setValue(VALUE_2);
       assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
+
+      // putAll copies each value on its own path (not the shared put helper).
+      var putAllValue = new MutableInt(VALUE_2);
+      cache.putAll(Map.of(KEY_2, putAllValue));
+      putAllValue.setValue(VALUE_3);
+      assertThat(cache.get(KEY_2)).isEqualTo(new MutableInt(VALUE_2));
     }
   }
 

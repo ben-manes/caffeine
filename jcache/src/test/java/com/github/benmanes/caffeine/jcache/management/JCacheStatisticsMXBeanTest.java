@@ -96,9 +96,9 @@ final class JCacheStatisticsMXBeanTest {
   void record_disabledOrZero_isNoOp() {
     var stats = new JCacheStatisticsMXBean();
 
-    // Disabled (the default): every record* short-circuits on the `enabled` guard. The cache only
-    // calls the guarded record* methods under an `if (statsEnabled)` check, so this branch is
-    // reachable only by a direct call.
+    // Disabled (the default): every record* short-circuits on the `enabled` guard. Most call sites
+    // also check a captured `statsEnabled`, but invoke records its puts unconditionally and relies
+    // on this guard.
     stats.recordPuts(1);
     stats.recordGetTime(1);
     stats.recordPutTime(1);

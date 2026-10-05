@@ -1210,8 +1210,9 @@ that were once recorded as one. On blind-corner cells it is **not reached** at a
 hold outranks its branch, and the starved samples the hold claims are exactly the stalest ones.
 Where it is reached, which test binds depends on the population — on constructed cells the
 **margin** does, with the shortfall present and large while the streak never reaches one; on real
-cells the **streak** does, the shortfall holding for many consecutive samples while one clearing
-sample resets it. The corollary worth keeping: between the veto's `rate − 3·dev` and the confirm's
+cells the **streak** does, the shortfall holding for many consecutive rail evaluations while one
+clearing evaluation resets it (walk, undo, return, retest and blind-corner samples neither count
+nor reset it). The corollary worth keeping: between the veto's `rate − 3·dev` and the confirm's
 `rate + VETO_MARGIN_MIN` lies a band in which **neither goal-metric layer can act**, and the
 machine spends real time there.
 
@@ -1769,6 +1770,9 @@ conserved and **probation's capacity is fixed for the cache's lifetime** at `(1�
 also means the low-P arms conflate probation size with window ceiling (p20 caps the window near
 20.6%), so their losses are a lower bound on p20's true merit — but p90/p95 carry no such handicap
 and fail on the mean anyway, so the verdict does not rest on it.
+A constructed two-reference band between the window's reach and LRU's (`s_probcapgeo`) costs every
+reachable split 32pp against LRU, and a larger probation at the same window recovers none of it
+(the filter refuses once-seen candidates); only a window of 89–92% catches it.
 
 Not covered: `ConCat` and `MergeP` (12 of 288 cells, ~9 GB of trace) were not run.
 
@@ -2119,9 +2123,10 @@ fix re-seeds the goal metric on a discarding stand-down instead.
   changing the mechanism.
 - **One-sided aging** (`agedown<pp>`: decay only while the live rate sits under the claim): passes
   both slowswap arms, battery mean −0.067 with no seeded mover, and still dead — it **disarms the
-  guard rail**. The rail needs `VETO_STREAK` consecutive samples of `smoothed < rate − vetoMargin`,
-  and aging closes that gap at the same rate `rateDeviationEma` decays, so the shortfall and the
-  margin shrink together and the streak never completes; both rail pins fail
+  guard rail**. The rail needs `VETO_STREAK` consecutive rail evaluations of
+  `smoothed < rate − vetoMargin`, and aging closes that gap at the same rate `rateDeviationEma`
+  decays, so the shortfall and the margin shrink together and the streak never completes; both
+  rail pins fail
   (`guardRail_sustainedShortfall_vetoesBackToAnchor`,
   `guardRail_marginTracksNoise_silentWhileWideThenVetoes`). The rail is measured near-dead on this
   battery, so the live cost is small — but a compensating fix that trades a documented mechanism is

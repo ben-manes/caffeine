@@ -5,13 +5,19 @@
 ```
 evictionLock (outer, ReentrantLock)
   └─ CHM bin lock (implicit in compute/computeIfPresent)
-      └─ synchronized(node) (inner)
+      └─ synchronized(node)
+          └─ refreshes bin lock (inner, discardRefresh)
 ```
 
 Never acquire in reverse order. evictionLock is NEVER acquired while holding
 synchronized(node). synchronized(node) is acquired in various contexts: inside
 CHM compute lambdas, under evictionLock outside compute (makeDead, AddTask),
 or standalone (put fast path, Policy API methods).
+
+`discardRefresh` takes a `refreshes` bin under the `data` bin lock, the node monitor, or both
+(the node monitor alone on `put`'s fast path), and under `evictionLock` when maintenance evicts.
+Nothing in the library takes another lock while holding a `refreshes` bin; a user reload that
+re-enters the cache does (see *CacheLoader.asyncReload / asyncLoad* below).
 
 **Never hold `synchronized(node)` across a CHM mutating call** (`data.putIfAbsent`/
 `compute`/`computeIfPresent`/`merge`). CHM takes bin-head locks internally not just to
@@ -67,6 +73,12 @@ timer-wheel links reuse the write-order or access-order links. `NodeFactory.getC
 the class so that the aliased feature is disabled, and `setAccessTime`/`setWriteTime` gate on
 `expiresAfterAccess()`/`expiresAfterWrite() || refreshAfterWrite()`, so two features never write one
 field.
+
+Values are release/acquire, not volatile, so two readers reading two keys in opposite orders may
+disagree on which of two independent writes came first (IRIW) on the bounded cache, which
+`ConcurrentHashMap`'s `volatile val` forbids on the unbounded one. `ConcurrentMap` promises
+happens-before per key only, and HotSpot cannot show it: x86 and ARMv8 are multi-copy atomic, and
+on POWER the CHM volatile load between the two value loads is a full barrier.
 
 `getPolicyWeight` reads two plain fields, its own and `metadata`, so an unlocked reader can
 see them from different moments. Maintenance callers hold `evictionLock`. A `Policy` snapshot's
@@ -198,15 +210,19 @@ loader dispatch (including the default `CompletableFuture.supplyAsync`'s `execut
 runs under the **refreshes** bin lock. Two consequences, both bounded to user misuse:
 - **Caller-runs executor** (`Runnable::run`, a saturated `CallerRunsPolicy` pool, or a
   synchronous prefix) runs the entire user reload body under that lock — a slow reload stalls
-  other refreshes on the same bin and every discard of a refresh registered there: a write of
-  that key, `clear()`'s up-front purge of the table, or maintenance evicting or expiring it, which
-  waits holding `evictionLock`, so all writers stall once the write buffer fills. The table cannot be presized. Moving the loader call
-  out of the registration needs a placeholder token, which §*Refresh Internals* rules out, and
-  deferring the discard past the eviction would still stall the thread running maintenance while
-  separating the discard from the write that requires it.
-- The only closing leg of a `refreshes-bin → data-bin` order (which would invert
-  `discardRefresh`'s `data-bin → refreshes-bin`) is a user loader re-entering the cache —
-  the documented callback-re-entrancy hazard, not an in-library cycle.
+  other refreshes on the same bin and every discard of a refresh registered there, each waiting
+  while it holds its own lock: a completion releasing its registration (its `data` bin), a write
+  of that key (its bin or node monitor), `clear()`'s up-front purge of the table, or maintenance
+  evicting or expiring it, which waits holding `evictionLock`, so all writers stall once the write
+  buffer fills. The Guava facade's default `reload` is this case on any executor. The table cannot
+  be presized. Moving the loader call out of the registration needs a placeholder token, which
+  §*Refresh Internals* rules out, and deferring the discard past the eviction would still stall the
+  thread running maintenance while separating the discard from the write that requires it.
+- The only closing leg of a `refreshes-bin → data-bin` order (which would invert `discardRefresh`'s
+  `data-bin → refreshes-bin`), or of a `refreshes-bin → refreshes-bin` order across two reloads, is
+  a user loader re-entering the cache, where reading a stale key is enough — the documented
+  callback-re-entrancy hazard, not an in-library cycle. See design-decisions, *ConcurrentHashMap
+  Constraints*.
 
 ### RemovalListener.onRemoval — OUTSIDE all locks (normal path)
 Delivered asynchronously via executor. Safe for re-entrant cache operations on

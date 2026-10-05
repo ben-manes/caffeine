@@ -372,9 +372,12 @@ cannot exercise this path. Pins: `BoundedLocalCacheTest.expiredReload_recordsCli
 `expiredRemap_recordsClimberMiss`, `expiredPut_recordsClimberMiss`, and `put_recordsClimberHit`.
 They also check the sketch increment, which a quiet update would incorrectly suppress.
 
-**~1% random admission of rejected candidates.** The TinyLFU admission filter
-randomly admits ~1% of candidates that would otherwise be rejected. This provides
-HashDoS protection by making frequency estimation attacks non-deterministic.
+**Random admission of rejected candidates.** The TinyLFU admission filter admits 1 in 128
+candidates of frequency 6 or more that would otherwise be rejected. This is the HashDoS
+protection: an entry whose frequency hash collisions have raised, whether it is the victim or was
+admitted as an inflated candidate, is eventually evicted rather than holding its place. It lets the
+inflated entry leave the cache; it does not prevent its admission (see
+[ruled-out](ruled-out.md#core), *Eviction and maintenance*).
 
 ## Climber review constraints
 
@@ -475,7 +478,11 @@ and an `EXPIRED` notification when the wait outlasts its duration. That is not a
 contract does not say when the clock starts, and either placement satisfies it. The caller obtained
 the value before the call, so after an hour's wait the value is an hour older, and dating it from
 the call does not overstate its freshness. A computation dates its result after the function
-instead (#191), because the cache produced that value under the lock.
+instead (#191), because the cache produced that value under the lock. The price of a back-dated
+insert is in the order deques: appended at the tail with the oldest time, it makes the next
+`expireAfterWriteEntries` scan relink every fresher live head before reaching it (one walk of the
+live deque, once per such insert), and in access order it can linger unreadable behind live
+heads until they expire, with size eviction reporting it as `EXPIRED`.
 
 **ASYNC_EXPIRY = ~220 years** (`Async.java`). Computing futures get this sentinel
 duration to prevent expiration during async computation. The `isComputingAsync()`
@@ -640,8 +647,12 @@ and timestamp stores across the old deadline shows the value, a miss, then the v
 other non-linearizable windows are the read-extension resurrection and same-deadline rebind
 above, the bulk single-`now` scans, a read preempted after its clock sample (it judges a value
 published later against that clock, so it can return a replacement past its deadline, even one
-created expired), and a compute whose function outlasts its input's remaining lifetime (a
-concurrent read reports the input expired before the result is stamped with a fresh clock).
+created expired), a compute whose function outlasts its input's remaining lifetime (a
+concurrent read reports the input expired before the result is stamped with a fresh clock),
+and a `put` or `replace` over a live entry, which judges liveness under the node monitor before
+calling `expireAfterUpdate` (a read crossing the old deadline in between reports the key absent
+while the write returns or replaces that value with `REPLACED`; a few instructions for fixed
+expiry, the callback's run time for variable expiry).
 Each is bounded; closing them needs a read-path lock or a second ticker read per read, both
 rejected above, or applying the function twice, which the compute contract forbids. A caller
 acting on an expired verdict must exempt an in-flight async load by
@@ -1068,18 +1079,19 @@ broken-`hashCode` sibling.
 The same restriction covers a read inside a computation or eviction listener that triggers an
 inline refresh update or inline maintenance. Two remappers reading each other's stale key can
 deadlock when completed reloads commit under the enclosing computations' locks, even with a pure
-loader and the default executor. On an executor that runs tasks on the caller (`Runnable::run`, a
-saturated `CallerRunsPolicy` pool), any read that schedules maintenance runs the whole cycle under
-the locks the callback inherits. Its eviction of the entry under computation or of a bin neighbour
-loses the computed value while the call returns it, notifies the old value twice, drifts the
-weight, or leaves a dead node mapped; from `put`'s eviction listener it takes the bin under the
-node monitor and deadlocks against a concurrent removal or load of that key. Both are still
-unsupported recursive modification under the existing warnings that these callbacks must not
-modify the cache; neither calls for a dispatch change, callback-scope tracking, or another API
-warning. A liveness check after the callback is too late: the nested eviction has already unlinked
-the map's node, so the enclosing compute writes through stale pointers whatever the lambda
-returns. The check could only choose between losing the value silently and throwing, and it
-cannot detect a neighbour's eviction.
+loader and the default executor, and a commit that removes a bin neighbour (a `null` reload)
+leaves the computed key mapped to a dead node if the computation removes it. On an executor that
+runs tasks on the caller (`Runnable::run`, a saturated `CallerRunsPolicy` pool), any read that
+schedules maintenance runs the whole cycle under the locks the callback inherits. Its eviction of
+the entry under computation or of a bin neighbour loses the computed value while the call returns
+it, notifies the old value twice, drifts the weight, or leaves a dead node mapped; from `put`'s
+eviction listener it takes the bin under the node monitor and deadlocks against a concurrent
+removal or load of that key. Both are still unsupported recursive modification under the existing
+warnings that these callbacks must not modify the cache; neither calls for a dispatch change,
+callback-scope tracking, or another API warning. A liveness check after the callback is too late:
+the nested eviction has already unlinked the map's node, so the enclosing compute writes through
+stale pointers whatever the lambda returns. The check could only choose between losing the value
+silently and throwing, and it cannot detect a neighbour's eviction.
 
 The **`evictionListener` runs inside the CHM compute lambda** — `notifyEviction` is called
 within `data.compute`/`computeIfPresent`, holding the entry's bin lock — so it is subject to this
@@ -1133,14 +1145,24 @@ wiring is the application's, under the executor rule in
 **The same doctrine covers a two-map deadlock, not just blocking, including when it wedges an
 innocent thread.** A loader that touches the cache can take the `refreshes` bin monitor and then a
 `data` bin monitor, while any write takes `data` and then `refreshes` through `discardRefresh`.
-Opposite orders, and `findDeadlockedThreads()` reports it on both implementations. It is declined
-on the same basis: the only path that acquires a `data` bin lock while holding a `refreshes` one is
-the user's `reload`/`asyncReload`, and `CacheLoader.reload`'s javadoc bolds the prohibition
-("loading **must not** attempt to update any mappings of this cache directly or block waiting for
-other cache operations to complete"). Everything else inside `refreshes.computeIfAbsent` is either
-a lock-free `data` read (`getIfPresentQuietly`) or the `asyncReload` call itself, and the
-completion `handle` that does the `data` work is attached **outside** the lambda, deliberately, so
-the refreshes monitor is not held while it runs. Keep it outside.
+Opposite orders, and `findDeadlockedThreads()` reports it on both implementations. A read closes
+the cycle as well as a write. Reading a stale key registers its refresh, which takes a second
+`refreshes` bin, so two reloads reading keys in each other's bins deadlock on `refreshes` alone, and
+a nested reload that completes inline commits into a `data` bin. On one thread, a registration that
+lands in the bin the reload holds makes CHM throw `Recursive update`: from the loader's read when
+the bin was empty, failing the outer refresh, or from the caller's `get` or `refresh` when it was
+populated. The counterparty can be maintenance evicting or expiring a key whose refresh is
+registered; it waits holding `evictionLock`, so every later `cleanUp()` and every writer that falls
+back to inline maintenance hangs with it. The reload body holds the monitor only on a caller-runs
+executor or in an `asyncReload`'s synchronous prefix; a `CacheLoader.reload` on the default
+executor runs on a pool thread. It is declined on the same basis: the only path that takes another
+lock while holding a `refreshes` bin is the user's `reload`/`asyncReload`, and
+`CacheLoader.reload`'s javadoc bolds the prohibition ("loading **must not** attempt to update any
+mappings of this cache directly or block waiting for other cache operations to complete").
+Everything else inside `refreshes.computeIfAbsent` is either a lock-free `data` read
+(`getIfPresentQuietly`) or the `asyncReload` call itself, and the completion `handle` that does the
+`data` work is attached **outside** the lambda, deliberately, so the refreshes monitor is not held
+while it runs. Keep it outside.
 
 Two objections are answered rather than ignored. That the victim is an ordinary `put` which did
 nothing wrong is true, and is a property of every lock-order inversion in a shared structure; the
@@ -1160,6 +1182,16 @@ the note that fits `CacheLoader.reload` and `evictionListener` would be noise on
 `Weigher`. Hoisting the callback out of the monitor the way `Weigher` was hoisted is not available
 either, since `expireAfterUpdate` and `expireAfterRead` read the node's variable time under it and
 the compute-path invocations need the atomic context.
+
+**A `Policy` ordering snapshot or `setMaximum` inside an atomic scope re-enters maintenance on any
+executor.** Both take `evictionLock` and run a maintenance cycle, and `Cache.policy()` forbids
+policy operations within another operation's atomic scope. The eviction listener runs while its
+victim is still linked and counted, so a nested cycle there evicts the same victim again, through
+the reentrant lock, until `StackOverflowError`: one due eviction became 407, and the drifted
+counters let a `maximumSize(2)` cache hold 407 entries. From a remapping function the nested cycle
+corrupts the bin like an inline eviction (see *No recursive computations*) or deadlocks against
+maintenance. Not guarded: a held-lock check in `snapshot` would miss the listener's `cleanUp()`
+and the remapping-function arms.
 
 **`clear()`/`invalidateAll()` do not wait for an in-flight `computeIfAbsent` insert.** The insert
 is invisible to `clear()`'s `data.values()` snapshot (the CHM Traverser skips the in-flight
@@ -1238,7 +1270,10 @@ restore the positional `iterator.remove` default for predicate removal.
 AbstractMap shape is symmetric with HashMap for `equals`-keyed caches and costs O(n), versus
 CHM's O(n+m) two-sided scan. Under `weakKeys()` it is not: the cache equals a `HashMap` holding
 an equal but distinct key, and that `HashMap` does not equal the cache (`IdentityHashMap` is
-unequal both ways). The final count catches maintenance trimming dead entries after the size
+unequal both ways). Two equal-but-distinct keys also make the cache equal a map holding one of
+them plus an entry the cache lacks, with unequal hash codes, as Guava's `weakKeys()` cache does;
+only `IdentityHashMap`'s identity pass avoids that, at the cost of making the single-key case
+false both ways. The final count catches maintenance trimming dead entries after the size
 prescreen; otherwise a surviving subset can incorrectly compare equal. Preserve it in
 `BoundedLocalCache.equals` and the future-typed `LocalAsyncCache.AsMapView.equals`.
 
@@ -1297,9 +1332,18 @@ is false and hash codes differ. The argument's `HashSet.equals` performs the tru
 comparison, so overriding the view's equality cannot repair it. A logical `size()` was
 rejected to preserve the lock-free physical estimate; a physical hash is unavailable once a
 weak key is collected. `WeakHashMap` has the same changes-during-comparison problem.
-Values views use identity equality like CHM. For exact comparisons, call `cleanUp()` with no
-concurrent operations. An additional `asMap()` size warning was declined as redundant with
-the cache's existing approximation contract.
+Values views use identity equality like CHM. The same gap lets `isEmpty()` disagree with
+iteration (an `isEmpty()`-guarded `iterator().next()` can throw `NoSuchElementException`),
+null-pads a `toArray(new T[size()])`, and lets a receiver that compares entry sets (Guava's
+`ImmutableMap`) equal `asMap()` while holding a never-cached entry per pending one. The inherited
+`AbstractSet.equals` can also return true under one concurrent `put` that lands after its size
+reads; the mirrored shape (physical `size()` prescreen, iterate this view, probe the argument's
+`contains`, `count == expectedSize`) was evaluated and declined, since it reverses two adjudicated
+rows and moves the `weakKeys()` false positive to the view. For exact comparisons, call
+`cleanUp()` with no concurrent operations; under variable expiration an entry that expired
+within the current wheel tick stays until the next tick (see [TimerWheel](#timerwheel)). An
+additional `asMap()` size warning was declined as redundant with the cache's existing
+approximation contract.
 
 The async synchronous view has the same gap for in-flight futures, which its `size()` counts and
 its iteration skips. `cleanUp()` cannot remove them, so the gap lasts until the load settles.
@@ -1350,13 +1394,21 @@ entry would be misfiled as a mismatch.
 ## Known JDK Interactions
 
 **StackOverflowError can leak the eviction lock.** If user code causes a
-`StackOverflowError` inside a cache operation, `ReentrantLock.unlock()` can fail
-to execute (JDK bug JDK-8319309), leaving the eviction lock permanently held and
-blocking all subsequent writes.
+`StackOverflowError` inside a cache operation, the eviction lock can stay permanently held and
+block all subsequent writes (JDK-8318888, open; JDK-8319309 is its duplicate). It happens at
+release, when `unlock()` fails to run, and at acquisition: `lock()` and `tryLock()` are
+`@ReservedStackAccess`, so an overflow inside them completes the acquisition and raises the error
+on return, before the caller's `try`. The canonical `lock(); try { } finally { unlock(); }` leaks
+the same way, so no call-site change removes it.
 
 **PerformCleanupTask.exec() returns false.** This is an optimization — the task is
 allocated once and reused instead of creating a new `Runnable` wrapper per executor
-submission (which showed up as a memory hotspot in profiling).
+submission (which showed up as a memory hotspot in profiling). `run()` catches every
+`Throwable`, so only its own `logger.log` can throw out of `exec()`: a `StackOverflowError`
+while logging one, or a logging backend that throws. Either completes the reused task
+exceptionally, and a `ForkJoinPool` never runs it again, which leaves maintenance to the
+write buffer's inline assist and `cleanUp()`. Both triggers are outside scope (a JVM `Error`,
+a broken user component); a `reinitialize()` per submission was the 2016 design this replaced.
 
 ## Pacer
 
@@ -1424,16 +1476,22 @@ lost expiration cycle is irrelevant). Don't add an executor wrapper to complete 
 rejection — it hardens a self-healing, user-configuration-warned corner for no real gain.
 
 **`delayedExecutor` has two other accepted consequences.** Cancelling the pacer's future does not
-dequeue the JDK's delayed task, which stays queued until its original fire time (about 600 B each;
-the cache is held weakly and remains collectable). The delayed task also submits to the cache's
-executor from the JDK's shared delay thread, so with a direct executor the maintenance cycle,
-eviction listener included, runs on that thread and delays every other `orTimeout`,
-`completeOnTimeout` and `delayedExecutor` task in the JVM until it returns.
+dequeue the JDK's delayed task, which stays queued until its original fire time (896 B each on JDK
+25, 688 B of it the `CancellationException` backtrace; the cache is held weakly and remains
+collectable). The count is one stranded far task per sparse short-lived cycle, so a process that
+churns caches with long expiries keeps about churn rate times remaining delay of them. The delayed
+task also submits to the cache's executor from the JDK's shared delay thread, so with a direct
+executor the maintenance cycle, eviction listener included, runs on that thread and delays every
+other `orTimeout`, `completeOnTimeout` and `delayedExecutor` task in the JVM until it returns.
 
 **`rescheduleCleanUpIfIncomplete` piggybacks an already-scheduled pacer fire, by
-design.** A `drainStatus == REQUIRED` backlog re-arms the pacer only when
-`!pacer.isScheduled()`; if a fire is already pending (the next expiration event), the
-backlog rides that fire rather than stacking a second schedule. An *expiration*
+design.** Its immediate resubmission is limited to `executor == ForkJoinPool.commonPool()`,
+since it cannot tell a transparent wrapper from a caller-runs executor, so a wrapper around the
+common pool (for context propagation, say) takes the custom-executor arms: with a removal
+listener under continuous eviction a forwarding wrapper measured 232.9 against 144.5 ns per
+insert, against about 8 ns without one. A `drainStatus == REQUIRED` backlog re-arms the
+pacer only when `!pacer.isScheduled()`; if a fire is already pending (the next expiration
+event), the backlog rides that fire rather than stacking a second schedule. An *expiration*
 backlog stays prompt regardless — a >`EXPIRATION_THRESHOLD` backlog leaves an
 already-expired deque/wheel head, so `getExpirationDelay` returns `≤ 0` and
 `expireEntries` already scheduled the pacer at `TOLERANCE` (~1s). Size eviction is
@@ -1441,9 +1499,12 @@ uncapped (drains fully in one cycle), so it never backlogs. A region transfer
 (`evictFromWindow`, `demoteFromMainProtected`) is capped at `QUEUE_TRANSFER_THRESHOLD` and
 re-arms after `expireEntries` armed the pacer, so a large window resize rides the pending fire
 too, delaying the rebalance rather than overfilling the cache. A *reference* backlog defers
-the same way a write-buffer one does, and its entries are already unreachable, so the
-delay costs a late `COLLECTED` notification rather than a stale read. The shape is a
-*write-buffer* backlog (`drainWriteBuffer`'s `WRITE_BUFFER_MAX` cap, reached only when
+the same way a write-buffer one does, and the delay costs a late `COLLECTED` notification
+rather than a stale read, while the entry's other half (a weak key's value, or a weak or soft
+value's key, node and table slot) stays reachable until a cycle polls it. A GC schedules no
+maintenance, `cleanUp()` polls at most `REFERENCE_THRESHOLD + 1` references per queue per
+call, and a cache with only reference collection has no pacer even with a `Scheduler`. The
+shape is a *write-buffer* backlog (`drainWriteBuffer`'s `WRITE_BUFFER_MAX` cap, reached only when
 a concurrent writer refills during the drain, or its `relaxedPoll` passing over a slot a
 producer has not published) on a cache whose next expiration is
 distant, that then goes idle: the buffered policy tasks — LRU/weight bookkeeping over
@@ -1611,9 +1672,11 @@ at registration. A `put` followed by an `invalidate` inside the reservation wind
 leaves the token registered and lets the completion install its loaded value over both.
 Measured on the bounded cache with a loader parked inside the registration, 5/5 per arm: put
 then invalidate installs the load, put alone leaves the written value (so the guard works
-wherever it can tell the two apart), and a present-start refresh is discarded. The escape needs
-the loader to run inside `refreshes.compute`, which means a direct executor, a saturated pool
-with `CallerRunsPolicy`, or an `AsyncCacheLoader` returning a completed future; on
+wherever it can tell the two apart), and a present-start refresh is discarded. A present start
+whose racing writes end on the instance it read (`put(k, 6); put(k, 5)` after reading 5) installs
+over them, since the identity test cannot tell that from no write. The escape needs the loader to
+run inside `refreshes.compute`, which means a direct executor, a saturated pool with
+`CallerRunsPolicy`, or an `AsyncCacheLoader` returning a completed future; on
 `ForkJoinPool.commonPool()` the registration publishes first and the refresh is discarded 0/5.
 The resulting history is still a legal linearization (put, invalidate, then the refresh's
 install), and no public contract covers it: `Cache.invalidate` is undefined only for an entry
@@ -1768,7 +1831,12 @@ returns null — a no-op, not a mutation, so it must **not** discard a refresh r
 without discarding on the absent branch when creation is disallowed. A creating caller
 (`compute`/`merge`) that returns null on an absent key still discards (over-aggressive, as
 above). `UnboundedLocalCache.remap` used to discard unconditionally on the absent+null path,
-diverging from `BoundedLocalCache` on the `replaceAll`-races-remove race.
+diverging from `BoundedLocalCache` on the `replaceAll`-races-remove race. The async views route
+`computeIfPresent`, and the synchronous view's conditional writes when the key vanishes between
+their quiet prescreen and the compute, through the creating `compute`, so they discard an absent
+key's registration. That is harmless: an async registration for an absent key can only be an
+orphan (the optimistic refresh inserts before registering, and eviction and expiry discard with
+the entry), so a later `refresh(k)` starts a fresh load instead of joining it.
 
 **`invalidate(k)`/`clear()` discard an *absent* key's pending refresh — a purge is not a
 query.** A `refresh(k)` on an absent key registers a reload in `refreshes` with **no data-map
@@ -1785,7 +1853,11 @@ can't reach node-less registrations). This is the over-aggressive-discard doctri
 purge, which is legitimate exactly as it is for present keys. Note `remove(k, v)` is **not**
 extended: a conditional remove that matched nothing (absent or wrong value) is a query-style
 no-op that "raced nothing," so it preserves the refresh (like `remove(k, wrongValue)` on a
-present key). Don't move the absent-key discard back outside the bin lock.
+present key). The traversal-based bulk removals (`removeIf` and `retainAll` on the key, value
+and entry views) and `computeIfPresent` also preserve the node-less registration: the key is not
+an element of any view, so they match nothing for it, and only a purge (`remove(k)`,
+`invalidate`, `invalidateAll`, `clear()`, `compute -> null`) discards it. Don't move the
+absent-key discard back outside the bin lock.
 
 **A sync `refresh(k)` on an absent key is an isolated side-load; the async view makes it a
 first-class in-flight entry — a structurally-forced divergence, not a bug.**
@@ -1828,13 +1900,17 @@ lock entries), so it is a **non-linearizable side-load** — closer to `refreshA
 load. Its only linearized moments are the `put` insert/replace points (where we match Guava,
 atomic or not); the "this key was absent" observations happen outside any lock and a key may
 materialize afterward (we stomp the still-missing keys but do not remove ones that appeared).
+So a `put`, `invalidate` or `clear()` issued while `loadAll` runs is overridden when its results
+are stored, re-caching what the loader read, where a per-key load makes the writer wait on its bin.
 With no atomic absence-observation instant, it has nothing to hang a discard on. So the
 sequential path discards because it *can* judge; the bulk path preserves because it *can't* —
 forcing bulk to discard would impose an absence-decision onto the one path structurally unable
 to make one. Don't "fix" the split; don't add `discardRefresh` to the `LocalCache` interface
-for it. The asynchronous bulk load does not stomp a write that lands during the load:
-`fillProxies` completes the proxy the write displaced, so the caller receives the loaded value,
-the cache keeps the write, and the write's `REPLACED` notification carries the loaded value.
+for it. The asynchronous bulk load does not stomp a write to a requested key that lands during the
+load: `fillProxies` completes the proxy the write displaced, so the caller receives the loaded
+value, the cache keeps the write, and the write's `REPLACED` notification carries the loaded value.
+Unrequested keys it returns are stored with `put` and do stomp such a write, or another caller's
+in-flight load of that key, whose waiters keep their own result.
 
 **`doComputeIfAbsent`'s new-node path preserves a racing refresh on a weigher/expiry throw —
 by design; don't add a `discardRefresh` there.** It discards on a clean value return (a real
@@ -1987,6 +2063,15 @@ the read. Only which `Expiry` leg dates the entry differs; the mapping, listener
 correct. Telling a delivered value from an in-flight one needs a readiness probe on every write
 and read.
 
+In the same window the age and remaining-time accessors (`ageOf`, `getExpiresAfter(key)`) return
+empty and every weight surface reports 0, while the value reads, `getEntryIfPresentQuietly` and
+the snapshots report the entry present with its current deadline, which under variable expiry is
+the insertion time plus `ASYNC_EXPIRY`. Both are deliberate: the entry cannot expire before the
+handler runs, and its creation expiry has not been computed; hiding the entry would make
+`getEntryIfPresentQuietly` disagree with `getIfPresentQuietly`, and a clamp would still report
+about 146 years. Pinned by the `ageOf_async_pendingCompletion` tests and
+`ExpireAfterVarTest.getExpiresAfter_async_pendingCompletion`.
+
 
 
 ## Async Put Re-registration
@@ -2026,17 +2111,20 @@ entry holding it and the proxy no longer cancelled. The single-key path differs 
 its `handleCompletion` removes an entry whose future completed without a value, so
 cancelling there is self-healing.
 
-Accepted 2026-08-16 as the least bad of unsatisfactory options, and the reasoning is what
-to re-read before proposing a change. Cancellation does not stop the computation, so the
-value still materializes, and a cache that dropped the entry on cancel would have no way
-to hand that value to a removal listener for cleanup, where an entry removed while in
-flight does have a listener attached to notify. Cancelling says downstream chained actions
-may be abandoned, which still happens; removing the mapping directly says the value is not
-cacheable. Obtruding is then the cache treating the value as having materialized elsewhere
-and re-asserting its own lifecycle over it. Removal-on-cancel is not free either: the
-cancellation happens outside the cache, so it takes a dependent action per proxy, and it
-would leave the completer's `replace` unable to install the loaded value. `CompletableFuture`
-offers no API that satisfies every case and there is no clean decision matrix, so don't add
+Accepted 2026-08-16 as the least bad of unsatisfactory options, and the reasoning is what to
+re-read before proposing a change. Cancellation does not stop the computation, so the value
+still materializes, and a cache that dropped the entry on cancel would have no way to hand that
+value to a removal listener for cleanup, where an entry removed while in flight does have a
+listener attached to notify. A later `refresh(key)`, `invalidate(key)`, or synchronous-view
+write such as `putIfAbsent` or `compute` still treats the cancelled proxy as a completed
+valueless mapping and replaces or removes it, so in that sequence the bulk value reaches
+neither the cache nor the listener, as after a per-key cancel. Cancelling says downstream
+chained actions may be abandoned, which still happens; removing the mapping directly says the
+value is not cacheable. Obtruding is then the cache treating the value as having materialized
+elsewhere and re-asserting its own lifecycle over it. Removal-on-cancel is not free either: the
+cancellation happens outside the cache, so it takes a dependent action per proxy, and it would
+leave the completer's `replace` unable to install the loaded value. `CompletableFuture` offers
+no API that satisfies every case and there is no clean decision matrix, so don't add
 cancel-aware completion logic to the bulk path, and don't screen the cancelled future out of
 `LocalAsyncCache.get`'s present branch, which the adopt-the-found-future decision covers.
 
@@ -2153,7 +2241,9 @@ only attribution swapped, unobservable with uniform `Boolean.TRUE` values and no
 
 **`LoadingCache.getAll` is not atomic.** Valid entries may commit before failure and are not
 rolled back. Per-key null results omit that key; bulk maps must omit a key to mean no value.
-An explicit null value fails the bulk load in both sync and async paths, matching Guava.
+An explicit null value fails the bulk load in both sync and async paths, matching Guava's failure,
+though not its residue: Guava first stores every non-null entry, where the synchronous path keeps
+only the entries before the first null and the asynchronous path keeps none.
 
 **`Caffeine`'s builder mirrors Guava's `CacheBuilder` validation shape, asymmetries included.**
 `refreshAfterWrite(long, TimeUnit)` checks the unit before state and requires `duration > 0`;

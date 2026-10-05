@@ -83,6 +83,7 @@ import com.github.benmanes.caffeine.jcache.EntryProxy;
 import com.github.benmanes.caffeine.jcache.JCacheFixture;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -651,6 +652,68 @@ final class CacheWriterTest {
       assertThat(listener.events).isEmpty();
       assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
     }
+  }
+
+  /**
+   * The create-branch sibling of {@code writeOp_failingWriter_suppressesMutationEvent}: a writer
+   * failure on an absent key must suppress the CREATED event and the put count too.
+   */
+  @ParameterizedTest
+  @MethodSource("createOps")
+  void createOp_failingWriter_suppressesCreatedAndPut(Consumer<Cache<Integer, Integer>> op) {
+    CloseableCacheWriter writer = Mockito.mock();
+    var listener = new RecordingMutationListener();
+    try (var fixture = eventFixture(writer, listener);
+         var cache = fixture.jcache()) {
+      doThrow(CacheWriterException.class).when(writer).write(any());
+      doThrow(CacheWriterException.class).when(writer).writeAll(any());
+      assertThrows(CacheException.class, () -> op.accept(cache));
+
+      assertThat(listener.events).isEmpty();
+      assertThat(getStatistics(cache).getCachePuts()).isEqualTo(0);
+      assertThat(cache.containsKey(KEY_1)).isFalse();
+    }
+  }
+
+  static Stream<Arguments> createOps() {
+    return Stream.of(
+        arguments(named("put", (Consumer<Cache<Integer, Integer>>) c -> c.put(KEY_1, VALUE_1))),
+        arguments(named("putAll",
+            (Consumer<Cache<Integer, Integer>>) c -> c.putAll(Map.of(KEY_1, VALUE_1)))),
+        arguments(named("getAndPut",
+            (Consumer<Cache<Integer, Integer>>) c -> c.getAndPut(KEY_1, VALUE_1))),
+        arguments(named("putIfAbsent",
+            (Consumer<Cache<Integer, Integer>>) c -> c.putIfAbsent(KEY_1, VALUE_1))),
+        arguments(named("invoke", (Consumer<Cache<Integer, Integer>>) c ->
+            c.invoke(KEY_1, (entry, args) -> {
+              entry.setValue(VALUE_1);
+              return nullRef();
+            }))));
+  }
+
+  /**
+   * A writer configured with write-through disabled is still created, so only the write-through
+   * checks keep every mutation from calling it.
+   */
+  @ParameterizedTest
+  @MethodSource("mutationOps")
+  void writeThroughDisabled_configuredWriter_neverCalled(Consumer<Cache<Integer, Integer>> op) {
+    CloseableCacheWriter writer = Mockito.mock();
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setCacheWriterFactory(() -> writer);
+          config.setWriteThrough(false);
+        }).build();
+         var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      op.accept(cache);
+      verifyNoInteractions(writer);
+    }
+  }
+
+  static Stream<Arguments> mutationOps() {
+    return Streams.concat(createOps(), updateOps(), removalOps(), Stream.of(
+        arguments(named("removeAllEntries", (Consumer<Cache<Integer, Integer>>) Cache::removeAll))));
   }
 
   @ParameterizedTest

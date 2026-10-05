@@ -169,6 +169,10 @@ synchronized (node) {
 // writer proceeds after releasing the monitor
 ```
 
+A white-box race test that parks a thread should advance the ticker while it is parked when the
+path under test stamps timestamps; a frozen `FakeTicker` hides any defect that needs time to pass
+during a lock wait.
+
 ### Observing retired node state
 
 Hold `evictionLock` to prevent maintenance, run a removal on another thread,
@@ -249,6 +253,13 @@ absence — vary seeds across many short launches instead of one long run.
 
 These tools answer an escalated interleaving. A path that sequential tests pin and that no report
 left ambiguous does not get a Fray, LinCheck or jcstress test for coverage.
+
+Two instruments hold a transient state deterministically in a standalone witness. An executor
+that queues tasks without running them (`deferred::add`, drained afterwards) keeps expired or
+collected entries unreaped while view paths are compared; `CacheExecutor.DISCARDING` is the
+in-suite form. A dependent registered with `whenComplete` after the cache inserts a future runs
+before the cache's completion handler, so it observes a failed future that is still mapped. Both
+are instruments: price a finding they expose on the default executor.
 
 ## Fray Concurrency Tests
 

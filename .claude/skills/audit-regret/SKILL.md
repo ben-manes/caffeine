@@ -644,16 +644,27 @@ not read prior reports. Strike a line when it is done or dead.
   past the abort stride. The interior-peak `bad_veto` construction is 0-for-2
   (`b_slowfade` round 7, `s_creepveto` round 8: the rail never fired; the trend feeds the
   confirm and the walk exit bars first). Class 7 is still witness-less (`s_scorch` repeated
-  `s_recoil`'s inside-scatter fate at gap 1.95). The `s_probcap` structural note (Belady
-  20.6pp over a flat curve) needs a geometry witness at cap-residency < D < LRU-residency
-  (~10–11.7k at that terrain's rates) before the fixed-probation tax can be attributed past
-  the sketch's ranking; LRU missed the band at both constructed doses. `pricedshift`
+  `s_recoil`'s inside-scatter fate at gap 1.95). The `s_probcap` structural note is closed:
+  `s_probcapgeo` places a two-reference band between the window's reach and LRU's (dreq
+  8,050–9,850; Belady 53.3, LRU 52.3, every reachable window 20.4), and the whole loss is TinyLFU
+  refusing once-seen candidates while the band's push distance exceeds the window's 80.2% cap: a
+  larger probation at the same window recovers nothing (328 to 1,638 entries: 19.9 to 20.1), a
+  filtered full-size LRU reads 20.35, and the reference recovers only at an 89–92% window.
+  Structural; it does not overturn §5's corpus verdict on the main-space knobs. `pricedshift`
   (+0.63 at n=129, +1.80 with the capture tail zeroed at repeat×2 on `pinnacle`) has an
   unmeasured cost side on the families that need the discard to fire (`ghostclaim`,
   `regimeramp`, the moat rows). The arrival-transient verdict bound was witnessed twice in
   one round (`settleflip`'s cold-start inversion; `pinnacle`'s one-stride overshoot); if
   either family is promoted, the bound belongs in `hill-climber.md` as a recorded residual
   rather than a round-4 note.
+- The real-trace episode readings of round 11's teacher (seed 1, one product draw, no ablation arm
+  confirmed any; each matches a recorded class): (1) the cloud-physics rest point, with the
+  `cp_w097`/`w098`/`w100@16384` family as its cleanest real class-1 witness, for the carried
+  real-trace anatomy above; (2) the audit retry on floor-optimal traces (`P8`, `P1@65536`), its
+  crash persistence and its base frozen on a dip; (3) blind-corner starvation probes from
+  steering on scan samples (`DS1@1M`), where whether that is the gate's intended price on a
+  scan-heavy trace is still open; (4) the proportional step's phase asymmetry (`cp_w058@16384`,
+  the law right and the pace wrong). Any climber change that follows owes `/climber-gate`.
 
 ## Rules of evidence
 

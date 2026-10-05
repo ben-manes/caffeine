@@ -22,11 +22,16 @@ paths:
   deferred weight/expiry work; a future already complete at insertion was weighed and dated then.
   An incomplete replacement releases its predecessor's weight and receives creation expiry when
   its value materializes; it does not reserve the old weight or preserve update classification.
+  While a node's expiration is still the sentinel, every value that lands on it through any write
+  API is dated by `expireAfterCreate`, since `AsyncExpiry` has no current duration to pass to
+  `expireAfterUpdate`; the synchronous cache, which orders the write after the load, updates.
   Finalization is a dependent action, so a caller can read the value while `Policy` reports weight
-  0, and a `Weigher` or `Expiry` that throws there is logged, counted as a load failure, and
-  removes the mapping the caller already received. Single-key `handleCompletion` leaves the
-  completed loader future successful. Bulk finalization continues through the proxies and fails
-  the aggregate `getAll` future if it encounters an error.
+  0 and no expiration (`getExpiresAfter`, `ageOf` empty), the common case with a costly `Weigher`
+  or `Expiry` since finalization runs them after the caller is released; a `setExpiresAfter` made
+  in that window is kept. A `Weigher` or `Expiry` that throws there is logged, counted as a load
+  failure, and removes the mapping the caller already received. Single-key `handleCompletion`
+  leaves the completed loader future successful. Bulk finalization continues through the proxies
+  and fails the aggregate `getAll` future if it encounters an error.
   Failure cleanup preserves a distinct successor future in both single and bulk completions;
   the two `AsyncCacheTest.*weigherFails_preservesConcurrentReplacement` methods pin that boundary.
   Reinserting the same future creates no separate cleanup owner; its earlier failing finalizer
@@ -42,10 +47,11 @@ paths:
   Loud completion double-counted admission frequency and added a synthetic window hit per miss,
   degrading measured hit rate (w50 -38.6pp; stress@512 -12.7pp). User replacements remain loud.
 - Record a load when `computed || deferred`: `get`/`getAll` and map computations record their
-  computation; `put`, `putIfAbsent`, and `replace` on either surface record only futures still
-  in flight at insertion. Already-resolved writes do not load anything, even when the future is
-  later obtruded or broken (`handleCompletion_completedWrite_*`). Preserve failure
-  accounting for in-flight writes (`computeIfAbsent_present_failed`,
+  computation; `put`, `putIfAbsent`, and `replace` on either surface record only futures that are
+  not already completed with a value at insertion: an in-flight future, or one already failed or
+  completed with null, which counts as a load failure. A write completed with a value loads
+  nothing, even when the future is later obtruded or broken (`handleCompletion_completedWrite_*`).
+  Preserve failure accounting for in-flight writes (`computeIfAbsent_present_failed`,
   `handleCompletion_brokenFuture_*`); "writes never record loads" is incorrect.
 - Null results and failed futures remove the mapping without invoking the user's removal
   listener. Refresh failure preserves the old value.
@@ -72,7 +78,10 @@ paths:
   non-async stage. Use `thenCombine` or an async stage with an executor that runs it off-thread.
   Filling proxies in separate off-thread tasks would decouple their completions, but changes
   dependent execution and adds a task per proxy.
-- `handleCompletion` suppresses logging for bare `CancellationException`/`TimeoutException`.
+- `handleCompletion`, the bulk completer's `failProxies` and the three refresh completions
+  (`refreshIfNeeded`, `RefreshOperation.complete`, `tryComputeRefresh`) suppress logging for a
+  bare `CancellationException`/`TimeoutException`; for refresh this qualifies the javadoc's "all
+  exceptions thrown during refresh will be logged", and the failure is still recorded.
   Do not unwrap a `CompletionException` from a user stage such as `orTimeout().thenApply(...)`:
   it is indistinguishable from a timeout thrown by loader code, which must remain reportable.
 

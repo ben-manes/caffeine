@@ -25,9 +25,11 @@ paths:
 ## Trace Characteristics and Policy Matching
 
 `Registry.policies()` includes a policy only if its `@PolicySpec` supports every characteristic
-declared by the reader. The sole characteristic is currently `WEIGHTED`; weighted traces
-exclude weight-oblivious policies. `sketch.WindowTinyLfu` supports weights and budgets regions
-by weight, so it supplies a static-window ceiling on weighted cells.
+declared by the reader. The sole characteristic is currently `WEIGHTED`; weighted traces exclude
+weight-oblivious policies, silently: a run names no excluded policy, and a class with no
+`@PolicySpec` supports nothing. Absent rows carry no number, so the omission misleads no panel.
+`sketch.WindowTinyLfu` supports weights and budgets regions by weight, so it supplies a
+static-window ceiling on weighted cells.
 
 This exclusion keeps each panel's metric consistent. Do not add a Registry option that treats
 weighted events as unit weight; use `simulator:rewrite` to strip weights explicitly. If a
@@ -39,9 +41,10 @@ two routinely mixed characteristics justify it.
 ## Reporting and Trace Fidelity
 
 - **Evictions use each policy's accounting.** A never-admitted entry counts as an eviction in
-  CAMP/GDWheel, nothing in S3FIFO/Sieve, and a rejection in GDSF. Oversized-entry behavior belongs
-  to the algorithm. Do not normalize these counters or retrofit size-awareness into a published
-  LRU algorithm; exclude unsuitable policies or add a separately named size-aware variant.
+  CAMP/GDWheel, nothing in S3FIFO/Sieve, and both a rejection and an eviction in GDSF.
+  Oversized-entry behavior belongs to the algorithm. Do not normalize these counters or retrofit
+  size-awareness into a published LRU algorithm; exclude unsuitable policies or add a separately
+  named size-aware variant.
 - **Never overwrite an input trace.** The rewriter uses `Files.isSameFile` to reject output
   aliases and symlinks to its inputs before opening the output. Otherwise truncation precedes
   lazy input reading and can destroy the trace while reporting success.

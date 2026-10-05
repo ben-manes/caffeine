@@ -129,8 +129,14 @@ Recorded zero-update comparison:
 
 | Behavior | UPDATED / put counted | Providers |
 |---|---|---|
-| Store immediately expired | yes / yes | RI, Coherence, Ehcache 3 |
+| Store immediately expired | yes / yes | RI, Coherence |
 | Remove or suppress | no / no | Infinispan, Ehcache 2, Hazelcast, cache2k |
+
+Measured cells: Ehcache 3.12.0 splits by path (`put`, `invoke` and `loadAll(replace)` store and
+publish UPDATED then EXPIRED; `getAndPut`, `putAll`, both `replace` forms and `getAndReplace`
+publish REMOVED for the old value); cache2k 2.6.1 publishes EXPIRED for the old value and counts no
+put; Infinispan 16.2.3 publishes REMOVED and calls `writer.delete`. Hazelcast 5.7.0 hung on the
+scenario, so its row keeps the recorded reading.
 
 cache2k maps a zero update expiry to `ExpiryTimeValues.NOW` (`ExpiryPolicyAdapter.durationToTicks`),
 and core's `EntryAction.checkKeepOrRemove` removes an entry expiring `NOW`.
@@ -168,7 +174,8 @@ both behaviors pass. The parity tests above check the missing event/statistic di
   REMOVED and a removal, and `containsKey` reaps one the same way where the RI only tests the
   deadline. The RI set overload disagrees with its own single-key/no-argument paths.
   TCK pins: `CacheExpiryTest.testCacheStatisticsRemoveAll` and
-  `testCacheStatisticsRemoveAllNoneExpired`; the expired set-overload pairing is not pinned.
+  `testCacheStatisticsRemoveAllNoneExpired`; the expired set-overload pairing is pinned by
+  `JCacheCombinedExpiryTest.removeAll_setOverload_expired`.
 
 ### Deadline conversion
 
@@ -188,13 +195,16 @@ Loader creation expiry uses the same ±1 correction as write/access expiry when 
 collides with sentinel `0` or `Long.MAX_VALUE`. Pins:
 `CacheLoaderTest.load_adjustedTimeSentinelZero` / `load_adjustedTimeSentinelMax`.
 
-The millisecond deadlines and their sentinels (`0` expire-now, `Long.MIN_VALUE` unchanged) assume
-a clock that neither reads below zero nor crosses the signed wrap, and durations far below
-`Long.MAX_VALUE` milliseconds. These boundaries are accepted without a fix. The recorded witnesses
-used custom boundary tickers; `System.nanoTime` documents that its values may be negative, so the
-system ticker can also read below zero, at a frequency that is unmeasured. JCache cannot express a
-lazy expiry below a millisecond: `Duration` rejects smaller units, and `TypesafeConfigurator` reads
-a configured duration in milliseconds, so a smaller one becomes `Duration.ZERO`.
+The millisecond deadlines and their sentinels (`0` expire-now, `Long.MIN_VALUE` unchanged) assume a
+clock that neither reads below zero nor crosses the signed wrap, and durations far below
+`Long.MAX_VALUE` milliseconds. The eternal deadline is the same boundary: at a clock below zero an
+unguarded `hasExpired` wraps it into expired, so an eternal replacement or an in-place renewal to
+eternal seen by `removeExpired`'s re-check is removed. These boundaries are accepted without a fix.
+The recorded witnesses used custom boundary tickers; `System.nanoTime` documents that its values may
+be negative, so the system ticker can also read below zero, at a frequency that is unmeasured.
+JCache cannot express a lazy expiry below a millisecond: `Duration` rejects smaller units, and
+`TypesafeConfigurator` reads a configured duration in milliseconds, so a smaller one becomes
+`Duration.ZERO`.
 
 ### Access expiry
 
@@ -209,12 +219,13 @@ API's atomic-scope restriction and can enter maintenance while holding a bin loc
 Read-path anchors: `getAndFilterExpiredEntries`, `EntryIterator.hasNext`, and
 `LoadingCacheProxy.getOrLoad`.
 
-A replacement between a read and its by-key timer update can receive the old read's native
-deadline. The old wrapper alone receives the timestamp, so this does not permit a stale value
-through its lazy-expiry check. `getExpiryForAccess()` is parameterless; standard Accessed/Touched
-policies use the same access and creation duration. A custom access duration shorter than creation
-can cause early native eviction and EXPIRED for the replacement. This race is accepted; do not
-add a bin lock or identity guard to every access-expiry read.
+A replacement between a read and its by-key timer update can receive the old read's native deadline.
+The old wrapper alone receives the timestamp, so this does not permit a stale value through its
+lazy-expiry check, and a replacement that keeps the old deadline loses that read's extension, under
+the standard `AccessedExpiryPolicy` too. `getExpiryForAccess()` is parameterless; standard
+Accessed/Touched policies use the same access and creation duration. A custom access duration
+shorter than creation can cause early native eviction and EXPIRED for the replacement. This race is
+accepted; do not add a bin lock or identity guard to every access-expiry read.
 
 `get` and `getAll` are happen-before, so a read whose captured wrapper has expired removes it only
 by identity and continues with a live replacement that the removal kept: a key replaced before the
@@ -318,6 +329,18 @@ Caffeine follows the listener table's requirement that an entry was removed; the
 table's wording is inconsistent. TCK covers remove-on-present only. For a read-through load,
 pin the miss/no-put behavior with `CacheProxyTest.invoke_readThroughLoad_recordsMissNotPut`.
 
+A remove that undoes this invocation's own create returns the entry to its untouched state: a
+later `getValue` reads through if the loader has not yet been called in this invocation (as in
+the RI), and a remove issued before that create is not written through (as in every provider
+compared). A remove of any other state is DELETED and blocks read-through.
+
+This terminal-action model follows the RI and the compared providers rather than the
+specification's *Entry Processors* examples, which read more broadly. For expiry the
+specification's own `ExpiryPolicy` table is explicit and takes precedence over Example 1's
+first-read wording, so a read-modify-write `invoke` under `AccessedExpiryPolicy` keeps its
+creation schedule. Example 3's writer delete after load, set and remove is the row above's full
+no-op, which the RI shares and the TCK does not test.
+
 `invoke` reconciles a lazily expired prior before the processor: publish EXPIRED, count eviction,
 and expose absence. (A prior that core has already expired natively is instead reaped by core
 with the quiet EXPIRED of [dispatch and commit](#dispatch-and-commit), which the caller does not
@@ -372,12 +395,23 @@ Read-through `getAll` materializes loaded values with core `put`, replacing a va
 concurrently during the load, and `JCacheLoaderAdapter.loadAll` publishes CREATED for the loaded
 value. This accepted choice treats the load as a fresh read of the system of record and preserves
 notification for resource-tracking listeners. Do not align it with
-`loadAll(replaceExistingValues=false)`, whose explicit contract is to keep existing values.
-That separate API uses `loadAllAndKeepExisting` / putIfAbsent. Two CREATED events without an
-intervening UPDATED are an accepted concurrent-load outcome. A key the loader returns outside the
-request is unspecified by `CacheLoader.loadAll` and the TCK, so it is stored and published as
-CREATED like any loaded value, even over an existing mapping; a presence check before core's `put`
-would be racy check-then-act.
+`loadAll(replaceExistingValues=false)`, whose explicit contract is to keep existing values. That
+separate API uses `loadAllAndKeepExisting` / putIfAbsent. Under `replaceExistingValues=true` a
+present key the loader cannot load is kept by the RI, Caffeine, Hazelcast and Infinispan and removed
+with a REMOVED event by Ehcache 3.12. The spec's Read-Through table says `getAll` invokes
+`loadAll()`, which Caffeine and Ehcache 3 follow (Ehcache once per missing key), while the RI,
+cache2k 2.6 and Hazelcast 5.7 load per key through `load`; a loader whose `loadAll` throws (for
+example `UnsupportedOperationException`) therefore works with the RI's `getAll` and fails Caffeine's
+with `CacheLoaderException`, and only Caffeine's `getAll` sees the bulk shapes. Two CREATED events
+without an intervening UPDATED are an accepted concurrent-load outcome. A key the loader returns
+outside the request is unspecified by `CacheLoader.loadAll` and the TCK, so it is stored and
+published as CREATED like any loaded value, even over an existing mapping; a presence check before
+core's `put` would be racy check-then-act. The same side-load does not classify the prior: it
+replaces an unrequested key's JCache-expired prior without its EXPIRED event or eviction when native
+expiry does not mirror the JCache deadline (a vendor `expireAfterWrite`), and with the default
+mirror the EXPIRED arrives after the CREATED; under zero creation expiry the unrequested key's
+EXPIRED names the discarded load while the prior stays live. `loadAll` routes such keys through the
+write path and announces the expired prior first, as the RI does.
 
 The overwrite holds under write-through and for a concurrent delete as well. A `put` or `remove` that
 commits through the writer while the bulk load runs is undone when the loaded value is stored: after
@@ -401,7 +435,14 @@ discards the expired entry. Do not describe the contract itself as lacking an or
 Recorded evidence: the inversion occurs when the reload lands before the timer wheel has swept
 the prior's bucket, whichever executor runs maintenance. On 2026-09-24 a `getAll` about 100 ms
 after a 50 ms deadline inverted in 17 of 20 runs on the direct executor and 16 of 20 on the
-common pool, and in none at about 1.25 s. The accepted rationale is
+common pool, and in none at about 1.25 s. The sweep follows a level-0 timer-wheel tick (2^30 ns of
+the ticker): on the direct executor the inversion occurs exactly when no tick has passed between the
+prior's write and the `getAll`, and on the common pool a tick lets the sweep win only usually, more
+rarely under CPU contention. The transitions can also end at a value the cache does not hold: when
+a concurrent `put` commits between a bulk load's CREATED and its insert, the load overwrites the
+put's value, so a mirroring listener's last event names a value the cache no longer holds and no
+later event corrects it. That is the accepted bulk overwrite's event face (see the write-through
+paragraph above). The accepted rationale is
 the timing/transport behavior of distributed providers, while preserving the contract difference:
 Hazelcast 5.7's per-entry cache-event factories did not set the publication order key (bulk
 removal used the key-set hash); Coherence localcache dispatched EXPIRED before loading, but its
@@ -447,11 +488,13 @@ and reload-before-prior-expiry as the same accepted design choice, not independe
 - `recordHits`/`recordMisses` and the conditional pairs that call them (`replace(K,V,V)`,
   batch hit/miss splits) are unconditional `LongAdder.add`, unlike `recordPuts`/`recordGetTime`/
   `recordPutTime`/`recordRemoveTime`, which also gate on a nonzero count. The asymmetry is
-  accepted: a zero-guard would still touch the same `LongAdder` cell, so it buys nothing under
-  best-effort statistics.
+  accepted under best-effort statistics: the zero count costs one uncontended `LongAdder`
+  update, and rewriting the pairs as `if (found) recordHits else recordMisses`, as the sibling
+  call sites read, was declined as churn.
 - `invoke`, conditional `remove`, and iterator yields count gets without timing them, and an
   empty `getAll` times no gets. The RI times the first three and not the last; these populations
-  stay unaligned under best-effort statistics. The same mismatch reaches `invoke`'s put and
+  stay unaligned under best-effort statistics. `putIfAbsent`'s hit or miss is untimed too, as in
+  the RI. The same mismatch reaches `invoke`'s put and
   removal counters: `postProcess` calls `recordPuts`/`recordRemovals` for CREATED/LOADED/UPDATED/
   REMOVED actions but never opens a timing scope, so `getAveragePutTime` and
   `getAverageRemoveTime` are diluted by `invoke` traffic the same way `getAverageGetTime` is.
@@ -502,14 +545,25 @@ non-clearing writer and was rejected for both. Pins:
 `CacheWriterTest.removeAll_nonClearingWriter_stillEmptiesCache` and
 `putAll_nonClearingWriter_stillStores`.
 
-A partial batch failure reconciles the same way whatever the writer throws, including a checked
-exception thrown undeclared by another JVM language. Pins:
+A partial batch failure reconciles the same way whatever `Exception` the writer throws, including
+a checked exception thrown undeclared by another JVM language. A writer `Error` after a partial
+`writeAll`/`deleteAll` propagates before the store loop, leaving the external resource changed
+for the completed entries and the cache unchanged, as in the RI. Pins:
 `CacheWriterTest.putAll_partialSuccess_storesWrittenEntriesOnly` and
 `removeAll_partialSuccess_removesDeletedEntriesOnly`. The specification requires wrapping any
 `Exception` a writer or loader throws. Recorded from bytecode on 2026-09-14: RI, Ehcache 3,
 Hazelcast, Infinispan, and cache2k catch `Exception` or `Throwable` around loader and writer calls
 (Ehcache and cache2k in their cores), while Coherence's `writeAll` and `deleteAll` catch only
 `RuntimeException`.
+
+The RI swallows a `CacheWriterException` thrown by `writeAll`/`deleteAll`, leaving nothing to
+rethrow; Caffeine propagates it, as `CacheWriter.writeAll`'s "if thrown cache mutations will occur
+for entries that succeeded" requires. Pins:
+`CacheWriterTest.putAll_fails_propagatesSameWriterException` and
+`removeAll_fails_propagatesSameWriterException`. When a write-through `put` over a JCache-expired
+prior fails, the RI has already removed the prior and skips its EXPIRED, and a read-through `get` or
+`getAll` whose loader throws over an expired prior removes it the same way; Caffeine keeps the prior
+until a later read or commits and announces it, one EXPIRED either way.
 
 Converting or defaulting a callback's `InterruptedException` first restores the thread's interrupt
 status, as core's `Caffeine.toUnchecked` does, since the wrapper or the default would otherwise hide
@@ -529,9 +583,11 @@ Those expired-but-unreaped keys are omitted from deleteAll, unlike the RI. This 
 accepted reading of an existing mapping, with no TCK assertion resolving it. The opposite half of
 the same method has the opposite outcome: a key that is JCache-expired but still natively live is
 present in that key set, so it is still passed to `writer.deleteAll` before being reaped as EXPIRED
-plus an eviction — not REMOVED. Both halves are defensible reads of `CacheWriter.deleteAll`'s
-"only invoked for keys that exist in the cache" against the two clocks; both are recorded together
-here rather than only the natively-expired half.
+plus an eviction — not REMOVED. `CacheWriter.deleteAll` allows both halves, since under 1.1.1 its
+keys "may include keys even if there is no mapping". What the second half departs from is
+`Cache.removeAll()`'s "If the cache is empty, the CacheWriter is not called" when every resident is
+JCache-expired, which needs a vendor native expiry that outlives the JCache deadline. Both halves
+are recorded together here rather than only the natively-expired half.
 
 ## Events and callbacks
 
@@ -588,6 +644,8 @@ mechanism remains reproducible.
 
 Native size/weight eviction publishes quiet REMOVED; native EXPIRED publishes quiet EXPIRED.
 Refresh reload publishes quiet UPDATED, EXPIRED for zero update expiry, or REMOVED on a miss.
+The last two remove the entry but count neither an eviction nor a removal: core removes it as
+an explicit removal, outside `JCacheEvictionListener`, and statistics are best-effort.
 Quiet means no synchronous caller await: it informs resource-tracking listeners without blocking
 the evicting/refresh thread. Lazy expiry mostly arrives this way on the system ticker: the native
 mirror hides an expired entry from reads, and a read in the sub-millisecond gap between the
@@ -596,8 +654,11 @@ wrapper, so `removeExpired` finds the entry natively expired. A read, or a `comp
 replace or conditional remove, that finds an entry expired therefore publishes and counts nothing,
 and its EXPIRED and eviction wait for a maintenance cycle after a wheel tick, which an idle cache
 without a `Scheduler` does not run. The adapter's own read-side reap runs only when a vendor
-native expiry outlives the JCache deadline. The ecosystem generally omits eviction events (RI
-never evicts).
+native expiry outlives the JCache deadline. For a read that finds an expired entry, the RI 1.1.1,
+Ehcache 3.12.0 and Infinispan 16.2.3 deliver EXPIRED to a synchronous listener before the read
+returns, cache2k 2.6.1 does not, and Hazelcast 5.7.0 does so only in some JVM histories, so the
+deferral is a Caffeine choice (lazy expiry; a `Scheduler` for promptness) rather than ecosystem
+parity.
 Clearing natively expired residents can produce quiet EXPIRED and eviction counts through core's
 removal cause, even though ordinary explicit clear removals are silent. Closed-cache delivery is
 separately suppressed by dispatch's closed check. A reload publishes before core decides whether
@@ -665,18 +726,22 @@ forbids side effects, so a filter whose cache call deadlocks the evicting thread
 eviction lock and the entry's locks, is outside the contract.
 
 The spec permits implementation-specific deadlock detection. Three accepted hazards remain:
-cross-cache listener cycles, a synchronous listener dispatched on another thread that operates
-on its own key, chains behind itself, then awaits itself, and the same shape across two distinct
-keys in one cache: two threads concurrently mutate keys A and B under one synchronous
-registration, and if that listener reciprocally writes the other key from the dispatch thread, the
-resulting per-key futures form an unbreakable cycle (A's future awaits B's, B's future awaits
-A's). Distinct keys are not a safety guarantee here; the mechanism is identical to the other two
-hazards; not marking dispatch threads is what admits all three, so it is not a separate boundary
-to name or a new decision to make. The own-key case was reproduced with the gate both enabled and
-disabled; moving execution outside compute did not create it. Do not extend the
-mark to dispatch threads. Pins: `EventDispatcherTest.publish_listenerUsesTheCache_isRejected`
-and `invoke_processorUsesTheCache_isRejected`. The probe included a positive control and found
-no re-entry in the then 493 TCK / 603 unit tests.
+cross-cache listener cycles, a synchronous listener dispatched on another thread that operates on
+its own key, chains behind itself, then awaits itself, and the same shape across two distinct keys
+in one cache: two threads concurrently mutate keys A and B under one synchronous registration, and
+if that listener reciprocally writes the other key from the dispatch thread, the resulting per-key
+futures form an unbreakable cycle (A's future awaits B's, B's future awaits A's). Distinct keys are
+not a safety guarantee here; the mechanism is identical to the other two hazards; not marking
+dispatch threads is what admits all three, so it is not a separate boundary to name or a new
+decision to make. A user callback that blocks on a `ForkJoinPool` worker between a publish and its
+operation's await (a `join()` inside an `ExpiryPolicy` or `Copier`) can let the worker help run
+another same-cache `loadAll`, whose `chainSynchronous()` drains the outer operation's thread-local
+pending futures; blocking a pool worker inside a callback is outside the contract, as a waiting
+executor is (traced from source, not witnessed). The own-key case was reproduced with the gate both
+enabled and disabled; moving execution outside compute did not create it. Do not extend the mark to
+dispatch threads. Pins: `EventDispatcherTest.publish_listenerUsesTheCache_isRejected` and
+`invoke_processorUsesTheCache_isRejected`. The probe included a positive control and found no
+re-entry in the then 493 TCK / 603 unit tests.
 
 ## Copying and listener configuration
 
@@ -689,6 +754,13 @@ A user's readObject throwing ISE therefore surfaces raw intentionally. The primi
 nonnull argument; nullable prior-value returns guard it explicitly. Loader copying retains its
 contextual `CacheLoaderException`, including the TCK-required wrapping. Pin:
 `CacheProxyTest.copierFailure_wrappedInCacheException`.
+
+Under store-by-value with write-through, the no-argument `removeAll()` hands `writer.deleteAll` the
+stored key instances and `iterator.remove()` hands `writer.delete` the last entry's stored key,
+where the other writes pass the caller's instances and the RI a deserialized copy. A writer that
+mutates the keys it is asked to delete is outside the contract. A null `unwrap` argument throws
+`NullPointerException` on every surface (cache, manager, entry, mutable entry, event); the RI throws
+NPE for the cache and manager and IAE for entries and events.
 
 A replacement copies its new value only once the entry is known to be present, as `replace(K,V,V)`
 does, so `replace(K,V)` and `getAndReplace` on an absent key return `false` or `null` without
@@ -860,7 +932,10 @@ RuntimeException originates in the spec's own FactoryBuilder.
 
 `maximumWeight` without a weigher throws ISE, even though createCache's generic validation
 clause uses IAE. These are vendor-extension properties; this difference remains accepted.
-Pin: `CacheManagerTest.maximumWeight_noWeigher`.
+Pin: `CacheManagerTest.maximumWeight_noWeigher`. The same holds for maximum size with maximum
+weight and for eager after-write or after-access expiry with a variable `Expiry`: the core
+builder rejects them with ISE inside `build()`, after the `Builder` constructor created the
+configured resources. HOCON rejects size-with-weight earlier, with IAE, in `TypesafeConfigurator`.
 
 ### Classloaders
 
@@ -884,7 +959,11 @@ Weakening registry values would allow live managers to disappear. The explicit
 `CachingProvider.close(ClassLoader)` lifecycle operation is implemented; use it for unloading.
 A cache still used after its manager's loader was collected throws `NullPointerException` from
 every copy, since `copyOf` resolves the loader each time; that use outlives the loader, and the
-RI's serializing converter holds it weakly as well.
+RI's serializing converter holds it weakly as well. Such a manager is also no longer reachable
+from `CachingProvider.close()` or `close(ClassLoader)`, since the registry entry left with the
+loader, so it must be closed directly. Deactivating the OSGi provider component likewise closes
+no manager: closing them stays the consuming bundle's responsibility, through
+`CachingProvider.close(ClassLoader)` or the manager.
 
 ### Management
 
@@ -910,15 +989,16 @@ A configured ExecutorService is cache-owned and is shut down on close (`PMD.Clos
 suppression documents this). The default ForkJoinPool common pool ignores shutdown. To share an
 executor, supply a plain Executor such as `shared::execute`: it bypasses the ExecutorService
 shutdown check and, being non-AutoCloseable, the trailing tryClose. A singleton ExecutorService
-returned raw by a factory does not opt out of ownership; do not add a shutdown flag.
-The JCache spec does not specifically require executor shutdown; its named Closeable list is
-loader, writer, listeners, and expiry policy. Ownership is the adapter's resource policy.
-The executor is the only vendor factory product the cache releases; a configured `Scheduler`,
-`Copier`, `Ticker`, `Weigher`, or native `Expiry` is borrowed, as in core. `Scheduler` has no
-close contract and none of its stock implementations owns a thread
-(`forScheduledExecutorService` adapts the caller's service), so the application releases a
-scheduler that starts one. cache2k instead closes an `AutoCloseable` scheduler with the cache, as
-its `Scheduler` interface documents.
+returned raw by a factory does not opt out of ownership; do not add a shutdown flag. The JCache spec
+does not specifically require executor shutdown; its named Closeable list is loader, writer,
+listeners, and expiry policy. Ownership is the adapter's resource policy. The executor is the only
+vendor factory product the cache releases; a configured `Scheduler`, `Copier`, `Ticker`, `Weigher`,
+or native `Expiry` is borrowed, as in core. `Scheduler` has no close contract and none of its stock
+implementations owns a thread (`forScheduledExecutorService` adapts the caller's service), so the
+application releases a scheduler that starts one. A scheduler named by class in HOCON is instead
+created per cache by `FactoryBuilder.ClassFactory`, so one that starts its own thread leaks it per
+cache lifecycle; share one through a factory that returns the application's instance. cache2k
+instead closes an `AutoCloseable` scheduler with the cache, as its `Scheduler` interface documents.
 
 `inFlight` tracks explicit asynchronous loadAll work, including its CompletionListener
 notification, with a bounded 10-second close await. `loadAllAndNotify` returns the notification
@@ -933,8 +1013,15 @@ dispatch. A stuck listener, or a CompletionListener that invokes `close()` direc
 (self-close), waits out the ten-second timeout, reported as TimeoutException. An `Error` from
 `executor.execute` is governed by standing executor/JVM-Error principles; the bounded await ensures
 it does not hang indefinitely. The bounded await does not promise that timed-out work has stopped.
+A loader `Error` during `Cache.loadAll` never notifies the RI's `CompletionListener` (its runnable
+catches only `Exception`), where Caffeine and Hazelcast deliver `onException(CacheLoaderException)`;
+a `CompletionListenerFuture` on the RI would block forever.
 `close()` sets the closed flag and deregisters under the configuration monitor, which admission and
-registration also check, and awaits outside it; an awaited listener that reads the configuration
+registration also check, and awaits outside it. A second, concurrent `close()` (directly, or through
+`CacheManager.close()` or `CachingProvider.close()`) returns once it sees the flag, possibly before
+the first closer has released the executor, loader, writer and listeners, and a manager close may
+not see the cache at all once the first closer deregistered it; the spec does not say a close must
+wait for another, and this is accepted; an awaited listener that reads the configuration
 would otherwise wait out the timeout. Pins: `CacheProxyTest.loadAll_loaderFailure_notifiesListener`,
 `loadAll_storeFailsMidway_notifiesAfterSynchronousListeners`,
 `close_awaitsInFlightLoadAll`, `close_awaitsRejectedLoadAllNotification`, and
@@ -990,6 +1077,9 @@ RI keeps it until close. Pin: `CacheProxyTest.destroyCache_clearsBeforeClosing`.
 Explicit clear removals do not notify listeners/writers: JCache uses core's evictionListener,
 not removalListener. Natively expired residents are the previously documented exception because
 their cause is EXPIRED rather than EXPLICIT; do not claim clear is unconditionally event-silent.
+A resident whose JCache deadline passed but whose native deadline has not (the sub-millisecond
+mirror gap, or any vendor native expiry) is cleared silently like a live one, as the RI's `clear()`
+is for every resident; `removeAll()` reaps the same prior as EXPIRED with an eviction.
 
 iterator.remove shares remove(K)'s removal path, removing the last-returned key even if its value was
 replaced since next. It checks closure and expiry through that operation: an entry expired in
@@ -1004,4 +1094,6 @@ Pins: `CacheProxyTest.iterator_remove_listenerFails_doesNotRemoveReplacement`,
 
 `next()` copies an entry before recording it, so one that fails to copy is skipped without counting
 a hit or becoming the entry `remove()` deletes; the RI likewise converts before remembering its
-last entry. Pin: `CacheProxyTest.iterator_next_copierFails_doesNotReturnTheEntry`.
+last entry. Pin: `CacheProxyTest.iterator_next_copierFails_doesNotReturnTheEntry`. The hit is
+counted in `next()`, once a value is returned; the RI and cache2k count it when `hasNext()` stages
+the entry, Ehcache 3 and Hazelcast in `next()`.

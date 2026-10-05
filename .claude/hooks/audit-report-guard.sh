@@ -29,7 +29,8 @@ agent_type=$(printf '%s' "$input" | jq -r '.agent_type // ""' 2>/dev/null)
 # other agents (Explore, Plan, workflow subagents, ...).
 [ "$agent_type" = "auditor" ] || exit 0
 
-transcript=$(printf '%s' "$input" | jq -r '.transcript_path // ""' 2>/dev/null)
+# Prefer a subagent-specific transcript field if the runtime provides one.
+transcript=$(printf '%s' "$input" | jq -r '.agent_transcript_path // .transcript_path // ""' 2>/dev/null)
 { [ -n "$transcript" ] && [ -f "$transcript" ]; } || exit 0
 
 guard="${TMPDIR:-/tmp}/claude-audit-report-guard.$(basename "$transcript" .jsonl)"
@@ -42,8 +43,10 @@ if [ -n "${AUDIT_REPORT_PATH:-}" ] && [ -s "$AUDIT_REPORT_PATH" ]; then
   exit 0
 fi
 
-# Did the auditor Write/Edit any report file under .local/audits/ this run?
-if jq -rc 'select(.type=="assistant")
+# Did the auditor Write/Edit any report file under .local/audits/ this run? Parse each line on
+# its own (-R, fromjson?): a strict stream parse stops at the first unparseable line and would
+# miss every later Write.
+if jq -Rrc 'fromjson? | select(.type=="assistant")
              | (.message.content // empty)
              | (if type=="array" then .[] else empty end)
              | select(.type=="tool_use"

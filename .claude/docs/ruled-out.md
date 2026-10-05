@@ -49,11 +49,21 @@ These dispose of whole families. Check them first.
   lifecycle is the user's choice. A waiting `execute` deadlocks because the drain task and
   eviction's removal notifications are submitted under `evictionLock` (`synchronization.md`,
   *notifyRemoval*). Submitting outside the lock would fix only the joining executor: maintenance
-  runs on the executor, so a lone worker still waits on its own full queue.
+  runs on the executor, so a lone worker still waits on its own full queue. The same holds for the
+  default common pool disabled JVM-wide (`java.util.concurrent.ForkJoinPool.common.parallelism=0`
+  or a common-pool thread factory returning null), where maintenance, notifications and async loads
+  stop. The library does not detect it ("Remove detection of JDK-8274349": the application is
+  broken in every other common-pool use too); a parallelism check, a caller-runs fallback, the
+  `AsynchronousCompletionTask` marker and routing through `CompletableFuture.runAsync` were
+  declined. So was more `Caffeine.executor` javadoc for any of these cases, a rejecting or
+  caller-runs executor running listeners under the eviction lock included: its existing caution
+  and the internal guidance suffice.
 - **Statistics are best-effort and lowest priority.** A counter that races, drifts, or
   double-counts is not a correctness defect. `CacheStats.missRate`'s
   `missCount >= loadSuccessCount + loadFailureCount` says a miss need not load (`getIfPresent`);
-  a refresh or `asMap` compute counting a load without a miss does not make it a defect.
+  a refresh or `asMap` compute counting a load without a miss does not make it a defect, and the
+  same reading covers `loadSuccessCount`/`loadFailureCount`'s "always" wording, which the javadoc
+  keeps deliberately rather than taking Guava's "usually".
 - **Anything reachable only through `Cache.unwrap(...)` is out of scope.** By the JCache
   spec `unwrap` is an ill-defined hack; once used, behaviour is undefined, however real the
   symptom.
@@ -139,21 +149,43 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
 
 **Eviction and maintenance**
 
+- Colliding keys inflating a new candidate's frequency so that TinyLFU admits it outright, before
+  the jitter is consulted. Keys with equal `hashCode()` share every sketch counter, so distinct
+  one-shot colliding keys read frequency 15 and displace colder probation victims; at 1% of traffic
+  on a Zipf 0.99 workload with a 10,000-entry cache they cost about 4.6 points of hit rate
+  (research-foundations, *Security*). The jitter exists to let an inflated entry be evicted, not to
+  prevent its admission: an admitted candidate becomes an inflated probation victim like any other,
+  and keys that are not reused never reach protected. No seed separates equal hash codes, and
+  naming the candidate side in `BoundedLocalCache`'s class comment was declined.
 - A weight change replayed after the fact evicting the mapping that replaced it. A weighted
   entry rewritten oversize and then rewritten small again can be removed as SIZE once the
   buffered deltas drain, because `UpdateTask` decides from the accumulated `policyWeight`
   while the node already carries the new weight. Deterministic with a discarding executor:
   under `maximumWeight(100)`, three puts of weight 1, 1000 and 1 leave the cache empty, and
-  the notification carries the small value. `weight` and `policyWeight` are owned by
+  the notification carries the small value. `AddTask` does the same from its captured insert
+  weight when an oversize insert is rewritten small before the drain (puts of 1000 then 1).
+  `weight` and `policyWeight` are owned by
   different locking protocols, so the replay is inherent, and the javadoc's "may evict an
   entry before this limit is exceeded" covers the result. The price is an extra miss on a
-  self-healing transient. Deciding the per-node check from `node.getWeight()` closes only
+  self-healing transient. Deciding either task's check from `node.getWeight()` closes only
   that path: the same replay inflates the global `weightedSize` across drain cycles and
   evicts through `evictEntries` instead, measured still losing the entry in 2 of 3
   default-executor runs, so it is a special case rather than a repair. Resurrecting a victim
   when size eviction no longer holds has the same gap, and does nothing for an update that
   is not itself oversize and pushes other entries out. Weight-0 pinning is unaffected, which
   is the case that would have made it more than premature eviction.
+- `lock()`'s timed retry never reaching its uninterruptible fallback while another thread
+  re-interrupts the writer faster than it loops, since `tryLock` checks the flag before trying.
+  The loop rides out ordinary interrupts and restores the flag; a storm is a constructed trigger,
+  and the writer acquires once it stops.
+- The `Caffeine` class javadoc's list of configurations that "perform periodic maintenance"
+  omitting `refreshAfterWrite`. A refresh-only cache is bounded so that it can refresh and
+  submits a drain after writes, but that drain has nothing to evict, expire or collect; the list
+  names maintenance that does work.
+- Replacing `EvictContext.removed` with `ctx.cause != null` at `evictEntry`'s tail, as the
+  siblings classify into a local cause. Equivalent today only because the resurrect return
+  comes first; the explicit flag keeps the tail correct if an edit sets a cause on a path that
+  neither removes nor resurrects, which is worth more than one field.
 - Size eviction is uncapped and drains the whole excess in one cycle under `evictionLock`.
   Eager shrink is the published `Policy.Eviction.setMaximum` contract, and the uncapped
   property is load-bearing for the `rescheduleCleanUpIfIncomplete` piggyback: size eviction
@@ -267,6 +299,12 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   decisions and read-path `accessTime` and `variableTime` updates; a read that shortens the
   variable deadline is always stored, so the tolerance never makes an entry expire late. Read-extension's accepted over-stay is a
   separate race described in [expiration](design-decisions.md#expiration).
+- The fixed and refresh `ageOf` accessors returning empty for a present entry whose timestamp a
+  concurrent read or write moved past the query's clock, while `getEntryIfPresentQuietly` and
+  the ordered snapshots clamp that negative age to 0 and report the entry. Both are deliberate
+  ("hide incomplete mappings from policy metadata queries"; `ageOf_negative`): the accessor
+  answers for its own instant, where that stamp is not yet visible, as it does for a pending
+  mapping, and the entry view reports a present entry with its full duration.
 - Expiration eviction capped at `EXPIRATION_THRESHOLD` (1000) per cycle, re-armed via
   `PROCESSING_TO_REQUIRED`. The wheel rewinds `nanos` and re-links the remainder, so a
   `schedule` inside that window measures against a behind clock. The budget counts only
@@ -288,7 +326,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   head's next recorded read or its own expiry. Measured with twelve threads keeping their
   read-buffer stripes full, the delay exceeded a second; without that contention it stayed under
   25 ms. The timer wheel sweeps by bucket and has no such stop; see
-  [TimerWheel](design-decisions.md#timerwheel).
+  [TimerWheel](design-decisions.md#timerwheel). The write-order deque has the same face: a write
+  time kept by the tolerance plus an `UpdateTask` reorder (a weight change, or a reinstall over a
+  collected value) can leave an expired node behind a live head until that head expires, under
+  the tolerance.
 - `Pacer.calculateSchedule`'s 0L sentinel collision.
 - `Pacer.schedule`'s reschedule arm must call `cancel()`, not `future.cancel(...)`: the
   immediate-scheduler recursion guard is `future == null && nextFireTime != 0L` and only
@@ -301,7 +342,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   operation. A one-second-granularity ticker reproduces; `systemTicker` and a one-millisecond
   cached clock did not in 20 trials each. Tickers are expected to advance between reads; a cheap
   clock can increment per read and resynchronise periodically. The `fired` flag was declined
-  for this coarse-clock trigger.
+  for this coarse-clock trigger, and for a monotonic `Ticker` that runs slower than the
+  scheduler's clock, whose lag grows with the delay: `Caffeine.ticker` states a testing intent,
+  the default pairs two `System.nanoTime` clocks, scheduling is best-effort, and the loss ends
+  at the next cache operation.
 - `Pacer` self-poison ordering (`nextFireTime` committed before `scheduler.schedule()`).
   User schedulers get `GuardedScheduler`'s no-throw/no-null guarantee; built-ins satisfy it
   directly. Do not add a catch for an unreachable synchronous scheduler failure.
@@ -342,7 +386,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   passes over that writer's slot, so the exit swap settles `IDLE` with the task buffered. It is the
   executor-run maintenance task's route to the same end state and heals the same way; jcstress
   reached it on aarch64 at about two per million racing pairs, where the direct `cleanUp` route
-  measured about four per ten thousand.
+  measured about four per ten thousand. Two unmeasured routes the JMM permits end the same way or
+  milder: `scheduleDrainBuffers`' blind `PROCESSING_TO_IDLE` store erasing a `REQUIRED` that a
+  writer set after the store's status read, and `rescheduleCleanUpIfIncomplete`'s post-unlock
+  opaque read missing a writer's `REQUIRED`, which stays `REQUIRED` for the next read or write.
 - Weak key identity semantics. Historical cleared-reference aliasing was harmless to the
   interner's uniform values; cleared references now compare equal only to themselves. See
   [refresh internals](design-decisions.md#refresh-internals).
@@ -379,6 +426,14 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
 - Weak-key lookups allocating a `LookupKeyReference` (24 B/op). A thread-local mutable
   wrapper pins the instance to the thread, rejected in #294 for virtual threads and
   classloader pinning. Young-gen allocation is the better trade.
+- `Interner.newWeakInterner()` losing `ConcurrentHashMap`'s tree-bin ordering for `Comparable`
+  elements, so interning many same-hash strings is O(n) each: 4.7 s for 16,384 against 10 ms for
+  the strong interner. Guava's weak interner chains its bins and degrades for every key type, and
+  no contract promises collision resistance. Comparable wrappers are not a repair: CHM orders only
+  a probe and stored key of one class, and a cleared referent cannot be ordered, so later inserts
+  are tie-broken around it and, once it drains, live keys sit on the wrong side of each other.
+  Measured with one comparable weak class in a plain CHM, that missed live keys and inserted
+  duplicate equal keys in every trial; without comparison, or without clearing, never.
 - A never-completing async or refresh loader retaining weak keys and values via callback
   capture.
 - `BoundedLocalCache.containsKey` and `EntrySetView.contains` lacking an `isAlive()` filter;
@@ -397,7 +452,11 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   `tryExpireAfterRead`.
 - Read-path expiry extension resurrecting a just-expired entry.
 - A read that returns a value already reported EXPIRED, during a concurrent rewrite. Real and
-  historically deferred, then repaired by the timestamps-before-value protocol.
+  historically deferred, then repaired by the timestamps-before-value protocol. The protocol
+  orders a timestamp stored by the rewriting thread; a fixed `expireAfterAccess` reader's opaque
+  `accessTime` store is ordered after the value only on multi-copy-atomic hardware (x86, ARMv8),
+  not on POWER, where a third reader can pair it with the superseded value. Unmeasured and not
+  repaired: POWER is not a tested target.
 
 **Refresh**
 
@@ -432,10 +491,15 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   `null == null`, and the prescreen cannot see the registration reservation. Reproduced 5/5
   with the loader running inside `refreshes.compute`, discarded 0/5 on a pool executor, and
   the history is still a legal linearization; see [refresh internals](design-decisions.md#refresh-internals).
+  The same holds for a present start whose racing writes end on the instance it read, which
+  the identity test cannot tell from no write.
 - `UnboundedLocalCache.discardRefresh` removing unconditionally, so a write waits out an
   inline refresh load on the same key (measured 2004 ms). It is a light `ConcurrentHashMap`
   wrapper and CHM's `put` is pessimistic regardless, so the bounded cache's prescreen is not
-  a repair to port.
+  a repair to port. A write to any key in the same `refreshes` bin also waits, so during k
+  inline reloads about k/16 of writes stall in a 16-bin table; with the default executor the bin
+  is held only for the submission (76 us measured). The prescreen would also bring the bounded
+  cache's reservation-window escape, which the unconditional `remove` waits out.
 - Removing the bounded `discardRefresh`'s `containsKey` prescreen as redundant work. `remove`
   reaches CHM's `replaceNode`, which returns without locking only when the target bin is empty,
   so an absent key that collides into an occupied bin still takes the bin monitor and walks the
@@ -506,7 +570,15 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   Capture each lazy holder once and return that local or the newly created instance. Final-field
   initialization protects a view's backing state, but does not make repeated plain holder reads
   coherent; a second read could return null after the check observed a peer's initialized view.
-- `Policy.hottest`/`coldest` map overloads collapsing equal-but-distinct weak keys.
+- The access-reset javadoc ("reset by all cache read and write operations") not naming
+  `containsKey`, `containsValue` and `forEach`. A cache read means get-style access, as its get and
+  put examples show, and membership checks and traversal stay quiet by design; enumerating the
+  exceptions across the four javadocs was declined.
+- Every `Policy` map overload (`coldest`/`hottest`, their weighted forms, `oldest`/`youngest`)
+  collapsing equal-but-distinct weak keys. The collecting `LinkedHashMap.put` keeps the first
+  key instance with the later key's value, a pair the cache does not hold, and the limit or
+  weight budget counts both, so the map can come back short. The `Map` cannot hold both keys,
+  so which pair survives is the same undefined collapse; the `Stream` overloads return all.
 - `Policy` snapshots pairing a value with a weight from another moment. The snapshot reports the
   policy's weight under `evictionLock` while writers publish values under the node's monitor, so
   a concurrent update can hand `coldestWeighted`/`hottestWeighted` a stale weight, and the
@@ -582,8 +654,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   Preserve `LoadingCache.getAll`'s existing exception wording; adding a partial-commit
   qualification was declined.
 - `loadAll` retaining the caller's mutable `Set` across the async boundary.
-- A dropped or hung async load leaving a permanent in-flight mapping. The remedy is to cancel
-  the future, which `async-cache.md` documents.
+- A dropped or hung async load leaving a permanent in-flight mapping. Cancelling a per-key
+  load's future removes its mapping; a cancelled bulk proxy stays mapped until the bulk loader's
+  own future completes (see design-decisions, *Async Put Re-registration*), so a hung bulk load
+  is released by completing that future or by `invalidate`.
 - `synchronous().refresh(k)` on an absent key returning a write that completed between its
   absence check and its load, without calling the loader. A refresh of an absent key is a
   `get(key)`, which adopts the mapping it finds, and a load in that race could equally have been
@@ -603,11 +677,22 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   `invalidate`, `invalidateAll`, `asMap().clear()` and key-set removals return at once: they
   return nothing that needs the loaded value. `asMap().put` and `remove(k)` store first and then
   wait for the displaced value they return; the wait is `join`'s, uninterruptible with the
-  interrupt status kept, and a load that fails during it yields null.
+  interrupt status kept, and a load that fails during it yields null. `WriteThroughEntry.setValue`
+  waits the same way although it returns the traversal-time value, which the blanket blocking
+  sentence permits.
   Callers occupying every worker of the load executor while waiting create thread starvation,
   even when the executor accepts and queues tasks correctly. That application dependency is
   covered by the executor-responsibility rule; the synchronous view promises no independent
   progress or finite wait for the load.
+- `AsyncCache.synchronous().get(k, fn)` and `getAll(keys, fn)` running the function on the cache
+  executor through `supplyAsync` (or on the caller when a blocked common-pool worker helps with
+  its own task), so it can see none, its own, or another task's leftover thread-bound state, and
+  interrupt status the function sets stays on that thread; the same view's
+  `asMap().computeIfAbsent` runs it on the caller. The `AsyncLoadingCache` view's loads are
+  documented to run on the executor through `CacheLoader.asyncLoad`.
+- The synchronous view logging a failed load at WARNING that it also throws to the caller.
+  Async load failures are logged because a future may go unobserved; the view reuses that
+  completion, and the logger can be configured to drop it.
 - `synchronous().get(k)`, `get(k, fn)` and `getAll` waiting on a load in flight without responding
   to interruption, the interrupt status kept. A synchronous cache's caller waits the same way at the
   bin lock for another thread's load, as Guava's does; only a thread running an interruptible
@@ -637,6 +722,13 @@ Read `jsr107-conformance.md`'s topic sections with this section.
   modification removed; `getCache(String)` typed-cache IAE removed; the iterator EXPIRED firing
   requirement removed. Loader exception wrapping was not relaxed: the 1.1.1
   `CacheLoaderException` javadoc still requires it, and the TCK asserts it for `get` and `loadAll`.
+- A listener, filter, loader, writer or other configured factory whose `create()` calls back into
+  the caching API while the adapter holds a monitor or a registry computation: `getCache` or
+  `createCache` on the same manager, or `CachingProvider.getCacheManager`. That is the standing
+  principle's constructed trigger whatever the outcome: a deadlock against destroy or close, a
+  loud `Recursive update`, or, when the nested insert resizes the registry under the outer
+  computation's bin, a silently corrupted registry that loses a cache or holds two for one name.
+  Moving construction out of the registry's mapping function was not proposed.
 - Operations racing `close()`. The spec explicitly permits a closed cache to retain
   contents, governs only *future* use, and punts concurrent behaviour to implementation
   dependent. Local in-memory means no OS resource leaks.
@@ -736,7 +828,8 @@ The simulator is a testing tool. Its correctness matters only to avoid misleadin
 claims, not user harm. Weight effort toward the core and the adapters; sibling-divergence is
 the one lens that stays productive here. A mechanism that no bundled trace, default run, or
 reported issue reaches is won't-do until one does, however cleanly it reproduces. A loud abort
-takes no number with it, so it waits for a report too.
+takes no number with it, so it waits for a report too. A documented but non-default setting is
+not reach either.
 
 - Approximate and lossy policies are intentional. `membership.bloom.FastFilter` is opt-in.
 - `product.*` policies inheriting third-party libraries' wall-clock expiry defaults.
@@ -779,20 +872,28 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
 
 - `tests-latest` (`LATEST_JDK`) gated to default-branch push only.
 - `run-gradle`'s blanket `attempt-limit: 2` retry.
-- jcstress and lincheck tasks being cacheable rather than `cacheIf { false }`.
+- jcstress, lincheck, `test`, `fuzzTest` and `frayTest` tasks being cacheable rather than
+  `cacheIf { false }`, so identical inputs (one tree pushed to two branches, a re-run, a
+  version-only change) replay a cached pass without re-fuzzing or re-exploring. The weekly canaries
+  run with `--rerun-tasks` for fresh executions.
 - `EclipseJavaCompile`'s `argumentProviders.add { lambda }` emitting absolute paths.
 - `ShardedTestFilter` running non-`MethodSource` descriptors in every shard.
 - `ShardedTestFilter` dropping every method without `@CacheSpec` when a `-P` filter is set. The
   filters select local subsets of the parameterized matrix; CI shards without them, so the plain
   tests run there.
 - `configureondemand` is intentional.
+- `run-gradle` and `build-ea.yml` expanding the suite list unquoted, so a `--tests` wildcard would
+  glob against the repository root. Nothing there matches either wildcard, and a match would most
+  likely fail loudly.
+- The `Stress Tests` job asserting nothing: `Stresser` prints status and throughput and exits 0
+  after `--duration`, so it is a smoke run that fails only if the JVM dies, not an invariant check.
 - Dependency verification is not wanted; the egress allowances are intentional.
 - `coverage` and `test-results` skipping after a failed `tests-minimum` matrix. The failed shard
   makes the Build fail; fix that failure. Keep downstream summaries skipped, since publishing
   partial results lowers test counts and coverage. Do not add an always-running downstream result
   gate solely because the required summary checks accept a skipped conclusion.
 - The cacheable `jmh` task behind the benchmark gists, `analysis.yml`'s SARIF merge keeping only
-  the first input's `tool`, the `git diff` metadata freshness check missing a deleted file,
+  the first input's `tool`, the `git diff` metadata freshness check missing a deleted or added file,
   and the opt-in `-Pjfr` profile (JDK 16+ event settings, no declared recording output).
 
 ---
@@ -800,6 +901,10 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
 ## Code generation
 
 - `AddFastPath.java` emitting `fastpath()` without `final`.
+- Dropping `WEAK_VALUES` and `SOFT_VALUES` from `Feature.fastPathIncompatible`, which the
+  local-cache generator never passes, and `AddFastPath.execute` recomputing the predicate
+  `applies` evaluated. Output-neutral, with no clarity gain worth the edit; the `Rule` split
+  between `applies` and `execute` is deliberate.
 - Field declarations and method shapes for evicting caches live in the generators, not in
   `BoundedLocalCache`. Trace a generated field back to its `AddX.java` before drawing a
   conclusion about its type or storage.
@@ -817,6 +922,12 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
   `ClassCastException` and an untyped one keeps the stale proxy. It fails only when the stream
   reaches the cache before the rest of the cycle. Guava's proxy extends `ForwardingCache` for
   this case; both that shape and a javadoc qualifier were declined.
+- Hand-built streams that no `writeReplace` produces: an internal async adapter
+  (`AsyncRemovalListener`, `AsyncEvictionListener`, `AsyncWeigher`, `AsyncExpiry`) placed in a
+  proxy's callback field, or a Guava facade whose `cache` is null or not a `LoadingCache`. A
+  crafted stream already chooses its callbacks, so an adapter or a broken facade gives it nothing
+  a hostile callback lacks; it fails on use rather than on read. `readObject` guards were
+  declined.
 
 ---
 

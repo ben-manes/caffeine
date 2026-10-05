@@ -45,6 +45,11 @@ The two `build` overloads bridge different contracts:
 
 ## Accepted Compatibility Limits
 
+- **Refresh while another thread loads the key loads again.** Guava's `refresh` is a no-op while
+  the key is loading; the facade's synchronous core side-loads, so a concurrent `get(k)` load and
+  `refresh(k)` both call the loader, and the refresh's value is discarded with a `REPLACED`
+  notification (see design-decisions, *A sync `refresh(k)` on an absent key is an isolated
+  side-load*).
 - **Fallback bulk failure discards the successful prefix.** Per-key fallback accumulates a
   map for core to install after every load succeeds. Native Guava commits each key immediately:
   an `asyncReloading` loader failing on key two leaves key one and its load-success statistic
@@ -75,10 +80,16 @@ The two `build` overloads bridge different contracts:
   rulings](../docs/ruled-out.md#core).
 - **Absent-key refresh uses the configured executor.** Guava calls `load` inline when no old
   value exists; the facade queues it. A queuing executor therefore leaves the facade's load
-  pending when Guava has already installed the result. `Runnable::run` gives Guava's timing.
+  pending when Guava has already installed the result. `Runnable::run` gives Guava's timing,
+  except while another thread is loading the key: the side-load's commit then waits for that
+  load to end (a refresh commit waits on its bin like any write), where Guava returns at once. On
+  the default executor, an `InterruptedException` from the load restores the interrupt on the
+  executor thread, not the caller.
   Present-key refresh matches: the adapter must call `reload` on the caller to obtain its
   future, even when that reload performs asynchronous work.
-  Slow reloads serialize colliding refresh registrations under the accepted CHM-bin rule.
+  Slow reloads serialize colliding refresh registrations, and every discard of a refresh
+  registered in the same bin (a completion, a write of that key, maintenance evicting it), under
+  the accepted CHM-bin rule; see synchronization.md's caller-runs bullet.
   A reload waiting for another thread's cache operation is still a prohibited cache dependency,
   even when its own body makes no cache call; Guava's different lock granularity does not
   establish an independent-progress guarantee for the facade. That includes Guava's default
@@ -116,11 +127,16 @@ The two `build` overloads bridge different contracts:
   executor is user error** principle applied to the load-submission boundary rather than to
   `load`/`reload` itself: `Cache.get`'s maintenance submission has the same exposure with the
   same executor, and Guava has no injected executor to reject in the same way.
+- **View instances are not identity-stable.** The facade initializes its views racily, as Guava
+  does for its own view fields, so two calls to `asMap()` can return different wrappers. Neither
+  library promises one instance; publication is safe because no view constructor assigns a
+  non-final field. Code that locks on a view or keys a map by it should capture one reference.
 - **`getAll` rejects a null element before loading anything; its bulk siblings filter it.**
   `getAll`'s eager `ImmutableList.copyOf(keys)` throws `NullPointerException` on a null element
-  before any load runs, leaving the cache exactly as before the call; Guava's null-tolerant
-  lookup instead loads and installs every other key first, then throws
-  `InvalidCacheLoadException` for the null. `getAllPresent` and `invalidateAll(Iterable)` both
+  before any load runs, leaving the cache exactly as before the call. Guava's null-tolerant
+  lookup instead installs the keys before the null first: with a `loadAll` override it loads every
+  other key and throws `InvalidCacheLoadException` for the null, and with a single-key loader it
+  throws `NullPointerException` at the null. `getAllPresent` and `invalidateAll(Iterable)` both
   filter nulls with `Iterables.filter(keys, Objects::nonNull)` and never reach `loadAll` with one.
   The facade's shape is also the safer one on the one measurable sub-difference: a bulk loader
   written against Guava has been receiving null keys through the request iterable, and the
@@ -147,6 +163,12 @@ The two `build` overloads bridge different contracts:
   `invalidate(k)` issued while `k` is loading returns immediately and is lost: the load still
   installs its result afterward. Under the facade the same call blocks on the bin lock for the
   whole load and then wins, removing the loaded value with `RemovalCause.EXPLICIT`. Neither
-  behaviour is uniformly better — a cache-aside "write through, then invalidate" pattern relies
-  on tolerating Guava's shape, and the facade reverses it — so this is recorded as a neutral
-  migration note rather than a preference.
+  behaviour is uniformly better — a cache-aside "write through, then invalidate" pattern relies on
+  tolerating Guava's shape, and the facade reverses it — so this is recorded as a neutral
+  migration note rather than a preference. Every write racing a pending load reverses the same
+  way: the facade's `putIfAbsent`, `replace` and `remove` wait on the bin and act on the loaded
+  value, where Guava's see the loading entry as absent (`putIfAbsent` wins and discards the load,
+  `replace` is a no-op). An in-flight refresh reverses it the same way: a racing write wins and
+  the reload is discarded, a racing `compute` or `merge` applies its function to the old value
+  where Guava waits and applies it to the reloaded one, and `invalidateAll()` leaves the key
+  absent where Guava's refresh re-installs it.
