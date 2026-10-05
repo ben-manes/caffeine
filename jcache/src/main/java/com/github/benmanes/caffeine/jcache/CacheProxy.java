@@ -661,9 +661,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     dispatcher.beginComputation();
     try {
       cache.asMap().computeIfPresent(key, (k, expirable) -> {
-        long millis = expirable.isEternal()
-            ? 0L
-            : nanosToMillis((start == 0L) ? ticker.read() : start);
+        long millis = expirable.isEternal() ? 0L : currentTimeMillis();
         if (expirable.hasExpired(millis)) {
           dispatcher.publishExpired(this, key, expirable.get());
           statistics.recordEvictions(1L);
@@ -736,9 +734,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     dispatcher.beginComputation();
     try {
       cache.asMap().computeIfPresent(key, (k, expirable) -> {
-        long millis = expirable.isEternal()
-            ? 0L
-            : nanosToMillis((start == 0L) ? ticker.read() : start);
+        long millis = expirable.isEternal() ? 0L : currentTimeMillis();
         if (expirable.hasExpired(millis)) {
           dispatcher.publishExpired(this, key, expirable.get());
           statistics.recordEvictions(1L);

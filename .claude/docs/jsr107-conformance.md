@@ -256,9 +256,12 @@ against. `LoadingCacheProxy.getOrLoad` instead reuses the statistics start times
 statistics changes which reading its expiry check uses while `get`'s is unaffected. This is
 intentional-enough, not a bug: the reused stamp is taken earlier in the method, so it can only
 make the check see an *older* clock, which can only judge an entry live that a fresh read might
-have judged expired — expiration is a maximum lifetime, and both readings satisfy that. The same
-reuse appears in `remove(K,V)`, `replace(K,V,V)`, and the other `compute`-based write sites, all of
-which take their stamp before entering the remapping function rather than reading fresh inside it.
+have judged expired — expiration is a maximum lifetime, and both readings satisfy that. The
+`compute`-based writes, `remove(K,V)` and `replace(K,V,V)` included, read the clock inside the
+remapping function instead. A stamp taken before the compute is older by the wait for the entry's
+lock, so it would judge an entry that expired during the wait as live and date a mismatch's access
+deadline from before the wait. Pinned by `JCacheAccessExpiryTest.removeConditionally_mismatchAfterLockWait`
+and `replaceConditionally_mismatchAfterLockWait`.
 
 ## Native extensions
 

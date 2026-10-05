@@ -540,6 +540,12 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   `computeIfAbsent` the eviction listener runs before the function returns its value.
 - Historical `afterWrite` inline-fallback loss when maintenance throws. The repair runs
   the write's own task in `maintenance`'s `finally`; buffered work remains deferred.
+- `RemovalCause.EXPLICIT` and `REPLACED` saying "by the user" while an automatic refresh notifies
+  both (`REPLACED` for a reloaded value, `EXPLICIT` for a `null` reload that removes the entry).
+  "By the user" separates the two non-eviction causes from the eviction ones, and
+  `Caffeine#refreshAfterWrite` delegates its semantics to `LoadingCache#refresh`, which both lists
+  name; Guava's identical wording describes its identical refresh. Naming `refreshAfterWrite` in
+  either javadoc was declined.
 
 ---
 

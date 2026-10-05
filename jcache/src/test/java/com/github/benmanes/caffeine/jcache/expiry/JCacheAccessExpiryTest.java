@@ -28,10 +28,12 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.Duration;
@@ -39,6 +41,7 @@ import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CompletionListenerFuture;
 import javax.cache.processor.EntryProcessorResult;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -408,6 +411,11 @@ final class JCacheAccessExpiryTest {
     }
   }
 
+  @ParameterizedTest @ValueSource(booleans = {false, true})
+  void removeConditionally_mismatchAfterLockWait(boolean statistics) {
+    checkMismatchAfterLockWait(statistics, cache -> cache.remove(KEY_1, VALUE_2));
+  }
+
   /* --------------- conditional replace --------------- */
 
   @Test
@@ -437,6 +445,11 @@ final class JCacheAccessExpiryTest {
     }
   }
 
+  @ParameterizedTest @ValueSource(booleans = {false, true})
+  void replaceConditionally_mismatchAfterLockWait(boolean statistics) {
+    checkMismatchAfterLockWait(statistics, cache -> cache.replace(KEY_1, VALUE_2, VALUE_3));
+  }
+
   @Test
   @SuppressWarnings("PreferJavaTimeOverload")
   void replaceConditionally_stats() {
@@ -456,6 +469,44 @@ final class JCacheAccessExpiryTest {
       fixture.ticker().setAutoIncrementStep(1, TimeUnit.SECONDS);
       assertThat(fixture.jcache().replace(KEY_1, VALUE_1, VALUE_2)).isTrue();
       assertThat(getStatistics(fixture.jcache()).getAveragePutTime()).isEqualTo(0);
+    }
+  }
+
+  /**
+   * Asserts that a conditional write that waits for the entry's lock and then mismatches dates the
+   * access from when it holds the lock, whether or not statistics are enabled.
+   */
+  private static void checkMismatchAfterLockWait(
+      boolean statistics, Predicate<javax.cache.Cache<Integer, Integer>> conditionalWrite) {
+    try (var fixture = jcacheFixture()) {
+      var cache = fixture.jcache();
+      cache.getCacheManager().enableStatistics(cache.getName(), statistics);
+      var holding = new CompletableFuture<@Nullable Void>();
+      var release = new CompletableFuture<@Nullable Void>();
+      var holder = CompletableFuture.runAsync(() -> cache.invoke(KEY_1, (entry, args) -> {
+        holding.complete(null);
+        return release.join();
+      }));
+      holding.join();
+
+      var writer = new AtomicReference<@Nullable Thread>();
+      var write = CompletableFuture.supplyAsync(() -> {
+        writer.set(Thread.currentThread());
+        return conditionalWrite.test(cache);
+      });
+      JCacheFixture.await().until(() -> {
+        var thread = writer.get();
+        return (thread != null) && (thread.getState() == Thread.State.BLOCKED);
+      });
+      fixture.ticker().advance(EXPIRY_DURATION.dividedBy(2));
+      release.complete(null);
+      assertThat(write.join()).isFalse();
+      holder.join();
+
+      var expirable = getExpirable(cache, KEY_1);
+      assertThat(expirable).isNotNull();
+      assertThat(requireNonNull(expirable).getExpireTimeMillis())
+          .isEqualTo(fixture.currentTime().plus(EXPIRY_DURATION).toMillis());
     }
   }
 
