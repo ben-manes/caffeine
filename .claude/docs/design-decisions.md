@@ -77,22 +77,23 @@ extra layout cost (JOL over all 147 node classes is unchanged, where a plain `lo
 a removal listener on a direct executor. Don't re-narrow the field, and don't guard the transfer
 on the sign instead.
 
-**Two notions of "weighted", and the internal one gates on both.** The `isWeighted` field is
-whether the caller configured a weigher, and it is what `Policy.Eviction.isWeighted()` reports.
-`BoundedLocalCache.isWeighted()` answers a different question, whether entries may be assigned
-*different* weights, and that is what decides whether the frequency sketch can be sized from the
-maximum or has to be sized from the live entry count. Neither test alone answers it: an async
-cache always wraps its weigher in `AsyncWeigher`, so identity against the singleton weigher says
-"varies" even for an unweighted one, while a caller who passes `Weigher.singletonWeigher()`
-explicitly sets the field even though every entry weighs the same. The method conjoins them.
-Sizing the sketch from the entry count is not free: `ensureCapacity` forgets all counts when it
-grows, so filling a `maximumSize(10_000)` async cache allocated the sketch twice (8192 then
-16384) and discarded the frequencies gathered over the first half, where the sync equivalent
-allocates 16384 once. It also called `data.mappingCount()` on every insertion past half the
-maximum. The one case still answered wrongly is an async cache given an explicit
-`Weigher.singletonWeigher()`, which needs unwrapping `AsyncWeigher` to reach and costs only that
-same extra warmup allocation. `BoundedLocalCacheTest.isWeighted_onlyWhenWeightsVary` pins the cases
-answered correctly.
+**Two notions of "weighted", and the internal one gates on both.** The `isWeighted` field is whether
+the caller configured a weigher, and it is what `Policy.Eviction` reads for `isWeighted()`,
+`weightOf` and `weightedSize` (`CaffeineTest.maximumWeight_large` pins this for an explicit
+`Weigher.singletonWeigher()`, where the method answers false). `BoundedLocalCache.isWeighted()`
+answers a different question, whether entries may be assigned *different* weights, and that is what
+decides whether the frequency sketch can be sized from the maximum or has to be sized from the live
+entry count. Neither test alone answers it: an async cache always wraps its weigher in
+`AsyncWeigher`, so identity against the singleton weigher says "varies" even for an unweighted one,
+while a caller who passes `Weigher.singletonWeigher()` explicitly sets the field even though every
+entry weighs the same. The method conjoins them. Sizing the sketch from the entry count is not free:
+`ensureCapacity` forgets all counts when it grows, so filling a `maximumSize(10_000)` async cache
+allocated the sketch twice (8192 then 16384) and discarded the frequencies gathered over the first
+half, where the sync equivalent allocates 16384 once. It also called `data.mappingCount()` on every
+insertion past half the maximum. The one case still answered wrongly is an async cache given an
+explicit `Weigher.singletonWeigher()`, which needs unwrapping `AsyncWeigher` to reach and costs only
+that same extra warmup allocation. `BoundedLocalCacheTest.isWeighted_onlyWhenWeightsVary` pins the
+cases answered correctly.
 
 **The climber has three size tiers, in the configured maximum's native units.** Weight units
 are deliberate: the weighted stress track included about 200 entries of 25–100MB in a 10GB

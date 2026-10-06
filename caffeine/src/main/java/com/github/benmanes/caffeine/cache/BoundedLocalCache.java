@@ -4397,7 +4397,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @Var var p = policy;
       if (p == null) {
         Function<@Nullable V, @Nullable V> identity = v -> v;
-        p = new BoundedPolicy<>(cache, identity, cache.isWeighted);
+        p = new BoundedPolicy<>(cache, identity);
         policy = p;
       }
       return p;
@@ -4417,7 +4417,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final class BoundedPolicy<K, V> implements Policy<K, V> {
     final Function<@Nullable V, @Nullable V> transformer;
     final BoundedLocalCache<K, V> cache;
-    final boolean isWeighted;
 
     @Nullable Optional<Eviction<K, V>> eviction;
     @Nullable Optional<FixedRefresh<K, V>> refreshes;
@@ -4425,10 +4424,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Nullable Optional<FixedExpiration<K, V>> afterAccess;
     @Nullable Optional<VarExpiration<K, V>> variable;
 
-    BoundedPolicy(BoundedLocalCache<K, V> cache,
-        Function<@Nullable V, @Nullable V> transformer, boolean isWeighted) {
+    BoundedPolicy(BoundedLocalCache<K, V> cache, Function<@Nullable V, @Nullable V> transformer) {
       this.transformer = transformer;
-      this.isWeighted = isWeighted;
       this.cache = cache;
     }
 
@@ -4513,11 +4510,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     final class BoundedEviction implements Eviction<K, V> {
       @Override public boolean isWeighted() {
-        return isWeighted;
+        return cache.isWeighted;
       }
       @Override public OptionalInt weightOf(K key) {
         requireNonNull(key);
-        if (!isWeighted) {
+        if (!cache.isWeighted) {
           return OptionalInt.empty();
         }
         Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
@@ -4536,7 +4533,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
       }
       @Override public OptionalLong weightedSize() {
-        return isWeighted
+        return cache.isWeighted
             ? OptionalLong.of(Math.max(0, cache.weightedSizeAcquire()))
             : OptionalLong.empty();
       }
@@ -4966,7 +4963,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     private static final long serialVersionUID = 1;
 
     final BoundedLocalCache<K, CompletableFuture<V>> cache;
-    final boolean isWeighted;
 
     @Nullable ConcurrentMap<K, CompletableFuture<V>> mapView;
     @Nullable CacheView<K, V> cacheView;
@@ -4976,7 +4972,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     BoundedLocalAsyncCache(Caffeine<K, V> builder) {
       cache = (BoundedLocalCache<K, CompletableFuture<V>>) LocalCacheFactory
           .newBoundedLocalCache(builder, /* cacheLoader= */ null, /* isAsync= */ true);
-      isWeighted = builder.isWeighted();
     }
 
     @Override
@@ -5005,7 +5000,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
         @SuppressWarnings("unchecked")
         var castTransformer = (Function<@Nullable V, @Nullable V>) transformer;
-        p = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
+        p = new BoundedPolicy<>(castCache, castTransformer);
         policy = p;
       }
       return p;
@@ -5027,7 +5022,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     private static final long serialVersionUID = 1;
 
     final BoundedLocalCache<K, CompletableFuture<V>> cache;
-    final boolean isWeighted;
 
     @Nullable ConcurrentMap<K, CompletableFuture<V>> mapView;
     @Nullable Policy<K, V> policy;
@@ -5035,7 +5029,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @SuppressWarnings("unchecked")
     BoundedLocalAsyncLoadingCache(Caffeine<K, V> builder, AsyncCacheLoader<? super K, V> loader) {
       super(loader);
-      isWeighted = builder.isWeighted();
       cache = (BoundedLocalCache<K, CompletableFuture<V>>) LocalCacheFactory
           .newBoundedLocalCache(builder, loader, /* isAsync= */ true);
     }
@@ -5060,7 +5053,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         Function<CompletableFuture<V>, @Nullable V> transformer = Async::getIfReady;
         @SuppressWarnings("unchecked")
         var castTransformer = (Function<@Nullable V, @Nullable V>) transformer;
-        p = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
+        p = new BoundedPolicy<>(castCache, castTransformer);
         policy = p;
       }
       return p;

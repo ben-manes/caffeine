@@ -411,9 +411,14 @@ final class CaffeineTest {
     assertThat(builder.maximumWeight).isEqualTo(Integer.MAX_VALUE);
     assertThat(builder.weigher).isSameInstanceAs(Weigher.singletonWeigher());
 
-    var eviction = builder.build().policy().eviction().orElseThrow();
+    var cache = builder.build();
+    var eviction = cache.policy().eviction().orElseThrow();
     assertThat(eviction.getMaximum()).isEqualTo(Integer.MAX_VALUE);
     assertThat(eviction.isWeighted()).isTrue();
+    assertThat(eviction.weightedSize()).hasValue(0);
+
+    cache.put(1, 1);
+    assertThat(eviction.weightOf(1)).hasValue(1);
   }
 
   /* --------------- weigher --------------- */
