@@ -76,7 +76,7 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
     int initialCapacity = calculateHashMapCapacity(keys);
     var result = new LinkedHashMap<K, @Nullable V>(initialCapacity);
     for (K key : keys) {
-      result.put(key, null);
+      result.put(requireNonNull(key), null);
     }
     var keysToLoad = new LinkedHashSet<K>(initialCapacity);
     var found = cache().getAllPresent(result.keySet());

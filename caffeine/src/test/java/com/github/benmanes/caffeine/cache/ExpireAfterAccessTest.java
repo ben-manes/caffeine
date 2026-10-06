@@ -26,6 +26,7 @@ import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executo
 import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
+import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -38,6 +39,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
@@ -237,6 +239,23 @@ final class ExpireAfterAccessTest {
     expected.remove(context.firstKey());
     assertThat(context).notifications().withCause(EXPIRED)
         .contains(expected).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
+      expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
+  void getAll_nullKey(Cache<Int, Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofSeconds(30));
+    var keys = Arrays.asList(context.firstKey(), nullKey());
+    assertThrows(NullPointerException.class, () ->
+        cache.getAll(keys, keysToLoad -> { throw new AssertionError(); }));
+
+    context.ticker().advance(Duration.ofSeconds(45));
+    cache.cleanUp();
+    assertThat(cache).isEmpty();
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
   }
 
   /* --------------- LoadingCache --------------- */
