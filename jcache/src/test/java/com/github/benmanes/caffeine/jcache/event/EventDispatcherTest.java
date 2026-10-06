@@ -496,8 +496,22 @@ final class EventDispatcherTest {
   @Test
   void awaitSynchronous() {
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
-    dispatcher.pending.get().add(CompletableFuture.completedFuture(null));
+    var pending = dispatcher.pending.get();
+    pending.add(CompletableFuture.completedFuture(null));
     dispatcher.awaitSynchronous();
+    assertThat(dispatcher.pending.get()).isSameInstanceAs(pending);
+    assertThat(pending).isEmpty();
+  }
+
+  @Test
+  void awaitSynchronous_largeBatch_releasesPendingList() {
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var pending = dispatcher.pending.get();
+    for (int i = 0; i < 1_000; i++) {
+      pending.add(CompletableFuture.completedFuture(null));
+    }
+    dispatcher.awaitSynchronous();
+    assertThat(dispatcher.pending.get()).isNotSameInstanceAs(pending);
     assertThat(dispatcher.pending.get()).isEmpty();
   }
 
@@ -1167,9 +1181,24 @@ final class EventDispatcherTest {
   @Test
   void ignoreSynchronous() {
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
-    dispatcher.pending.get().add(CompletableFuture.completedFuture(null));
+    var pending = dispatcher.pending.get();
+    pending.add(CompletableFuture.completedFuture(null));
 
     dispatcher.ignoreSynchronous();
+    assertThat(dispatcher.pending.get()).isSameInstanceAs(pending);
+    assertThat(pending).isEmpty();
+  }
+
+  @Test
+  void ignoreSynchronous_largeBatch_releasesPendingList() {
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var pending = dispatcher.pending.get();
+    for (int i = 0; i < 1_000; i++) {
+      pending.add(CompletableFuture.completedFuture(null));
+    }
+
+    dispatcher.ignoreSynchronous();
+    assertThat(dispatcher.pending.get()).isNotSameInstanceAs(pending);
     assertThat(dispatcher.pending.get()).isEmpty();
   }
 

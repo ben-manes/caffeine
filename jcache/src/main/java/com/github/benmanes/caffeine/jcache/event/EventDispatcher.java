@@ -70,6 +70,7 @@ import com.google.errorprone.annotations.Var;
  */
 public final class EventDispatcher<K, V> {
   static final Logger logger = System.getLogger(EventDispatcher.class.getName());
+  static final int MAX_RETAINED_PENDING = 64;
 
   final ConcurrentMap<
       Registration<K, V>,
@@ -293,7 +294,7 @@ public final class EventDispatcher<K, V> {
    * this thread published.
    */
   public void ignoreSynchronous() {
-    pending.get().clear();
+    clearPending(pending.get());
   }
 
   /**
@@ -320,7 +321,7 @@ public final class EventDispatcher<K, V> {
                     }).orElse(null);
               }
             });
-    synchronous.clear();
+    clearPending(synchronous);
     return future;
   }
 
@@ -365,6 +366,15 @@ public final class EventDispatcher<K, V> {
       if (registration.isSynchronous() && !quiet) {
         pending.get().add(future);
       }
+    }
+  }
+
+  /** Discards this thread's pending futures. */
+  private void clearPending(List<?> synchronous) {
+    if (synchronous.size() > MAX_RETAINED_PENDING) {
+      pending.remove();
+    } else {
+      synchronous.clear();
     }
   }
 

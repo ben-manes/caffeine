@@ -599,8 +599,13 @@ lazily creates a gate. `endComputation` releases the gate from `finally`, holdin
 release because a caller-runs executor may dispatch there. A throwing Weigher/native Expiry must
 not leave the chain blocked. No listeners means no gate allocation, and the release clears the
 gate's slot with `set(null)`: `remove()` discarded the thread-local entry, so every computation
-allocated a fresh one. Do not stage an event outside a computation, such as an unwrap-driven load,
-because it has no matching release.
+allocated a fresh one. A drain likewise empties the thread's pending list in place, except one
+holding more than `MAX_RETAINED_PENDING` futures, which it releases: a bulk operation with a
+synchronous listener otherwise left each thread holding its largest array until the thread died
+(about 4.9 MB after a 1M-entry `removeAll`). Pins:
+`EventDispatcherTest.awaitSynchronous_largeBatch_releasesPendingList` and
+`ignoreSynchronous_largeBatch_releasesPendingList`. Do not stage an event outside a computation,
+such as an unwrap-driven load, because it has no matching release.
 
 This staging makes ordinary listeners observe committed mappings. RI dispatches after put under
 its key lock; Ehcache 3 releases a StoreEventSink after compute; Hazelcast publishes after record
