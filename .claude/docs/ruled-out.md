@@ -894,6 +894,11 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
 - The cacheable `jmh` task behind the benchmark gists, `analysis.yml`'s SARIF merge keeping only
   the first input's `tool`, the `git diff` metadata freshness check missing a deleted or added file,
   and the opt-in `-Pjfr` profile (JDK 16+ event settings, no declared recording output).
+- Moving or deleting an IntelliJ token in `@SuppressWarnings` for an inspection that `qodana.yaml`
+  excludes (`ConstantValue`, `DataFlowIssue`, `NullableProblems`), even one that suppresses nothing
+  where it sits. Only the IDE reports those inspections, so no build or CI step shows what the
+  change does, and checking it by hand costs more than the token. Take such a change only with an
+  IDE result in hand.
 
 ---
 

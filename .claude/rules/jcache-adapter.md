@@ -105,14 +105,15 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   preceding identity `get` is only a fast path. These protect a successor's slot and ordering;
   do not add locking. Await or ignore synchronous futures on relevant operation exits, including
   bulk failures. See [dispatch and commit](../docs/jsr107-conformance.md#dispatch-and-commit).
-- Public operations use `requireOperable()`. While the publishing thread is marked, refuse
-  callback re-entry, including reads (lazy expiry may compute). Do not mark dispatch threads:
-  cross-cache cycles, an asynchronously dispatched synchronous listener accessing its own key, and
-  the same reciprocal-future cycle across two distinct keys in one cache (each listener writes the
-  other's key) are accepted residual hazards from the same root cause. Maintenance-thread filters
-  remain unmarked unless maintenance is inline inside an already marked computation. Batch writer
-  callbacks outside the per-key loop are also unmarked.
-  See [callback re-entry](../docs/jsr107-conformance.md#callback-re-entry).
+- Public operations use `requireOperable()`; `close()` refuses the same way after its idempotent
+  return, and `destroyCache` clears before closing so a refused clear destroys nothing. While the
+  publishing thread is marked, refuse callback re-entry, including reads (lazy expiry may compute).
+  Do not mark dispatch threads: cross-cache cycles, an asynchronously dispatched synchronous
+  listener accessing its own key, and the same reciprocal-future cycle across two distinct keys in
+  one cache (each listener writes the other's key) are accepted residual hazards from the same root
+  cause. Maintenance-thread filters remain unmarked unless maintenance is inline inside an already
+  marked computation. Batch writer callbacks outside the per-key loop are also unmarked. See
+  [callback re-entry](../docs/jsr107-conformance.md#callback-re-entry).
 - Throwing vendor `Weigher`/native `Expiry` callbacks can abort storage after writer/event
   publication. This accepted misuse boundary differs from standard `ExpiryPolicy`, whose
   exceptions, checked ones included, are caught. Do not move publication outside `compute` to

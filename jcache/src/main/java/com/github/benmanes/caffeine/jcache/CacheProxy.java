@@ -1160,6 +1160,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public void close() {
     if (isClosed()) {
       return;
+    } else if (dispatcher.inCallback()) {
+      throw new IllegalStateException("Recursive cache operation");
     }
     @Var Throwable thrown = null;
     synchronized (configuration) {

@@ -1364,6 +1364,51 @@ final class EventDispatcherTest {
   }
 
   @Test
+  void invoke_processorClosesTheCache_isRejected() {
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {};
+    var failure = new AtomicReference<Throwable>();
+    try (var fixture = syncListenerFixture(listener).build();
+        var cache = fixture.jcache()) {
+      cacheRef.set(cache);
+
+      var result = cache.invoke(KEY_1, (entry, args) -> {
+        failure.set(assertThrows(IllegalStateException.class, cache::close));
+        entry.setValue(VALUE_1);
+        return null;
+      });
+      assertThat(requireNonNull(failure.get()).getMessage()).isEqualTo("Recursive cache operation");
+      assertThat(cache.isClosed()).isFalse();
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+      assertThat(result).isNull();
+    }
+  }
+
+  @Test
+  void invoke_processorDestroysTheCache_isRejected() {
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {};
+    var failure = new AtomicReference<Throwable>();
+    try (var fixture = syncListenerFixture(listener).build();
+        var cache = fixture.jcache()) {
+      cacheRef.set(cache);
+
+      try (var manager = cache.getCacheManager()) {
+        var result = cache.invoke(KEY_1, (entry, args) -> {
+          failure.set(assertThrows(IllegalStateException.class,
+              () -> manager.destroyCache(cache.getName())));
+          entry.setValue(VALUE_1);
+          return null;
+        });
+        assertThat(requireNonNull(failure.get()).getMessage())
+            .isEqualTo("Recursive cache operation");
+        assertThat(manager.getCacheNames()).contains(cache.getName());
+        assertThat(cache.isClosed()).isFalse();
+        assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+        assertThat(result).isNull();
+      }
+    }
+  }
+
+  @Test
   void publish_computationThrowsAfterPublishing_doesNotWedgeTheKey() {
     var weigherFails = new AtomicBoolean();
     var events = new ArrayList<Integer>();

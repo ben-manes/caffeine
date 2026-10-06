@@ -717,6 +717,16 @@ refused and can reschedule native access expiry under the callback's locks. The 
 reentrancy section permits restricting such use without requiring it, the RI refuses nothing, and
 checking every advance would add a thread-local read per staged entry.
 
+`close()` refuses the same way after its idempotent return: its sweep would clear the map under the
+callback's bin lock, taking `evictionLock` there and nesting a structural update of the same map,
+which deadlocked against maintenance and left a permanent size drift. `destroyCache` clears before
+it closes, the spec's order, so a refused `clear()` destroys nothing. A resource whose own `close()`
+closes the cache still returns quietly, since the closed flag is set first. `CacheManager.close()`
+from a callback logs that cache's refused close as a WARNING and leaves it open while the manager
+closes; that is lifecycle re-entry, outside the contract. Pins:
+`EventDispatcherTest.invoke_processorClosesTheCache_isRejected` and
+`invoke_processorDestroysTheCache_isRejected`.
+
 The mark is per cache/thread, not a general listener ban. Batch writeAll/deleteAll runs before
 the per-key loop and may use the cache (`CacheWriterTest.removeAll_racingInsert`). An eviction
 filter on an asynchronous maintenance thread has no mark and may read the cache; inline

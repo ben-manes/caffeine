@@ -200,10 +200,10 @@ public final class CacheManagerImpl implements CacheManager {
     synchronized (lock) {
       requireNotClosed();
 
-      try (var cache = caches.remove(cacheName)) {
-        if (cache != null) {
-          cache.clear();
-        }
+      var cache = caches.get(cacheName);
+      if (cache != null) {
+        cache.clear();
+        cache.close();
       }
     }
   }
