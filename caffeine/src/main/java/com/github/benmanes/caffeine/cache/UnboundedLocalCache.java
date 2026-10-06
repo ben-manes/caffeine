@@ -553,9 +553,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return value;
     });
 
-    if ((oldValue[0] != null) && (oldValue[0] != value)) {
-      notifyOnReplace(key, oldValue[0], value);
-    }
+    notifyOnReplace(key, oldValue[0], value);
     return oldValue[0];
   }
 
@@ -578,11 +576,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return v;
     });
 
-    boolean replaced = (prev[0] != null);
-    if (replaced && (prev[0] != newValue)) {
-      notifyOnReplace(key, prev[0], newValue);
-    }
-    return replaced;
+    notifyOnReplace(key, prev[0], newValue);
+    return (prev[0] != null);
   }
 
   @Override
