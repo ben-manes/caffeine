@@ -113,10 +113,6 @@ final class CaffeineSpecTest {
   void parseDuration_exception() {
     // TimeUnit
     assertThrows(IllegalArgumentException.class,
-        () -> CaffeineSpec.parseTimeUnit("key", ""));
-    assertThrows(IllegalArgumentException.class,
-        () -> CaffeineSpec.parseTimeUnit("key", nullString()));
-    assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parseTimeUnit("key", "value"));
 
     // Duration
@@ -202,6 +198,12 @@ final class CaffeineSpecTest {
   void parse_duplicateInitialCapacity_throws() {
     assertThrows(IllegalArgumentException.class,
         () -> CaffeineSpec.parse("initialCapacity=1,initialCapacity=2"));
+  }
+
+  @Test
+  void parse_durationWithoutValue_throws() {
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("expireAfterWrite"));
+    assertThrows(IllegalArgumentException.class, () -> CaffeineSpec.parse("expireAfterWrite="));
   }
 
   @Test

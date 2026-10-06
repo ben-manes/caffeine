@@ -256,7 +256,9 @@ final class CaffeineTest {
   void async_weakKeys_evictionListener() {
     RemovalListener<Object, Object> evictionListener = (k, v, c) -> {};
     var builder = Caffeine.newBuilder().weakKeys().evictionListener(evictionListener);
-    assertThrows(IllegalStateException.class, builder::buildAsync);
+    var exception = assertThrows(IllegalStateException.class, builder::buildAsync);
+    assertThat(exception).hasMessageThat().isEqualTo(
+        "Weak keys cannot be combined with eviction listener and AsyncCache");
   }
 
   /* --------------- async loader --------------- */

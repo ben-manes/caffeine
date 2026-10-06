@@ -1161,7 +1161,7 @@ public final class Caffeine<K, V> {
   public <K1 extends K, V1 extends @Nullable V> AsyncCache<K1, V1> buildAsync() {
     requireState(valueStrength == null, "Weak or soft values cannot be combined with AsyncCache");
     requireState(isStrongKeys() || (evictionListener == null),
-        "Weak keys cannot be combined with eviction listener and AsyncLoadingCache");
+        "Weak keys cannot be combined with eviction listener and AsyncCache");
     requireWeightWithWeigher();
     requireNonLoadingCache();
 

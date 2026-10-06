@@ -332,10 +332,8 @@ public final class CaffeineSpec {
   }
 
   /** Returns a parsed {@link TimeUnit} value. */
-  @SuppressWarnings({"ConstantValue", "StatementSwitchToExpressionSwitch"})
+  @SuppressWarnings("StatementSwitchToExpressionSwitch")
   static TimeUnit parseTimeUnit(String key, String value) {
-    requireArgument((value != null) && !value.isEmpty(), "value of key %s omitted", key);
-    @SuppressWarnings("null")
     char lastChar = Character.toLowerCase(value.charAt(value.length() - 1));
     switch (lastChar) {
       case 'd':
