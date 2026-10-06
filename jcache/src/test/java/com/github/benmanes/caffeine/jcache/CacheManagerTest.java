@@ -122,10 +122,10 @@ final class CacheManagerTest {
         /* filterFactory= */ null, /* isOldValueRequired= */ false, /* isSynchronous= */ true);
     var asynchronous = new MutableCacheEntryListenerConfiguration<Integer, Integer>(factory,
         /* filterFactory= */ null, /* isOldValueRequired= */ false, /* isSynchronous= */ false);
-    try (var fixture = JCacheFixture.builder().build()) {
-      var cacheManager = fixture.cacheManager();
-      var cache = cacheManager.createCache("typed",
-          new MutableConfiguration<Integer, Integer>().setTypes(Integer.class, Integer.class));
+    try (var fixture = JCacheFixture.builder().build();
+         var cacheManager = fixture.cacheManager();
+         var cache = cacheManager.createCache("typed",
+            new MutableConfiguration<Integer, Integer>().setTypes(Integer.class, Integer.class))) {
       cache.registerCacheEntryListener(synchronous);
       cache.registerCacheEntryListener(asynchronous);
       synchronous.setSynchronous(false);

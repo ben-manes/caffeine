@@ -4062,6 +4062,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
 
     @Override
+    public boolean containsAll(Collection<?> collection) {
+      requireNonNull(collection);
+      if (collection != this) {
+        for (Object o : collection) {
+          if ((o == null) || !contains(o)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    @Override
     public boolean removeAll(Collection<?> collection) {
       requireNonNull(collection);
       @Var boolean modified = false;

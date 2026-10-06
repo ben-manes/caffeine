@@ -2303,6 +2303,37 @@ final class ExpirationTest {
   }
 
   @ParameterizedTest
+  @SuppressWarnings("ModifyingCollectionWithItself")
+  @SuppressFBWarnings("DMI_VACUOUS_SELF_COLLECTION_CALL")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void entrySet_containsAll_self(Map<Int, Int> map, CacheContext context) {
+    // Each probe reads the ticker after the traversal did, so it finds the entry expired
+    context.ticker().setAutoIncrementStep(Duration.ofMinutes(1));
+    var entries = map.entrySet();
+    assertThat(entries.containsAll(entries)).isTrue();
+  }
+
+  @ParameterizedTest
+  @SuppressWarnings("ModifyingCollectionWithItself")
+  @SuppressFBWarnings("DMI_VACUOUS_SELF_COLLECTION_CALL")
+  @CacheSpec(population = Population.FULL,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+  void entrySet_containsAll_self_async(AsyncCache<Int, Int> cache, CacheContext context) {
+    context.ticker().setAutoIncrementStep(Duration.ofMinutes(1));
+    var entries = cache.asMap().entrySet();
+    assertThat(entries.containsAll(entries)).isTrue();
+  }
+
+  @ParameterizedTest
   @CacheSpec(implementation = Implementation.Caffeine,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },

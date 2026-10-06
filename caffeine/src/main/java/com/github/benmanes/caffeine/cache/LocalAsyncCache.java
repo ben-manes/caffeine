@@ -596,6 +596,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @Override public boolean contains(@Nullable Object o) {
         return asyncCache.cache().entrySet().contains(o);
       }
+      @Override public boolean containsAll(Collection<?> collection) {
+        return (collection == this) || asyncCache.cache().entrySet().containsAll(collection);
+      }
       @Override public boolean remove(@Nullable Object o) {
         return asyncCache.cache().entrySet().remove(o);
       }
@@ -1607,6 +1610,19 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         }
         V cachedValue = Async.getIfReady(delegate.getIfPresentQuietly(key));
         return value.equals(cachedValue);
+      }
+
+      @Override
+      public boolean containsAll(Collection<?> collection) {
+        requireNonNull(collection);
+        if (collection != this) {
+          for (Object o : collection) {
+            if ((o == null) || !contains(o)) {
+              return false;
+            }
+          }
+        }
+        return true;
       }
 
       @Override
