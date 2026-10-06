@@ -943,6 +943,16 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         + " is not supported by this implementation");
   }
 
+  /** Returns the key type that this cache was configured with. */
+  Class<K> keyType() {
+    return configuration.getKeyType();
+  }
+
+  /** Returns the value type that this cache was configured with. */
+  Class<V> valueType() {
+    return configuration.getValueType();
+  }
+
   @Override
   public <T extends @Nullable Object> T invoke(K key,
       EntryProcessor<K, V, T> entryProcessor, Object @Nullable ... arguments) {

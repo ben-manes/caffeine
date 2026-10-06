@@ -43,8 +43,11 @@ import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
+import javax.cache.configuration.Factory;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.configuration.MutableConfiguration;
+import javax.cache.event.CacheEntryCreatedListener;
+import javax.cache.event.CacheEntryListener;
 import javax.cache.spi.CachingProvider;
 import javax.management.ObjectName;
 import javax.management.OperationsException;
@@ -106,6 +109,29 @@ final class CacheManagerTest {
     try (var fixture = JCacheFixture.builder().build()) {
       assertThrows(NullPointerException.class, () ->
           fixture.cacheManager().getCache("test-cache", Integer.class, nullRef()));
+    }
+  }
+
+  @Test
+  void getCache_typed_listenerConfigurationMutatedIntoDuplicate_returnsCache() {
+    // The cache retains the caller's listener configurations, so a typed lookup must not depend
+    // on copying them, which rejects two that the caller has since mutated into equality
+    CacheEntryCreatedListener<Integer, Integer> listener = events -> {};
+    Factory<CacheEntryListener<Integer, Integer>> factory = () -> listener;
+    var synchronous = new MutableCacheEntryListenerConfiguration<Integer, Integer>(factory,
+        /* filterFactory= */ null, /* isOldValueRequired= */ false, /* isSynchronous= */ true);
+    var asynchronous = new MutableCacheEntryListenerConfiguration<Integer, Integer>(factory,
+        /* filterFactory= */ null, /* isOldValueRequired= */ false, /* isSynchronous= */ false);
+    try (var fixture = JCacheFixture.builder().build()) {
+      var cacheManager = fixture.cacheManager();
+      var cache = cacheManager.createCache("typed",
+          new MutableConfiguration<Integer, Integer>().setTypes(Integer.class, Integer.class));
+      cache.registerCacheEntryListener(synchronous);
+      cache.registerCacheEntryListener(asynchronous);
+      synchronous.setSynchronous(false);
+
+      assertThat(cacheManager.getCache("typed", Integer.class, Integer.class))
+          .isSameInstanceAs(cache);
     }
   }
 
