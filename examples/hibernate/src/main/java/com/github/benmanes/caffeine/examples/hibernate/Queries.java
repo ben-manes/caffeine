@@ -15,10 +15,9 @@
  */
 package com.github.benmanes.caffeine.examples.hibernate;
 
-import java.util.List;
-
 import org.hibernate.annotations.processing.Find;
 import org.hibernate.annotations.processing.HQL;
+import org.hibernate.query.SelectionQuery;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -32,8 +31,8 @@ public interface Queries {
   Project getProject(long id);
 
   @HQL("FROM Project WHERE id = :id")
-  Project findProject(long id);
+  SelectionQuery<Project> findProject(long id);
 
   @Find
-  List<Project> findProjects();
+  SelectionQuery<Project> findProjects();
 }

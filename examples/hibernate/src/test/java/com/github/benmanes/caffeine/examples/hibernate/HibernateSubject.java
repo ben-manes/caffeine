@@ -56,4 +56,22 @@ public final class HibernateSubject extends Subject {
         .getSecondLevelCachePutCount()).isEqualTo(putCount);
     return this;
   }
+
+  public HibernateSubject queryHits(int hitCount) {
+    check("queryHits").that(actual.getStatistics()
+        .getQueryCacheHitCount()).isEqualTo(hitCount);
+    return this;
+  }
+
+  public HibernateSubject queryMisses(int missCount) {
+    check("queryMisses").that(actual.getStatistics()
+        .getQueryCacheMissCount()).isEqualTo(missCount);
+    return this;
+  }
+
+  public HibernateSubject queryPuts(int putCount) {
+    check("queryPuts").that(actual.getStatistics()
+        .getQueryCachePutCount()).isEqualTo(putCount);
+    return this;
+  }
 }

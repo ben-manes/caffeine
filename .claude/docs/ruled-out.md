@@ -774,7 +774,11 @@ Read `jsr107-conformance.md`'s topic sections with this section.
 - `CacheManagerImpl.close()` deregistering by URI after it releases its lock. A lookup
   overlapping the close can return the closing manager, and a close racing a provider close and a
   fresh lookup can close the successor. Deregistering under the lock deadlocked against the
-  provider's registry monitor, and the RI also releases by URI.
+  provider's registry monitor, and the RI also releases by URI. Removing only this manager by
+  identity, as the manager removes its caches, needs a hook from `CacheManagerImpl` into the
+  provider's private registry across the `jcache` and `jcache.spi` packages. Its other half, a
+  lookup that replaces a closed manager, must not land alone: `close()` sets `closed` before it
+  deregisters, so the replacement would be the mapping its by-URI release removes and closes.
 - `AbstractCopier` trusting an array's declared component type, so a `BigDecimal[]` holding a
   mutable subclass is copied shallowly. The subclass breaks the declared type's immutability.
 - `JavaSerializationCopier` defining a proxy class in the manager's loader, which fails for a
