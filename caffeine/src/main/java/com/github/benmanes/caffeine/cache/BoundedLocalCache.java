@@ -2601,7 +2601,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           exceedsTolerance = exceedsWriteTimeTolerance(prior, varTime, expirationTime);
           prior.setValue(value, valueReferenceQueue());
           prior.setWeight(newWeight);
-          if (expired || exceedsTolerance) {
+          if (expired || (oldValue == null) || exceedsTolerance) {
             setWriteTime(prior, expirationTime);
           }
 

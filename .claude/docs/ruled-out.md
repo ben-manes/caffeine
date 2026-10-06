@@ -327,9 +327,8 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   read-buffer stripes full, the delay exceeded a second; without that contention it stayed under
   25 ms. The timer wheel sweeps by bucket and has no such stop; see
   [TimerWheel](design-decisions.md#timerwheel). The write-order deque has the same face: a write
-  time kept by the tolerance plus an `UpdateTask` reorder (a weight change, or a reinstall over a
-  collected value) can leave an expired node behind a live head until that head expires, under
-  the tolerance.
+  time kept by the tolerance plus a weight change's `UpdateTask` reorder can leave an expired node
+  behind a live head until that head expires, under the tolerance.
 - `Pacer.calculateSchedule`'s 0L sentinel collision.
 - `Pacer.schedule`'s reschedule arm must call `cancel()`, not `future.cancel(...)`: the
   immediate-scheduler recursion guard is `future == null && nextFireTime != 0L` and only

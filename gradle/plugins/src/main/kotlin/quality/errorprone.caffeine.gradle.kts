@@ -75,6 +75,8 @@ tasks.withType<JavaCompile>().configureEach {
         annotatedPackages.add("com.github.benmanes.caffeine")
         annotatedPackages.add("com.google.common")
         annotatedPackages.add("com.google.inject")
+        jspecifyUnrecognizedAnnotationLocation { error() }
+        requireExplicitNullMarking { error() }
         handleTestAssertionLibraries = true
         checkOptionalEmptiness = true
         jspecifyExperimental = true

@@ -459,9 +459,10 @@ seeded admission comparisons to distinguish a repair from a shifted probabilisti
 **EXPIRE_TOLERANCE = 1 second.** Expiration is a maximum lifetime,
 not a minimum hold time. Like ScheduledExecutorService, the timing is never exact.
 The tolerance applies to multiple per-entry timestamps:
-- `writeTime` reorder decisions in remap (`exceedsWriteTimeTolerance`) — avoids
-  write buffer saturation from rapid timer wheel rescheduling, ~4x throughput on
-  write-heavy workloads.
+- `writeTime` reorder decisions when a write updates a live value
+  (`exceedsWriteTimeTolerance`) — avoids write buffer saturation from rapid timer wheel
+  rescheduling, ~4x throughput on write-heavy workloads. A write over an expired or collected
+  value is a creation and restarts the write time.
 - `accessTime` updates on the read path — avoids cache-line true-sharing on a hot
   entry under `expireAfterAccess`. When the configured duration is `<= tolerance`
   the skip is bypassed so tiny expiration windows still behave exactly.

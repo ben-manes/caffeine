@@ -41,6 +41,7 @@ import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
+import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.AbstractMap.SimpleImmutableEntry;
@@ -448,6 +449,20 @@ final class ReferenceTest {
     awaitFullGc();
 
     assertThat(expireAfterWrite.ageOf(key)).isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, keys = ReferenceType.STRONG,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterWrite = Expire.ONE_MINUTE)
+  void put_collected_restartsWriteTime(Cache<Int, Int> cache, CacheContext context,
+      @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
+    var key = context.firstKey();
+    context.ticker().advance(Duration.ofMillis(500));
+    context.clear();
+    awaitFullGc();
+
+    cache.put(key, context.absentValue());
+    assertThat(expireAfterWrite.ageOf(key)).hasValue(Duration.ZERO);
   }
 
   @ParameterizedTest
