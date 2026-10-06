@@ -570,9 +570,14 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   initialization protects a view's backing state, but does not make repeated plain holder reads
   coherent; a second read could return null after the check observed a peer's initialized view.
 - The access-reset javadoc ("reset by all cache read and write operations") not naming
-  `containsKey`, `containsValue` and `forEach`. A cache read means get-style access, as its get and
-  put examples show, and membership checks and traversal stay quiet by design; enumerating the
-  exceptions across the four javadocs was declined.
+  `containsKey`, `containsValue`, `forEach`, or a conditional `replace(k, old, new)` or
+  `remove(k, v)` whose value does not match. A cache read means get-style access, as its get and
+  put examples show: an operation records an access when it returns the entry's value, as
+  `putIfAbsent` on a present key does, or writes it. Membership checks, traversal, and a failed
+  conditional write do neither and stay quiet by design. Guava records a read on a mismatched
+  `replace` but not on a mismatched `remove`. Enumerating the exceptions across the four javadocs
+  was declined. Pins: `ExpireAfterAccessTest.replaceConditionally_wrongOldValue` and
+  `removeConditionally_wrongValue`.
 - Every `Policy` map overload (`coldest`/`hottest`, their weighted forms, `oldest`/`youngest`)
   collapsing equal-but-distinct weak keys. The collecting `LinkedHashMap.put` keeps the first
   key instance with the later key's value, a pair the cache does not hold, and the limit or

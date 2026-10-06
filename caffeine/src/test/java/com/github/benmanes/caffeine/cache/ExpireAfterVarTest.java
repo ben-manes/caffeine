@@ -2031,6 +2031,22 @@ final class ExpireAfterVarTest {
     verify(context.expiry(), never()).expireAfterRead(any(), any(), anyLong(), anyLong());
   }
 
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.FOREVER, loader = Loader.IDENTITY)
+  void putIfAbsent_present_refreshes(LoadingCache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    Int key = context.firstKey();
+    context.ticker().advance(Duration.ofMinutes(2));
+    Int result = expireAfterVar.putIfAbsent(key, context.absentValue(), Duration.ofMinutes(2));
+    assertThat(result).isEqualTo(context.original().get(key));
+
+    assertThat(cache.policy().getIfPresentQuietly(key)).isEqualTo(key);
+    assertThat(context).removalNotifications().withCause(REPLACED)
+        .contains(key, context.original().get(key)).exclusively();
+  }
+
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY,
       expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.MOCKITO)

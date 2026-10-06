@@ -880,11 +880,14 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       requireNonNull(value);
 
       // Keep in sync with BoundedVarExpiration.putIfAbsentAsync(key, value, duration, unit)
-      @Var CompletableFuture<V> priorFuture = null;
+      var probe = delegate.putIfAbsent(key, CompletableFuture.completedFuture(value));
+      V present = Async.getIfReady(probe);
+      if ((probe == null) || (present != null)) {
+        return present;
+      }
+
       for (;;) {
-        priorFuture = (priorFuture == null)
-            ? delegate.get(key)
-            : delegate.getIfPresentQuietly(key);
+        var priorFuture = delegate.getIfPresentQuietly(key);
         if (priorFuture != null) {
           if (!priorFuture.isDone()) {
             Async.getWhenSuccessful(priorFuture);

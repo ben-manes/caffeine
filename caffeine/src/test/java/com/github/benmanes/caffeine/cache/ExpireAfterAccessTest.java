@@ -337,6 +337,44 @@ final class ExpireAfterAccessTest {
         .contains(expected).exclusively();
   }
 
+  @ParameterizedTest
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
+      expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
+  void replaceConditionally_wrongOldValue(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(Duration.ofSeconds(30));
+    assertThat(map.replace(context.firstKey(), context.absentValue(), context.absentValue()))
+        .isFalse();
+
+    context.ticker().advance(Duration.ofSeconds(45));
+    context.cleanUp();
+
+    var expected = new HashMap<>(context.original());
+    if (context.isGuava()) {
+      // Guava records a read on a mismatched replace
+      expected.remove(context.firstKey());
+    }
+    assertThat(map).hasSize(context.initialSize() - expected.size());
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(expected).exclusively();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
+      expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
+  void removeConditionally_wrongValue(Map<Int, Int> map, CacheContext context) {
+    context.ticker().advance(Duration.ofSeconds(30));
+    assertThat(map.remove(context.firstKey(), context.absentValue())).isFalse();
+
+    context.ticker().advance(Duration.ofSeconds(45));
+    context.cleanUp();
+
+    assertThat(map).isEmpty();
+    assertThat(context).notifications().withCause(EXPIRED)
+        .contains(context.original()).exclusively();
+  }
+
   /* --------------- Policy --------------- */
 
   @CheckNoStats
