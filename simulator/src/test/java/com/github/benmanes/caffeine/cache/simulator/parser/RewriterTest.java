@@ -70,6 +70,33 @@ final class RewriterTest {
     assertThat(exitCode).isEqualTo(ExitCode.USAGE);
   }
 
+  @Test
+  void formatPrefix(@TempDir Path dir) throws IOException {
+    Path input = Files.writeString(dir.resolve("in.trace"), "1\n2\n1\n");
+    Path output = dir.resolve("out.trace");
+    var command = new CommandLine(Rewriter.class).setCaseInsensitiveEnumValuesAllowed(true);
+
+    int exitCode = command.execute(Rewriter.argumentsWithDefaults(new String[] {
+        "--inputFiles", "lirs:" + input, "--outputFile", output.toString(),
+        "--outputFormat", "lirs"}));
+
+    assertThat(exitCode).isEqualTo(ExitCode.OK);
+    assertThat(Files.readAllLines(output)).containsExactly("1", "2", "1").inOrder();
+  }
+
+  @Test
+  void missingFormatPrefix(@TempDir Path dir) throws IOException {
+    Path input = Files.writeString(dir.resolve("in.trace"), "1\n");
+    var command = new CommandLine(Rewriter.class).setCaseInsensitiveEnumValuesAllowed(true);
+    command.setErr(command.getOut());
+
+    int exitCode = command.execute(Rewriter.argumentsWithDefaults(new String[] {
+        "--inputFiles", input.toString(), "--outputFile", dir.resolve("out.trace").toString(),
+        "--outputFormat", "lirs"}));
+
+    assertThat(exitCode).isEqualTo(ExitCode.USAGE);
+  }
+
   private static Result execute(Path input, Path output) {
     var failure = new AtomicReference<Exception>();
     var command = new CommandLine(Rewriter.class).setCaseInsensitiveEnumValuesAllowed(true);

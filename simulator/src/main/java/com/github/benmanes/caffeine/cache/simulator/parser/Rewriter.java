@@ -108,18 +108,15 @@ public final class Rewriter implements Runnable {
     }
   }
 
-  @SuppressWarnings("ConstantValue")
-  private static String[] argumentsWithDefaults(String[] args) {
+  static String[] argumentsWithDefaults(String[] args) {
     var params = new ArrayList<>(Arrays.asList(args));
     if (params.contains("--inputFormat")) {
       return args;
     }
     int index = params.indexOf("--inputFiles");
-    if ((index != -1) && (index < (args.length - 1))) {
+    if ((index != -1) && (index < (args.length - 1)) && args[index + 1].contains(":")) {
       var format = substringBefore(args[index + 1], ':');
-      if (format != null) {
-        params.addAll(List.of("--inputFormat", TraceFormat.named(format).name()));
-      }
+      params.addAll(List.of("--inputFormat", TraceFormat.named(format).name()));
     }
     return params.toArray(String[]::new);
   }
