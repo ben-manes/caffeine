@@ -2425,43 +2425,37 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   @Override
-  public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<K, @Nullable V>(calculateHashMapCapacity(keys));
-    for (K key : keys) {
-      result.put(key, null);
-    }
-
+  public int getAllPresent(Map<K, @Nullable V> result, boolean retainAbsent) {
+    @Var int absent = 0;
     @Var boolean drain = false;
     int uniqueKeys = result.size();
     long now = expirationTicker().read();
     for (var iter = result.entrySet().iterator(); iter.hasNext();) {
       var entry = iter.next();
       Node<K, V> node = data.get(nodeFactory.newLookupKey(entry.getKey()));
-      if (node == null) {
-        iter.remove();
-        continue;
-      }
-      boolean expired = hasExpired(node, now);
-      V value = node.getValue();
-      if ((value == null) || expired) {
-        iter.remove();
+      if (node != null) {
+        boolean expired = hasExpired(node, now);
+        V value = node.getValue();
+        if ((value != null) && !expired) {
+          setAccessTime(node, now);
+          tryExpireAfterRead(node, entry.getKey(), value, expiry(), now);
+          V refreshed = afterRead(node, now, /* recordHit= */ false);
+          entry.setValue((refreshed == null) ? value : refreshed);
+          continue;
+        }
         drain = true;
-      } else {
-        setAccessTime(node, now);
-        tryExpireAfterRead(node, entry.getKey(), value, expiry(), now);
-        V refreshed = afterRead(node, now, /* recordHit= */ false);
-        entry.setValue((refreshed == null) ? value : refreshed);
+      }
+      absent++;
+      if (!retainAbsent) {
+        iter.remove();
       }
     }
     if (drain) {
       scheduleDrainBuffers();
     }
-    statsCounter().recordHits(result.size());
-    statsCounter().recordMisses(uniqueKeys - result.size());
-
-    @SuppressWarnings({"NullableProblems", "NullAway"})
-    Map<K, V> unmodifiable = Collections.unmodifiableMap(result);
-    return unmodifiable;
+    statsCounter().recordHits(uniqueKeys - absent);
+    statsCounter().recordMisses(absent);
+    return absent;
   }
 
   @Override

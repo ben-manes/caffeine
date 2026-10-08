@@ -65,7 +65,15 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
 
   @Override
   default Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-    return cache().getAllPresent(keys);
+    var result = new LinkedHashMap<K, @Nullable V>(calculateHashMapCapacity(keys));
+    for (K key : keys) {
+      result.put(key, null);
+    }
+    cache().getAllPresent(result, /* retainAbsent= */ false);
+
+    @SuppressWarnings({"NullableProblems", "NullAway"})
+    Map<K, V> unmodifiable = Collections.unmodifiableMap(result);
+    return unmodifiable;
   }
 
   @Override
@@ -73,24 +81,20 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
       Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     requireNonNull(mappingFunction);
 
-    int initialCapacity = calculateHashMapCapacity(keys);
-    var result = new LinkedHashMap<K, @Nullable V>(initialCapacity);
+    var result = new LinkedHashMap<K, @Nullable V>(calculateHashMapCapacity(keys));
     for (K key : keys) {
       result.put(requireNonNull(key), null);
     }
-    var keysToLoad = new LinkedHashSet<K>(initialCapacity);
-    var found = cache().getAllPresent(result.keySet());
-    for (var entry : result.entrySet()) {
-      V value = found.get(entry.getKey());
-      if (value == null) {
-        keysToLoad.add(entry.getKey());
+    int absent = cache().getAllPresent(result, /* retainAbsent= */ true);
+    if (absent != 0) {
+      var keysToLoad = new LinkedHashSet<K>(calculateHashMapCapacity(absent));
+      for (var entry : result.entrySet()) {
+        if (entry.getValue() == null) {
+          keysToLoad.add(entry.getKey());
+        }
       }
-      entry.setValue(value);
+      bulkLoad(keysToLoad, result, mappingFunction);
     }
-    if (keysToLoad.isEmpty()) {
-      return found;
-    }
-    bulkLoad(keysToLoad, result, mappingFunction);
 
     @SuppressWarnings({"NullableProblems", "NullAway"})
     Map<K, V> unmodifiable = Collections.unmodifiableMap(result);

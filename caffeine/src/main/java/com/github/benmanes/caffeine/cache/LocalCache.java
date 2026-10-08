@@ -90,8 +90,13 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
    */
   @Nullable V getIfPresentQuietly(Object key);
 
-  /** See {@link Cache#getAllPresent}. */
-  Map<K, V> getAllPresent(Iterable<? extends K> keys);
+  /**
+   * See {@link Cache#getAllPresent}. This method differs by setting the present values on the
+   * given mapping's entries, where an absent key's entry is removed or, if {@code retainAbsent},
+   * left unchanged. Returns the number of absent keys.
+   */
+  @CanIgnoreReturnValue
+  int getAllPresent(Map<K, @Nullable V> result, boolean retainAbsent);
 
   @Override
   default boolean replace(K key, V oldValue, V newValue) {

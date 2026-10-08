@@ -57,7 +57,16 @@ These dispose of whole families. Check them first.
   `AsynchronousCompletionTask` marker and routing through `CompletableFuture.runAsync` were
   declined. So was more `Caffeine.executor` javadoc for any of these cases, a rejecting or
   caller-runs executor running listeners under the eviction lock included: its existing caution
-  and the internal guidance suffice.
+  and the internal guidance suffice. Such an executor runs the removal listener under the lock and
+  inside the expiration and eviction scans, so a listener that waits on another thread's
+  `cleanUp()` deadlocks. Deferring those inline notifications to the lock's release fixes that and
+  measured performance-neutral, but was declined: the eviction listener still runs inside the
+  scans under the lock, so the scans keep their reentrancy defenses, and the tests that guard them
+  (`ReentrancyFuzzer`, `BoundedLocalCacheTest.maintenance_recursive*`, the `ExpirationTest` scan
+  pins) re-enter through a removal listener on `Runnable::run`. Under the deferral they reach no
+  scan: with the deque scans' resume-from-head defense removed, the four deque `maintenance_*`
+  pins and the four `ExpirationTest` scan cells fail at HEAD and pass with the deferral. Revisiting
+  it starts with moving those tests onto the eviction listener.
 - **Statistics are best-effort and lowest priority.** A counter that races, drifts, or
   double-counts is not a correctness defect. `CacheStats.missRate`'s
   `missCount >= loadSuccessCount + loadFailureCount` says a miss need not load (`getIfPresent`);
@@ -142,6 +151,24 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   sequential check is already there (`moveToBack` skips the tail). Moving the links off the node
   adds a mapping and a structure to size. In applications, the work between reads absorbs the
   invalidations. Accepted as the cost of LRU ordering.
+- **Batching removal notifications, or submitting them after the eviction lock's release.**
+  Eviction and `removeNode` submit one executor task per notification while holding `evictionLock`
+  (`synchronization.md`, *notifyRemoval*). With a no-op listener on the common pool, saturated
+  inserts into a full 10k cache cost about 150 ns wall and 1.5 µs of process CPU each, most of it
+  in waking pool workers (JDK 25, M3 Max). Collecting a lock hold's notifications and submitting
+  them after the release was built in several shapes, and each trades one regime for another.
+  Delivering a hold's calls in one task, or in chunks of 64, cut that CPU about tenfold, but runs a
+  burst's calls one after another: an `invalidateAll` of 64 entries whose listener blocks for 1 ms
+  finished delivering in 96 ms instead of 8. Chunks of 16 still cut it about sixfold and took
+  21-24 ms. One task per notification after the release kept the burst, but doubled saturated CPU
+  and raised the writer's p99 at 1M evictions/s from 2.3 to 13 µs. Dividing each hold into at most
+  NCPU tasks kept the 64-entry burst, but regressed 1M/s like the per-notification shape and slowed
+  a 1,024-entry burst from 100 to 171 ms. No shape holds both high-rate CPU and slow-listener
+  parallelism, so the per-notification task stays. The drain task's own submission under the
+  `tryLock`, which a worker that starts at once waits out, was not priced and stays too. Reopen
+  with a shape that keeps the 64-entry burst and the saturated and 1M/s CPU together, or with a
+  production workload whose cost is the in-lock submission. Deferring only the notifications that
+  would run inline is under *A broken or misconfigured executor is user error*.
 
 ---
 

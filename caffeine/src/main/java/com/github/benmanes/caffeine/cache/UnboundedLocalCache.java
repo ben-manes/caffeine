@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
 import static com.github.benmanes.caffeine.cache.LocalCache.castNonNull;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
@@ -35,7 +34,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -151,28 +149,24 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
-    var result = new LinkedHashMap<K, @Nullable V>(calculateHashMapCapacity(keys));
-    for (K key : keys) {
-      result.put(key, null);
-    }
-
+  public int getAllPresent(Map<K, @Nullable V> result, boolean retainAbsent) {
+    @Var int absent = 0;
     int uniqueKeys = result.size();
     for (var iter = result.entrySet().iterator(); iter.hasNext();) {
       Map.Entry<K, @Nullable V> entry = iter.next();
       V value = data.get(entry.getKey());
-      if (value == null) {
-        iter.remove();
-      } else {
+      if (value != null) {
         entry.setValue(value);
+        continue;
+      }
+      absent++;
+      if (!retainAbsent) {
+        iter.remove();
       }
     }
-    statsCounter.recordHits(result.size());
-    statsCounter.recordMisses(uniqueKeys - result.size());
-
-    @SuppressWarnings({"NullableProblems", "NullAway"})
-    Map<K, V> unmodifiable = Collections.unmodifiableMap(result);
-    return unmodifiable;
+    statsCounter.recordHits(uniqueKeys - absent);
+    statsCounter.recordMisses(absent);
+    return absent;
   }
 
   @Override
