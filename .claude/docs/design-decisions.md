@@ -1296,12 +1296,14 @@ the same reference in the same slot, with any task status. A small set of rotate
 does not prevent it either. The fix is in the class and not in `scheduleDrainBuffers`, because the
 pacer also submits the same object through `Scheduler.forScheduledExecutorService`.
 
-The pool now allocates one `RunnableExecuteAction` for each submission, and `drainStatus` keeps at
-most one submission in flight for each cache. On JDK 25.0.1, `GetPutBenchmark` and a `weakKeys()`
-copy ran with 3 forks and `-prof gc`. Every throughput change was within the 99.9% confidence
-interval. Allocation increased by at most 0.06 B/op, and by 0.4 B/op for `weakKeys()` read/write.
-The 2016 result, that the adapter halved `weakKeys()` read throughput, did not reproduce. Each
-bounded cache is 8 bytes smaller, because its task no longer has the `ForkJoinTask` status field.
+The pool now allocates one `RunnableExecuteAction` for each submission. `drainStatus` coalesces the
+submissions that cache operations trigger, and the pacer holds at most one delayed submission. The
+two paths can overlap, so one cache can have two submissions in flight. On JDK 25.0.1,
+`GetPutBenchmark` and a `weakKeys()` copy ran with 3 forks and `-prof gc`. Every throughput change
+was within the 99.9% confidence interval. Allocation increased by at most 0.06 B/op, and by 0.4
+B/op for `weakKeys()` read/write. The 2016 result, that the adapter halved `weakKeys()` read
+throughput, did not reproduce. Each bounded cache is 8 bytes smaller, because its task no longer
+has the `ForkJoinTask` status field.
 
 ## Pacer
 
