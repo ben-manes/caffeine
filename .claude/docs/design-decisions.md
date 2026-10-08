@@ -1435,14 +1435,36 @@ release, when `unlock()` fails to run, and at acquisition: `lock()` and `tryLock
 on return, before the caller's `try`. The canonical `lock(); try { } finally { unlock(); }` leaks
 the same way, so no call-site change removes it.
 
-**PerformCleanupTask.exec() returns false.** This is an optimization — the task is
-allocated once and reused instead of creating a new `Runnable` wrapper per executor
-submission (which showed up as a memory hotspot in profiling). `run()` catches every
-`Throwable`, so only its own `logger.log` can throw out of `exec()`: a `StackOverflowError`
-while logging one, or a logging backend that throws. Either completes the reused task
-exceptionally, and a `ForkJoinPool` never runs it again, which leaves maintenance to the
-write buffer's inline assist and `cleanUp()`. Both triggers are outside scope (a JVM `Error`,
-a broken user component); a `reinitialize()` per submission was the 2016 design this replaced.
+**`PerformCleanupTask` is not a `ForkJoinTask`.** `ForkJoinPool.execute(Runnable)` does not wrap a
+`ForkJoinTask`, and its source comment says "avoid re-wrap". The steal path claims a slot with a
+CAS on the slot content, then writes the absolute value `base = b + 1`. A worker can stall between
+its `base` recheck and the CAS. If the pool receives the same task object again, the CAS can
+succeed on a later copy, one or more laps around the array. The worker then moves `base` back by a
+multiple of the array length, and every slot is null. No code in the pool repairs this state.
+
+JDK 22 and later reject every submission to that queue with `Queue capacity exceeded` (#2021).
+JDK 21 and earlier silently lose or overwrite the tasks in that queue. From v2.2.4 to v3.3.0, the
+task extended `ForkJoinTask`, and `exec()` returned false. This reuse avoided the per-submission
+adapter, which was a profiling hotspot in 2016. The reuse also made a throw from `exec()`
+permanent: `run()` catches every `Throwable`, so only its own `logger.log` could throw, on a
+`StackOverflowError` while logging or a logging backend that throws, and that completed the task
+exceptionally so that a `ForkJoinPool` never ran it again, leaving maintenance to the write
+buffer's inline assist and `cleanUp()`. A fresh wrapper per submission confines such a throw to
+that submission.
+
+A call to `reinitialize()` before each submission does not prevent the race. The race needs only
+the same reference in the same slot, with any task status. A small set of rotated task objects
+does not prevent it either. The fix is in the class and not in `scheduleDrainBuffers`, because the
+pacer also submits the same object through `Scheduler.forScheduledExecutorService`.
+
+The pool now allocates one `RunnableExecuteAction` for each submission. `drainStatus` coalesces the
+submissions that cache operations trigger, and the pacer holds at most one delayed submission. The
+two paths can overlap, so one cache can have two submissions in flight. On JDK 25.0.1,
+`GetPutBenchmark` and a `weakKeys()` copy ran with 3 forks and `-prof gc`. Every throughput change
+was within the 99.9% confidence interval. Allocation increased by at most 0.06 B/op, and by 0.4
+B/op for `weakKeys()` read/write. The 2016 result, that the adapter halved `weakKeys()` read
+throughput, did not reproduce. Each bounded cache is 8 bytes smaller, because its task no longer
+has the `ForkJoinTask` status field.
 
 ## Pacer
 
@@ -1471,7 +1493,7 @@ future alone leaves the old one published, and then `!future.isDone()` is perman
 false for an immediate scheduler, so every re-entry cancels and reschedules without
 bound. That was a live defect: a `Scheduler` running its command synchronously and
 returning a *completed* future hung `put` on every executor including `commonPool`,
-silently, because `GuardedScheduler` and `PerformCleanupTask.exec` swallow the
+silently, because `GuardedScheduler` and `PerformCleanupTask.run` swallow the
 `StackOverflowError` and the stack immediately re-descends. Pinned by
 `ExpirationTest.schedule_immediate_completed`; its neighbour `schedule_immediate`
 returns an *incomplete* future, which is the shape a real inline scheduler never

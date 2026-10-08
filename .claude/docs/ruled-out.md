@@ -209,6 +209,22 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   shares the line (-1.57 and +0.10 ns per lookup, against -0.95 at a control placement). Statistics
   are best-effort and lowest priority. Reopen with a measured cost at the sharing placements under an
   eviction rate an application reaches.
+- **Reusing one `ForkJoinTask` as the maintenance task, to skip the pool's per-submission wrapper.**
+  `ForkJoinPool.execute(Runnable)` wraps only a non-`ForkJoinTask`, and the maintenance task is one
+  object resubmitted for the cache's lifetime, by `scheduleDrainBuffers` and by the pacer. A worker
+  stalled between its base recheck and the slot CAS can match a later copy of the same object and
+  move the queue's base back by a multiple of the array length; JDK 22 and later then reject every
+  submission to that queue, and earlier JDKs lose tasks silently (#2021). `reinitialize()` before
+  each submission and a rotated set of tasks do not help, since the race needs only the same
+  reference in the same slot. A fresh `PerformCleanupTask` per submission would allocate on every
+  executor, where a thread pool queues the raw `Runnable` and needs nothing, and would carry its own
+  `WeakReference`, so the pool's one wrapper is the cheapest fresh object. Measured on JDK 25.0.1
+  (`GetPutBenchmark` and a `weakKeys()` copy, 3 forks, `-prof gc`): throughput within the 99.9%
+  confidence interval, allocation up by at most 0.06 B/op, 0.4 B/op for weak-key read/write.
+  `BoundedLocalCacheTest.scheduleDrainBuffers_notForkJoinTask` and `pacer_notForkJoinTask` pin the
+  type on both paths. Reopen only for a design that never hands the same object to the executor
+  twice; an upstream fix does not reopen it while older JDKs are supported. Details in
+  [Known JDK Interactions](design-decisions.md#known-jdk-interactions).
 
 ---
 

@@ -73,7 +73,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -4298,22 +4297,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
-  /** A reusable task that performs the maintenance work; used to avoid wrapping by ForkJoinPool. */
-  static final class PerformCleanupTask extends ForkJoinTask<@Nullable Void> implements Runnable {
-    private static final long serialVersionUID = 1L;
-
+  /** A reusable task that performs the maintenance work. */
+  static final class PerformCleanupTask implements Runnable {
     final WeakReference<BoundedLocalCache<?, ?>> reference;
 
     PerformCleanupTask(BoundedLocalCache<?, ?> cache) {
       reference = new WeakReference<>(cache);
-    }
-
-    @Override
-    protected boolean exec() {
-      run();
-
-      // Indicates that the task has not completed to allow subsequent submissions to execute
-      return false;
     }
 
     @Override
@@ -4327,19 +4316,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         }
       }
     }
-
-    /**
-     * This method cannot be ignored due to being final, so a hostile user supplied Executor could
-     * forcibly complete the task and halt future executions. There are easier ways to intentionally
-     * harm a system, so this is assumed to not happen in practice.
-     */
-    // public final void quietlyComplete() {}
-
-    @Override public void complete(@Nullable Void value) {}
-    @Override public void setRawResult(@Nullable Void value) {}
-    @Override public @Nullable Void getRawResult() { return null; }
-    @Override public void completeExceptionally(@Nullable Throwable t) {}
-    @Override public boolean cancel(boolean mayInterruptIfRunning) { return false; }
   }
 
   /** Creates a serialization proxy based on the common configuration shared by all cache types. */

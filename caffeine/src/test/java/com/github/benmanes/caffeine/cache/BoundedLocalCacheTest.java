@@ -69,7 +69,6 @@ import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
-import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.github.benmanes.caffeine.testing.Nullness.nullReferenceQueue;
 import static com.github.benmanes.caffeine.testing.Nullness.nullString;
 import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
@@ -124,6 +123,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -149,6 +149,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.openjdk.jol.info.ClassLayout;
@@ -756,22 +757,6 @@ final class BoundedLocalCacheTest {
 
   @Test
   @CheckMaxLogLevel(ERROR)
-  void cleanupTask_exception() {
-    var expected = new RuntimeException();
-    BoundedLocalCache<?, ?> cache = Mockito.mock();
-    doThrow(expected).when(cache).performCleanUp(any());
-    var task = new PerformCleanupTask(cache);
-    assertThat(task.exec()).isFalse();
-    assertThat(logEvents()
-        .withMessage("Exception thrown when performing the maintenance task")
-        .withThrowable(expected)
-        .withLevel(ERROR)
-        .exclusively())
-        .hasSize(1);
-  }
-
-  @Test
-  @CheckMaxLogLevel(ERROR)
   void cleanupTask_run_exception() {
     var expected = new RuntimeException();
     BoundedLocalCache<?, ?> cache = Mockito.mock();
@@ -877,6 +862,40 @@ final class BoundedLocalCacheTest {
         reset(executor);
       }
     });
+  }
+
+  @Test
+  void scheduleDrainBuffers_notForkJoinTask() {
+    // ForkJoinPool.execute(Runnable) does not wrap a ForkJoinTask, and the maintenance task is one
+    // object resubmitted for the cache's lifetime. A worker stalled between its base recheck and
+    // the slot CAS can match a later copy of the same object and move the queue's base backwards
+    // (#2021). The stall cannot be forced in a test, so this pins the type the executor receives
+    Executor executor = Mockito.mock();
+    var cache = new BoundedLocalCache<>(Caffeine.newBuilder().executor(executor),
+        /* cacheLoader= */ null, /* isAsync= */ false) {};
+    cache.scheduleDrainBuffers();
+
+    ArgumentCaptor<Runnable> task = ArgumentCaptor.captor();
+    verify(executor).execute(task.capture());
+    assertThat(task.getValue()).isSameInstanceAs(cache.drainBuffersTask);
+    assertThat(task.getValue()).isNotInstanceOf(ForkJoinTask.class);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      scheduler = CacheScheduler.MOCKITO, expireAfterWrite = Expire.ONE_MINUTE)
+  void pacer_notForkJoinTask(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // The pacer resubmits the same task through the scheduler, so the type is pinned on that path
+    // as well (see scheduleDrainBuffers_notForkJoinTask)
+    when(context.scheduler().schedule(any(), any(), anyLong(), any()))
+        .thenReturn(new CompletableFuture<>());
+    var oldValue = cache.put(context.absentKey(), context.absentValue());
+    assertThat(oldValue).isNull();
+
+    var task = ArgumentCaptor.forClass(Runnable.class);
+    verify(context.scheduler()).schedule(any(), task.capture(), anyLong(), any());
+    assertThat(task.getValue()).isSameInstanceAs(cache.drainBuffersTask);
+    assertThat(task.getValue()).isNotInstanceOf(ForkJoinTask.class);
   }
 
   @Test
@@ -8336,18 +8355,6 @@ final class BoundedLocalCacheTest {
     assertThrows(type, () -> cache.setWindowWeightedSize(0));
     assertThrows(type, () -> cache.setMainProtectedWeightedSize(1L));
     assertThrows(type, cache::climber);
-  }
-
-  @Test
-  void cleanupTask_ignore() {
-    BoundedLocalCache<?, ?> cache = nullRef();
-    var task = new PerformCleanupTask(cache);
-    assertThat(task.getRawResult()).isNull();
-    assertThat(task.cancel(false)).isFalse();
-    assertThat(task.cancel(true)).isFalse();
-    task.completeExceptionally(null);
-    task.setRawResult(null);
-    task.complete(null);
   }
 
   @ParameterizedTest

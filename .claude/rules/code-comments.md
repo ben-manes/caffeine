@@ -55,6 +55,8 @@ local workspace contents.
 
 ## Where the evidence goes
 
-Keep invariants and necessary warnings in source comments. Put supporting measurements and rejected
-alternatives in `.claude/docs/` when future decisions need them; keep raw study records in `.local/`.
-Verify that useful evidence is retained before removing it from a comment.
+Keep in source comments only what a reader needs to use or change the code correctly, not a bug's
+history. An invariant that a regression test pins needs no source note either: someone who tries
+the same trick fails the test and finds the history in `.claude/docs/`. Put supporting measurements
+and rejected alternatives in `.claude/docs/` when future decisions need them; keep raw study records
+in `.local/`. Verify that useful evidence is retained before removing it from a comment.
