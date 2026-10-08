@@ -72,6 +72,7 @@ jmh {
   zip64 = true
 
   jvmArgs = defaultJvmArgs()
+  jvm = providers.environmentVariable("JDK_CI").map { "$it/bin/java" }
   failOnError = true
   forceGC = true
   fork = 1

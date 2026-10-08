@@ -33,7 +33,7 @@ jobs:
       JAVA_VERSION: 26
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -58,7 +58,7 @@ jobs:
       JAVA_VERSION: 26
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -84,7 +84,7 @@ jobs:
       JAVA_VERSION: 26
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -111,7 +111,7 @@ jobs:
       JAVA_VERSION: 26
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -130,7 +130,7 @@ jobs:
           arguments: pmd -Ppmd
       - name: Upload Reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 1
           name: pmd-reports
@@ -153,7 +153,7 @@ jobs:
       - name: Upload result to GitHub Code Scanning
         if: always() && hashFiles('pmd-combined.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: pmd-combined.sarif
           category: pmd
@@ -167,7 +167,7 @@ jobs:
       JAVA_VERSION: 26
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -194,7 +194,7 @@ jobs:
       JAVA_VERSION: 26
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -213,7 +213,7 @@ jobs:
           arguments: spotbugs -Pspotbugs
       - name: Upload Reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 1
           name: spotbugs-reports
@@ -236,7 +236,7 @@ jobs:
       - name: Upload result to GitHub Code Scanning
         if: always() && hashFiles('spotbugs-combined.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: spotbugs-combined.sarif
           category: spotbugs

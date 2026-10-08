@@ -33,7 +33,7 @@ jobs:
         language: [ actions, java ]
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
           disable-sudo-and-containers: true
           egress-policy: block
@@ -67,13 +67,13 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Initialize CodeQL (Actions)
-        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         if: ${{ matrix.language == 'actions' }}
         with:
           languages: actions
           dependency-caching: true
       - name: Initialize CodeQL (Java)
-        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         if: ${{ matrix.language == 'java' }}
         with:
           queries: >
@@ -90,6 +90,6 @@ jobs:
           config: |
             threat-models: local
       - name: Autobuild
-        uses: github/codeql-action/autobuild@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/autobuild@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
