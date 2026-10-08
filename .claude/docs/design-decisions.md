@@ -1332,7 +1332,7 @@ future alone leaves the old one published, and then `!future.isDone()` is perman
 false for an immediate scheduler, so every re-entry cancels and reschedules without
 bound. That was a live defect: a `Scheduler` running its command synchronously and
 returning a *completed* future hung `put` on every executor including `commonPool`,
-silently, because `GuardedScheduler` and `PerformCleanupTask.exec` swallow the
+silently, because `GuardedScheduler` and `PerformCleanupTask.run` swallow the
 `StackOverflowError` and the stack immediately re-descends. Pinned by
 `ExpirationTest.schedule_immediate_completed`; its neighbour `schedule_immediate`
 returns an *incomplete* future, which is the shape a real inline scheduler never
