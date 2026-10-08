@@ -195,6 +195,16 @@ Recheck bundled unweighted LIRS cells bit-for-bit after changes.
   Treat sub-1pp single-seed deltas as unresolved, not wins. Run at least 3 seeds, preferably 5,
   on low-hit-rate cells. Accept robust multi-seed wins around 2pp or larger with no collapse, judged
   cell-by-cell; summing many sub-noise deltas into `net +Npp` is misleading.
+- **Drive a product's recency clock with the event count.** Coherence and Ehcache3 rank eviction
+  victims by last use in wall-clock milliseconds, and a replay touches many entries in each
+  millisecond, so the order would follow the replay speed: identical default runs at 512 differed
+  by up to 4pp. Their adapters supply the clock (`LocalCache.getCurrentTimeMillis()`,
+  `TimeSourceConfiguration`), and `ReplaySpeedTest` pins it. Three product rows stay
+  irreproducible: `product.TCache` ranks its LRU by a JVM-wide clock estimate that a background
+  thread updates and trims on another thread (up to 6pp between identical runs on multi1 and sprite
+  at 512), and triava, which is unmaintained, offers no clock to replace; `product.Hazelcast`
+  samples victims from an unseeded random start (about 1pp); and `product.Caffeine`'s admission
+  jitter is unseeded.
 - Equal seeds make arms reproducible, but do not provide request-indexed common randomness
   when admission contests consume draws on different requests. Exact pairing requires matching
   draw counts and request-index digests. Interleaving arms limits temporal drift without

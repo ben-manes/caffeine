@@ -25,6 +25,7 @@ import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
 import org.ehcache.core.internal.statistics.DefaultStatisticsService;
 import org.ehcache.core.statistics.CacheStatistics;
+import org.ehcache.impl.internal.TimeSourceConfiguration;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
@@ -45,11 +46,19 @@ public final class Ehcache3Policy implements Policy {
   private final PolicyStats policyStats;
   private final CacheStatistics stats;
 
+  private long time;
+
   public Ehcache3Policy(Config config) {
     policyStats = new PolicyStats(name());
     var settings = new BasicSettings(config);
     var statistics = new DefaultStatisticsService();
     cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
+        .using(new TimeSourceConfiguration(() -> {
+          // Ehcache evicts the least recently used of a sample of entries, and a replay touches
+          // many entries in each millisecond, so a wall clock would make the eviction order depend
+          // on the replay speed.
+          return time;
+        }))
         .using(statistics)
         .build(true);
     cache = cacheManager.createCache("ehcache3",
@@ -62,6 +71,7 @@ public final class Ehcache3Policy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
+    time++;
     Long key = event.longKey();
     var value = cache.get(key);
     if (value == null) {

@@ -867,7 +867,9 @@ takes no number with it, so it waits for a report too. A documented but non-defa
 not reach either.
 
 - Approximate and lossy policies are intentional. `membership.bloom.FastFilter` is opt-in.
-- `product.*` policies inheriting third-party libraries' wall-clock expiry defaults.
+- `product.*` policies inheriting third-party libraries' wall-clock expiry defaults. This does not
+  extend to a clock that ranks eviction victims, which the adapter drives with the event count
+  (simulator rules, *Hit-Rate Validation*).
 - `ClockProSimplePolicy` omitting the CLOCK-Pro hot-warmup phase, or collapsing on scan-loop
   workloads.
 - `Cache2kPolicy.finished()` not failing; LIRS and LIRS2 at `percent-hot = 1.0`;

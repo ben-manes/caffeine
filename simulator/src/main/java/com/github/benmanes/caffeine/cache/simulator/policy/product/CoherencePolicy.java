@@ -52,6 +52,8 @@ public final class CoherencePolicy implements Policy {
   private final PolicyStats policyStats;
   private final CacheStatistics stats;
 
+  private long time;
+
   @SuppressWarnings("unchecked")
   public CoherencePolicy(CoherenceSettings settings, Eviction policy) {
     policyStats = new PolicyStats(name() + " (%s)", policy);
@@ -64,7 +66,14 @@ public final class CoherencePolicy implements Policy {
       factor *= 1024;
     }
 
-    var cache = new LocalCache();
+    var cache = new LocalCache() {
+      @Override public long getCurrentTimeMillis() {
+        // Coherence ranks its LRU and hybrid victims by when each entry was last used, and a replay
+        // touches many entries in each millisecond, so a wall clock would make the eviction order
+        // depend on the replay speed.
+        return time;
+      }
+    };
     cache.setUnitFactor(factor);
     cache.setHighUnits((int) maximum);
     cache.setEvictionType(policy.type);
@@ -84,6 +93,7 @@ public final class CoherencePolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
+    time++;
     Long key = event.longKey();
     var value = map.get(key);
     if (value == null) {
