@@ -155,6 +155,27 @@ final class IndexedCacheTest {
     assertThat(invocations.get()).isEqualTo(1);
   }
 
+  @Test
+  void invalidate_expired_releasesKeys() {
+    var ticker = new FakeTicker();
+    var cache = new IndexedCache.Builder<UserKey, User>()
+        .addSecondaryKey(user -> new UserByLogin(user.login()))
+        .primaryKey(user -> new UserById(user.id()))
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .ticker(ticker::read)
+        .build(this::findUser);
+
+    // Invalidating an entry that expired before maintenance removed it must still release its
+    // keys, so a new user may take the login at once
+    cache.put(new User(1, "john.doe", "+1 (555) 555-5555"));
+    ticker.advance(Duration.ofHours(1));
+    cache.invalidate(new UserByLogin("john.doe"));
+
+    var user = new User(3, "john.doe", "+1 (999) 999-9999");
+    cache.put(user);
+    assertThat(cache.getIfPresent(new UserByLogin("john.doe"))).isSameInstanceAs(user);
+  }
+
   /** Returns the user found in the system of record. */
   private User findUser(UserKey key) {
     Predicate<User> predicate = switch (key) {

@@ -899,9 +899,11 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
 - The RxJava and Reactor examples having no backpressure or an unbounded buffer under a slow
   sink.
 - `IndexedCache` enforcing unique secondary keys only sequentially: two values sharing a unique key
-  are user error. Its alias lookups and `invalidate` read two maps under no shared lock, so a
-  concurrent same-primary key change can briefly return or remove the entity through the alias it
-  just left; an exact check would run every indexer on each hit.
+  are user error. A key held by an expired row that maintenance has not yet removed still counts as
+  shared, so a put that claims it is rejected until then; invalidating the key releases it. Its
+  alias lookups and `invalidate` read two maps under no shared lock, so a concurrent same-primary
+  key change can briefly return or remove the entity through the alias it just left; an exact check
+  would run every indexer on each hit.
 
 ---
 

@@ -134,8 +134,10 @@ public final class IndexedCache<K, V> {
       return;
     }
 
-    store.asMap().computeIfPresent(index.getFirst(), (_, _) -> {
-      removeIndexes(index.getFirst());
+    store.asMap().compute(index.getFirst(), (primaryKey, value) -> {
+      if (value != null) {
+        removeIndexes(primaryKey);
+      }
       return null;
     });
   }
