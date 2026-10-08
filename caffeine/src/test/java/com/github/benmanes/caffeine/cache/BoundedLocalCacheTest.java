@@ -69,7 +69,6 @@ import static com.github.benmanes.caffeine.testing.IntSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
-import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.github.benmanes.caffeine.testing.Nullness.nullReferenceQueue;
 import static com.github.benmanes.caffeine.testing.Nullness.nullString;
 import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
@@ -123,8 +122,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -753,22 +755,6 @@ final class BoundedLocalCacheTest {
 
   @Test
   @CheckMaxLogLevel(ERROR)
-  void cleanupTask_exception() {
-    var expected = new RuntimeException();
-    BoundedLocalCache<?, ?> cache = Mockito.mock();
-    doThrow(expected).when(cache).performCleanUp(any());
-    var task = new PerformCleanupTask(cache);
-    assertThat(task.exec()).isFalse();
-    assertThat(logEvents()
-        .withMessage("Exception thrown when performing the maintenance task")
-        .withThrowable(expected)
-        .withLevel(ERROR)
-        .exclusively())
-        .hasSize(1);
-  }
-
-  @Test
-  @CheckMaxLogLevel(ERROR)
   void cleanupTask_run_exception() {
     var expected = new RuntimeException();
     BoundedLocalCache<?, ?> cache = Mockito.mock();
@@ -874,6 +860,51 @@ final class BoundedLocalCacheTest {
         reset(executor);
       }
     });
+  }
+
+  /**
+   * A {@code ForkJoinPool} does not wrap a {@link ForkJoinTask}, so a resubmitted task object lets
+   * a stalled worker move the queue's base backwards. A test cannot cause that stall, so this test
+   * checks the type that the executor receives.
+   */
+  @Test
+  void scheduleDrainBuffers_notForkJoinTask() {
+    var submitted = new ArrayList<Runnable>();
+    Cache<Int, Int> cache = Caffeine.newBuilder()
+        .executor(submitted::add)
+        .maximumSize(10)
+        .build();
+    cache.put(Int.valueOf(1), Int.valueOf(1));
+
+    assertThat(Iterables.getOnlyElement(submitted)).isNotInstanceOf(ForkJoinTask.class);
+  }
+
+  /** The pacer submits the same task object through the scheduler, so this checks that path. */
+  @Test
+  void pacer_notForkJoinTask() {
+    var scheduled = new ArrayList<Runnable>();
+    ScheduledFuture<?> future = Mockito.mock();
+    ScheduledExecutorService scheduledExecutor = Mockito.mock();
+    when(scheduledExecutor.schedule(any(Runnable.class), anyLong(), any()))
+        .thenAnswer(invocation -> {
+          scheduled.add(invocation.getArgument(0));
+          return future;
+        });
+
+    var submitted = new ArrayList<Runnable>();
+    Cache<Int, Int> cache = Caffeine.newBuilder()
+        .scheduler(Scheduler.forScheduledExecutorService(scheduledExecutor))
+        .executor(task -> {
+          submitted.add(task);
+          task.run();
+        })
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .build();
+    cache.put(Int.valueOf(1), Int.valueOf(1));
+
+    submitted.clear();
+    Iterables.getOnlyElement(scheduled).run();
+    assertThat(Iterables.getOnlyElement(submitted)).isNotInstanceOf(ForkJoinTask.class);
   }
 
   @Test
@@ -8308,18 +8339,6 @@ final class BoundedLocalCacheTest {
     assertThrows(type, () -> cache.setWindowWeightedSize(0));
     assertThrows(type, () -> cache.setMainProtectedWeightedSize(1L));
     assertThrows(type, cache::climber);
-  }
-
-  @Test
-  void cleanupTask_ignore() {
-    BoundedLocalCache<?, ?> cache = nullRef();
-    var task = new PerformCleanupTask(cache);
-    assertThat(task.getRawResult()).isNull();
-    assertThat(task.cancel(false)).isFalse();
-    assertThat(task.cancel(true)).isFalse();
-    task.completeExceptionally(null);
-    task.setRawResult(null);
-    task.complete(null);
   }
 
   @ParameterizedTest
