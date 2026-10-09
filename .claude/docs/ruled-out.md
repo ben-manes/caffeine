@@ -910,7 +910,10 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
 ## build and CI
 
 - `tests-latest` (`LATEST_JDK`) gated to default-branch push only.
-- `run-gradle`'s blanket `attempt-limit: 2` retry.
+- `build.yml`'s `attempt-limit` retries through `run-gradle`. The weekly canaries (`build-arm.yml`,
+  `build-ea.yml`) run their suites once: the intermittent failure a retry absorbs is what they are
+  scheduled to catch. Their retry was for flaky network calls, and from June to October 2026 it
+  absorbed five test failures and no network failure; bring it back if that noise returns.
 - jcstress, lincheck, `test`, `fuzzTest` and `frayTest` tasks being cacheable rather than
   `cacheIf { false }`, so identical inputs (one tree pushed to two branches, a re-run, a
   version-only change) replay a cached pass without re-fuzzing or re-exploring. The weekly canaries

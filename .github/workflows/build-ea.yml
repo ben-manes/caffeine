@@ -101,22 +101,11 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
       - name: Run Tests
         env:
-          ATTEMPT_LIMIT: 2
-          ATTEMPT_DELAY: 30
           TEST_SUITE: ${{ matrix.suite }}
         run: |
           echo "::add-matcher::.github/problem-matcher.json"
-          for ((i=1; i<="$ATTEMPT_LIMIT"; i++)); do
-            ./gradlew --rerun-tasks -PearlyAccess=true \
+          ./gradlew --rerun-tasks -PearlyAccess=true \
             -PjavaTestVersion="$JAVA_TEST_VERSION" \
             --warning-mode all --no-problems-report \
             -Dscan.tag.${GITHUB_WORKFLOW// /_} \
-            ${TEST_SUITE//$'\n'/ } && break
-            if [ $i -lt "$ATTEMPT_LIMIT" ]; then
-              echo "Attempt $i failed. Retrying in $ATTEMPT_DELAY seconds..."
-              sleep "$ATTEMPT_DELAY"
-            else
-              echo "All attempts failed."
-              exit 1
-            fi
-          done
+            ${TEST_SUITE//$'\n'/ }
