@@ -870,6 +870,10 @@ not reach either.
 - `product.*` policies inheriting third-party libraries' wall-clock expiry defaults. This does not
   extend to a clock that ranks eviction victims, which the adapter drives with the event count
   (simulator rules, *Hit-Rate Validation*).
+- The feedback TinyLFU policies' `Admit rate` leaving out a candidate their feedback override
+  admits after `TinyLfu` rejected it (under half a point on the bundled traces). Counting it would
+  need a way to undo the admitter's recorded rejection, for a secondary column of two experimental
+  policies. GDSF's admissions are its own accounting, as its evictions are.
 - `ClockProSimplePolicy` omitting the CLOCK-Pro hot-warmup phase, or collapsing on scan-loop
   workloads.
 - `Cache2kPolicy.finished()` not failing; LIRS and LIRS2 at `percent-hot = 1.0`;

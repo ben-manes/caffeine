@@ -120,7 +120,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     if (data.size() > maximumSize) {
       @SuppressWarnings({"NullableProblems", "NullAway"})
       List<Node> sample = (policy == EvictionPolicy.RANDOM)
-          ? Arrays.asList(table)
+          ? Arrays.asList(table).subList(0, maximumSize) // all but the candidate in the last slot
           : sampleStrategy.sample(table, candidate, sampleSize, random, policyStats);
       Node victim = policy.select(sample, random, tick);
       policyStats.recordEviction();

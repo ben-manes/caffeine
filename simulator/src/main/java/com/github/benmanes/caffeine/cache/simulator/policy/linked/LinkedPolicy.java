@@ -119,7 +119,7 @@ public final class LinkedPolicy implements Policy {
           continue;
         }
 
-        Node victim = policy.findVictim(sentinel, policyStats);
+        Node victim = policy.findVictim(sentinel, candidate, policyStats);
         boolean admit = admitter.admit(candidate.key, victim.key);
         if (admit) {
           evictEntry(victim);
@@ -148,7 +148,7 @@ public final class LinkedPolicy implements Policy {
         policyStats.recordOperation();
         // do nothing
       }
-      @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
+      @Override Node findVictim(Node sentinel, Node candidate, PolicyStats policyStats) {
         policyStats.recordOperation();
         return requireNonNull(sentinel.next);
       }
@@ -163,13 +163,16 @@ public final class LinkedPolicy implements Policy {
         policyStats.recordOperation();
         node.marked = true;
       }
-      @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
+      @Override Node findVictim(Node sentinel, Node candidate, PolicyStats policyStats) {
         for (;;) {
           policyStats.recordOperation();
           Node node = requireNonNull(sentinel.next);
           if (node.marked) {
             node.moveToTail();
             node.marked = false;
+          } else if (node == candidate) {
+            // The candidate was appended before the sweep, so the hand passes over it
+            node.moveToTail();
           } else {
             return node;
           }
@@ -183,7 +186,7 @@ public final class LinkedPolicy implements Policy {
         policyStats.recordOperation();
         node.moveToTail();
       }
-      @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
+      @Override Node findVictim(Node sentinel, Node candidate, PolicyStats policyStats) {
         policyStats.recordOperation();
         // Skip over the added entry
         return requireNonNull(requireNonNull(sentinel.prev).prev);
@@ -196,7 +199,7 @@ public final class LinkedPolicy implements Policy {
         policyStats.recordOperation();
         node.moveToTail();
       }
-      @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
+      @Override Node findVictim(Node sentinel, Node candidate, PolicyStats policyStats) {
         policyStats.recordOperation();
         return requireNonNull(sentinel.next);
       }
@@ -210,7 +213,7 @@ public final class LinkedPolicy implements Policy {
     abstract void onAccess(Node node, PolicyStats policyStats);
 
     /** Returns the victim entry to evict. */
-    abstract Node findVictim(Node sentinel, PolicyStats policyStats);
+    abstract Node findVictim(Node sentinel, Node candidate, PolicyStats policyStats);
   }
 
   /** A node on the double-linked list. */
