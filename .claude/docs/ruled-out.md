@@ -922,6 +922,16 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
   re-run was the Fray leg stalling after its tests finished, on a remote build-cache store that
   hung (gradle/gradle#39064, a temporary network problem), and a re-run recovers it. A test hang
   that does not recur therefore ends green; one that does ends red at the third attempt.
+- A jcstress run that tests nothing (no matching tests, or no JVM configurations) exiting 0. The
+  weekly workflow passes no test filter, so it would take an empty test jar or a platform without
+  configurations, and a grading failure already fails the task.
+- The generated sources stamping the build year into their license header, so a release rebuilt
+  in a later year has a different sources jar (the class files are identical). The generated code
+  gains files and changes over time, so the header keeps the current year rather than a fixed one;
+  a reproducibility rebuild of the sources jar holds within the release's year.
+- A re-run of an older `master` Build publishing its snapshot after a newer run's. The re-run
+  keeps its own concurrency group so that it cannot cancel the newer run, `rerun-cancelled`
+  re-runs only the newest run, and the next push republishes the snapshot.
 - jcstress, lincheck, `test`, `fuzzTest` and `frayTest` tasks being cacheable rather than
   `cacheIf { false }`, so identical inputs (one tree pushed to two branches, a re-run, a
   version-only change) replay a cached pass without re-fuzzing or re-exploring. The weekly canaries
@@ -937,6 +947,10 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
   likely fail loudly.
 - The `Stress Tests` job asserting nothing: `Stresser` prints status and throughput and exits 0
   after `--duration`, so it is a smoke run that fails only if the JVM dies, not an invariant check.
+- jcache publishing the OSGi DS annotations as `api` although bnd needs them only at build time.
+  Like core's jspecify and Error Prone annotations, they stay on consumers' classpath because
+  some compilers (scalac, kotlinc) have failed on a missing annotation class even though the JVM
+  spec makes a CLASS-retention annotation optional.
 - Dependency verification is not wanted; the egress allowances are intentional.
 - The release restoring caches that other jobs write (the Develocity remote build cache, the
   Gradle home, the JDKs). The workflows are guarded against compromised actions and the

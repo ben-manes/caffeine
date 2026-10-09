@@ -61,6 +61,12 @@ locally when `ORG_GRADLE_PROJECT_signingKey` / `...KeyId` / `...Password` are se
 doing before a release, as `signing.setRequired { false }` means an unsigned bundle builds
 silently. Sigstore is gated on `ACTIONS_ID_TOKEN_REQUEST_URL` and so is reachable only in CI.
 
+The release job runs harden-runner with `egress-policy: audit` on purpose: a `block` list that
+missed an endpoint would fail a release whose tag is immutable, while `publish-snapshot` can block
+because the next push retries a failed snapshot. The signing and Central secrets are repository
+secrets, not environment-scoped; the workflows are guarded against compromised actions, and an
+unsigned bundle cannot be published, since the Portal's validation requires the `.asc` files.
+
 Central carries `.asc.md5` and friends for releases up to 3.2.4 that the Portal will not
 reproduce. Gradle never generated them; the OSSRH staging API synthesized them server-side.
 
@@ -153,7 +159,9 @@ mirroring `earlyAccess`), so ErrorProne/NullAway run **only** in the dedicated `
 (build.yml compile + shards, the other analysis jobs, examples, jcstress, …) compiles bare. The
 job is not a required status check (the branch rulesets require Test Results, Coverage, PMD, and
 Spotbugs) and cannot be a `needs:` edge across workflows, so an ErrorProne failure does not block a
-merge.
+merge. All four are bound to the GitHub Actions jobs. Code scanning also posts a `PMD` check, but it
+fails only on new alerts at its error threshold, and PMD's SARIF reports priorities 3-5 as warnings
+and notes, so binding the requirement to it would pass most violations.
 
 **Invariant — do not break:** toggling `lint` changes each `JavaCompile`'s compiler args, hence its
 build-cache key. Any job that pulls compiled output from the remote cache must run with the *same*

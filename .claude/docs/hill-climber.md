@@ -276,6 +276,12 @@ owns it; a confirmed family lands here and in the gate table.
   absence, so a hit-rate threshold does not identify a mechanism boundary. This is another
   class-3/class-5 dose beside `entry_duty`, not a new failure class or mandatory gate bar.
   No individual missed audit's benefit was measured.
+  The `audit-regret/specs/stillness_starve.json` dose is the class at its extreme: a trickle rider
+  and a two-reference band, square-modulated together, keep 63–90% of samples moving, so not one
+  audit arms in 128 samples, the calibration audit included. Seeded 1–8 at 8192 it reads
+  51.16 ± 0.13, identical to `noaudit`, against reactive's 56.08 and a 60.0 static peak, at every
+  period from 2.3 to 9.0 samples. The shrink (`stillness_starve_min.json`, the band dropped) keeps
+  the mechanism, and holding the rider steady arms four audits. Another dose, not a new family.
 - **crashnoise / mixnoise** (`crashnoise.py`, `mixnoise.py`, adv3 rows): the whisper and
   mixture bases under a mean-centred, RMS-normalised rate modulation whose **amplitude** is
   the dose — the walk's exit-bar instruments. The two interior exits test different statistics
@@ -686,6 +692,23 @@ owns it; a confirmed family lands here and in the gate table.
   arrival's tolerance increase. The two size cells are finite-horizon sentinels. No production
   rule was proposed or priced against the corpus; unconditional rejection would also reject
   the valid returns the rail exists to defend.
+- **deadpark** (spec `audit-regret/specs/deadpark.json`, 120 samples, trace seed 11): the moat
+  terrain the calibration audit solves (a zipf core fills main, a two-reference band is caught
+  only past a ~55% window; static 30.6 flat to 50% and 55.0 at 60–65%, LRU 53.1), with two
+  samples of pure scan at s36–37, so s37 is dead. The audit parks at 72% at s21 against a density
+  law that wants a smaller window. On the dead sample `route` tests `hasBlindCorner` before
+  `anchor.held`, and the audit confirm's bridge write zeroed `refractoryLeft`, so a starvation
+  down-probe arms from the park inside its fresh shield (the shield guards `isWorkloadShift`
+  only). The next live sample confirms the stride by average density; a first-round starvation
+  confirm is not audit-grade, so `keepConfirmedPosition` re-plants the claim at 66% with the
+  smoothed rate the dead samples dragged down and releases the hold, and density walks the window
+  to the floor. Seeded 1–8: 38.43 ± 0.22 against the no-burst control's 48.90 ± 2.59. An arm
+  that holds the park on a blind corner (`parkblind`) reads 50.80 ± 0.34, unpriced on the gate
+  battery and on the phase-alternation rows where §5's arming guards lost (`shiftdead`). One
+  percent of live traffic in the burst defeats the trigger, and after the shield the recorded
+  stand-down applies instead. Class 6, class 4 in the recovery. Real corpus: one blind-corner arm
+  from a held park in 10,538 density samples (ConCat), which failed. Constructed-only; a sentinel
+  row.
 
 
 ### Terrain classes, and what reachability means

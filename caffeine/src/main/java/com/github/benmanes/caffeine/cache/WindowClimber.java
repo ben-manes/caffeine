@@ -105,10 +105,13 @@ final class WindowClimber {
     }
   }
 
-  /** Discards a full sample gathered while the cache was too empty to adapt from. */
+  /**
+   * Discards a full sample gathered while the cache was too empty to adapt from, keeping the hit
+   * rate from before the gap for the next comparison.
+   */
   public void discardSample(long maximum, int sketchSampleSize) {
     if (sample.requestCount() >= tier.samplePeriod(maximum, sketchSampleSize)) {
-      sample.reset();
+      sample.discard();
     }
   }
 
@@ -662,6 +665,11 @@ final class WindowClimber {
     /** Clears the sample, retaining its hit rate for the next comparison. */
     void close() {
       close(hitRate());
+    }
+
+    /** Discards the sample, retaining the previous hit rate for the next comparison. */
+    void discard() {
+      close(previousHitRate);
     }
 
     /** Discards the sample and cross-sample memory. */

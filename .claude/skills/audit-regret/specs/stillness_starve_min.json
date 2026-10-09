@@ -1,0 +1,40 @@
+{
+ "max": 8192,
+ "seed": 23,
+ "members": {
+  "loop": {
+   "kind": "loop",
+   "n": 0.85
+  },
+  "tight": {
+   "kind": "trickle",
+   "gap": 8
+  },
+  "pilot": {
+   "kind": "trickle",
+   "gap": 8
+  },
+  "junk": {
+   "kind": "scan"
+  }
+ },
+ "segments": [
+  {
+   "samples": 128,
+   "shares": {
+    "loop": 0.35,
+    "junk": 0.15,
+    "pilot": 0.02,
+    "tight": {
+     "share": 0.15,
+     "mod": {
+      "kind": "square",
+      "period": 3.7,
+      "amp": 1.0
+     }
+    }
+   }
+  }
+ ],
+ "repeat": 1
+}

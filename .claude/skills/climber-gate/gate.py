@@ -170,6 +170,9 @@ CELLS = [
     # adjudicate at admission seeds 1-8 (the gate table records the conditional neighborhood).
     ("ramp_retest", "ramp_retest_8192.lirs", 8192, 8),
     ("ramp_retest_16k", "ramp_retest_16384.lirs", 16384, 8),
+    # /audit-regret 2026-09-24: one dead sample inside a fresh audit park's shield arms a blind-corner
+    # probe that releases the park. Constructed-only sentinel; adjudicate at admission seeds 1-8.
+    ("deadpark", "deadpark_8192.lirs", 8192, 8),
 ]
 
 

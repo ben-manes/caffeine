@@ -114,6 +114,21 @@ final class WindowClimberTest {
     assertThat(climber.sample.previousHitRate).isEqualTo(0.0);
   }
 
+  @Test
+  void discardSample_keepsTheCrossSampleRate() {
+    // a sample gathered below half occupancy says nothing about the split, so the first decision
+    // after the gap compares against the rate from before it rather than against zero
+    var climber = makeClimber();
+    climber.sample.previousHitRate = 0.6;
+    climber.sample.hits += 8192;
+    climber.sample.misses += 8192;
+
+    climber.discardSample(MAXIMUM, /* sketchSampleSize= */ 16_384);
+    assertThat(climber.sample.hits).isEqualTo(0);
+    assertThat(climber.sample.misses).isEqualTo(0);
+    assertThat(climber.sample.previousHitRate).isEqualTo(0.6);
+  }
+
   /* --------------- Sampling --------------- */
 
   @Test
