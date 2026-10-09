@@ -60,7 +60,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
   private int sizeT2;
   private int sizeB1;
   private int sizeB2;
-  private int p;
+  private double p;
 
   public CarPolicy(Config config) {
     var settings = new BasicSettings(config);
@@ -151,7 +151,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
       // Adapt: Increase the target size for the list T1 as: p = min{p + max{1, |B2|/|B1|}, c}
       // Move x at the tail of T2
       // Reset the page reference bit of x.
-      p = Math.min(p + Math.max(1, sizeB2 / sizeB1), maximumSize);
+      p = Math.min(p + Math.max(1, (double) sizeB2 / sizeB1), maximumSize);
       node.remove();
       sizeB1--;
       node.appendToTail(headT2);
@@ -162,7 +162,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
       // Adapt: Decrease the target size for the list T1 as: p = max{p − max{1, |B1|/|B2|}, 0}
       // Move x at the tail of T2.
       // Reset the page reference bit of x.
-      p = Math.max(p - Math.max(1, sizeB1 / sizeB2), 0);
+      p = Math.max(p - Math.max(1, (double) sizeB1 / sizeB2), 0);
       node.remove();
       sizeB2--;
       node.appendToTail(headT2);

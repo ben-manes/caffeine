@@ -62,7 +62,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
   private int sizeB2;
   private int sizeS;
   private int sizeL;
-  private int p;
+  private double p;
   private int q;
 
   public CartPolicy(Config config) {
@@ -165,7 +165,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
       sizeS++;
     } else if (requireNonNull(node).type == QueueType.B1) {
       // Adapt: Increase the target size for the list T1 as: p = min{p + max{1, nS / |B1|}, c}
-      p = Math.min(p + Math.max(1, sizeS / sizeB1), maximumSize);
+      p = Math.min(p + Math.max(1, (double) sizeS / sizeB1), maximumSize);
 
       // Move x to the tail of T1
       node.remove();
@@ -182,7 +182,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
       sizeL++;
     } else if (node.type == QueueType.B2) {
       // Adapt: Decrease the target size for the list T1 as: p = max{p − max{1, nL / |B2|}, 0}
-      p = Math.max(p - Math.max(1, sizeL / sizeB2), 0);
+      p = Math.max(p - Math.max(1, (double) sizeL / sizeB2), 0);
 
       // Move x to the tail of T1
       node.remove();

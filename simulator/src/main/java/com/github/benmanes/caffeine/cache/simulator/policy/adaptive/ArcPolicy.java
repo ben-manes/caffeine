@@ -72,7 +72,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
   private int sizeT2;
   private int sizeB1;
   private int sizeB2;
-  private int p;
+  private double p;
 
   public ArcPolicy(Config config) {
     var settings = new BasicSettings(config);
@@ -118,7 +118,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     // Adapt p = min{ c, p + max{ |B2| / |B1|, 1} }. REPLACE(p).
     // Move x to the top of T2 and place it in the cache.
 
-    p = Math.min(maximumSize, p + Math.max(sizeB2 / sizeB1, 1));
+    p = Math.min(maximumSize, p + Math.max((double) sizeB2 / sizeB1, 1));
     evict(node);
 
     sizeT2++;
@@ -134,7 +134,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     // Adapt p = max{ 0, p – max{ |B1| / |B2|, 1} } . REPLACE(p).
     // Move x to the top of T2 and place it in the cache.
 
-    p = Math.max(0, p - Math.max(sizeB1 / sizeB2, 1));
+    p = Math.max(0, p - Math.max((double) sizeB1 / sizeB2, 1));
     evict(node);
 
     sizeT2++;
@@ -198,7 +198,9 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     //   then move the LRU page of T1 to the top of B1 and remove it from the cache.
     // else move the LRU page in T2 to the top of B2 and remove it from the cache.
 
-    if ((sizeT1 >= 1) && (((candidate.type == QueueType.B2) && (sizeT1 == p)) || (sizeT1 > p))) {
+    // With the strict case first, |T1| ≥ p on a B2 hit is the paper's |T1| = p, without testing a
+    // real-valued p for equality
+    if ((sizeT1 >= 1) && ((sizeT1 > p) || ((candidate.type == QueueType.B2) && (sizeT1 >= p)))) {
       Node victim = requireNonNull(headT1.next);
       victim.remove();
       victim.type = QueueType.B1;
