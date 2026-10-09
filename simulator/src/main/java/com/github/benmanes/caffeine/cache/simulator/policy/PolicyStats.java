@@ -254,7 +254,7 @@ public class PolicyStats {
   }
 
   public void setPercentAdaption(double percentAdaption) {
-    this.percentAdaption = (Math.floor(100 * percentAdaption) / 100);
+    this.percentAdaption = percentAdaption;
   }
 
   public double hitRate() {

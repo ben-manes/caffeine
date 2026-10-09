@@ -57,11 +57,12 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   private static final boolean debug = false;
   private static final boolean trace = false;
 
-  private final double initialPercentMain;
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final HillClimber climber;
   private final Admitter admitter;
+
+  private final int initialMaxWindow;
   private final int maximumSize;
 
   private final Node headWindow;
@@ -81,15 +82,15 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     int maxMain = (int) (maximumSize * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxWindow = maximumSize - maxMain;
+    this.initialMaxWindow = maxWindow;
 
     this.data = new Long2ObjectOpenHashMap<>();
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.headWindow = new Node();
 
-    this.initialPercentMain = percentMain;
     this.policyStats = new PolicyStats(name() + " (%s %.0f%%)",
-        strategy.name().toLowerCase(US), 100 * (1.0 - initialPercentMain));
+        strategy.name().toLowerCase(US), 100 * (1.0 - percentMain));
     this.admitter = Admission.TINYLFU.from(settings.config(), policyStats);
     this.climber = strategy.create(percentMain, settings.config());
 
@@ -293,8 +294,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   @Override
   public void finished() {
-    policyStats.setPercentAdaption(
-        (maxWindow / (double) maximumSize) - (1.0 - initialPercentMain));
+    policyStats.setPercentAdaption((maxWindow - initialMaxWindow) / (double) maximumSize);
     printSegmentSizes();
 
     long actualWindowSize = data.values().stream().filter(n -> n.queue == WINDOW).count();

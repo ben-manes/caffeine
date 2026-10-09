@@ -19,6 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimberWindowTinyLfuPolicy.HillClimberWindowTinyLfuSettings;
@@ -51,6 +52,20 @@ final class ClimberBaselineTest {
       swept.record(key);
     }
     assertThat(swept.stats().hitCount()).isEqualTo(alone.stats().hitCount());
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {512, 1000})
+  void adaption_unmoved_isZero(int maximumSize) {
+    // The starting window is the entries that percent-main leaves (6 of 512, 10 of 1000), so the
+    // adaption is measured from it rather than from 1.0 - percent-main
+    var config = ConfigFactory.parseString("caffeine.simulator.maximum-size = " + maximumSize)
+        .withFallback(ConfigFactory.load())
+        .getConfig("caffeine.simulator");
+    var policy = new HillClimberWindowTinyLfuPolicy(HillClimberType.SIMPLE, 0.99,
+        new HillClimberWindowTinyLfuSettings(config));
+    policy.finished();
+    assertThat(policy.stats().percentAdaption()).isEqualTo(0.0);
   }
 
   private static KeyOnlyPolicy policy(HillClimberType strategy, String percentMain) {

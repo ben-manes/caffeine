@@ -914,6 +914,10 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
   `build-ea.yml`) run their suites once: the intermittent failure a retry absorbs is what they are
   scheduled to catch. Their retry was for flaky network calls, and from June to October 2026 it
   absorbed five test failures and no network failure; bring it back if that noise returns.
+- `rerun-cancelled` re-running a Build job that hit its `timeout-minutes`. Every timeout it has
+  re-run was the Fray leg stalling after its tests finished, on a remote build-cache store that
+  hung (gradle/gradle#39064, a temporary network problem), and a re-run recovers it. A test hang
+  that does not recur therefore ends green; one that does ends red at the third attempt.
 - jcstress, lincheck, `test`, `fuzzTest` and `frayTest` tasks being cacheable rather than
   `cacheIf { false }`, so identical inputs (one tree pushed to two branches, a re-run, a
   version-only change) replay a cached pass without re-fuzzing or re-exploring. The weekly canaries
@@ -930,10 +934,17 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
 - The `Stress Tests` job asserting nothing: `Stresser` prints status and throughput and exits 0
   after `--duration`, so it is a smoke run that fails only if the JVM dies, not an invariant check.
 - Dependency verification is not wanted; the egress allowances are intentional.
+- The release restoring caches that other jobs write (the Develocity remote build cache, the
+  Gradle home, the JDKs). The workflows are guarded against compromised actions and the
+  configuration cache is encrypted, so a cache-free release is excessive for now; if that
+  changes, disable caching for the release job only (`--no-build-cache` and no cache restores).
 - `coverage` and `test-results` skipping after a failed `tests-minimum` matrix. The failed shard
   makes the Build fail; fix that failure. Keep downstream summaries skipped, since publishing
   partial results lowers test counts and coverage. Do not add an always-running downstream result
-  gate solely because the required summary checks accept a skipped conclusion.
+  gate solely because the required summary checks accept a skipped conclusion. The same holds when
+  the early-access compile leg fails upstream (an EA JDK checksum mismatch in `setup-java`) and
+  cancels the test matrix: the Build is red, the outage is temporary, and the next run tests every
+  commit pushed during it.
 - The cacheable `jmh` task behind the benchmark gists, `analysis.yml`'s SARIF merge keeping only
   the first input's `tool`, the `git diff` metadata freshness check missing a deleted or added file,
   and the opt-in `-Pjfr` profile (JDK 16+ event settings, no declared recording output).
