@@ -198,6 +198,9 @@ jobs:
     strategy:
       matrix:
         suite: ${{ fromJson(needs.setup.outputs.suites) }}
+        exclude:
+          # The Fray suite runs only up to JDK 25, so tests-minimum covers it
+          - suite: caffeine:frayTest
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
