@@ -4923,8 +4923,8 @@ final class BoundedLocalCacheTest {
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       await().untilTrue(started);
+      writer.set(Thread.currentThread());
       assertThat(cache.putIfAbsent(context.absentKey(), context.absentKey())).isNull();
     }, executor);
     cache.data.compute(context.absentKey(), (k, v) -> {
@@ -4954,8 +4954,8 @@ final class BoundedLocalCacheTest {
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       await().untilTrue(started);
+      writer.set(Thread.currentThread());
       assertThat(cache.putIfAbsent(context.absentKey(), context.absentKey())).isNull();
     }, executor);
     cache.data.compute(context.absentKey(), (k, v) -> {
@@ -5708,8 +5708,8 @@ final class BoundedLocalCacheTest {
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       await().untilTrue(started);
+      writer.set(Thread.currentThread());
       assertThat(cache.remove(key)).isNull();
     }, executor);
     synchronized (node) {
@@ -5741,8 +5741,8 @@ final class BoundedLocalCacheTest {
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       await().untilTrue(started);
+      writer.set(Thread.currentThread());
       assertThat(cache.remove(key, value)).isFalse();
     }, executor);
     synchronized (node) {
@@ -5773,8 +5773,8 @@ final class BoundedLocalCacheTest {
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       await().untilTrue(started);
+      writer.set(Thread.currentThread());
       assertThat(cache.replace(key, value)).isNull();
     }, executor);
     synchronized (node) {
@@ -5801,8 +5801,8 @@ final class BoundedLocalCacheTest {
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       await().untilTrue(started);
+      writer.set(Thread.currentThread());
       assertThat(cache.replace(key, value, context.absentValue())).isFalse();
     }, executor);
     synchronized (node) {
@@ -5828,8 +5828,8 @@ final class BoundedLocalCacheTest {
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       await().untilTrue(started);
+      writer.set(Thread.currentThread());
       var result = cache.doComputeIfAbsent(key, node.getKeyReference(),
           k -> context.absentValue(), new ComputeContext<>(), /* recordStats= */ false);
       assertThat(result).isEqualTo(context.absentValue());
@@ -5997,8 +5997,8 @@ final class BoundedLocalCacheTest {
     var started = new AtomicBoolean();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       await().untilTrue(started);
+      writer.set(Thread.currentThread());
       var result = cache.remap(context.firstKey(), node.getKeyReference(),
           (k, v) -> context.absentValue(), context.expiresVariably() ? context.expiry() : null,
           new ComputeContext<>(), /* computeIfAbsent= */ true);
@@ -7135,17 +7135,13 @@ final class BoundedLocalCacheTest {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(context.absentKey())));
     var errors = new ConcurrentLinkedDeque<Throwable>();
     doAnswer(invocation -> {
-      ConcurrentTestHarness.execute(() -> {
-        try {
-          var value = cache.remove(context.absentKey());
-          assertThat(value).isEqualTo(context.absentValue());
-        } catch (Throwable t) {
-          errors.addLast(t);
-        }
-      });
+      var removal = CompletableFuture.runAsync(() -> {
+        var value = cache.remove(context.absentKey());
+        assertThat(value).isEqualTo(context.absentValue());
+      }, executor);
 
       try {
-        await().until(() -> !cache.containsKey(context.absentKey()));
+        assertThat(removal).succeedsWithNull();
         assertThat(node.isRetired()).isTrue();
         return null;
       } catch (Throwable t) {

@@ -433,8 +433,10 @@ non-empty. That path is authoritative, because the directory it names is the orc
 label for the run and need not match what you call yourself. Absent both, use
 `.local/audits/<model>/<skill-name>.md` (create the directory if absent) where
 `<model>` is your own short model id (`opus-5`, `fable-5`, `gpt-5.6-sol`) and `<skill-name>`
-matches the invoking skill — see `.claude/docs/audit-output.md`. **This write is
-mandatory — never inline-only.** Writing the file and returning your findings to
+matches the invoking skill — see `.claude/docs/audit-output.md`. A sub-agent you spawn
+inherits `AUDIT_REPORT_PATH`, so give a delegated agent that writes its own report a path of
+its own in its prompt; challenge and witness agents return results and write no report. **This
+write is mandatory — never inline-only.** Writing the file and returning your findings to
 the parent are BOTH required: write the file first, then summarize it in your
 returned message. The returned message does not substitute for the file — the file
 is the durable artifact, the message is the relay. You are forbidden from reading

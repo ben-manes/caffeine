@@ -541,9 +541,9 @@ final class AsyncLoadingCacheTest {
     var writer = new AtomicReference<@Nullable Thread>();
 
     var future = CompletableFuture.supplyAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
       return cache.getAll(ImmutableSet.of(context.absentKey())).join();
     }, executor);
 

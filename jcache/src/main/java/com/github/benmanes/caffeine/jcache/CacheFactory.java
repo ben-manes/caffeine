@@ -37,7 +37,6 @@ import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
-import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
@@ -157,7 +156,6 @@ final class CacheFactory {
     final Ticker ticker;
     final String cacheName;
     final Executor executor;
-    final Scheduler scheduler;
     final ExpiryPolicy expiryPolicy;
     final CacheManagerImpl cacheManager;
     final EventDispatcher<K, V> dispatcher;
@@ -173,7 +171,7 @@ final class CacheFactory {
       this.statistics = new JCacheStatisticsMXBean();
       this.ticker = config.getTickerFactory().create();
       this.executor = config.getExecutorFactory().create();
-      this.scheduler = config.getSchedulerFactory().create();
+      var scheduler = config.getSchedulerFactory().create();
       this.expiryPolicy = config.getExpiryPolicyFactory().create();
       this.dispatcher = new EventDispatcher<>(executor);
       this.copier = config.isStoreByValue()
@@ -246,23 +244,25 @@ final class CacheFactory {
 
     /** Configures the maximum size and returns if set. */
     private boolean configureMaximumSize() {
-      if (config.getMaximumSize().isPresent()) {
-        caffeine.maximumSize(config.getMaximumSize().getAsLong());
+      if (config.getMaximumSize().isEmpty()) {
+        return false;
       }
-      return config.getMaximumSize().isPresent();
+      caffeine.maximumSize(config.getMaximumSize().getAsLong());
+      return true;
     }
 
     /** Configures the maximum weight and returns if set. */
     private boolean configureMaximumWeight() {
-      if (config.getMaximumWeight().isPresent()) {
-        caffeine.maximumWeight(config.getMaximumWeight().getAsLong());
-        Weigher<K, V> weigher = config.getWeigherFactory().map(Factory::create)
-            .orElseThrow(() -> new IllegalStateException("Weigher not configured"));
-        caffeine.weigher((K key, Expirable<V> expirable) -> {
-          return weigher.weigh(key, expirable.get());
-        });
+      if (config.getMaximumWeight().isEmpty()) {
+        return false;
       }
-      return config.getMaximumWeight().isPresent();
+      caffeine.maximumWeight(config.getMaximumWeight().getAsLong());
+      Weigher<K, V> weigher = config.getWeigherFactory().map(Factory::create)
+          .orElseThrow(() -> new IllegalStateException("Weigher not configured"));
+      caffeine.weigher((K key, Expirable<V> expirable) -> {
+        return weigher.weigh(key, expirable.get());
+      });
+      return true;
     }
 
     /** Configures write expiration and returns if set. */

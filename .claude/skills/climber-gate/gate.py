@@ -173,6 +173,12 @@ CELLS = [
     # /audit-regret 2026-09-24: one dead sample inside a fresh audit park's shield arms a blind-corner
     # probe that releases the park. Constructed-only sentinel; adjudicate at admission seeds 1-8.
     ("deadpark", "deadpark_8192.lirs", 8192, 8),
+    # /audit-regret 2026-09-17: a narrow static peak. The narrow face's verdict needs four above-bar
+    # samples ending on or after the walk's fifth, which lands three strides past the peak; the wide
+    # face confirms and parks, then the stand-down discards the park on the machine's own recovery.
+    # 288 samples (the discard lands near s116); seeds 1-8 are one decision path.
+    ("needle", "needle_8192.lirs", 8192, 8),
+    ("needle_wide", "needle_wide_8192.lirs", 8192, 8),
 ]
 
 

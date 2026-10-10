@@ -66,9 +66,10 @@ tasks.withType<JavaCompile>().configureEach {
     compilerArgs.addAll(listOf("-Xlint:all", "-parameters",
       "-Xmaxerrs", "500", "-Xmaxwarns", "500"))
     val failOnWarnings = isCI().zip(isLintEnabled()) { ci, lint -> ci && lint }
-    compilerArgumentProviders.add {
-      if (failOnWarnings.get()) listOf("-Werror") else emptyList()
-    }
+    compilerArgumentProviders.add(object : CommandLineArgumentProvider {
+      @get:Input val werror = failOnWarnings
+      override fun asArguments() = if (werror.get()) listOf("-Werror") else emptyList()
+    })
     encoding = "UTF-8"
   }
 }

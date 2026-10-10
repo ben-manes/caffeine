@@ -657,6 +657,42 @@ not read prior reports. Strike a line when it is done or dead.
   one round (`settleflip`'s cold-start inversion; `pinnacle`'s one-stride overshoot); if
   either family is promoted, the bound belongs in `hill-climber.md` as a recorded residual
   rather than a round-4 note.
+- Round 10's leftovers (2026-09-17, fable-5.1). `needle` is constructed-only: a `marginal.py` static
+  anatomy at a 1% grid over the non-convex real cells (`P3`, `fiu_webmail`) is the realism check,
+  and the ten-point grid cannot see the shape, so a screen ranked by coarse gap will miss a narrow
+  interior peak (the round's finding ranked 10th of 17) and a ~96-sample screen reads a retention
+  loss as solved (the wide face's discard lands at ~s116). `pricedshift` now has a +5.9 benefit
+  witness (one decision: identical to the shipped machine in every dumped field through s115 on
+  every seed checked; +2.8 to +5.9 across the surface) and still no measured cost side on the
+  families that need the discard to fire (`ghostclaim`, `regimeramp`, the moat rows); price that
+  before anything else. The narrow face's rule is four consecutive above-bar samples ending on or
+  after the walk's fifth, and every cell shares the calibration's 32.0% park, so its verdict is one
+  reading (the 62.7% sample); a share of 0.10 is a 3-in-12 coin that a two-seed ladder read as a
+  cell, so give a rung near a threshold the seeds a classification cell gets, and read admission
+  seeds as one decision path unless a dump diff says otherwise. Promoted 2026-10-10 as two sentinel
+  rows, re-measured identical at HEAD; round 8's `pinnacle` survives only in its record, as a
+  one-stride overshoot on arrival, which the narrow face is not. The narrow face has no repair
+  candidate: what separates a three-sample needle from a three-sample spike is persistence at rest,
+  which a moving walk never measures, and every pull-back variant in §5 died on that distinction.
+  `b_creepclaim` (the blind lane's independent `ramp_retest`) is a 5-vs-3 basin lottery with a 15pp
+  spread selected by a 0.24pp difference between adjacent samples of one walk: the best-sample rule
+  parks on the catch region's near edge or one stride in, and an insert-rate ramp erodes the edge
+  under the shield with the claim resynced down; reachable there only through the veto,
+  unchallenged, and wanting a cell that reaches it without one. Class 8: `s_twinwait_a/b` met the
+  pair premise for the first time (40 of 40 trajectory lines byte-identical through the decision:
+  the divergent member absent from the first segment, `pairs` drawing nothing at construction), and
+  produced no regret because the prefix left the machine parked by the cold-start misconfirm rather
+  than in floor backoff; the next pair keeps the construction and needs a prefix with no warmup
+  trend. Class 7 has its first witness above scatter, and only as a same-position measurement inside
+  a surviving park (the script's `undo_deficit` stayed phase-confounded on the shipped arm);
+  `b_undodebt` and `s_emberfade` sat inside their scatter. The FIU near-basin settle failed again
+  (`s_nearsettle` rests in the near basin for 30 samples and then crosses: the valley must be deeper
+  than `AUDIT_BAR_FRACTION` of the base rate, as `lowbar`'s is). After an `AUDITCONFIRM+home` the
+  follow rule's staleness guard fires whenever the best sample beat the confirm-time smoothed rate
+  by 5pp, which the pull-back makes likely by construction; unpriced. The arrival-discard link
+  showed on three independent cells in one round. Process: give the sighted lane §3, the class table
+  and the directions, and §5 and the gate table by heading only; it had nothing on disk at 28
+  minutes and delivered within three of a nudge.
 - The real-trace episode readings of round 11's teacher (seed 1, one product draw, no ablation arm
   confirmed any; each matches a recorded class): (1) the cloud-physics rest point, with the
   `cp_w097`/`w098`/`w100@16384` family as its cleanest real class-1 witness, for the carried

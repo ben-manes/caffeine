@@ -691,7 +691,11 @@ owns it; a confirmed family lands here and in the gate table.
   retest limits the loss. Here the existing retest is reached and passes because of the
   arrival's tolerance increase. The two size cells are finite-horizon sentinels. No production
   rule was proposed or priced against the corpus; unconditional rejection would also reject
-  the valid returns the rail exists to defend.
+  the valid returns the rail exists to defend. The best-sample rule adds a basin selector on this
+  terrain: in an independent construction (round 10's blind lane), two basins identical through s33
+  split when the recovery audit's first sample read 0.24pp above its second, so
+  `Walk.rememberBest` parked on the catch region's near edge instead of one stride inside, and the
+  ramp eroded that edge under the fresh-park shield (parked 56.7 against 73.6).
 - **deadpark** (spec `audit-regret/specs/deadpark.json`, 120 samples, trace seed 11): the moat
   terrain the calibration audit solves (a zipf core fills main, a two-reference band is caught
   only past a ~55% window; static 30.6 flat to 50% and 55.0 at 60–65%, LRU 53.1), with two
@@ -709,6 +713,64 @@ owns it; a confirmed family lands here and in the gate table.
   stand-down applies instead. Class 6, class 4 in the recovery. Real corpus: one blind-corner arm
   from a held park in 10,538 density samples (ConCat), which failed. Constructed-only; a sentinel
   row.
+- **needle** (specs `audit-regret/specs/needle.json` and `needle_wide.json`, 288 samples): a narrow
+  static peak with a loss on both sides. A loop (a cyclic scan) over 0.55·max at 28% of requests
+  (period ~16k requests, longer than the window's residency at every window up to the cap, since a
+  54-58% one-shot scan holds residency near W/0.7 requests, so only main can hold it, by frequency,
+  and only while main has room: window ≤ 45%), a two-reference band 0.57·max apart caught from ~41%,
+  and the one-shot scan. Static, dense-swept at 1%: flat within 0.4pp from 1% to 40%, a peak at
+  44-45%, then ~-0.5pp per 1% of window to 17-21 at the cap; LRU 8-11. The product held at a fixed
+  window matches the reference within 0.25pp over 21 (cell, window) pairs, 0.12 around the peak. An
+  audit confirms on four consecutive samples above its frozen reference plus 1pp ending on or after
+  the walk's fifth sample (`AUDIT_CONFIRM_STREAK` with `AUDIT_COMMITMENT`) and `nextStride` never
+  commands zero, so the machine keeps a peak only where the curve stays above the reference across
+  four consecutive stride positions reached late enough in the walk. The calibration audit parks at
+  32.0% on every cell, seed and size, so the park's up-audit samples 38.2 / 44.3 / 50.6 / 56.7 /
+  62.7%, the first stride lands just under the catch point, and the verdict is one reading: whether
+  the 62.7% sample, three strides past the peak, clears the bar. The band's share sets that margin
+  (-5.70 -4.54 -3.67 -2.08 -1.25 -0.99 -0.54 at shares 0.04-0.10, +1.08 at 0.12), a gradient that is
+  a threshold in the outcome. **Narrow** (shares ≤ 0.09): at 0.08 the rung-16 audit reads 33.89 /
+  32.83 / 30.13 against a 28.58 bar, misses on the fifth, and walks on up the far slope to a crash;
+  the rung-32 one reads 34.11, overshoots, reverses, and re-crosses the peak at 27.28 because its
+  far-side excursion evicted main's loop, then fails through its base (audit rung 64, wait 128, then
+  256); at 576 samples the rung-64 one strides 25% across it (57.0% above, 80.2% a crash). 27.15
+  against 33.73 at 44%, `reactive` 26.98 and `noaudit` 26.88 pinned as well (the flat approach has
+  no gradient for either law, so the arms read the flat's rate from different windows), `closed` ≤
+  0.05 while the gap grows 3.65 → 7.71 with the prize; pinned on 12 of 12 admission seeds (one
+  decision path: the seeds move sample rates by up to 2.6pp and flip no decision), at 7 of 7
+  alignments reached by planting the start so the calibration parks at 33-38% or not at all, on
+  three trace seeds, at 16384 and at 576 samples (27.31 against 34.51). A run of four is collected
+  and voided where the walk enters the region on its first stride (the band 0.52·max apart:
+  38.2-56.6% above, 62.5% not), and the same four positions confirm when reached later in a walk, so
+  the region's width alone does not decide it. A share of 0.10 is a 3-in-12 coin (a third pass
+  clears the bar by 0.13pp) and is not a row. **Wide** (0.11-0.12): the audit confirms on its fifth
+  sample on the far slope and the best-sample rule returns it to the peak, where it parks at the
+  ceiling's rate; the park's next up-audit is the tolerant retry and rides three below-bar strides
+  up the far slope, the restored park reads 24.5 against a parked 38.0, and the recovery's second
+  sample (a +8.6pp first difference) lands one sample after `RETREAT_COVER`, so `isWorkloadShift`
+  reads the machine's own recovery as a new workload and the stand-down discards a correct claim on
+  its anchor; density then slides off (its rest point is the floor, main's hits being real and worth
+  nothing at the margin below the knee) and the starvation ladder cycles near-edge confirms 1 → 64
+  without a park. 28.56 against 36.37 at 45%, `noaudit` 26.15, and `pricedshift` **34.45**: the two
+  arms are identical in every dumped field until the one sample where the shipped machine stands
+  down, on every seed checked, so +5.9 is that decision. The same responder fires on the narrow face
+  at a share of 0.04 and costs nothing, the park it discards being on the flat. At 96 samples the
+  wide face reads solved: the discard lands at ~s116. At the restored park the deficit is -13 then
+  -4.5 after the up-audit's crash and -1.2 after a down-audit's (4 of 4 each, parked sd ~0.2, ~10:1
+  on every seed of both wide cells): class 7's first synthetic reading above scatter, and small by
+  itself. Robust to the band's distance (0.52-0.62), the loop's size (0.50 flips the narrow cell
+  wide by moving the knee out, the fifth sample clearing by +0.44), two regenerated traces and 16384
+  (14 of 14 neighborhood cells at 4.9-8.2). Class 4 in the verdict's geometry (narrow), and class 7
+  feeding class 6 (wide), both owned by the recovery layer; class 1 is the co-requisite of each. The
+  narrow face needs narrowness only, the run breaking where the far slope has merely returned to the
+  flat's level; the far side's depth is what class 7 and the wide face's route need. Nearest
+  recorded: `crestpast`, whose far side declines slowly enough for the fifth sample to clear, and
+  every far-band family, whose plateau runs to the cap where a walk wall-sits for its streak. Round
+  8's `pinnacle` (record only; its workspace is gone) overshoots by one stride on arrival, which the
+  narrow face does not. Constructed; the narrow face's prize is bounded near 8pp by the generator (a
+  steeper far side lets the window hold the loop itself), and no real instance is claimed. The
+  ten-point anchor grid has no point between 40% and 50% and under-reads this ceiling by 1.2-3.6pp;
+  sweep it densely.
 
 
 ### Terrain classes, and what reachability means

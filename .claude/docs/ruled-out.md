@@ -169,6 +169,46 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   with a shape that keeps the 64-entry burst and the saturated and 1M/s CPU together, or with a
   production workload whose cost is the in-lock submission. Deferring only the notifications that
   would run inline is under *A broken or misconfigured executor is user error*.
+- **Moving the eviction lock away from the cache object.** The constructor allocates the lock
+  first, so in allocation order the lock and its `Sync`, whose `state` every lock, unlock and
+  `tryLock` CASes, follow the cache object. With the eviction counters padded, only an expiring or
+  refreshing cache has fields that a hit loads at its end (its duration and ticker), 24 to 40 bytes
+  before the `Sync`. On an Apple M3 Max (JDK 27, eight readers, a writer at 500k put+invalidate/s),
+  a reachable 128-byte gap between the cache and the lock, which keeps every later object's
+  alignment, left the hit unchanged (-0.21 ns [-0.83, +0.38]) and cut the writer's put+invalidate
+  from 351 to 296 ns, most of it at the placements where the `Sync` shares the duration's
+  128-byte line (78 ns there): the writer's lock CASes take a line that the readers hold. Allocating
+  the write buffer first, which puts its leading padding after the cache at no memory cost, made the
+  hit 1 ns slower (23.2 to 24.2 ns) and moved a writer cost of similar size elsewhere, since it also
+  rearranges the objects that follow. No collector keeps this neighbour for a cache in use: G1 and
+  Parallel put the write buffer after the cache at its first young collection, and ZGC relocates a
+  cache that readers are touching on its own (nothing within 128 bytes of 9 of 10 caches). The cost
+  lasts only until the cache first moves, so a pad would cost memory for nothing after that. Reopen
+  with a collector or workload that keeps the lock beside a cache in use.
+- **Opaque reads of the expiration and refresh durations.** The generated duration getters are
+  `getAcquire` (the fields were plain `volatile` until #1897 gave `maximum` and `weightedSize`
+  lock-free readers), although the durations publish nothing else, so `getOpaque` would keep the
+  64-bit atomicity. C2 on JDK 27 emits each acquire load as `ldar`: two per expire-after-access hit
+  (`hasExpired`, `setAccessTime`), one per expire-after-write hit, and the opaque build emits plain
+  `ldr` instead. On an Apple M3 Max (eight readers and a writer, mean over 16 placements) opaque
+  measured +0.34 ns [-0.56, +1.16] per expire-after-access hit and +0.32 [-0.42, +1.15] per
+  expire-after-write hit on JDK 27, and +0.40 [-0.28, +0.92] on JDK 25; pooled over 64 pairs, +0.35
+  [-0.16, +0.84]. That is within noise, and the `readBuffer` ruling keeps the better-specified mode
+  when the weaker one is not measurably cheaper (`design-decisions.md`, "Read recording starts with
+  the frequency sketch"). Reopen with a resolved gain, such as on a platform where an acquire load
+  costs a fence.
+- **Separating `ConcurrentStatsCounter`'s eviction adders from its hit and miss adders.** Under
+  compact object headers, the default on JDK 27, a `LongAdder` is 24 bytes and the counter allocates
+  its seven back to back, so `hitCount.cells` sits 108 bytes from `evictionCount.base` and
+  `missCount.cells` 84: in allocation order they share a 128-byte line at 2 and 5 of the 16
+  placements, and maintenance CASes `evictionCount.base` on every eviction. (Default headers give
+  32-byte adders, with `hitCount` never on that line and `missCount` at 1 of 16; once the readers'
+  contention has inflated `hitCount`, a young collection copies its cells right after it, away from
+  the others.) On an Apple M3 Max (JDK 27, eight readers, a writer evicting about 500k entries/s),
+  moving the eviction adders 120 bytes further gained nothing at the two placements where `hitCount`
+  shares the line (-1.57 and +0.10 ns per lookup, against -0.95 at a control placement). Statistics
+  are best-effort and lowest priority. Reopen with a measured cost at the sharing placements under an
+  eviction rate an application reaches.
 
 ---
 

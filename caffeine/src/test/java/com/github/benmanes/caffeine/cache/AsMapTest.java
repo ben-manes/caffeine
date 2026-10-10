@@ -559,9 +559,9 @@ final class AsMapTest {
     var writer = new AtomicReference<@Nullable Thread>();
 
     var future = CompletableFuture.<@Nullable Int>supplyAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
       return map.putIfAbsent(context.absentKey(), context.absentValue());
     }, executor);
 
@@ -1172,9 +1172,9 @@ final class AsMapTest {
     var writer = new AtomicReference<@Nullable Thread>();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
       map.replaceAll((k, v) -> context.absentValue());
     }, executor);
 
@@ -2492,9 +2492,9 @@ final class AsMapTest {
     var writer = new AtomicReference<@Nullable Thread>();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
       boolean modified = map.keySet().removeIf(key -> key.equals(context.firstKey()));
       if (context.isGuava()) {
         assertThat(modified).isTrue();
@@ -2614,9 +2614,9 @@ final class AsMapTest {
 
     map.put(context.absentKey(), context.absentValue());
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
       boolean modified = map.keySet().retainAll(context.original().keySet());
       if (context.isGuava()) {
         assertThat(modified).isTrue();
@@ -2983,9 +2983,9 @@ final class AsMapTest {
     var writer = new AtomicReference<@Nullable Thread>();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
       var value = requireNonNull(context.original().get(context.firstKey()));
       boolean modified = map.values().removeAll(ImmutableSet.of(value));
       if (context.isGuava()) {
@@ -3047,9 +3047,9 @@ final class AsMapTest {
     var writer = new AtomicReference<@Nullable Thread>();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
 
       var value = requireNonNull(context.original().get(context.firstKey()));
       boolean modified = map.values().remove(value);
@@ -3298,9 +3298,9 @@ final class AsMapTest {
 
     map.put(context.absentKey(), context.absentValue());
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
       boolean modified = map.values().retainAll(context.original().values());
       if (context.isGuava()) {
         assertThat(modified).isTrue();
@@ -3838,9 +3838,9 @@ final class AsMapTest {
     var writer = new AtomicReference<@Nullable Thread>();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
       var mapping = ImmutableMap.of(context.firstKey(),
           requireNonNull(context.original().get(context.firstKey())));
       assertThat(map.entrySet().removeAll(mapping.entrySet())).isFalse();
@@ -3923,9 +3923,9 @@ final class AsMapTest {
     var writer = new AtomicReference<@Nullable Thread>();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
       var entry = Map.entry(context.firstKey(),
         requireNonNull(context.original().get(context.firstKey())));
       assertThat(map.entrySet().remove(entry)).isFalse();
@@ -4185,9 +4185,9 @@ final class AsMapTest {
 
     map.put(context.absentKey(), context.absentValue());
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
       boolean modified = map.entrySet().retainAll(context.original().entrySet());
       if (context.isGuava()) {
         assertThat(modified).isTrue();

@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
@@ -128,6 +129,32 @@ final class CoalescingBulkLoaderTest {
     // A throwing mappingFunction must complete the futures exceptionally, not leave them hanging
     var error = assertThrows(ExecutionException.class, () -> cache.get(1).get(5, TimeUnit.SECONDS));
     assertThat(error).hasCauseThat().isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void mappingFunctionFailsThenRecovers() throws Exception {
+    var calls = new AtomicInteger();
+    var loader = new CoalescingBulkLoader.Builder<Integer, Integer>()
+        .mappingFunction(keys -> {
+          if (calls.getAndIncrement() == 0) {
+            throw new IllegalStateException("load failed");
+          }
+          return keys.stream().collect(toMap(key -> key, key -> -key));
+        })
+        .maxTime(Duration.ofMillis(100))
+        .parallelism(1)
+        .maxSize(2)
+        .build();
+    var cache = Caffeine.newBuilder().buildAsync(loader);
+
+    // A failed batch must fail every future in it and leave the pipeline loading later batches
+    var first = cache.get(1);
+    var second = cache.get(2);
+    var firstError = assertThrows(ExecutionException.class, () -> first.get(5, TimeUnit.SECONDS));
+    var secondError = assertThrows(ExecutionException.class, () -> second.get(5, TimeUnit.SECONDS));
+    assertThat(firstError).hasCauseThat().isInstanceOf(IllegalStateException.class);
+    assertThat(secondError).hasCauseThat().isInstanceOf(IllegalStateException.class);
+    assertThat(cache.get(3).get(5, TimeUnit.SECONDS)).isEqualTo(-3);
   }
 
   @Test

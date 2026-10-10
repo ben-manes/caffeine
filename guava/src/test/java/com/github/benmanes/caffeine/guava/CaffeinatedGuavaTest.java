@@ -78,10 +78,12 @@ final class CaffeinatedGuavaTest {
   @Test
   void serializable() {
     SerializableTester.reserialize(CaffeinatedGuava.build(Caffeine.newBuilder()));
-    SerializableTester.reserialize(CaffeinatedGuava.build(
+    var identityCopy = SerializableTester.reserialize(CaffeinatedGuava.build(
         Caffeine.newBuilder(), IdentityLoader.INSTANCE));
-    SerializableTester.reserialize(CaffeinatedGuava.build(Caffeine.newBuilder(),
+    assertThat(identityCopy.getUnchecked(1)).isEqualTo(1);
+    var functionCopy = SerializableTester.reserialize(CaffeinatedGuava.build(Caffeine.newBuilder(),
         CacheLoader.from((Function<Object, Object> & Serializable) key -> key)));
+    assertThat(functionCopy.getUnchecked(1)).isEqualTo(1);
   }
 
   @Test

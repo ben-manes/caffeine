@@ -142,11 +142,11 @@ public final class EventDispatcher<K, V> {
    */
   @SuppressWarnings("PMD.CloseResource")
   public void register(CacheEntryListenerConfiguration<K, V> configuration) {
-    if (configuration.getCacheEntryListenerFactory() == null) {
+    var listenerFactory = configuration.getCacheEntryListenerFactory();
+    if (listenerFactory == null) {
       return;
     }
-    var listener = new EventTypeAwareListener<K, V>(
-        configuration.getCacheEntryListenerFactory().create());
+    var listener = new EventTypeAwareListener<K, V>(listenerFactory.create());
 
     CacheEntryEventFilter<K, V> filter;
     try {

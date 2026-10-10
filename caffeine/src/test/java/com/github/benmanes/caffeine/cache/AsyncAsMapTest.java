@@ -557,9 +557,9 @@ final class AsyncAsMapTest {
     var writer = new AtomicReference<@Nullable Thread>();
 
     var future = CompletableFuture.supplyAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
       var f = cache.asMap().putIfAbsent(context.absentKey(), context.absentValue().toFuture());
       return requireNonNull(f).join();
     }, executor);
@@ -1177,9 +1177,9 @@ final class AsyncAsMapTest {
     var writer = new AtomicReference<@Nullable Thread>();
 
     var future = CompletableFuture.runAsync(() -> {
-      writer.set(Thread.currentThread());
       started.set(true);
       await().untilTrue(computing);
+      writer.set(Thread.currentThread());
       cache.asMap().replaceAll((k, v) -> context.absentValue().toFuture());
     }, executor);
 
