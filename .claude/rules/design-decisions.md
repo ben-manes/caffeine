@@ -40,6 +40,16 @@ For adjudication, also read your module's section of [ruled-out](../docs/ruled-o
   `size` dirties. A test that initializes the sketch directly must call `recordReads()` too.
   Keep `readBuffer` volatile: a plain swap is safe only while a new buffer's constructor
   writes nothing, and race detectors flag it.
+- The maximums and weighted sizes are padded from the fields that a hit loads
+  (`AddMaximum.supertypes`): 120 bytes before the class that adds them, and 120 more before its
+  expiring and refreshing subclasses, whose ticker and durations would otherwise follow them.
+  Keep that class to those six longs, with the climber, sketch and deques in the class before the
+  first pad, since HotSpot places a subclass's fields in its superclass's alignment gaps. Keep each
+  pad a class of its own, since the JVM may reorder a class's own fields of one size (JDK 17 and 21
+  sort them with `qsort`). The pads are not dead fields, and a size-only cache's unpadded end is
+  deliberate. Do not move the six fields into a separate object, whose neighbours the collector
+  chooses. `BoundedLocalCacheTest.evictionFields_ownCacheLines` pins the layout; run it on a recent
+  JDK (`-PjavaTestVersion`), since JDK 11 cannot fail it.
 - The shaded JCTools write queue's index overflow after 2^62 offers is accepted; a subtraction
   check alone does not fix the wrapping producer limit, and rollback can strand the consumer.
 

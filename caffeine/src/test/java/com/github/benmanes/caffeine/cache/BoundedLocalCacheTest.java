@@ -117,6 +117,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -150,6 +151,7 @@ import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
+import org.openjdk.jol.info.ClassLayout;
 
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.Access;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedPolicy.FixedExpireAfterWrite;
@@ -195,6 +197,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.google.common.testing.FakeTicker;
 import com.google.common.testing.GcFinalization;
@@ -3296,6 +3299,35 @@ final class BoundedLocalCacheTest {
     assertThat(cache.readBuffer).isInstanceOf(BoundedBuffer.class);
     assertThat(cache.get(context.absentKey())).isNotNull();
     assertThat(cache.readBuffer.writes()).isEqualTo(1);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.SYNC,
+      population = Population.EMPTY, maximumSize = Maximum.FULL,
+      weigher = {CacheWeigher.DISABLED, CacheWeigher.TEN}, expiry = CacheExpiry.DISABLED,
+      values = {ReferenceType.STRONG, ReferenceType.WEAK}, loader = Loader.NEGATIVE,
+      evictionListener = Listener.DISABLED)
+  void evictionFields_ownCacheLines(BoundedLocalCache<Int, Int> cache) {
+    // the maintenance thread writes these, so at every 8-byte alignment no other field may share
+    // their 128-byte line (Apple silicon, x86's adjacent-line prefetch); only JDK 15 and later
+    // can place a subclass's field in a gap beside them
+    var evictionFields = Set.of("maximum", "weightedSize", "windowMaximum",
+        "windowWeightedSize", "mainProtectedMaximum", "mainProtectedWeightedSize");
+    var layout = ClassLayout.parseClass(cache.getClass());
+    for (long address = 0; address < 128; address += 8) {
+      var evictionLines = new TreeSet<Long>();
+      var otherLines = new TreeSet<Long>();
+      for (var field : layout.fields()) {
+        long line = (address + field.offset()) / 128;
+        if (evictionFields.contains(field.name())) {
+          evictionLines.add(line);
+        } else if (!field.name().matches("p\\d+")) {
+          otherLines.add(line);
+        }
+      }
+      assertWithMessage("%s at %s bytes into a line", cache.getClass().getSimpleName(), address)
+          .that(Sets.intersection(evictionLines, otherLines)).isEmpty();
+    }
   }
 
   @Test

@@ -3637,7 +3637,11 @@ final class WindowClimberTest {
     return climber.adjustment();
   }
 
-  /** The protected region's maximum for the main space left by the window (80% of main). */
+  /**
+   * The protected region's maximum for the main space left by the window (80% of main). This is a
+   * per-position simplification: the cache sets protected once per resize and conserves window plus
+   * protected, so its probation stays fixed while this helper's varies with the window.
+   */
   private static long protectedMax(long maximum, long windowMax) {
     return ((maximum - windowMax) * 4) / 5;
   }

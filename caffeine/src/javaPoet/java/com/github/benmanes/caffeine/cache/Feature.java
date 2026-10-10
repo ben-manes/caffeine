@@ -85,6 +85,10 @@ public enum Feature {
         || features.contains(Feature.MAXIMUM_WEIGHT);
   }
 
+  public static boolean addsMaximum(Set<Feature> parentFeatures, Set<Feature> generateFeatures) {
+    return !usesMaximum(parentFeatures) && usesMaximum(generateFeatures);
+  }
+
   public static boolean usesFastPath(Set<Feature> features) {
     return Collections.disjoint(features, fastPathIncompatible) && usesMaximum(features);
   }

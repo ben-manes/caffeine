@@ -235,6 +235,7 @@ testing.suites {
       implementation(libs.awaitility)
       implementation(libs.commons.lang3)
       implementation(libs.guava.testlib)
+      implementation(libs.java.`object`.layout)
       implementation(libs.commons.collections4)
       implementation(libs.commons.collections4) {
         artifact { classifier = "tests" }

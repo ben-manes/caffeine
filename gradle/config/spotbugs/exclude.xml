@@ -336,6 +336,7 @@
   </Match>
   <Match>
     <Or>
+      <Field name="~p\d+"/>
       <Field name="maximum"/>
       <Field name="weightedSize"/>
       <Field name="expiresAfterWriteNanos"/>

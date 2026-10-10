@@ -38,9 +38,19 @@ public final class AddDeques implements Rule<LocalCacheContext> {
 
   @Override
   public void execute(LocalCacheContext context) {
+    if (!Feature.addsMaximum(context.parentFeatures, context.generateFeatures)) {
+      addAccessOrderDeques(context);
+    }
+    addWriteOrderDeque(context);
+  }
+
+  /**
+   * Adds the access-order deques that the class is the first to use. A cache that adds a maximum
+   * inherits them from its eviction policy class instead (see {@link AddMaximum#supertypes}).
+   */
+  static void addAccessOrderDeques(LocalCacheContext context) {
     addAccessOrderWindowDeque(context);
     addAccessOrderMainDeque(context);
-    addWriteOrderDeque(context);
   }
 
   private static void addAccessOrderWindowDeque(LocalCacheContext context) {

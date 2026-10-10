@@ -416,6 +416,9 @@ The current machine and its rejected alternatives are described in [hill-climber
   about 80% old regime. A distant crash keeps the claim and reference. On-anchor `resync` runs
   even during return drain; planting waits for both a walk and its pending undo to finish.
   Symmetric claim aging lost 11.9pp on the ramp control; one-sided aging disarmed the rail.
+  The pairing also holds inside a starvation walk, whose crash and reversal bars the reset widens
+  to their cap: a census of the battery found seven such stand-downs, all on gains, which neither
+  bar judges, and skipping the reset through 38 of them on seeded runs changed no hit rate.
 - **An audit judges against the position it leaves.** `Walk.baseSmoothedRate`, not `Anchor.rate`,
   is its baseline (`ghostclaim` 31.2 → 48.5; `cp_w100` +2.0). Discarding a claim on a still swing
   loses retreat recovery (`moat_h3000`, −0.7 to −1.9 on all eight seeds); resetting the metric
@@ -1026,6 +1029,35 @@ were measured and rejected: padding `size` 128 bytes away from `table` recovered
 10.35 and 10.28 to 9.02 ns/op) at 128 bytes per cache, and keeping the count in the table's
 trailing slot recovered a third of the gain at one thread and none at eight, for a reason not
 established.
+
+The maximums and weighted sizes (`maximum`, `weightedSize`, and the window and protected pairs) are
+padded from the fields that a hit loads, because the maintenance thread writes them for drained
+writes, promotions and climber steps. Unpadded, they shared a 128-byte line with an expiring or
+refreshing cache's `ticker` and duration (`expiresAfter*Nanos`, `refreshAfterWriteNanos`) at every
+alignment, and with the stats counter and the base class's `data`, `nodeFactory` and `readBuffer`
+at others; a line that also held `drainStatus`, which every drain writes anyway, cost little. On an
+Apple M3 Max with eight readers and a writer doing 500k put+invalidate/s, averaged over the cache's
+16 alignments in a line on JDK 27, padding cut the mean time per hit (eight readers over their
+throughput) from 28.1 to 24.6 ns for a size and expire-after-access cache, from 23.1 to 21.8 ns
+with stats, and from 17.1 to 16.0 ns for a size-only cache, whose put+invalidate fell from 399 to
+329 ns. JDK 25 agreed, except that the size-only hit was within noise there.
+
+So `AddMaximum.supertypes` puts a class of 15 longs (120 bytes) before the class that adds the six
+fields, and another between that class and its expiring and refreshing subclasses: 120 bytes per
+cache bounded by size or weight, 240 with expiration or refresh. The class that adds them holds only
+those longs, and its climber, sketch and access-order deques go in a class before the first pad,
+because HotSpot (JDK 15 and later) places a subclass's fields in its superclass's alignment gaps:
+those references leave a 4-byte gap, and a subclass's `ticker` filled it beside the counters. Each
+pad is a class of its own because a class's own fields of one size may be laid out in any order (JDK
+17 and 21 sort them with the platform's `qsort`, which on macOS swaps the first and last of the run;
+JDK 24 made the sort stable, JDK-8341471). A size-only cache's end is left unpadded: the object
+after it is the collector's choice (the eviction lock at allocation, the write buffer's leading pad
+after a young collection on G1 or Parallel), and the gains were the same with either beside it.
+Moving the six fields into a separate object would cost about 20 bytes, but that object shares its
+line with whatever the collector places beside it, which JOL cannot check. The JDK pads its own
+separate counter objects (`ConcurrentHashMap.CounterCell`, `Striped64.Cell`) for that reason.
+`BoundedLocalCacheTest.evictionFields_ownCacheLines` checks the layout with JOL; only JDK 15 and
+later fill gaps, so only they can fail it.
 
 ## Node State
 

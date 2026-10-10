@@ -83,8 +83,9 @@ public final class NodeFactoryGenerator {
     generator.generate();
   }
 
-  private TypeSpec makeNodeSpec(String className, String parentClassName, boolean isFinal,
-      ImmutableSet<Feature> parentFeatures, ImmutableSet<Feature> generateFeatures) {
+  private ImmutableList<TypeSpec> makeNodeSpec(String className, String parentClassName,
+      boolean isFinal, ImmutableSet<Feature> parentFeatures,
+      ImmutableSet<Feature> generateFeatures) {
     TypeName superClass = parentFeatures.isEmpty()
         ? ClassName.OBJECT
         : ParameterizedTypeName.get(
@@ -94,7 +95,7 @@ public final class NodeFactoryGenerator {
     for (var rule : rules) {
       rule.run(context);
     }
-    return context.build();
+    return ImmutableList.of(context.build());
   }
 
   public static void main(String[] args) throws IOException {

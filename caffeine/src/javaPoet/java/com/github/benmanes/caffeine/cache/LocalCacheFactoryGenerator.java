@@ -43,6 +43,7 @@ import com.github.benmanes.caffeine.cache.local.LocalCacheContext;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.palantir.javapoet.ClassName;
 import com.palantir.javapoet.ParameterizedTypeName;
 import com.palantir.javapoet.TypeName;
@@ -92,17 +93,24 @@ public final class LocalCacheFactoryGenerator {
     generator.generate();
   }
 
-  private TypeSpec makeLocalCacheSpec(String className, String parentClassName, boolean isFinal,
-      ImmutableSet<Feature> parentFeatures, ImmutableSet<Feature> generateFeatures) {
-    TypeName superClass = parentFeatures.isEmpty()
+  private ImmutableList<TypeSpec> makeLocalCacheSpec(String className, String parentClassName,
+      boolean isFinal, ImmutableSet<Feature> parentFeatures,
+      ImmutableSet<Feature> generateFeatures) {
+    TypeName parent = parentFeatures.isEmpty()
         ? BOUNDED_LOCAL_CACHE
         : ParameterizedTypeName.get(ClassName.bestGuess(parentClassName), kTypeVar, vTypeVar);
+    var supertypes = AddMaximum.supertypes(parentClassName, parent,
+        parentFeatures, generateFeatures);
+    TypeName superClass = supertypes.isEmpty()
+        ? parent
+        : ParameterizedTypeName.get(ClassName.bestGuess(
+            Iterables.getLast(supertypes).name()), kTypeVar, vTypeVar);
     var context = new LocalCacheContext(superClass,
         className, isFinal, parentFeatures, generateFeatures);
     for (var rule : rules) {
       rule.run(context);
     }
-    return context.build();
+    return ImmutableList.<TypeSpec>builder().addAll(supertypes).add(context.build()).build();
   }
 
   public static void main(String[] args) throws IOException {

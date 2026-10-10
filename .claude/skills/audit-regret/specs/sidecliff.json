@@ -17,6 +17,9 @@
    "kind": "pairs",
    "dreq": 7000,
    "k": 2
+  },
+  "scan": {
+   "kind": "scan"
   }
  },
  "segments": [
@@ -25,7 +28,8 @@
    "shares": {
     "core": 0.5,
     "near": 0.08,
-    "far": 0.3
+    "far": 0.3,
+    "scan": 0.12
    }
   }
  ]

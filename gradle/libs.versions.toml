@@ -1,7 +1,7 @@
 [versions]
 ap-loader = "4.5-13"
 ascii-table = "1.13.0"
-asm = "9.10.1"
+asm = "9.11"
 awaitility = "4.3.0"
 bcel = "6.13.0"
 bnd = "7.4.0"

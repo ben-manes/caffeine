@@ -32,6 +32,7 @@ import java.time.Year;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Optional;
 import java.util.spi.ToolProvider;
 import java.util.stream.Stream;
@@ -85,20 +86,27 @@ final class FactoryGenerator {
     }
   }
 
-  /** Generates a specialization per configuration, ordered so that a parent precedes its child. */
+  /**
+   * Generates a specialization per configuration, ordered so that a parent precedes its child, and
+   * once each supertype that siblings share.
+   */
   private ImmutableList<TypeSpec> generateTypes() {
     var classNameToFeatures = classNameToFeatures();
-    var types = ImmutableList.<TypeSpec>builderWithExpectedSize(classNameToFeatures.size());
+    var types = new LinkedHashMap<String, TypeSpec>(classNameToFeatures.size());
     classNameToFeatures.forEach((className, features) -> {
       var parentFeatures = parentFeatures(features);
       var parentClassName = classNameOf(parentFeatures);
       var higherKey = classNameToFeatures.higherKey(className);
       boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
       checkInheritance(className, parentClassName);
-      types.add(specFactory.create(className, parentClassName,
-          isLeaf, parentFeatures, generateFeatures(features)));
+      ImmutableList<TypeSpec> specializedTypes = specFactory.create(className,
+          parentClassName, isLeaf, parentFeatures, generateFeatures(features));
+      for (var type : specializedTypes) {
+        var prior = types.putIfAbsent(type.name(), type);
+        checkState((prior == null) || prior.equals(type), "Conflicting %s", type.name());
+      }
     });
-    return types.build();
+    return ImmutableList.copyOf(types.values());
   }
 
   /** Maps each encoded class name to its features, sorted so a parent sorts before its child. */
@@ -193,8 +201,11 @@ final class FactoryGenerator {
 
   @FunctionalInterface
   interface SpecFactory {
-    /** Returns the specialized type for a single configuration in the matrix. */
-    TypeSpec create(String className, String parentClassName, boolean isFinal,
+    /**
+     * Returns the specialized type for a single configuration in the matrix, preceded by any
+     * generated supertypes between it and its parent.
+     */
+    ImmutableList<TypeSpec> create(String className, String parentClassName, boolean isFinal,
         ImmutableSet<Feature> parentFeatures, ImmutableSet<Feature> generateFeatures);
   }
 }
