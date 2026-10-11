@@ -38,6 +38,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.glcache.GLCacheTraceR
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.kaggle.OutbrainTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.kvcache.AgentXTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.kvcache.BailianTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.kvcache.MooncakeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.libcachesim.csv.LibCacheSimCsvTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.libcachesim.oracle.OracleGeneralTraceReader;
@@ -75,6 +76,7 @@ public enum TraceFormat {
   ADAPT_SIZE(AdaptSizeTraceReader::new),
   AGENTX(AgentXTraceReader::new),
   ARC(ArcTraceReader::new),
+  BAILIAN(BailianTraceReader::new),
   BALEEN(BaleenTraceReader::new),
   CACHE2K(Cache2kTraceReader::new),
   CACHELIB(CachelibTraceReader::new),

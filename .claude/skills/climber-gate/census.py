@@ -69,7 +69,7 @@ def do_parse(dumpdir, out):
         bar = max(4, (4 * mx) >> 10)
         n = len(lines)
         for i, d in enumerate(lines):
-            if d["mode"] != "AUDITCONFIRM":
+            if not d["mode"].startswith("AUDITCONFIRM"):
                 continue
             j = i - 1
             while j >= 0 and not lines[j]["mode"].startswith("AUDIT"):

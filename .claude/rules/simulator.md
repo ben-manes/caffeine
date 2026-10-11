@@ -64,6 +64,20 @@ two routinely mixed characteristics justify it.
   xz-magic-only file consequently still falls through to raw. The price of failing loudly is that
   a raw trace whose first bytes match a compressor signature but not its header, such as a first
   key beginning `1f 8b 00`, is rejected; compress it to read it.
+- **A KV prefix-cache block is keyed by its whole prefix.** An engine reuses a block's KV only
+  when everything before it matches. Mooncake's and AgentX's identifiers already chain (AgentX's
+  within its session), but the Qwen Bailian To-C and To-B traces reuse an identifier after
+  different prefixes, so `bailian` keys each block by chaining its identifier onto the previous
+  block's key. Read raw, To-B's reuse ceiling is 61.5% instead of 53.4%; chained, it reproduces
+  the To-B LRU, S3-FIFO and OPT values of arXiv 2609.28870 (0.403, 0.491, 0.534) exactly.
+- **Replaying a KV trace block by block can evict the in-flight request's own blocks**, which no
+  engine does: a request's blocks are resident together for its prefill. LRU is immune, since a
+  request's blocks are its most recent, and a static-window W-TinyLFU moved under 1pp when the
+  request was pinned. SIEVE collapses instead, because a long request's new blocks evict one
+  another: it scores 4.95% on Qwen Thinking@16384 replayed and 34.05% pinned (the paper's value).
+  LFU replays to the same 4.95% there against the paper's ~0.29, which points to the same cause
+  but was not measured pinned. The simulator has no request-pinned mode, so do not report SIEVE or
+  LFU on these traces as the algorithm's quality.
 - **Text decoding preserves byte identity.** ISO-8859-1 maps each byte to a distinct character,
   preserving real Latin-1 traces and avoiding malformed-UTF-8 aliases through U+FFFD for keys
   derived from fields such as MSR hostnames or Baleen shards. Parsing/filtering uses ASCII.

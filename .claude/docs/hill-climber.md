@@ -834,6 +834,42 @@ constructed traps hold both at once, and no real cell in the corpus does. The on
 trap-strength scatter on wide terrain has an optimum that *moves* — which makes its scatter
 window-informative, precisely the case the goal-metric layer exists to answer.
 
+**LLM prefix-cache traces hold both, and the machine does not climb on them** (the Qwen Bailian
+traces, read by `bailian`; `/climber-gate`'s prefix-cache row). A sample is a few hundred requests
+that each re-read a session's whole prefix, so on Thinking@16384 the per-sample rate swings between
+14% and 60%, while the static 1%-to-80% span is 4.4pp there, 6.9pp at 65536 and 18pp on
+To-C@185364. The response rises toward the 80% ceiling on every such cell, a window planted at 80%
+holds there (Thinking@16384 36.99 against LRU 36.26, To-C@185364 43.97 against the static 43.96),
+and the MiniSim leader reaches the 80% value within one pass, so the loss is steering into that
+basin, not missing information. The window earns nothing until it spans one inter-turn reuse
+interval (about a fifth of the cache on Thinking@16384), so it starts starved, and three things
+keep it there. Growing the window demotes protected's coldest entries and hands the window
+probation's coldest, so the hot set stays in main and keeps hitting there: a walk to 80% scores
+what the planted run does at the same point in the trace, but its density error reads shrink until
+the hot set migrates (on Thinking@16384, a median of −3.9 at windows of 40% and up on a seed whose
+walks stayed 23 samples there and +0.3 on one that stayed 140, against the planted window's +0.6).
+On the static anchor the average law is bistable there, negative from 1% to 40% and positive from
+50%, where the window takes over main's hits, so the floor and the ceiling both attract and a climb
+confirmed below about 45% is reversed. The marginal form crosses up near 9% and rests near 71%
+instead; on Coder@65536 the average law rests at the floor or near 40% (1.1pp under the peak) and
+the marginal form at the ceiling, and on the To-B control, whose average law rightly rests at the
+floor, the marginal form rests near 13% for 0.2pp. And probes and audits are judged across phase
+swings several times the window's effect, so most fail and their backoffs escalate.
+
+**On these traces the large cells' loss is mostly sample budget, and the HBM-size cells' is not.**
+Replaying a trace back to back adds decisions without adding reuse (LRU reads the same on every
+pass). To-C@185364, at 8.5 samples a pass, closes from 19.6pp below LRU to about 6.5 from the fifth
+pass, parked at a 32–43% window where the product's density error sits near zero though the static
+anchor's reads +2.1; Thinking@65536 (12 samples a pass) closes from 5.9 to about 1.5, and
+Coder@65536 (59) from 2.9 to about 1. Thinking@16384 (49) averages 1.6 below on the fourth pass, but
+one seed of three never leaves the floor, and Thinking@32768 replayed four times reads 32.95–36.97
+across eight seeds against LRU's 39.61, an escape lottery. The reactive law is no repair, though
+given time it is the better of the two here: −1.7 to +1.2 against the shipped machine on single
+passes and −7.2 on Coder at 699051, but +1.3 on Thinking@32768 replayed four times and +4.4 on
+To-C@185364 replayed eight (ahead on six and eight of eight seeds), still 3.0 and 6.6pp under LRU.
+The 20-day AgentX corpus, scheduled at a steady 16 sessions, converges to within 1.8pp of LRU at
+every size from 8192.
+
 **The tier boundary.** At the 4096 switch the discontinuity is the policy, not the terrain: on a
 constructed straddle one entry of capacity moves the answer by several points while LRU steps zero
 and both single-law arms are continuous. On real traces the sign inverts, so the cost is borne
@@ -1777,8 +1813,9 @@ start rather than the controller; with the floor applied that stratum is negativ
 **The mechanism is why, and it is the part worth keeping.** The climber absorbs the plant
 asymmetrically: on recency workloads it captures **96%** of what a larger start could statically
 buy (frozen +2.68 against a delivered +0.11 at a 10% start), because it was walking to a 20–50%
-window anyway and the plant only shortens a journey already underway. On frequency workloads it
-passes **90% of the harm through** (frozen −0.80, delivered −0.72), since there the plant is pure
+window anyway and the plant only shortens a journey already underway. That assumes the climber
+walks; the LLM prefix-cache cells (§3, terrain classes) are recency-favorable and do not. On
+frequency workloads it passes **90% of the harm through** (frozen −0.80, delivered −0.72), since there the plant is pure
 displacement to be walked back at the descent rate of 4–6% of the maximum per sample. A larger default therefore buys almost
 nothing where it would help and costs nearly full price where it hurts. On two cells it lands in a
 *worse* attractor than 1% reaches at all: `wiki_1191a@64k` frozen −0.12 → delivered **−0.99** on
@@ -2073,6 +2110,12 @@ successor on rest-point tracking before spending a battery**: Spearman(meanWindo
 over the nine D3 cells reads ship +0.917, `marghalf` +0.983, `margtail` +0.367, and a candidate
 that does not beat +0.917 is buying stability with tracking — trap wins paid for by corpus
 losses.
+
+The thread was closed against a corpus prize under a point. The LLM prefix-cache cells (§3, terrain
+classes) are real traces where the average law's rest error is most of a 3–7pp loss: on the static
+anchor it is bistable on Thinking@16384 and rests at the floor or near 40% on Coder@65536, where the
+marginal form rests near 71% and at the ceiling against 80% peaks. A re-opened thread prices
+against `/climber-gate`'s prefix-cache row as well as `slowswap`.
 
 ### Verdict corroboration, and the delayed entry stride
 

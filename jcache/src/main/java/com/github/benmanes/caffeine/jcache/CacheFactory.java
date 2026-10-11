@@ -259,9 +259,7 @@ final class CacheFactory {
       caffeine.maximumWeight(config.getMaximumWeight().getAsLong());
       Weigher<K, V> weigher = config.getWeigherFactory().map(Factory::create)
           .orElseThrow(() -> new IllegalStateException("Weigher not configured"));
-      caffeine.weigher((K key, Expirable<V> expirable) -> {
-        return weigher.weigh(key, expirable.get());
-      });
+      caffeine.weigher((K key, Expirable<V> expirable) -> weigher.weigh(key, expirable.get()));
       return true;
     }
 

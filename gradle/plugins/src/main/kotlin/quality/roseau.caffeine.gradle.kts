@@ -10,6 +10,7 @@ val roseau = configurations.register("roseau")
 
 dependencies {
   roseau(libs.roseau)
+  roseau(platform(libs.jackson.bom))
 }
 
 tasks.register<Roseau>("roseau") {

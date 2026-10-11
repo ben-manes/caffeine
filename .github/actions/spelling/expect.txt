@@ -10,6 +10,7 @@ Autobuild
 awaitility
 Azul
 Backpressure
+bailian
 benmanes
 bigserial
 BLC
@@ -162,6 +163,7 @@ QMETA
 qodana
 Qth
 Qube
+Qwen
 radarlint
 rawtypes
 redefaults

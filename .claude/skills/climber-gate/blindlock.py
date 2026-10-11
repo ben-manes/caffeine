@@ -72,7 +72,7 @@ def analyze(path):
         due += isdue
         if mode.startswith("ARM"):
             probes += 1
-        if mode.startswith("AUDIT") and mode != "AUDITCONFIRM":
+        if mode.startswith("AUDIT") and not mode.startswith("AUDITCONFIRM"):
             audits += 1
         if branch6 and isdue:
             lock += 1

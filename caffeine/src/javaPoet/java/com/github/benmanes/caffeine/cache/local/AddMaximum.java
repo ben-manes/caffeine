@@ -68,7 +68,7 @@ public final class AddMaximum implements Rule<LocalCacheContext> {
           parentFeatures, generateFeatures);
       var padding = addPadding(parentClassName + "PadBeforeMaximum", typeOf(policy),
           /* first= */ 120, "Pads the maximums and weighted sizes of its subclasses from the "
-              + "fields of its superclasses.");
+              + "fields of its super classes.");
       return ImmutableList.of(policy, padding);
     } else if (Feature.usesMaximum(parentFeatures)
         && !Feature.usesExpirationTicker(parentFeatures)) {

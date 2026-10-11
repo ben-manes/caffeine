@@ -96,7 +96,7 @@ def summarize(lines, size):
         wins.append(int(d["win"]) / size)
         modes[d["mode"]] = modes.get(d["mode"], 0) + 1
     audits = sum(v for k, v in modes.items() if k.startswith("AUDIT"))
-    conf = modes.get("AUDITCONFIRM", 0)
+    conf = sum(v for k, v in modes.items() if k.startswith("AUDITCONFIRM"))
     arms = sum(v for k, v in modes.items() if k.startswith("ARM"))
     return (f"n={len(wins)} start={wins[0]:.3f} min={min(wins):.3f} max={max(wins):.3f} "
             f"end={wins[-1]:.3f} mean={statistics.mean(wins):.3f} "
