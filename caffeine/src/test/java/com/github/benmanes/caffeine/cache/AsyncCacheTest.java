@@ -31,6 +31,7 @@ import static com.github.benmanes.caffeine.testing.Nullness.nullFunction;
 import static com.github.benmanes.caffeine.testing.Nullness.nullFuture;
 import static com.github.benmanes.caffeine.testing.Nullness.nullKey;
 import static com.github.benmanes.caffeine.testing.Nullness.nullMap;
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -279,7 +280,7 @@ final class AsyncCacheTest {
   @ParameterizedTest
   void getBiFunc_nullKey(AsyncCache<Int, Int> cache) {
     assertThrows(NullPointerException.class, () ->
-        cache.get(nullKey(), (key, executor) -> CompletableFuture.completedFuture(null)));
+        cache.get(nullKey(), (key, executor) -> CompletableFuture.completedFuture(nullRef())));
   }
 
   @CacheSpec

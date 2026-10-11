@@ -31,6 +31,7 @@ import static com.github.benmanes.caffeine.testing.FutureSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.LoggingEvents.logEvents;
 import static com.github.benmanes.caffeine.testing.MapSubject.assertThat;
 import static com.github.benmanes.caffeine.testing.Nullness.nullFuture;
+import static com.github.benmanes.caffeine.testing.Nullness.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
@@ -331,11 +332,10 @@ final class RefreshAfterWriteTest {
     assertThat(value).isNotNull();
 
     assertThat(cache.policy().refreshes()).isNotEmpty();
-    CompletableFuture<@Nullable Int> future = requireNonNull(
-        cache.policy().refreshes().get(context.firstKey()));
+    var future = requireNonNull(cache.policy().refreshes().get(context.firstKey()));
 
     cache.put(context.firstKey(), context.absentValue());
-    future.complete(null);
+    future.complete(nullRef());
 
     assertThat(cache).containsEntry(context.firstKey(), context.absentValue());
     // Only the put-over-original REPLACED should be observed; the null refresh must be silently
@@ -901,11 +901,10 @@ final class RefreshAfterWriteTest {
     assertThat(value).isNotNull();
 
     assertThat(cache.policy().refreshes()).isNotEmpty();
-    CompletableFuture<@Nullable Int> future =
-        requireNonNull(cache.policy().refreshes().get(context.firstKey()));
+    var future = requireNonNull(cache.policy().refreshes().get(context.firstKey()));
 
     cache.invalidate(context.firstKey());
-    future.complete(null);
+    future.complete(nullRef());
 
     assertThat(cache).doesNotContainKey(context.firstKey());
     assertThat(context).removalNotifications().withCause(EXPLICIT)
