@@ -380,8 +380,20 @@ final class BoundedLocalCacheTest {
     var task = cache.drainBuffersTask;
     cache = null;
 
-    GcFinalization.awaitClear(task.reference);
+    GcFinalization.awaitClear(task);
     task.run();
+  }
+
+  @Test
+  void cleanupTask_ignoreClear() {
+    BoundedLocalCache<?, ?> cache = Mockito.mock();
+    var task = new PerformCleanupTask(cache);
+    task.clear();
+    assertThat(task.enqueue()).isFalse();
+    assertThat(task.get()).isSameInstanceAs(cache);
+
+    task.run();
+    verify(cache).performCleanUp(any());
   }
 
   @Test

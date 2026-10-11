@@ -69,18 +69,19 @@ runs:
       with:
         cache-jdk: true
         java-version: ${{ inputs.java }}
-        distribution: ${{ endsWith(inputs.java, '-ea') && 'temurin' || inputs.distribution }}
+        distribution: ${{ endsWith(inputs.java, '-ea') && 'oracle-openjdk' || inputs.distribution }}
     - name: Prepare JDK toolchain
       id: java_toolchain
       env:
         INPUTS_JAVA: ${{ inputs.java }}
         JDK_EA: ${{ endsWith(inputs.java, '-ea') }}
-        INPUTS_DISTRIBUTION: ${{ endsWith(inputs.java, '-ea') && 'temurin' || inputs.distribution }}
+        INPUTS_DISTRIBUTION: ${{ endsWith(inputs.java, '-ea') && 'oracle-openjdk' || inputs.distribution }}
       shell: bash
       run: |
         declare -A -r VENDORS=(
           ["zulu"]="Azul"
           ["temurin"]="Adoptium"
+          ["oracle-openjdk"]="Oracle"
         )
         version="${INPUTS_JAVA%-ea}"
         vendor=${VENDORS["$INPUTS_DISTRIBUTION"]}

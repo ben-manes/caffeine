@@ -4298,16 +4298,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   }
 
   /** A reusable task that performs the maintenance work. */
-  static final class PerformCleanupTask implements Runnable {
-    final WeakReference<BoundedLocalCache<?, ?>> reference;
+  static final class PerformCleanupTask
+      extends WeakReference<BoundedLocalCache<?, ?>> implements Runnable {
 
     PerformCleanupTask(BoundedLocalCache<?, ?> cache) {
-      reference = new WeakReference<>(cache);
+      super(cache);
     }
 
     @Override
     public void run() {
-      BoundedLocalCache<?, ?> cache = reference.get();
+      BoundedLocalCache<?, ?> cache = get();
       if (cache != null) {
         try {
           cache.performCleanUp(/* ignored */ null);
@@ -4315,6 +4315,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           logger.log(Level.ERROR, "Exception thrown when performing the maintenance task", t);
         }
       }
+    }
+    @Override public void clear() {}
+    @Override public boolean enqueue() {
+      return false;
     }
   }
 

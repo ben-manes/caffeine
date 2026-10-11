@@ -26,6 +26,7 @@ env:
     gds.oracle.com:443
     github.com:443
     hosted-compute-watchdog-prod-eus-01.githubapp.com:443
+    jdk.java.net:443
     maven-central.storage-download.googleapis.com:443
     objects.githubusercontent.com:443
     plugins.gradle.org:443
@@ -98,7 +99,7 @@ jobs:
           - java: 26
             distribution: temurin
           - java: 28-ea
-            distribution: temurin
+            distribution: oracle-openjdk
           - java: 25
             distribution: graalvm
           - java: 26

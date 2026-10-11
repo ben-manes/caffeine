@@ -115,6 +115,8 @@ Details: [expiration](../docs/design-decisions.md#expiration),
   `ComputeContext.unmodified`, not a second approximation of the no-op predicate.
 - Value-bearing callbacks propagate failures; fire-and-forget callbacks are guarded. Do not
   add broad containment for broken tickers, equality, hostile futures, or JVM errors.
+  `PerformCleanupTask`'s no-op `clear()` and `enqueue()` are a deliberate, zero-cost exception:
+  only the garbage collector clears its referent, so an executor cannot disable it that way.
   A maintenance throw defers buffered work; it does not require forcing `REQUIRED`.
 - `Caffeine.toUnchecked` restores the current thread's interrupt status when converting
   `InterruptedException`. Functional interfaces can throw checked exceptions from other JVM

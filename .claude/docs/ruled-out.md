@@ -217,14 +217,14 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   submission to that queue, and earlier JDKs lose tasks silently (#2021). `reinitialize()` before
   each submission and a rotated set of tasks do not help, since the race needs only the same
   reference in the same slot. A fresh `PerformCleanupTask` per submission would allocate on every
-  executor, where a thread pool queues the raw `Runnable` and needs nothing, and would carry its own
-  `WeakReference`, so the pool's one wrapper is the cheapest fresh object. Measured on JDK 25.0.1
-  (`GetPutBenchmark` and a `weakKeys()` copy, 3 forks, `-prof gc`): throughput within the 99.9%
-  confidence interval, allocation up by at most 0.06 B/op, 0.4 B/op for weak-key read/write.
-  `BoundedLocalCacheTest.scheduleDrainBuffers_notForkJoinTask` and `pacer_notForkJoinTask` pin the
-  type on both paths. Reopen only for a design that never hands the same object to the executor
-  twice; an upstream fix does not reopen it while older JDKs are supported. Details in
-  [Known JDK Interactions](design-decisions.md#known-jdk-interactions).
+  executor, where a thread pool queues the raw `Runnable` and needs nothing, and is the same size as
+  the pool's wrapper (32 bytes on JDK 25 and 26), so the pool's one wrapper costs no more. Measured
+  on JDK 25.0.1 (`GetPutBenchmark` and a `weakKeys()` copy, 3 forks, `-prof gc`): throughput within
+  the 99.9% confidence interval, allocation up by at most 0.06 B/op, 0.4 B/op for weak-key
+  read/write. `BoundedLocalCacheTest.scheduleDrainBuffers_notForkJoinTask` and
+  `pacer_notForkJoinTask` pin the type on both paths. Reopen only for a design that never hands the
+  same object to the executor twice; an upstream fix does not reopen it while older JDKs are
+  supported. Details in [Known JDK Interactions](design-decisions.md#known-jdk-interactions).
 
 ---
 

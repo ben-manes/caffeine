@@ -1262,7 +1262,7 @@ no hard timing guarantees.
 
 **No close() by design.** The `Cache` interface deliberately does not extend
 `Closeable`. The cache is a data structure that becomes GC-eligible when
-unreferenced. The `WeakReference` in `PerformCleanupTask` breaks the
+unreferenced. `PerformCleanupTask` is a `WeakReference` to its cache, which breaks the
 scheduler→cache reference chain, so scheduled maintenance becomes a no-op
 when the cache is unreachable. (JCache's `CacheProxy` is the only component
 with explicit close semantics, as required by JSR-107.)
@@ -1465,6 +1465,16 @@ was within the 99.9% confidence interval. Allocation increased by at most 0.06 B
 B/op for `weakKeys()` read/write. The 2016 result, that the adapter halved `weakKeys()` read
 throughput, did not reproduce. Each bounded cache is 8 bytes smaller, because its task no longer
 has the `ForkJoinTask` status field.
+
+The task extends `WeakReference` rather than holding one, which saves an object per cache (16
+bytes with compressed oops). Its `clear()` and `enqueue()` do nothing, so only the garbage
+collector clears the referent. `enqueue()` clears without calling `clear()`, so both overrides are
+needed. Without them, an executor that cleared the task it receives would make every later
+execution a no-op. This is a deliberate exception to treating a contract-violating component as
+the user's bug: the overrides cost nothing on any path, and the `ForkJoinTask` version guarded the
+same way with no-op `complete`, `completeExceptionally`, and `cancel`. An executor can still halt
+maintenance by never running the task. `BoundedLocalCacheTest.cleanupTask_ignoreClear` pins the
+overrides.
 
 ## Pacer
 
