@@ -946,6 +946,7 @@ final class TimerWheelTest {
     @Override public Node<@NonNull Int, @NonNull Int> getPreviousInVariableOrder() {
       return prev;
     }
+    @SuppressFBWarnings("NP_METHOD_PARAMETER_TIGHTENS_ANNOTATION")
     @Override public void setPreviousInVariableOrder(
         @Nullable Node<@NonNull Int, @NonNull Int> prev) {
       this.prev = prev;
@@ -953,6 +954,7 @@ final class TimerWheelTest {
     @Override public Node<@NonNull Int, @NonNull Int> getNextInVariableOrder() {
       return next;
     }
+    @SuppressFBWarnings("NP_METHOD_PARAMETER_TIGHTENS_ANNOTATION")
     @Override public void setNextInVariableOrder(@Nullable Node<@NonNull Int, @NonNull Int> next) {
       this.next = next;
     }

@@ -762,6 +762,7 @@ final class AsMapTest {
 
   @CheckNoStats
   @ParameterizedTest
+  @SuppressWarnings("PMD.CollectionTypeMismatch")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       values = ReferenceType.STRONG, removalListener = { Listener.DISABLED, Listener.REJECTING })
   void removeConditionally_failingExpectedEquality(Map<Int, Int> map, CacheContext context) {

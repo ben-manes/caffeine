@@ -472,7 +472,11 @@ The tolerance applies to multiple per-entry timestamps:
   the skip is bypassed so tiny expiration windows still behave exactly.
 - `variableTime` updates on the read path — the same saving under an `Expiry`, with the same
   bypass. Only an extension is skipped: a read that moves the deadline earlier is stored, since
-  skipping it would serve the entry past the deadline the `Expiry` asked for.
+  skipping it would serve the entry past the deadline the `Expiry` asked for. An unchanged
+  deadline is not rewritten, even inside the bypass. Under `Expiry.creating` or `writing` every hit
+  in an entry's last second keeps its deadline, and rewriting it was a CAS that cost ~45 ns per hit
+  on 8 threads. The skip is pinned by
+  `BoundedLocalCacheTest.expireTolerance_variableTime_skipsForUnchangedShortDuration`.
 
 **A `put` dates a new entry from its call, not its insertion.** The create path reads the clock
 when it builds the node, before `data.putIfAbsent`, and a retry after a node-monitor wait reuses

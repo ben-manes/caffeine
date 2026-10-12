@@ -1548,7 +1548,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     long duration = Math.max(0L, expiry.expireAfterRead(key, value, now, currentDuration));
     long expirationTime = expiresAt(now, duration);
     long extension = expirationTime - variableTime;
-    if ((duration <= tolerance) || (extension < 0) || (extension > tolerance)) {
+    if ((extension != 0)
+        && ((duration <= tolerance) || (extension < 0) || (extension > tolerance))) {
       VarHandle.loadLoadFence();
       if (node.getValue() == value) {
         node.casVariableTime(variableTime, expirationTime);

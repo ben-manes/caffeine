@@ -89,6 +89,7 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -6602,6 +6603,7 @@ final class BoundedLocalCacheTest {
 
     // Expiry.accessing(...) returns the configured 1-minute duration fresh on every read.
     // Within tolerance the recomputed expirationTime is close enough to skip the CAS.
+    context.ticker().advance(Duration.ofMillis(500));
     assertThat(cache.get(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
     assertThat(node.getVariableTime()).isEqualTo(initialVariableTime);
 
@@ -6627,6 +6629,27 @@ final class BoundedLocalCacheTest {
         .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
     assertThat(cache.get(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
     assertThat(node.getVariableTime()).isNotEqualTo(initialVariableTime);
+  }
+
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  void expireTolerance_variableTime_skipsForUnchangedShortDuration(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    var key = Int.valueOf(1);
+    var value = Int.valueOf(1);
+    assertThat(cache.put(key, value)).isNull();
+    var node = Mockito.spy(requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key))));
+    long now = context.ticker().read();
+    node.setVariableTime(now + Duration.ofMillis(500).toNanos());
+
+    // Inside the bypass a read stores any deadline that changed, but one that the Expiry kept is
+    // not written again, as that CAS contends on a hot entry
+    var expiry = requireNonNull(context.expiry());
+    when(expiry.expireAfterRead(any(), any(), anyLong(), anyLong()))
+        .thenAnswer(invocation -> invocation.getArgument(3));
+    cache.tryExpireAfterRead(node, key, value, expiry, now);
+    verify(node, never()).casVariableTime(anyLong(), anyLong());
   }
 
   @Test

@@ -37,6 +37,8 @@ import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
 import com.google.errorprone.annotations.Var;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A fuzzer that exercises the {@link TimerWheel} by generating random sequences of schedule,
  * deschedule, and advance operations. The expired items are validated against a reference
@@ -269,6 +271,7 @@ final class TimerWheelFuzzer {
     @Override public Node<@NonNull Object, @NonNull Object> getPreviousInVariableOrder() {
       return prev;
     }
+    @SuppressFBWarnings("NP_METHOD_PARAMETER_TIGHTENS_ANNOTATION")
     @Override public void setPreviousInVariableOrder(
         @Nullable Node<@NonNull Object, @NonNull Object> prev) {
       this.prev = prev;
@@ -276,6 +279,7 @@ final class TimerWheelFuzzer {
     @Override public Node<@NonNull Object, @NonNull Object> getNextInVariableOrder() {
       return next;
     }
+    @SuppressFBWarnings("NP_METHOD_PARAMETER_TIGHTENS_ANNOTATION")
     @Override public void setNextInVariableOrder(
         @Nullable Node<@NonNull Object, @NonNull Object> next) {
       this.next = next;

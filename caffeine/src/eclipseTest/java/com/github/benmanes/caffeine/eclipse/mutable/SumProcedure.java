@@ -25,9 +25,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * @deprecated Don't use in new tests
  */
 @Deprecated
+@SuppressFBWarnings("CI_CONFUSED_INHERITANCE")
 @SuppressWarnings({"all", "overloads", "unchecked"})
-@SuppressFBWarnings({"CI_CONFUSED_INHERITANCE",
-    "SING_SINGLETON_HAS_NONPRIVATE_CONSTRUCTOR", "SING_SINGLETON_IMPLEMENTS_SERIALIZABLE"})
 final class SumProcedure<T>
     implements Procedure<T>, Function2<Sum, T, Sum>, ProcedureFactory<SumProcedure<T>> {
   private static final long serialVersionUID = 1L;
