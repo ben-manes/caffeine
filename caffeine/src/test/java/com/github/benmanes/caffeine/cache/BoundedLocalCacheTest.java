@@ -6652,6 +6652,31 @@ final class BoundedLocalCacheTest {
     verify(node, never()).casVariableTime(anyLong(), anyLong());
   }
 
+  @ParameterizedTest
+  @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
+      expiry = CacheExpiry.CREATE, expiryTime = Expire.ONE_MINUTE)
+  void expireTolerance_setExpiresAfter(BoundedLocalCache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireVariably) {
+    assertThat(cache.put(Int.valueOf(1), Int.valueOf(1))).isNull();
+    assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
+
+    // An extension within the tolerance is not rescheduled through the write buffer
+    context.ticker().advance(Duration.ofMillis(500));
+    expireVariably.setExpiresAfter(Int.valueOf(1), Duration.ofMinutes(1));
+    assertThat(cache.writeBuffer.producerIndex).isEqualTo(2);
+
+    // The sweep of the entry's earlier bucket reschedules it rather than expiring it
+    context.ticker().advance(Duration.ofSeconds(60).minusMillis(250));
+    cache.cleanUp();
+    assertThat(cache.getIfPresentQuietly(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
+
+    // A longer extension or a shortening is rescheduled through the write buffer
+    expireVariably.setExpiresAfter(Int.valueOf(1), Duration.ofMinutes(2));
+    assertThat(cache.writeBuffer.producerIndex).isEqualTo(4);
+    expireVariably.setExpiresAfter(Int.valueOf(1), Duration.ofSeconds(30));
+    assertThat(cache.writeBuffer.producerIndex).isEqualTo(6);
+  }
+
   @Test
   void expireAfterRead_asyncSentinel() {
     // An async entry carries the sentinel as its duration until the completion applies the create

@@ -96,12 +96,12 @@ sigstore = "2.3.0"
 sonarqube = "7.5.0.8588"
 spotbugs = "4.10.5"
 spotbugs-contrib = "7.7.4"
-spotbugs-plugin = "6.5.12"
+spotbugs-plugin = "6.5.13"
 stream = "2.9.8"
 tcache = "2.0.1"
 testng = "7.12.0"
 truth = "1.4.5"
-versions = "0.65.0"
+versions = "0.66.0"
 xz = "1.12"
 ycsb = "0.17.0"
 zero-allocation-hashing = "2026.0"
@@ -256,4 +256,4 @@ pitest = { id = "info.solidsoft.pitest", version.ref = "pitest-plugin" }
 sigstore = { id = "dev.sigstore.sign", version.ref = "sigstore" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
 spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs-plugin" }
-versions = { id = "io.github.ben-manes.versions.contributor", version.ref = "versions" }
+versions = { id = "io.github.ben-manes.versions", version.ref = "versions" }

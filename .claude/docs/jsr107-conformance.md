@@ -208,7 +208,7 @@ JCache cannot express a lazy expiry below a millisecond: `Duration` rejects smal
 
 ### Access expiry
 
-`getAccessExpireTime` evaluates the policy; `setAccessExpireTime` writes the resulting deadline
+`getAccessExpireTime` evaluates the policy; `adjustAccessExpireTime` writes the resulting deadline
 to the held wrapper. Only lock-free reads call `setVariableExpiration` to update the
 native timer by key, after writing the wrapper: any core read re-derives the native deadline from
 the wrapper through `ExpirableToExpiry`, so one landing between the two writes would otherwise
@@ -218,6 +218,13 @@ same-wrapper return. Calling policy `setExpiresAfter` inside their compute viola
 API's atomic-scope restriction and can enter maintenance while holding a bin lock.
 Read-path anchors: `getAndFilterExpiredEntries`, `EntryIterator.hasNext`, and
 `LoadingCacheProxy.getOrLoad`.
+
+An access whose millisecond deadline equals the wrapper's writes neither the wrapper nor the native
+timer. `getExpiryForAccess()` is still called once per access, which the TCK counts, and
+`Duration.getAdjustedTime` is millisecond arithmetic, so the skipped writes are unobservable.
+Rewriting them made every hit take the node's lock and queue a write-buffer task through
+`setExpiresAfter`. Under `AccessedExpiryPolicy` on 8 threads a hit cost ~2.2 us, and ~0.2 us with
+the skip. Pin: `JCacheAccessExpiryTest.get_sameMillisecond_keepsNativeExpiration`.
 
 A replacement between a read and its by-key timer update can receive the old read's native deadline.
 The old wrapper alone receives the timestamp, so this does not permit a stale value through its

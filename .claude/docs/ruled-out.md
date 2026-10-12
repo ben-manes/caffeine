@@ -151,6 +151,25 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   sequential check is already there (`moveToBack` skips the tail). Moving the links off the node
   adds a mapping and a structure to size. In applications, the work between reads absorbs the
   invalidations. Accepted as the cost of LRU ordering.
+- **Skipping the timer-wheel move for a drained read under `Expiry.creating` or `writing`.** Such a
+  read never moves the deadline, so `onAccess`'s `reschedule` only relinks the node within its
+  bucket, writing the links of the node and its neighbors. Skipping it measured -2.2 ns/op
+  (se 2.3, 8 of 12 pairs faster) on bounded `Expiry.writing` hits with 8 threads (M3 Max, JDK 27,
+  a cached-clock ticker, a loaded host). The gain is maintenance time only, which the plain slot
+  clears ruling above does not count. `Expiry.accessing` is excluded either way: `oldest()` reads
+  the wheel's order, and an extended node would keep its old bucket until the sweep. Reopen with a
+  reader-side gain on a quiet host.
+- **Padding `StripedBuffer`'s `table` field (inconclusive).** Every hit loads `table` from a
+  16-24 B object, a different object from the padded rings, whose neighbours the collector picks.
+  After a young or full GC settle, JOL found the climber's `Sample` (written per drained read) or the
+  eviction lock's `NonfairSync` (written per drain) on that 128-byte line in 31 of 48 placements
+  across JDK 17/25/26/27, 18 of 48 with 64-byte lines. Padding the field by inheritance, BBHeader's
+  shape, measured on JDK 27 with 20 natural-placement forks: read_only 15.29 vs 15.52 ns/op (paired
+  +0.23, se 0.48), and readwrite 22.09 vs 22.51 with puts unchanged. The lock state beside the field,
+  in 8 of 20 base forks, cost nothing measurable. The `Sample` never landed there on JDK 27, so that
+  placement is unmeasured, and a padded object's header, which the hit's type check loads, stays
+  exposed. Reopen with placement-controlled pairs at the `Sample`-adjacent placement (see
+  `/audit-performance`'s pricing traps), on JDK 25 or 26 where it is common.
 - **Batching removal notifications, or submitting them after the eviction lock's release.**
   Eviction and `removeNode` submit one executor task per notification while holding `evictionLock`
   (`synchronization.md`, *notifyRemoval*). With a no-op listener on the common pool, saturated

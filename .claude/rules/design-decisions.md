@@ -91,8 +91,10 @@ Details: [eviction](../docs/design-decisions.md#eviction),
   removal and notification may wait one tick, and longer when the deadline moved after the node
   was scheduled. A variable-expiry read that shortens a duration reschedules only if the lossy
   read buffer accepted the node, so a dropped offer defers the reaping to the previous deadline's
-  bucket sweep and a `Scheduler` does not shorten that. Eager current-bucket sweeps need a cost
-  measurement before replacing `delta <= 0`.
+  bucket sweep and a `Scheduler` does not shorten that. `setExpiresAfter` uses the write buffer
+  only for a shortening or an extension beyond the tolerance; a bucket's sweep pushes a smaller
+  extension forward. Eager current-bucket sweeps need a cost measurement before replacing
+  `delta <= 0`.
 - `TimerWheel.expire` detaches onto the field-backed, circular `pending` sentinel and re-reads
   its head each iteration. `advance` defers on the explicit `advancing` flag, even when
   `pending` is empty. Deque scans instead resume from their head and re-check their captured

@@ -4695,6 +4695,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         Object lookupKey = cache.nodeFactory.newLookupKey(key);
         Node<K, V> node = cache.data.get(lookupKey);
         if (node != null) {
+          long extension;
           long durationNanos = TimeUnit.NANOSECONDS.convert(duration, unit);
           synchronized (node) {
             long now = cache.expirationTicker().read();
@@ -4703,9 +4704,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
                 || cache.hasExpired(node, now)) {
               return;
             }
-            node.setVariableTime(now + Math.min(durationNanos, MAXIMUM_EXPIRY));
+            long expirationTime = now + Math.min(durationNanos, MAXIMUM_EXPIRY);
+            extension = expirationTime - node.getVariableTime();
+            node.setVariableTime(expirationTime);
           }
-          cache.afterWrite(cache.new UpdateTask(node, 0, Access.QUIET));
+          if ((extension < 0) || (extension > EXPIRE_TOLERANCE)) {
+            cache.afterWrite(cache.new UpdateTask(node, 0, Access.QUIET));
+          }
         }
       }
       @Override public @Nullable V put(K key, V value, long duration, TimeUnit unit) {

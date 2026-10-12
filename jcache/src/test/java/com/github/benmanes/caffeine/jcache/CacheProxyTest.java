@@ -1725,7 +1725,7 @@ final class CacheProxyTest {
   }
 
   @Test
-  void setAccessExpireTime_eternal() throws IOException {
+  void adjustAccessExpireTime_eternal() throws IOException {
     try (CloseableExpiryPolicy expiry = Mockito.mock();
         var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry)) {
       when(expiry.getExpiryForCreation()).thenReturn(ONE_DAY);
@@ -1736,8 +1736,8 @@ final class CacheProxyTest {
       assertThat(expirable.isEternal()).isFalse();
 
       var duration = fixture.jcache().getAccessExpireTime();
-      fixture.jcache().setVariableExpiration(KEY_1, duration);
-      fixture.jcache().setAccessExpireTime(expirable, duration, 0);
+      fixture.jcache().setVariableExpiration(KEY_1, requireNonNull(duration));
+      fixture.jcache().adjustAccessExpireTime(expirable, duration, 0);
       assertThat(expirable.isEternal()).isTrue();
 
       var policy = fixture.jcache().cache.policy().expireVariably().orElseThrow();
@@ -1747,20 +1747,20 @@ final class CacheProxyTest {
   }
 
   @Test
-  void setAccessExpireTime_exception() throws IOException {
+  void adjustAccessExpireTime_exception() throws IOException {
     try (CloseableExpiryPolicy expiry = Mockito.mock();
         var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry)) {
       when(expiry.getExpiryForAccess()).thenThrow(IllegalStateException.class);
       var expirable = new Expirable<>(KEY_1, 0);
       var duration = fixture.jcache().getAccessExpireTime();
       assertThat(duration).isNull();
-      fixture.jcache().setAccessExpireTime(expirable, duration, 0);
+      fixture.jcache().adjustAccessExpireTime(expirable, duration, 0);
       assertThat(expirable.getExpireTimeMillis()).isEqualTo(0);
     }
   }
 
   @Test
-  void setAccessExpireTime_adjustedTimeSentinelZero() throws IOException {
+  void adjustAccessExpireTime_adjustedTimeSentinelZero() throws IOException {
     try (CloseableExpiryPolicy expiry = Mockito.mock();
         var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry)) {
       fixture.jcache().put(KEY_1, VALUE_1);
@@ -1769,13 +1769,13 @@ final class CacheProxyTest {
       when(duration.getAdjustedTime(anyLong())).thenReturn(0L);
 
       var expirable = requireNonNull(getExpirable(fixture.jcache(), KEY_1));
-      fixture.jcache().setAccessExpireTime(expirable, duration, 1L);
+      fixture.jcache().adjustAccessExpireTime(expirable, duration, 1L);
       assertThat(expirable.getExpireTimeMillis()).isEqualTo(-1L);
     }
   }
 
   @Test
-  void setAccessExpireTime_adjustedTimeSentinelMaxValue() throws IOException {
+  void adjustAccessExpireTime_adjustedTimeSentinelMaxValue() throws IOException {
     try (CloseableExpiryPolicy expiry = Mockito.mock();
         var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), expiry)) {
       fixture.jcache().put(KEY_1, VALUE_1);
@@ -1784,7 +1784,7 @@ final class CacheProxyTest {
       when(duration.getAdjustedTime(anyLong())).thenReturn(Long.MAX_VALUE);
 
       var expirable = requireNonNull(getExpirable(fixture.jcache(), KEY_1));
-      fixture.jcache().setAccessExpireTime(expirable, duration, 1L);
+      fixture.jcache().adjustAccessExpireTime(expirable, duration, 1L);
       assertThat(expirable.getExpireTimeMillis()).isEqualTo(Long.MAX_VALUE - 1);
     }
   }

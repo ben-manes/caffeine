@@ -188,8 +188,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
 
     var duration = getAccessExpireTime();
-    setAccessExpireTime(expirable, duration, millis);
-    setVariableExpiration(key, duration);
+    if (adjustAccessExpireTime(expirable, duration, millis)) {
+      setVariableExpiration(key, requireNonNull(duration));
+    }
     V value = copyOf(expirable.get());
     if (statsEnabled) {
       statistics.recordHits(1L);
@@ -239,8 +240,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         entry.setValue(current);
       }
       var duration = getAccessExpireTime();
-      setAccessExpireTime(entry.getValue(), duration, millis[0]);
-      setVariableExpiration(entry.getKey(), duration);
+      if (adjustAccessExpireTime(entry.getValue(), duration, millis[0])) {
+        setVariableExpiration(entry.getKey(), requireNonNull(duration));
+      }
       return false;
     });
 
@@ -675,7 +677,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           removed[0] = true;
           return null;
         }
-        setAccessExpireTime(expirable, getAccessExpireTime(), millis);
+        adjustAccessExpireTime(expirable, getAccessExpireTime(), millis);
         return expirable;
       });
     } finally {
@@ -755,7 +757,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           replaced[0] = true;
         } else {
           result = expirable;
-          setAccessExpireTime(expirable, getAccessExpireTime(), millis);
+          adjustAccessExpireTime(expirable, getAccessExpireTime(), millis);
         }
         return result;
       });
@@ -1080,7 +1082,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       case NONE:
         return expirable;
       case READ: {
-        setAccessExpireTime(requireNonNull(expirable), getAccessExpireTime(), 0L);
+        adjustAccessExpireTime(requireNonNull(expirable), getAccessExpireTime(), 0L);
         return expirable;
       }
       case CREATED:
@@ -1438,42 +1440,46 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /**
-   * Sets the JCache access expiration time.
+   * Adjusts the JCache access expiration time.
    *
    * @param expirable the entry that was operated on
    * @param duration the access duration, or null if unchanged
    * @param currentTimeMillis the current time, or zero if not read yet
+   * @return if the expiration time changed
    */
-  protected final void setAccessExpireTime(Expirable<?> expirable,
+  @CanIgnoreReturnValue
+  protected final boolean adjustAccessExpireTime(Expirable<?> expirable,
       @Nullable Duration duration, @Var long currentTimeMillis) {
+    @Var long expireTimeMillis;
     if (duration == null) {
-      return;
+      return false;
     } else if (duration.isZero()) {
-      expirable.setExpireTimeMillis(0L);
+      expireTimeMillis = 0L;
     } else if (duration.isEternal()) {
-      expirable.setExpireTimeMillis(Long.MAX_VALUE);
+      expireTimeMillis = Long.MAX_VALUE;
     } else {
       if (currentTimeMillis == 0L) {
         currentTimeMillis = currentTimeMillis();
       }
-      @Var long expireTimeMillis = duration.getAdjustedTime(currentTimeMillis);
+      expireTimeMillis = duration.getAdjustedTime(currentTimeMillis);
       expireTimeMillis = ((expireTimeMillis == 0L) || (expireTimeMillis == Long.MAX_VALUE))
           ? (expireTimeMillis - 1)
           : expireTimeMillis;
-      expirable.setExpireTimeMillis(expireTimeMillis);
     }
+    if (expirable.getExpireTimeMillis() == expireTimeMillis) {
+      return false;
+    }
+    expirable.setExpireTimeMillis(expireTimeMillis);
+    return true;
   }
 
   /**
    * Sets the native access expiration time.
    *
    * @param key the entry's key
-   * @param duration the access duration, or null if unchanged
+   * @param duration the access duration
    */
-  protected final void setVariableExpiration(K key, @Nullable Duration duration) {
-    if (duration == null) {
-      return;
-    }
+  protected final void setVariableExpiration(K key, Duration duration) {
     cache.policy().expireVariably().ifPresent(policy -> {
       if (duration.isZero()) {
         policy.setExpiresAfter(key, 0L, TimeUnit.NANOSECONDS);
@@ -1528,8 +1534,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         long millis = entry.getValue().isEternal() ? 0L : currentTimeMillis();
         if (!entry.getValue().hasExpired(millis)) {
           var duration = getAccessExpireTime();
-          setAccessExpireTime(entry.getValue(), duration, millis);
-          setVariableExpiration(entry.getKey(), duration);
+          if (adjustAccessExpireTime(entry.getValue(), duration, millis)) {
+            setVariableExpiration(entry.getKey(), requireNonNull(duration));
+          }
           cursor = entry;
         }
       }

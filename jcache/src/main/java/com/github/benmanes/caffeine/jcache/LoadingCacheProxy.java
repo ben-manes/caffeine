@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
 import java.util.List;
@@ -114,8 +115,9 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     }
 
     var duration = getAccessExpireTime();
-    setAccessExpireTime(expirable, duration, millis);
-    setVariableExpiration(key, duration);
+    if (adjustAccessExpireTime(expirable, duration, millis)) {
+      setVariableExpiration(key, requireNonNull(duration));
+    }
     statistics.recordHits(1L);
     V value = copyOf(expirable.get());
     if (statsEnabled) {

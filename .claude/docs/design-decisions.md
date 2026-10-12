@@ -2229,6 +2229,16 @@ Accepted: the node reference is gone once the offer is dropped, routing the resc
 buffer would put most reads of such a configuration on the MPSC queue, and declining the CAS instead
 would leave the entry readable past the duration the user asked for.
 
+**`setExpiresAfter` reschedules through the write buffer only for a shortening or for an extension
+beyond the 1s tolerance.** A smaller extension relies on the same self-healing, so `oldest()` and
+`youngest()` order the entry by a deadline at most a second stale. A shortening keeps the write
+buffer: a lost reschedule would leave the entry resident past its new deadline. The JCache adapter
+calls `setExpiresAfter` on every access-expiry hit, and the `UpdateTask` made each hit pay what a
+write pays. Alone, the skip took such a hit from ~2.2 us to ~195 ns on 8 threads. Beside the
+adapter's own millisecond skip it saves ~25 ns more. Pinned by
+`BoundedLocalCacheTest.expireTolerance_setExpiresAfter` and
+`ExpirationTest.setExpiresAfter_reschedules`.
+
 The resolution is accepted for a cache's maximum-lifetime contract. It aligns with the 1s
 expiration tolerance and pacer's minimum delay; a bounded cache can also reclaim by size.
 An eager current-bucket sweep remains a possible optimization, not an approved change.

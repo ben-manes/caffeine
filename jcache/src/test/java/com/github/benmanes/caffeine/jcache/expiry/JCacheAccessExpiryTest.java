@@ -165,6 +165,29 @@ final class JCacheAccessExpiryTest {
     }
   }
 
+  @Test
+  void get_sameMillisecond_keepsNativeExpiration() {
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> config.setExpiryPolicyFactory(() -> new AccessedExpiryPolicy(
+            new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION.toMillis()))))
+        .build()) {
+      // Start at a millisecond's first nanosecond, so that the get below falls in the put's
+      long now = fixture.ticker().read();
+      long millis = TimeUnit.NANOSECONDS.toMillis(now);
+      long start = (millis < 0)
+          ? TimeUnit.MILLISECONDS.toNanos(millis) + 1
+          : TimeUnit.MILLISECONDS.toNanos(millis + 1);
+      fixture.ticker().advance(java.time.Duration.ofNanos(start - now));
+      fixture.jcache().put(KEY_1, VALUE_1);
+
+      // The access computes the deadline that the put stored, so the native timer is not rewritten
+      fixture.ticker().advance(java.time.Duration.ofNanos(500_000));
+      assertThat(fixture.jcache().get(KEY_1)).isEqualTo(VALUE_1);
+      assertThat(getNativeExpiresAfter(fixture.jcache(), KEY_1))
+          .isEqualTo(EXPIRY_DURATION.minusNanos(500_000));
+    }
+  }
+
   /* --------------- get (loading) --------------- */
 
   @Test
