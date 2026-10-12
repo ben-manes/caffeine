@@ -114,20 +114,17 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
   @Override
   default @Nullable V compute(K key,
       BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction) {
-    return compute(key, remappingFunction, expiry(),
-        /* recordLoad= */ true, /* recordLoadFailure= */ true);
+    return compute(key, remappingFunction, expiry(), /* recordLoad= */ true);
   }
 
   /**
-   * See {@link ConcurrentMap#compute}. This method differs by accepting parameters indicating
+   * See {@link ConcurrentMap#compute}. This method differs by accepting a parameter indicating
    * whether to record load statistics based on the success of this operation.
    */
   default @Nullable V compute(K key,
       BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction,
-      @Nullable Expiry<? super K, ? super V> expiry,
-      boolean recordLoad, boolean recordLoadFailure) {
-    return compute(key, remappingFunction, expiry, recordLoad, recordLoadFailure,
-        /* hints= */ null);
+      @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad) {
+    return compute(key, remappingFunction, expiry, recordLoad, /* hints= */ null);
   }
 
   /**
@@ -141,7 +138,7 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
   @Nullable V compute(K key,
       BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
-      boolean recordLoadFailure, @Nullable RemapHints hints);
+      @Nullable RemapHints hints);
 
   @Override
   default V computeIfAbsent(K key,
@@ -224,15 +221,15 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
   default <T extends @Nullable Object, U extends @Nullable Object, R extends @Nullable Object>
       BiFunction<? super T, ? super U, ? extends @Nullable R> statsAware(
           BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
-    return statsAware(remappingFunction, /* recordLoad= */ true, /* recordLoadFailure= */ true);
+    return statsAware(remappingFunction, /* recordLoad= */ true);
   }
 
   /** Decorates the remapping function to record statistics if enabled. */
   default <T extends @Nullable Object, U extends @Nullable Object, R extends @Nullable Object>
       BiFunction<? super T, ? super U, ? extends @Nullable R> statsAware(
           BiFunction<? super T, ? super U, ? extends @Nullable R> remappingFunction,
-          boolean recordLoad, boolean recordLoadFailure) {
-    if (!isRecordingStats() || (!recordLoad && !recordLoadFailure)) {
+          boolean recordLoad) {
+    if (!isRecordingStats() || !recordLoad) {
       return remappingFunction;
     }
     return (t, u) -> {
@@ -241,18 +238,14 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
       try {
         result = remappingFunction.apply(t, u);
       } catch (Throwable e) {
-        if (recordLoadFailure) {
-          statsCounter().recordLoadFailure(statsTicker().read() - startTime);
-        }
+        statsCounter().recordLoadFailure(statsTicker().read() - startTime);
         throw e;
       }
-      if (recordLoad) {
-        long loadTime = statsTicker().read() - startTime;
-        if (result == null) {
-          statsCounter().recordLoadFailure(loadTime);
-        } else {
-          statsCounter().recordLoadSuccess(loadTime);
-        }
+      long loadTime = statsTicker().read() - startTime;
+      if (result == null) {
+        statsCounter().recordLoadFailure(loadTime);
+      } else {
+        statsCounter().recordLoadSuccess(loadTime);
       }
       return result;
     };

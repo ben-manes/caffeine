@@ -501,6 +501,24 @@ final class TimerWheelTest {
     assertThat(timerWheel.getExpirationDelay()).isAtMost(SPANS[1] - offset);
   }
 
+  @Test
+  void getExpirationDelay_occupiedCurrentBucket_higherWheel() {
+    var timerWheel = new TimerWheel<Int, Int>();
+
+    // just shy of a wheel[1] tick
+    long clock = 2 * SPANS[1] - SPANS[0];
+    timerWheel.nanos = clock;
+
+    // a timer a full wheel[1] revolution out wraps onto the current bucket
+    timerWheel.schedule(new Timer(clock + SPANS[2] - 1));
+
+    // a later timer in wheel[0] is found first, so wheel[1] is only peeked at
+    timerWheel.schedule(new Timer(clock + 10 * SPANS[0]));
+
+    // the occupied current bucket is flushed when wheel[1] next ticks
+    assertThat(timerWheel.getExpirationDelay()).isEqualTo(SPANS[0]);
+  }
+
   @ParameterizedTest @MethodSource("clock")
   void getExpirationDelay_hierarchy(long clock) {
     BoundedLocalCache<Int, Int> cache = Mockito.mock();

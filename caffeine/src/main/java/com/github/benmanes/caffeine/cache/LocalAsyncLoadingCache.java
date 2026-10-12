@@ -302,8 +302,7 @@ abstract class LocalAsyncLoadingCache<K, V>
               hints.preserveRefresh = !successful;
               discard[0] = (newValue != Async.getIfReady((CompletableFuture<?>) currentValue));
               return currentValue;
-            }, asyncCache.cache().expiry(), /* recordLoad= */ false,
-                /* recordLoadFailure= */ true, hints);
+            }, asyncCache.cache().expiry(), /* recordLoad= */ false, hints);
 
             if (discard[0] && (newValue != null)) {
               var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;

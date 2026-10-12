@@ -2095,6 +2095,30 @@ final class ExpireAfterVarTest {
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
   }
 
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, expiry = CacheExpiry.MOCKITO)
+  void putIfAbsent_incomplete_present(AsyncCache<Int, Int> cache,
+      CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
+    var started = new AtomicBoolean();
+    var future = new CompletableFuture<Int>();
+    var writer = new AtomicReference<@Nullable Thread>();
+
+    cache.put(context.absentKey(), future);
+    var result = CompletableFuture.supplyAsync(() -> {
+      writer.set(Thread.currentThread());
+      started.set(true);
+      return expireAfterVar.putIfAbsent(context.absentKey(),
+          context.absentValue(), Duration.ofDays(1));
+    }, executor);
+    await().untilTrue(started);
+    var thread = requireNonNull(writer.get());
+    await().untilAsserted(() -> assertThat(thread.getState()).isAnyOf(BLOCKED, WAITING));
+
+    future.complete(context.absentKey());
+    assertThat(result).succeedsWith(context.absentKey());
+    assertThat(cache).containsEntry(context.absentKey(), context.absentKey());
+  }
+
   @Nested @Isolated
   final class IsolatedTest {
 

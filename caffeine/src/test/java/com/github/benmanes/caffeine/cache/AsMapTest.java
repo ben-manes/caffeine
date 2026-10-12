@@ -760,6 +760,17 @@ final class AsMapTest {
     assertThat(map).containsKey(context.absentKey());
   }
 
+  @CheckNoStats
+  @ParameterizedTest
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      values = ReferenceType.STRONG, removalListener = { Listener.DISABLED, Listener.REJECTING })
+  void removeConditionally_failingExpectedEquality(Map<Int, Int> map, CacheContext context) {
+    // the expected value's equals failing is not a load, so no view records it as one
+    assertThrows(IllegalStateException.class, () ->
+        map.remove(context.firstKey(), new FailingEquality()));
+    assertThat(map).hasSize(context.initialSize());
+  }
+
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY,
       removalListener = {Listener.DISABLED, Listener.REJECTING})
@@ -4454,6 +4465,16 @@ final class AsMapTest {
     @SuppressFBWarnings("EQ_UNUSUAL")
     @Override public boolean equals(@Nullable Object o) {
       throw new AssertionError("the cached value's equals must not be invoked");
+    }
+    @Override public int hashCode() {
+      return System.identityHashCode(this);
+    }
+  }
+
+  private static final class FailingEquality {
+    @SuppressFBWarnings("EQ_UNUSUAL")
+    @Override public boolean equals(@Nullable Object o) {
+      throw new IllegalStateException();
     }
     @Override public int hashCode() {
       return System.identityHashCode(this);

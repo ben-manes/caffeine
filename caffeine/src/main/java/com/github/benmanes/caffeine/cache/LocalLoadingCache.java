@@ -243,7 +243,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
         hints.preserveTimestamps = true;
         discard[0] = (currentValue != newValue);
         return currentValue;
-      }, cache.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true, hints);
+      }, cache.expiry(), /* recordLoad= */ false, hints);
 
       if (discard[0] && (newValue != null)) {
         var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;

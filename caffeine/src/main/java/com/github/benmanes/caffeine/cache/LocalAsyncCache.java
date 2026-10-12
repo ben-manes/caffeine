@@ -544,7 +544,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
             deferred[0] = !Async.isReady(computed);
             prior[0] = oldValue;
             return computed;
-          }, asyncCache.cache().expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false);
+          }, asyncCache.cache().expiry(), /* recordLoad= */ false);
 
       if ((result != null) && (result != prior[0])) {
         asyncCache.handleCompletion(key, result, startTime, deferred[0], /* computed= */ true);
@@ -914,7 +914,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
               }
               hints.preserveEntry();
               return valueFuture;
-            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
+            }, delegate.expiry(), /* recordLoad= */ false, hints);
 
         if (added[0]) {
           return null;
@@ -957,7 +957,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       @SuppressWarnings("unchecked")
       var castedKey = (K) key;
       boolean[] removed = { false };
-      remapWhenSettled(castedKey, /* recordLoadFailure= */ true, (oldValue, oldValueFuture) -> {
+      remapWhenSettled(castedKey, (oldValue, oldValueFuture) -> {
         removed[0] = Objects.equals(value, oldValue);
         return ((oldValue == null) || removed[0]) ? null : oldValueFuture;
       });
@@ -970,7 +970,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
       @Nullable V[] oldValue = (V[]) new Object[1];
-      remapWhenSettled(key, /* recordLoadFailure= */ false, (current, oldValueFuture) -> {
+      remapWhenSettled(key, (current, oldValueFuture) -> {
         oldValue[0] = current;
         return (current == null) ? null : CompletableFuture.completedFuture(value);
       });
@@ -983,7 +983,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       requireNonNull(newValue);
 
       boolean[] replaced = { false };
-      remapWhenSettled(key, /* recordLoadFailure= */ false, (current, oldValueFuture) -> {
+      remapWhenSettled(key, (current, oldValueFuture) -> {
         replaced[0] = Objects.equals(oldValue, current);
         return replaced[0] ? CompletableFuture.completedFuture(newValue) : oldValueFuture;
       });
@@ -1006,12 +1006,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
      * metadata and any in-flight refresh intact.
      *
      * @param key the key whose entry is to be remapped
-     * @param recordLoadFailure if a removal should be recorded as a failed load
      * @param remapping computes the future to store from the settled value, or {@code null} to
      *        remove the entry
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    private void remapWhenSettled(K key, boolean recordLoadFailure,
+    private void remapWhenSettled(K key,
         BiFunction<@Nullable V, CompletableFuture<V>, @Nullable CompletableFuture<V>> remapping) {
       boolean[] done = { false };
       for (;;) {
@@ -1037,7 +1036,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
             hints.preserveEntry();
           }
           return remapped;
-        }, delegate.expiry(), /* recordLoad= */ false, recordLoadFailure, hints);
+        }, delegate.expiry(), /* recordLoad= */ false, hints);
 
         if (done[0]) {
           return;
@@ -1085,7 +1084,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
               }
               future[0] = CompletableFuture.completedFuture(newValue);
               return future[0];
-            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
+            }, delegate.expiry(), /* recordLoad= */ false, hints);
 
         V result = Async.getWhenSuccessful(computed);
         if ((computed == future[0]) || (result != null)) {
@@ -1127,10 +1126,10 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
               }
 
               BiFunction<? super K, ? super V, ? extends @Nullable V> function =
-                  delegate.statsAware(remappingFunction, recordLoad, recordLoad);
+                  delegate.statsAware(remappingFunction, recordLoad);
               newValue[0] = function.apply(key, oldValue);
               return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
-            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
+            }, delegate.expiry(), /* recordLoad= */ false, hints);
 
         if (newValue[0] != null) {
           return newValue[0];
@@ -1162,11 +1161,10 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
               V oldValue = Async.getIfReady(oldValueFuture);
               BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> function =
-                  delegate.statsAware(remappingFunction,
-                      /* recordLoad= */ true, /* recordLoadFailure= */ true);
+                  delegate.statsAware(remappingFunction, /* recordLoad= */ true);
               newValue[0] = function.apply(key, oldValue);
               return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
-            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
+            }, delegate.expiry(), /* recordLoad= */ false, hints);
 
         if (newValue[0] != null) {
           return newValue[0];
@@ -1213,7 +1211,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
                 return newValueFuture;
               }
               return CompletableFuture.completedFuture(mergedValue);
-            }, delegate.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
+            }, delegate.expiry(), /* recordLoad= */ false, hints);
 
         if (merged[0]) {
           return Async.getWhenSuccessful(mergedValueFuture);

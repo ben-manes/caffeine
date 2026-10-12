@@ -1436,7 +1436,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             hints.preserveTimestamps = true;
             hints.preserveRefresh = !owned;
             return currentValue;
-          }, expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true, hints);
+          }, expiry(), /* recordLoad= */ false, hints);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
           refreshes.remove(keyReference, refreshFuture[0]);
@@ -3015,7 +3015,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     @SuppressWarnings("NullAway")
     BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> statsAwareRemappingFunction =
-        statsAware(remappingFunction, /* recordLoad= */ true, /* recordLoadFailure= */ true);
+        statsAware(remappingFunction, /* recordLoad= */ true);
     return remap(key, lookupKey, statsAwareRemappingFunction,
         expiry(), new ComputeContext<>(), /* computeIfAbsent= */ false);
   }
@@ -3023,7 +3023,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @Override
   public @Nullable V compute(K key,
       BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction,
-      @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad, boolean recordLoadFailure,
+      @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
       @Nullable RemapHints hints) {
     requireNonNull(key);
     requireNonNull(remappingFunction);
@@ -3031,7 +3031,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     var ctx = new ComputeContext<K, V>();
     ctx.hints = hints;
-    return remap(key, keyRef, statsAware(remappingFunction, recordLoad, recordLoadFailure),
+    return remap(key, keyRef, statsAware(remappingFunction, recordLoad),
         expiry, ctx, /* computeIfAbsent= */ true);
   }
 
@@ -3526,6 +3526,41 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         : Long.MAX_VALUE;
     return SnapshotEntry.forEntry(key, value, now,
         isWeighted ? weight : 1, now + expiresAfter, now + refreshableAfter);
+  }
+
+  /** Creates a serialization proxy based on the common configuration shared by all cache types. */
+  static <K, V> SerializationProxy<K, V> makeSerializationProxy(BoundedLocalCache<?, ?> cache) {
+    var proxy = new SerializationProxy<K, V>();
+    proxy.weakKeys = cache.collectKeys();
+    proxy.weakValues = cache.nodeFactory.weakValues();
+    proxy.softValues = cache.nodeFactory.softValues();
+    proxy.isRecordingStats = cache.isRecordingStats();
+    proxy.evictionListener = cache.evictionListener;
+    proxy.removalListener = cache.removalListener();
+    proxy.ticker = cache.expirationTicker();
+    if (cache.expiresAfterAccess()) {
+      proxy.expiresAfterAccessNanos = cache.expiresAfterAccessNanos();
+    }
+    if (cache.expiresAfterWrite()) {
+      proxy.expiresAfterWriteNanos = cache.expiresAfterWriteNanos();
+    }
+    if (cache.expiresVariable()) {
+      proxy.expiry = cache.expiry();
+    }
+    if (cache.refreshAfterWrite()) {
+      proxy.refreshAfterWriteNanos = cache.refreshAfterWriteNanos();
+    }
+    if (cache.evicts()) {
+      if (cache.isWeighted) {
+        proxy.weigher = cache.weigher;
+        proxy.maximumWeight = cache.maximumAcquire();
+      } else {
+        proxy.maximumSize = cache.maximumAcquire();
+      }
+    }
+    proxy.cacheLoader = cache.cacheLoader;
+    proxy.async = cache.isAsync;
+    return proxy;
   }
 
   /** Mutable context for passing state between a lambda and the caller. */
@@ -4322,41 +4357,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
-  /** Creates a serialization proxy based on the common configuration shared by all cache types. */
-  static <K, V> SerializationProxy<K, V> makeSerializationProxy(BoundedLocalCache<?, ?> cache) {
-    var proxy = new SerializationProxy<K, V>();
-    proxy.weakKeys = cache.collectKeys();
-    proxy.weakValues = cache.nodeFactory.weakValues();
-    proxy.softValues = cache.nodeFactory.softValues();
-    proxy.isRecordingStats = cache.isRecordingStats();
-    proxy.evictionListener = cache.evictionListener;
-    proxy.removalListener = cache.removalListener();
-    proxy.ticker = cache.expirationTicker();
-    if (cache.expiresAfterAccess()) {
-      proxy.expiresAfterAccessNanos = cache.expiresAfterAccessNanos();
-    }
-    if (cache.expiresAfterWrite()) {
-      proxy.expiresAfterWriteNanos = cache.expiresAfterWriteNanos();
-    }
-    if (cache.expiresVariable()) {
-      proxy.expiry = cache.expiry();
-    }
-    if (cache.refreshAfterWrite()) {
-      proxy.refreshAfterWriteNanos = cache.refreshAfterWriteNanos();
-    }
-    if (cache.evicts()) {
-      if (cache.isWeighted) {
-        proxy.weigher = cache.weigher;
-        proxy.maximumWeight = cache.maximumAcquire();
-      } else {
-        proxy.maximumSize = cache.maximumAcquire();
-      }
-    }
-    proxy.cacheLoader = cache.cacheLoader;
-    proxy.async = cache.isAsync;
-    return proxy;
-  }
-
   /* --------------- Manual Cache --------------- */
 
   static class BoundedLocalManualCache<K, V> implements LocalManualCache<K, V>, Serializable {
@@ -4766,7 +4766,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             }
             hints.preserveEntry();
             return oldValue;
-          }, expiry, /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
+          }, expiry, /* recordLoad= */ false, hints);
 
           if (added[0]) {
             return null;
@@ -4799,8 +4799,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
         return cache.isAsync
             ? computeAsync(key, remappingFunction, expiry)
-            : cache.compute(key, remappingFunction, expiry,
-                /* recordLoad= */ true, /* recordLoadFailure= */ true);
+            : cache.compute(key, remappingFunction, expiry, /* recordLoad= */ true);
       }
       @Nullable V computeAsync(K key,
           BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction,
@@ -4824,13 +4823,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
                 V oldValue = Async.getIfReady(oldValueFuture);
                 BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> function =
-                    delegate.statsAware(remappingFunction,
-                        /* recordLoad= */ true, /* recordLoadFailure= */ true);
+                    delegate.statsAware(remappingFunction, /* recordLoad= */ true);
                 newValue[0] = function.apply(key, oldValue);
                 return (newValue[0] == null) ? null
                     : CompletableFuture.completedFuture(newValue[0]);
-              }, new AsyncExpiry<>(expiry), /* recordLoad= */ false,
-              /* recordLoadFailure= */ false, hints);
+              }, new AsyncExpiry<>(expiry), /* recordLoad= */ false, hints);
 
           if (newValue[0] != null) {
             return newValue[0];

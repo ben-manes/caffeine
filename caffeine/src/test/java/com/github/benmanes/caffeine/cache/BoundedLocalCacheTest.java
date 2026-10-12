@@ -4887,7 +4887,7 @@ final class BoundedLocalCacheTest {
 
     var hints = new LocalCache.RemapHints();
     var value = cache.compute(context.firstKey(), (key, oldValue) -> oldValue, cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
+        /* recordLoad= */ false, hints);
     cache.cleanUp();
 
     assertThat(value).isEqualTo(context.original().get(context.firstKey()));
@@ -4910,7 +4910,7 @@ final class BoundedLocalCacheTest {
     var hints = new LocalCache.RemapHints();
     hints.quietly = true;
     var value = cache.compute(context.firstKey(), (key, oldValue) -> oldValue, cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
+        /* recordLoad= */ false, hints);
     cache.cleanUp();
 
     assertThat(value).isEqualTo(context.original().get(context.firstKey()));
@@ -5316,7 +5316,7 @@ final class BoundedLocalCacheTest {
     assertThrows(IllegalStateException.class, () ->
         cache.compute(context.firstKey(), (key, value) -> {
           throw new IllegalStateException();
-        }, cache.expiry(), /* recordLoad= */ false, /* recordLoadFailure= */ true));
+        }, cache.expiry(), /* recordLoad= */ false));
     assertThat(cache).doesNotContainKey(context.firstKey());
   }
 
@@ -5930,7 +5930,7 @@ final class BoundedLocalCacheTest {
     hints.preserveRefresh = true;
     assertThrows(IllegalStateException.class,
         () -> cache.compute(key, (k, v) -> context.absentValue(), expiry,
-            /* recordLoad= */ false, /* recordLoadFailure= */ false, hints));
+            /* recordLoad= */ false, hints));
     assertThat(cache.refreshes()).containsEntry(keyRef, successor);
     cache.refreshes().remove(keyRef);
   }
@@ -7546,7 +7546,7 @@ final class BoundedLocalCacheTest {
     var hints = new LocalCache.RemapHints();
     hints.preserveTimestamps = true;
     assertThat(cache.compute(key, (k, old) -> context.absentValue(), cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints))
+        /* recordLoad= */ false, hints))
         .isEqualTo(context.absentValue());
     assertThat(cache).containsEntry(key, context.absentValue());
   }
@@ -7568,7 +7568,7 @@ final class BoundedLocalCacheTest {
     var hints = new LocalCache.RemapHints();
     hints.preserveTimestamps = true;
     assertThat(cache.compute(key, (k, old) -> originalValue, cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints))
+        /* recordLoad= */ false, hints))
         .isEqualTo(originalValue);
   }
 
@@ -7584,7 +7584,7 @@ final class BoundedLocalCacheTest {
     var hints = new LocalCache.RemapHints();
     hints.preserveTimestamps = true;
     assertThat(cache.compute(key, (k, oldValue) -> context.absentValue(), cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints))
+        /* recordLoad= */ false, hints))
         .isEqualTo(context.absentValue());
     cache.cleanUp();
     assertThat(cache.weightedSize()).isEqualTo(context.weigher().weigh(key, context.absentValue()));
@@ -7602,7 +7602,7 @@ final class BoundedLocalCacheTest {
     var hints = new LocalCache.RemapHints();
     hints.preserveTimestamps = true;
     assertThat(cache.compute(key, (k, oldValue) -> context.absentValue(), cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints))
+        /* recordLoad= */ false, hints))
         .isEqualTo(context.absentValue());
     cache.cleanUp();
     assertThat(cache.weightedSize()).isEqualTo(context.weigher().weigh(key, context.absentValue()));
@@ -7634,7 +7634,7 @@ final class BoundedLocalCacheTest {
     hints.preserveTimestamps = true;
     hints.preserveRefresh = true;
     var result = cache.compute(key, (k, old) -> oldValue, cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints);
+        /* recordLoad= */ false, hints);
 
     assertThat(result).isEqualTo(oldValue);
     assertThat(cache.refreshes()).containsEntry(keyRef, pendingRefresh);
@@ -7661,7 +7661,7 @@ final class BoundedLocalCacheTest {
     var hints = new LocalCache.RemapHints();
     hints.preserveTimestamps = true;
     assertThat(cache.compute(key, (k, old) -> oldValue, cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints)).isNotNull();
+        /* recordLoad= */ false, hints)).isNotNull();
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
 
@@ -7683,7 +7683,7 @@ final class BoundedLocalCacheTest {
     var hints = new LocalCache.RemapHints();
     hints.preserveRefresh = true;
     assertThat(cache.compute(key, (k, old) -> context.absentValue(), cache.expiry(),
-        /* recordLoad= */ false, /* recordLoadFailure= */ false, hints)).isNotNull();
+        /* recordLoad= */ false, hints)).isNotNull();
     assertThat(cache.refreshes()).doesNotContainKey(keyRef);
   }
 

@@ -301,7 +301,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Nullable V[] oldValue = (V[]) new Object[1];
     V nv = data.computeIfPresent(key, (K k, V value) -> {
       BiFunction<? super K, ? super V, ? extends @Nullable V> function = statsAware(
-          remappingFunction, /* recordLoad= */ true, /* recordLoadFailure= */ true);
+          remappingFunction, /* recordLoad= */ true);
       try {
         V newValue = function.apply(k, value);
         if (newValue != value) {
@@ -327,9 +327,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   public @Nullable V compute(K key,
       BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction,
       @Nullable Expiry<? super K, ? super V> expiry, boolean recordLoad,
-      boolean recordLoadFailure, @Nullable RemapHints hints) {
+      @Nullable RemapHints hints) {
     requireNonNull(remappingFunction);
-    return remap(key, statsAware(remappingFunction, recordLoad, recordLoadFailure),
+    return remap(key, statsAware(remappingFunction, recordLoad),
         hints, /* computeIfAbsent= */ true);
   }
 

@@ -70,6 +70,26 @@ final class GuardedCacheEntryEventFilterTest {
   }
 
   @Test
+  void evaluate_interrupted() {
+    CacheEntryEventFilter<Integer, Integer> underlying = Mockito.mock();
+    var filter = new GuardedCacheEntryEventFilter<>(underlying);
+    try (Cache<Integer, Integer> cache = Mockito.mock()) {
+      when(underlying.evaluate(any()))
+          .thenAnswer(invocation -> { throw new InterruptedException(); });
+      var event = new JCacheEntryEvent<>(cache, EventType.CREATED,
+          /* key= */ 1, /* hasOldValue= */ false, /* oldValue= */ null, /* newValue= */ 2);
+      boolean interrupted;
+      try {
+        assertThat(filter.evaluate(event)).isFalse();
+      } finally {
+        interrupted = Thread.interrupted();
+      }
+      assertThat(interrupted).isTrue();
+      assertThat(TestLoggerFactory.getLoggingEvents()).hasSize(1);
+    }
+  }
+
+  @Test
   void equals() {
     CacheEntryEventFilter<Integer, Integer> none = event -> false;
     CacheEntryEventFilter<Integer, Integer> all = event -> true;
