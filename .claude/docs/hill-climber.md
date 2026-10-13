@@ -34,6 +34,22 @@ recency-heavy workloads want windows of 20–80%, frequency-heavy ones want ~1%,
 switch regimes. The climber's job is to track the optimal split online using only signals the cache
 can observe about itself, at zero cost to the request path.
 
+Practical comparators include LRU, static windows and ARC on the same access stream, with MiniSim
+testing what additional observation state can reveal. The objective is broad workload quality
+within the cache's cost budget, not a universal policy optimum. Losses to these references remain
+generic headroom; richer application metadata cannot explain them away.
+A specialized policy may do better using context or structure, such as request category, turn and
+prefix depth. OPT/Bélády instead knows future accesses. A gap to that oracle proves neither that
+an online feature can recover the gap nor that learning such a feature must be expensive.
+
+Inferring useful reuse structure from generic observations is a separate, testable question. It
+requires bounded state and work, enough labels during cold start, an observation stream available
+in the cache, and controls that distinguish persistence from scans and changing workloads.
+The failed skew classifiers (§5's opening) do not rule out all inexpensive inference. Arbitrary
+key hash values do not supply application semantics: do not treat them as addresses,
+request categories or turns. Specialized contextual policies and generic adaptivity therefore
+need separate evidence, while sharing the same discipline for information, action and cost (§6).
+
 Constraints that shape everything:
 - **The counterfactual is invisible.** The cache observes only what its *current* split earns.
   What a bigger window *would have* caught requires ghost state (ARC's B1/B2), which Ben rejected:
@@ -834,7 +850,7 @@ constructed traps hold both at once, and no real cell in the corpus does. The on
 trap-strength scatter on wide terrain has an optimum that *moves* — which makes its scatter
 window-informative, precisely the case the goal-metric layer exists to answer.
 
-**LLM prefix-cache traces hold both, and the machine does not climb on them** (the Qwen Bailian
+**LLM prefix-cache traces hold both, and the machine climbs on them slowly** (the Qwen Bailian
 traces, read by `bailian`; `/climber-gate`'s prefix-cache row). A sample is a few hundred requests
 that each re-read a session's whole prefix, so on Thinking@16384 the per-sample rate swings between
 14% and 60%, while the static 1%-to-80% span is 4.4pp there, 6.9pp at 65536 and 18pp on
@@ -856,19 +872,49 @@ the marginal form at the ceiling, and on the To-B control, whose average law rig
 floor, the marginal form rests near 13% for 0.2pp. And probes and audits are judged across phase
 swings several times the window's effect, so most fail and their backoffs escalate.
 
+Two properties matter when interpreting these comparisons (§1). A prefix lookup stops at a
+request's first missing block, so only the leading run of hits is usable, while the simulator
+counts every block hit. LRU's usable and block hits were equal in the studied replay; that is
+not a universal LRU guarantee. A small window streams a long request through TinyLFU's admission
+one block at a time, and a rejected shallow block can strand the hits behind it. The shipped
+climber's usable hits run 0.8–2.8pp below its block hits in these measurements (To-C@185364 23.4
+against 26.2; 0.5–1.7 at an 80% window). The source study's
+[workload-aware policy](https://arxiv.org/html/2506.02634v5#S4.SS2) ranks blocks using request
+category and turn, idle time and prefix depth, preferring deep blocks for eviction on a priority
+tie. These fields can be recovered from the released request records, but the flattened generic
+access event and cache maintenance stream do not carry them. That richer input is distinct from
+the key-only steering loss above.
+
+**A bounded information study did not qualify a generic trigger.** Across sixteen cells and eight
+sampling seeds, two 64-key banks predicted reuse over the next C block events, where C is the
+declared cache capacity, using a fixed learner and an authentic demand-fed aged-frequency sketch. On
+the seven primary cells' held-out key Brier, bounded reuse history improved 1.63% relative to age
+plus frequency (AF), but lost 0.68% to an equally deep AF-child control with no new feature.
+Type/turn improved 0.40% over AF child, below the 1% bar, and failed request-weighted and control
+checks. Frequency alone had lower primary key Brier than any tested extension. The observer and its
+core learner occupied 31,872 native bytes per replica, excluding the shared sketch and offline
+evaluator; no production CPU or JVM-size claim was tested. All six history/metadata extensions
+failed the preregistered gate. This is a limit of that finite learner, budget and horizon, not proof
+that context or inexpensive inference is useless. Prediction or ranking gains do not establish a
+harmful-mode trigger, a window direction, benefit from invoking MiniSim, or a qualified policy
+change.
+
 **On these traces the large cells' loss is mostly sample budget, and the HBM-size cells' is not.**
-Replaying a trace back to back adds decisions without adding reuse (LRU reads the same on every
-pass). To-C@185364, at 8.5 samples a pass, closes from 19.6pp below LRU to about 6.5 from the fifth
-pass, parked at a 32–43% window where the product's density error sits near zero though the static
-anchor's reads +2.1; Thinking@65536 (12 samples a pass) closes from 5.9 to about 1.5, and
-Coder@65536 (59) from 2.9 to about 1. Thinking@16384 (49) averages 1.6 below on the fourth pass, but
-one seed of three never leaves the floor, and Thinking@32768 replayed four times reads 32.95–36.97
-across eight seeds against LRU's 39.61, an escape lottery. The reactive law is no repair, though
-given time it is the better of the two here: −1.7 to +1.2 against the shipped machine on single
-passes and −7.2 on Coder at 699051, but +1.3 on Thinking@32768 replayed four times and +4.4 on
-To-C@185364 replayed eight (ahead on six and eight of eight seeds), still 3.0 and 6.6pp under LRU.
-The 20-day AgentX corpus, scheduled at a steady 16 sessions, converges to within 1.8pp of LRU at
-every size from 8192.
+A pass holds 8.5 samples on To-C@185364, 12 on Thinking@65536 and 49–59 on Thinking@16384 and
+Coder@65536, so one pass of a large cell is warm-up: To-C@185364 reads 26.2 against LRU's 45.8.
+Replaying the trace lengthens the run, but replaying its keys also lets the frequency sketch
+remember every key from the previous pass. LRU reads the same on every pass, yet that memory lifts a
+static 1% window by 4.8pp on To-C@185364 and keeps the climber small: under plain replay To-C@185364
+closes only to about 6.5 below LRU from the fifth pass, and Thinking@32768 replayed four times reads
+32.95–36.97 across eight seeds, an apparent escape lottery. With fresh keys each pass (each pass's
+keys mapped onto new ones) the climber reaches LRU or the static 80% window within two to four
+passes on every cell (passes 2–8: To-C@185364 41.3, Thinking@32768 38.8, Thinking@65536 41.6,
+Coder@262144 53.4, against LRU's 45.8 / 39.6 / 42.3 / 55.4), as the 20-day AgentX corpus, scheduled
+at a steady 16 sessions, converges to within 1.8pp of LRU at every size from 8192. The HBM-size
+cells climb slowly even with samples to spare: Thinking@16384 reaches LRU's 36.3 only on its fourth
+fresh pass, about 150 samples in. Under plain replay the reactive law looked the better of the two
+given time (+1.3 on Thinking@32768 ×4, +4.4 on To-C@185364 ×8); on single passes it is −1.7 to +1.2
+against the shipped machine, and −7.2 on Coder at 699051.
 
 **The tier boundary.** At the 4096 switch the discontinuity is the policy, not the terrain: on a
 constructed straddle one entry of capacity moves the answer by several points while LRU steps zero
@@ -1525,6 +1571,15 @@ below the discarded claim through a settle is a new state inside the confidence-
 and was not built. The seven arms stay in the harness under one flag table (`rearm*`), so the
 square can be re-priced after an alternation change.
 
+A regime change can also miss the detector. `standDown` discards only with the window on the
+anchor, so a step that lands while an audit's undo is still carrying the window home keeps the
+stale claim; its veto later drags the window back, and the next audit waits out the ended regime's
+clock. `slowswap_step` shows the size: moving its swap 16 samples later (`slowswap.py --p1 166`)
+puts it inside such an undo, and the shipped climber reads 33.3 against 40.3 at the committed
+timing, holding near a 25% window with a 1% hit rate through a 64-sample wait while the new regime
+wants 80%. Discarding on an off-anchor step meets the same wall, since the controller's own moves
+also step the rate.
+
 ### Guarding the probe's arming, and re-reading its verdict, on a regime-change sample
 
 Four guards on the starvation probe's arming, built for `arc_DS1`'s trough-armed confirms at a
@@ -1814,7 +1869,9 @@ start rather than the controller; with the floor applied that stratum is negativ
 asymmetrically: on recency workloads it captures **96%** of what a larger start could statically
 buy (frozen +2.68 against a delivered +0.11 at a 10% start), because it was walking to a 20–50%
 window anyway and the plant only shortens a journey already underway. That assumes the climber
-walks; the LLM prefix-cache cells (§3, terrain classes) are recency-favorable and do not. On
+walks; on the LLM prefix-cache cells (§3, terrain classes) it walks too slowly for one pass, where a
+plant does pay (one pass of To-C@185364 gains +8.7 from a 10% start and +17.5 from 50%), though with
+fresh-key replays it reaches the large window within two to four passes anyway. On
 frequency workloads it passes **90% of the harm through** (frozen −0.80, delivered −0.72), since there the plant is pure
 displacement to be walked back at the descent rate of 4–6% of the maximum per sample. A larger default therefore buys almost
 nothing where it would help and costs nearly full price where it hurts. On two cells it lands in a
@@ -1842,6 +1899,69 @@ belong to the marginal-steering thread (§5) rather than here: `arc_P1@64k` sett
 for **3.25pp** (45.63 against a 48.88 frozen ceiling). `cp_w097@16k` is the other face, but it does
 not settle: its 135-decision endpoint is near 47% against a broad 5–15% optimum, and continuous
 270- and 541-decision runs stay near 47% while cycling through seed-dependent walks and parks.
+
+### An LRU estimate as an audit trigger
+
+A sampled estimate of what an LRU of the same maximum would hit (SHARDS-sampled keys in a
+fingerprint-and-stamp table of about 25 KB, read through AET with the SHARDS-adj correction, within
+about 1pp of exact LRU) can schedule an up-audit when LRU out-hits the cache by more than 3pp for
+four samples. Under plain multi-pass replays it brought every LLM prefix row within 2.6pp of LRU at
+steady state and lifted the battery by +1.6 with no bar failing, but the steady-state win was the
+replays' frequency memory (§6): with fresh keys per pass the shipped climber converges within two to
+four passes on its own, and the trigger adds 0.0 to +0.8. It also cost 16% of `EvictionBenchmark`
+throughput at 5,000 entries and 9.5% at 10,000, where 2,048 sampled keys cover 41% of a 5,000-entry
+cache's requests; capping sampling at 1/16 of keys cut that to 2.7–3.7%, the rest being per-request
+work. Early in a run the cold frequency sketch lets LRU lead on frequency-favorable traces too, so a
+lead-triggered audit ahead of the climber's own first audit confirms premature windows. What
+remains is +1.6 on synthetic traps, which does not pay for the state and the throughput. Price a
+per-request sketch at the smallest maximum it serves before validating its hit rates.
+
+### Accelerating warm-up: jumps, momentum and shorter samples
+
+On a recency-favorable trace the climber reaches its large window, but slowly. On the LLM
+prefix-cache cells (§3, terrain classes) one pass of a two-hour trace is 8.5 to 25 samples at the
+larger sizes, and the climber spends 9 samples (To-C@185364) to 74 (Thinking@32768, about three
+passes) at the floor before steering climbs: a grown window reads sparse while main holds the
+captured hot set, and probes and audits from the floor fail on phase swings. The rules that shorten
+that phase buy +1.6 to +2.8pp on those first passes, and each costs something on every seed: a
+frequency-heavy real trace 0.7–2.4pp or, once gated so that no real trace triggers it, the
+battery's traps. None passes the bar the start-window ruling above set:
+
+- A geometric up-audit from the floor (stride doubling while the hit rate holds), with dip
+  tolerance and arming ahead of the calibration wait: +2.8 on the prefix cells, but To-B −1.2 and
+  ARC S1 −2.7, S2 −1.2, S3 −0.9. Gating it on an early sample in which the window out-earned main
+  leaves the controls bit-identical but not ARC, since a cold cache makes every window look dense in
+  its first sample. Judging it against its base plus the hit rate's prior rise, with arming held two
+  samples, keeps +2.4 (To-C@185364 +7.4) and still costs P8 −0.9, S3 −0.8, S1 −0.7.
+- The same jump behind a fill-drop gate, which allows it only when the hit rate falls once the
+  cache is full (the second and third samples averaging under 70% of the first): every corpus cell
+  (seeds 1–2) and control is bit-identical and the prefix cells gain +1.6, but the battery fails
+  slowswap's step and ramp (−11.7, −9.3) and mixture_d050_long (−1.3), each on every seed, while
+  absolve and absolve_p8 gain +9.2 and straywall2@16k +4.0, for a battery mean of +0.4. On
+  mixture_d050_long the doubling strides land at 80% and park at 69%, where the shipped walk parks
+  at 56%. The early audit also moves every later one, so on slowswap an audit crashes just before
+  the swap; the swap's rate step lands during its undo, away from the anchor, where `standDown`
+  ignores it, and the stale anchor vetoes the climb. That trap is timing-sensitive for the shipped
+  climber too (33.3–41.8 as `slowswap.py --p1` moves the swap ±24 samples, the row's committed
+  timing near its best), but averaged over those timings the jump still costs 2.1. Handing the
+  landing to density steering instead of a park does not escape this: at To-C@185364's 80% landing
+  density reads the window sparse (log ratio −0.8, main still holding the captured hot set) and
+  would give back the gain, while at mixture's 69% overshoot it reads −0.5 and would correct it,
+  so the landing carries no signal that tells the two apart.
+- Momentum, consecutive same-direction density steps growing ×1.5: +0.3, too small.
+- Samples of one maximum instead of four until the first audit: +2.2 (Thinking@65536 +5.1), but
+  DS1@1M −2.4 and cp_w097 −1.2. DS1's first audit never runs, its 0–68% per-sample swings drive
+  density-judged probes to a 40–62% window, and capping the short samples at 8 or 16 still costs
+  DS1 −1.6 or −1.2.
+
+Two things recur. The first samples after the half-full gate are cold: the hit rate rises with the
+warming cache (ARC S1 climbs 1.1 → 6.9 over the first ten of its 15 samples) and the empty frequency
+sketch makes the window look dense, so a verdict taken then is biased. And an early move persists
+through parks, backoffs and the audit schedule (P8's jump crashes cheaply at 20%, yet a later audit
+confirms larger windows on every seed). So the ungated rules help the traces whose right move is up
+anyway and charge the ones whose right move is to stay; the fill-drop gate removes the first problem
+and still fails on the second. Warm-up stays as it is; a rule that could pass needs an early move
+that neither parks its landing nor shifts the later audits.
 
 ### Neither main-space knob is worth adapting
 
@@ -2486,18 +2606,38 @@ controls and §6's decision-replay protocol, with its own source binding and val
   common, and a single-cell regression is adjudicated by basin count at N≥10, never by a mean at
   N=2.
 - Adaptive N is sound and ~60% cheaper: N=2 everywhere, N=5 where |Δ| ∈ 0.5–2.5pp or spread >0.5.
+- **Lengthen a trace with fresh keys, not a plain replay.** Replaying a trace back to back lets the
+  frequency sketch remember every key from the previous pass, which flatters small windows and can
+  trap the climber there: on the LLM prefix cells a static 1% window gains 4.8pp on To-C@185364 from
+  that memory alone, and under plain replay the shipped climber stays small where with each pass's
+  keys mapped onto new ones it reaches LRU or the static 80% window within two to four passes.
+  Check a multi-pass claim against a fixed policy over one and over N passes before trusting it.
+- **Pair usable-prefix scores with the legacy block scores.** A request's usable hits stop at its
+  first missing block (§3, terrain classes). Preserve exact prefix-chain keys and real request
+  boundaries, and score both measures on the same paired replay. LRU's equality in the studied
+  setup must be checked, not assumed for every workload or serving model. Do not silently stop
+  the access stream at the first miss, add request pinning, or replace historical gate bars;
+  those are separate replay or acceptance changes.
+- **Test fill transitions rather than naming them from a drop.** A hit-rate drop near first
+  eviction can motivate a fill-transition hypothesis, but admission, sketch initialization/aging,
+  capacity pressure and workload phase can change together. Isolate those effects before
+  attribution; a filling cache is not unconditionally equivalent to a large LRU window.
 - Trajectories (window size per adaptation) are the diagnostic instrument — every fix in §4 was
   found by reading a trajectory, not a scoreboard. The debug hook pattern: stderr print in
   `determineAdjustment` behind a temporary system property (the simulator forwards `caffeine.*`);
   no hook is checked in — the 2026-07 study's working-tree harness (variant knob + debug + seeded
   admission RNG) is preserved in the
   local hill-climber-study workspace (`experiment-harness.patch`).
-- **Separate information, actuation, and deployability.** First ask whether a signal ranks
-  counterfactual window sizes on an exact simulator stream. Then ask whether its controller moves
-  the live cache safely and converges under clamps, reversals, and phase changes. Only then price
-  the actual production host for retained state, steady allocation, command/boundary allocation,
-  and CPU. Passing one layer says nothing about the next: replicated MiniSim passed its information
-  screen and failed cost, while Compact Shadow passed layout and stopped before quality.
+- **Separate information, actuation, and deployability.** First ask whether a signal predicts reuse
+  or ranks counterfactual window sizes on a declared observation stream. Use past-only features,
+  complete negative labels, cold-start accounting, authentic frequency and equally deep no-feature
+  controls, and bounded state/work. Check which observations survive generic maintenance; metadata
+  recovered offline does not make it available there. Reuse prediction alone establishes neither
+  when to trigger a different mode nor which window direction helps. Then ask whether a controller
+  moves the live cache safely and converges under clamps, reversals, and phase changes. Only then
+  price the actual production host for retained state, steady allocation, command/boundary
+  allocation, and CPU. Passing one layer says nothing about the next: replicated MiniSim passed its
+  information screen and failed cost, while Compact Shadow passed layout and stopped before quality.
 - **Distinguish issued commands from applied movement.** An experiment requiring exact arrival
   must keep its decision pending until the host acknowledges the actual signed setpoint change.
   Reject overlapping acknowledgements and the wrong sign or magnitude; retain geometry-specific

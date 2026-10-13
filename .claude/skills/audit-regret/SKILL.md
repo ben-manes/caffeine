@@ -60,9 +60,12 @@ Every number is relative to anchors from one static sweep (`climber-gate/run.py`
   `peak-at-edge` and the true optimum may be unreachable by any window setting.
 - **LRU**: the floor. Below LRU is a bad sign, but "above LRU" is not the bar; the recorded
   families were built to attack the density signal, and most sit far above LRU while pinned.
-- **Belady** (`--belady`, `opt.Clairvoyant`): the structural limit. `structural = Belady - ceiling`
-  is what no window setting recovers; it belongs to admission, the sketch, or the SLRU split, not
-  to the climber.
+- **Belady** (`--belady`, `opt.Clairvoyant`): the reference with knowledge of future accesses.
+  `structural = Belady - ceiling` is its gap over the tested static-window family, not proof that
+  every point is recoverable by an online policy or that no adaptive window can recover any of it.
+  Establish a policy mechanism before routing that gap to admission, the sketch, or SLRU.
+  Extra application metadata is another information advantage; neither comparison explains away
+  losses to LRU, static windows or other references using the same key stream.
 - The ceiling is the best **static** window, not an upper bound: an adaptive window can beat every
   fixed split where the workload's phases want different ones, so a negative gap
   (`beats-static-ceiling`) can be a real result marking a cell where adaptivity is earning. It can
@@ -204,8 +207,9 @@ The decision procedure `regret.py` encodes as hints, to be applied by hand on th
    anchors (`structural`). `climber-gate/marginal.py` answers class 1 without a controller: where
    the average error rests versus where the hit rate peaks. `exposure.py`/`blindlock.py` answer
    class 4's clock questions.
-4. Where the anchors themselves say the ceiling is unreachable (`structural`, `peak-at-edge`), stop:
-   the finding is routed to admission/sketch/SLRU work, recorded, and not chased here unless asked.
+4. A large `structural` value or `peak-at-edge` is a diagnostic lead, not sufficient attribution.
+   Confirm a policy-structure or reachability limitation before routing the finding to
+   admission/sketch/SLRU work, recording it, and stopping controller work unless asked.
 
 The hint strings `regret.py` prints (the `hints` column; across seeds each carries a vote count,
 `name xN`), and the class each points at. `search.py`'s `primary` skips the flags when it names
@@ -231,7 +235,9 @@ Every hint is a pointer; the classification is the trajectory read against the t
 
 "Classify the signal, not the workload" governs every proposed remedy: a fix may test whether the
 machine's own measurement can be trusted (a starved region, an unresponsive hit rate, a sample too
-small to mean anything); it may not recognize a workload shape and pick a window for it.
+small to mean anything). A workload label or an inferred class is not evidence for a window choice.
+An estimator using generic observations remains testable, but must earn its information, action
+and cost claims under the rules of evidence below; do not substitute a hand-tuned workload lookup.
 
 ## Instruments
 
@@ -704,6 +710,14 @@ not read prior reports. Strike a line when it is done or dead.
 
 ## Rules of evidence
 
+- **A new predictor needs controls for the information it adds.** Freeze its query population,
+  horizon, weighting and cold-start learning before outcomes. Compare age, authentic aged
+  frequency, their combination, and an equally deep estimator with no new feature; use common
+  queries, complete negative outcomes and explicit censoring. Check what survives the actual
+  maintenance stream, and count learner state and observation work as well as sampled keys.
+  Better reuse prediction or ranking does not establish a mode trigger or a profitable window
+  move; evaluate that action separately. See [methodology](../../docs/hill-climber.md#6-methodology-the-discipline-that-kept-this-honest)
+  and the [gate's prefix-scoring precautions](../climber-gate/SKILL.md#harness) for application traces.
 - A claim about a particular decision needs a feasible paired continuation, not just a static
   ceiling gap. Follow §6's
   [decision-replay protocol](../../docs/hill-climber.md#decision-attribution-and-later-retention)
@@ -728,6 +742,11 @@ not read prior reports. Strike a line when it is done or dead.
 - Sign-uniform losses across a family are a mechanism, not noise, whatever their size, and a
   result that contradicts the round's hypothesis is written up as the result rather than
   reframed into one the data supports.
+- Uniform across seeds is not uniform across a family. Seeds vary admission draws, not a spec's
+  schedule, so where a regime changes at a fixed sample every seed meets it at the same audit
+  phase, and a loss on all eight seeds can be one timing draw. Move the change (its segment's
+  `samples`) before classifying it as a mechanism: on the gate's slowswap step the shipped climber
+  reads 33.3–41.8 as the swap moves ±24 samples.
 - Do not rebuild §5's graveyard, and do not reopen anything in it without a new
   mechanism; when a proposal resembles one, say which and what differs.
 - Holdout discipline is §6's: freeze before tuning by LRU-only characterization

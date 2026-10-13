@@ -195,6 +195,16 @@ Details: [async synchronous view](../docs/design-decisions.md#async-synchronous-
 - Keep SLRU and its 80/20 split with one-hit promotion. Alternative splits, promotion gates,
   and plain-LRU main space have been measured. Probation is fixed near 19.8%; window growth
   borrows protected capacity, not probation.
+- Use same-stream policies (LRU, static windows, ARC) to assess generic headroom. A specialized
+  policy's additional request categories or prefix dependencies are a separate information
+  advantage; OPT's future knowledge is another. Neither explains away losses to the same-stream
+  references. Generic inference must earn its cold-start evidence, state and runtime costs;
+  failed classifiers do not prove it impossible. Keep usable-prefix scoring separate from
+  block-hit bars and replay semantics ([hill-climber](../docs/hill-climber.md) §1, §3 and §6).
+- Warm-up on a short trace is accepted as JIT-like. Do not propose persisting learned climber
+  or sketch state across restarts to skip it (the AOT-profile analogue, an operational burden);
+  production often fronts the cache with a remote LRU tier that absorbs early misses. The
+  start-up rules already priced are in [hill-climber](../docs/hill-climber.md) §5.
 
 Before a change, read [eviction](../docs/design-decisions.md#eviction) and
 [climber review constraints](../docs/design-decisions.md#climber-review-constraints), then

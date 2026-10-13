@@ -1842,6 +1842,19 @@
   measurement is trustworthy, rather than which archetype the traffic resembles. The
   starvation bar (§6.1), the stillness clock (§7.3), and the noise-cleared margins
   (§8.1) are all signal classifiers.</p>
+<p>Classifying the workload also runs into a limit on what the cache can know. A
+  general-purpose cache sees opaque keys; a specialized policy sees what they mean. A disk
+  cache's keys are block addresses, so a run of consecutive ones is a scan. An LLM server that
+  caches the work done on shared prompt prefixes knows, for each cached block, what kind of
+  request it came from, which turn of the conversation, and how deep in the prompt it sits. A
+  <a href="https://arxiv.org/html/2506.02634v5#S4.SS2">workload-aware policy</a> written for that
+  cache ranks blocks by how likely each is to be reused, estimated separately for each kind of
+  request and turn, and evicts the deepest block on a tie. On its own traffic it can beat a
+  policy that sees only keys, because it knows more; the offline optimum (Bélády) wins the same
+  way, by knowing the future. The adaptive window serves any workload, so it is judged against
+  policies given the same keys: LRU, ARC and the best fixed window (§10.1). Whether those
+  facts could be recovered from the keys alone, by something like a trained classifier with its
+  own training data, memory and CPU, is an open question this design does not take on.</p>
 
 <h3 id="s4-7"><a class="hl" href="#s4-7">4.7 Compare marginal values directly: density</a></h3>
 <p>The last family drops both the cross-time comparison and the counterfactual and
