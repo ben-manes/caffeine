@@ -60,8 +60,7 @@ public interface Scheduler {
   }
 
   /**
-   * Returns a scheduler that uses the system-wide scheduling thread by using
-   * {@link CompletableFuture#delayedExecutor}.
+   * Returns a scheduler that uses the JDK's shared, system-wide scheduling thread.
    *
    * @return a scheduler that uses the system-wide scheduling thread
    */
@@ -99,9 +98,22 @@ enum SystemScheduler implements Scheduler {
   INSTANCE;
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   public Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit) {
-    Executor delayedExecutor = CompletableFuture.delayedExecutor(delay, unit, executor);
-    return CompletableFuture.runAsync(command, delayedExecutor);
+    requireNonNull(executor);
+    requireNonNull(command);
+    requireNonNull(unit);
+
+    var timer = new CompletableFuture<@Nullable Void>();
+    var future = new CompletableFuture<@Nullable Void>();
+    timer.orTimeout(delay, unit).whenComplete((result, error) -> {
+      if (error != null) {
+        future.complete(null);
+        executor.execute(command);
+      }
+    });
+    future.whenComplete((result, error) -> timer.complete(null));
+    return future;
   }
 }
 

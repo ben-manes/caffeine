@@ -51,9 +51,15 @@ These dispose of whole families. Check them first.
   *notifyRemoval*). Submitting outside the lock would fix only the joining executor: maintenance
   runs on the executor, so a lone worker still waits on its own full queue. The same holds for the
   default common pool disabled JVM-wide (`java.util.concurrent.ForkJoinPool.common.parallelism=0`
-  or a common-pool thread factory returning null), where maintenance, notifications and async loads
-  stop. The library does not detect it ("Remove detection of JDK-8274349": the application is
-  broken in every other common-pool use too); a parallelism check, a caller-runs fallback, the
+  or a common-pool thread factory returning null). Removal notifications are never delivered, and
+  each queued one retains its entry. Maintenance still runs inline when the write buffer fills and
+  on `cleanUp()`, which expires at most `EXPIRATION_THRESHOLD` entries per call and hands the rest
+  to the dead pool. At parallelism 0 async loads keep running: `CompletableFuture` replaces an
+  explicit `commonPool()` with a thread per task through JDK 24, and from 25 raises the pool's
+  parallelism to 2 when it initializes, which also restores maintenance and notifications if no
+  backlog has built up. A null factory stops async loads too. The library does not detect either
+  ("Remove detection of JDK-8274349"): the JDK documents a zero setting as leaving unjoined tasks
+  unexecuted, and from 25 strongly discourages it. A parallelism check, a caller-runs fallback, the
   `AsynchronousCompletionTask` marker and routing through `CompletableFuture.runAsync` were
   declined. So was more `Caffeine.executor` javadoc for any of these cases, a rejecting or
   caller-runs executor running listeners under the eviction lock included: its existing caution
@@ -352,6 +358,17 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
 - Weight=0 entries are a user-facing pinning feature.
 - In-flight async entries are uncounted by any bound (weight 0 plus `ASYNC_EXPIRY`).
 - The eviction-listener same-key mutation "corrupting or silently losing the write".
+- A loader that joins a default-executor `CompletableFuture` deadlocking with maintenance on JDK 25
+  and later at a common-pool parallelism of 1, the default on one or two CPUs. Through JDK 24,
+  `CompletableFuture` replaced a common pool below parallelism 2 with a thread per task, including
+  an explicit `commonPool()` argument; from 25 it uses the single worker (JDK-8319447; JDK-8360593
+  was closed Won't Fix). Maintenance, notifications, async loads and the application's default
+  futures then share that worker, so a loader that joins its own `supplyAsync` inside `compute`
+  waits for a task queued behind maintenance, which holds `evictionLock` and waits for the loader's
+  bin. Blocking async loads also run one at a time. Not ours to control: a loader that blocks a
+  pooled thread is the application's problem, and one that must wait belongs on a virtual thread
+  or a dedicated executor. The default executor stays the common pool until virtual threads are
+  preemptive (#1898).
 
 **Buffers and queues**
 
@@ -440,10 +457,12 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   Later independent scheduling can recover; synchronous scheduling is not itself a contract violation.
 - `Pacer` skipping its re-arm when the scheduler fires before the cache ticker reaches
   `nextFireTime`. The executing future still appears pending, so maintenance waits for the next
-  operation. A one-second-granularity ticker reproduces; `systemTicker` and a one-millisecond
-  cached clock did not in 20 trials each. Tickers are expected to advance between reads; a cheap
-  clock can increment per read and resynchronise periodically. The `fired` flag was declined
-  for this coarse-clock trigger, and for a monotonic `Ticker` that runs slower than the
+  operation. `systemScheduler()` completes its future before submitting the task, so this needs a
+  scheduler whose future can still be pending while the task runs, such as
+  `forScheduledExecutorService`. A one-second-granularity ticker reproduces; `systemTicker` and a
+  one-millisecond cached clock did not in 20 trials each. Tickers are expected to advance between
+  reads; a cheap clock can increment per read and resynchronise periodically. The `fired` flag was
+  declined for this coarse-clock trigger, and for a monotonic `Ticker` that runs slower than the
   scheduler's clock, whose lag grows with the delay: `Caffeine.ticker` states a testing intent,
   the default pairs two `System.nanoTime` clocks, scheduling is best-effort, and the loss ends
   at the next cache operation.
@@ -475,6 +494,20 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   contract* accepts, for a computation `Policy` already documents as throwing CME when it
   detectably writes an entry.
 - `TimerWheel.expire()`'s catch block holding a stale `prev` pointer.
+- A fixed expiry of about 146 years or more freezing the JDK's shared delay queue under
+  `systemScheduler()` on JDK 11 through 23. `MAXIMUM_EXPIRY` clamps only variable expiry, so
+  `expireAfterWrite` or `expireAfterAccess` of `Long.MAX_VALUE` units or `ChronoUnit.FOREVER`
+  hands `CompletableFuture`'s delay queue a delay near `Long.MAX_VALUE`. Before JDK 24 its
+  `overflowFree` moves such a delay to `Long.MAX_VALUE` past an overdue head (JDK-8338765), so a
+  short task inserted moments later compares after it by overflow and never runs; enough of them
+  stop every `orTimeout`, `completeOnTimeout` and `delayedExecutor` task in the JVM. The losses
+  need tens of such schedules a second, from building caches or from one cache emptying and
+  refilling; on JDK 21 at 10 a second nothing was lost in 300 s. A dropped cache's pending task
+  never drains in this configuration, an unbounded case of the retention
+  [Pacer](design-decisions.md#pacer) accepts.
+  Clamping the delay avoids the freeze (`MAXIMUM_EXPIRY` suffices, and the timer wheel's 6.5-day
+  span also bounds the retention) and was declined: the configuration is extremely rare, and the
+  bug is the JDK's, fixed in 24, so an affected user should move to a current JDK.
 
 **Node lifecycle and access modes**
 
@@ -615,6 +648,19 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
 - Quiet refresh or async completion skipping the timer-wheel reschedule under variable
   expiry plus `refreshAfterWrite`.
 - Refresh only triggering on access, and returning the stale value rather than the fresh one.
+- A computation that blocks in `CompletableFuture.join()` or `get()` on a pool worker running the
+  cache's own refresh inside it. A blocked worker runs the `AsynchronousCompletionTask`s at the
+  base of its queue on its own stack (`helpAsyncBlocker`, JDK 9 and later). A reload or async load
+  that worker submitted earlier is one, so its completion's `compute` runs under the outer
+  computation's bin lock. With both keys in one bin and a `null` reload the outer insertion is lost
+  (the returned value is not mapped, and the map's count stays one high); the helped completion's
+  `afterWrite` can take `evictionLock` under that bin, inverting the lock order; and two workers
+  can deadlock on each other's bins. Who helps varies by release: on 11 any caller, from a
+  common-pool submission queue; on 17-24 only common-pool workers; on 25.0.0 and 25.0.1 also other
+  pools' workers (JDK-8369656); from 25.0.2 every pool's workers, each in its own pool. It is
+  helping rather than starvation, so a larger pool does not prevent it; a virtual thread or a
+  separate executor for the cache does. Not ours to fix: the trigger is a computation blocking a
+  pooled thread.
 
 **Views, iteration, and the Map contract**
 
@@ -724,6 +770,14 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   `Caffeine#refreshAfterWrite` delegates its semantics to `LoadingCache#refresh`, which both lists
   name; Guava's identical wording describes its identical refresh. Naming `refreshAfterWrite` in
   either javadoc was declined.
+- Under the value-objects preview (JEP 401), `put`, `putIfAbsent`, `putAll` or
+  `VarExpiration.put` over an expired or collected weak- or soft-value entry announcing the
+  eviction twice. The eviction listener runs before `setValue`, whose new reference throws
+  `IdentityException` for a value object, and nothing commits the eviction, so the next
+  maintenance announces it again. `compute` and `get(key, fn)` catch, commit and rethrow around
+  the same call. Deferred until the feature leaves preview (#1997); the likely shape is an
+  `Objects.requireIdentity` precondition before any notification, as `WeakHashMap` does for its
+  keys.
 
 ---
 

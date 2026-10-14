@@ -558,8 +558,10 @@ write, which only a completion performs, preserves the variable time when the en
 longer carries the sentinel, and still finalizes the weight and the write time. Nothing else
 can have cleared the mark, because the two read-extension paths above return early on it.
 
-**MAXIMUM_EXPIRY = ~150 years** (`Long.MAX_VALUE >> 1`). User-provided expiration
-durations are clamped to prevent nanoTime arithmetic overflow. `now + ASYNC_EXPIRY`
+**MAXIMUM_EXPIRY = ~150 years** (`Long.MAX_VALUE >> 1`). User-provided variable expiration
+durations are clamped to prevent nanoTime arithmetic overflow; fixed `expireAfterWrite` and
+`expireAfterAccess` durations are stored as given (see *Timing and arithmetic* in
+[ruled-out](ruled-out.md) for a near-`MAX` one under a scheduler). `now + ASYNC_EXPIRY`
 overflows to negative after ~73 years of JVM uptime, but this is within the
 documented assumption that JVM instances don't run for 73+ years continuously.
 
@@ -898,8 +900,8 @@ in `maintenance`'s `finally`, preserving the repair for that task's former loss.
 **Executor rejection and lock contention need different epilogues.**
 `scheduleDrainBuffers` deliberately does not follow rejection-fallback maintenance with
 `rescheduleCleanUpIfIncomplete`. The rejecting executor cannot use the common-pool arm; a
-pacer would submit to the same broken executor and its fire-time rejection is swallowed by
-the JDK Delayer. Recovery relies on later activity, as documented for discarded/never-run
+pacer would submit to the same broken executor, where its fire-time rejection is swallowed.
+Recovery relies on later activity, as documented for discarded/never-run
 tasks. A drain that merely bounces off `clear`'s held lock still has a healthy executor and
 must reschedule. Do not generalize the rejection exception to that case.
 
@@ -1523,36 +1525,28 @@ not to throw or return null, so only user types need guarding. Either way
 — don't wrap it in a try/catch to "harden" an unreachable throw, and don't hand `Pacer`
 an unguarded *user* scheduler (that, not the ordering, would be the bug).
 
-**A fire-time executor rejection orphaning the pacer's future is accepted best-effort — don't
-wrap `SystemScheduler`.** `SystemScheduler` schedules via `CompletableFuture.runAsync(command,
-delayedExecutor)`; at fire-time the JDK `Delayer` submits the future-completing task to the
-cache `executor`, and if `executor.execute` throws `RejectedExecutionException` there, the
-returned future never completes. **This is a JDK `delayedExecutor` limitation, not our misuse:**
-`delayedExecutor.execute` accepts the task synchronously (schedules a `TaskSubmitter` on the
-shared `Delayer` STPE) so `runAsync` believes submission succeeded, but the fire-time
-`baseExecutor.execute` REE is thrown inside the Delayer's own (discarded) `ScheduledFutureTask`
-→ swallowed, and `AsyncRun` never runs to complete the CF. A *synchronous* rejection from
-`runAsync` **does** propagate to the caller (confirmed empirically on JDK 25) — only the
-deferred one is dropped. `GuardedScheduler` can't catch it either — that REE is asynchronous
-(fire-time, on the Delayer thread), while the guard wraps only the synchronous `schedule()`
-call. `Pacer.schedule` then suppresses *similar-or-later* re-arms while `!future.isDone()`, so
-one expiration cycle is lost — but it self-heals: an *earlier* re-arm fails `maySkip` and
-reschedules, and once `now` passes the phantom `nextFireTime` the next re-arm reschedules
-regardless (no permanent wedge; the stale future is replaced next schedule, no leak). This sits
-inside the documented amortized/best-effort expiration envelope, the `executor(Executor)`
-javadoc already warns that an executor "that discards tasks or never runs them may experience
-non-deterministic behavior," and the default `commonPool` only rejects at JVM shutdown (where a
-lost expiration cycle is irrelevant). Don't add an executor wrapper to complete the future on
-rejection — it hardens a self-healing, user-configuration-warned corner for no real gain.
+**`SystemScheduler` returns a future separate from its timer, so that a cancel removes the JDK's
+delayed task.** The timer is `orTimeout` on an internal future, and its timeout completes the
+returned future and submits the task. Any completion of the returned future, a cancel included,
+completes the timer normally, the one completion on which `orTimeout`'s canceller removes the
+delayed task on every JDK: on 11, and on 17 before 17.0.14, it ignores an exceptional completion
+such as a cancel (JDK-8303742). `delayedExecutor` keeps no handle at all, so with it each
+cancelled task stayed queued until its original fire time (896 B on JDK 25), one per cycle of a
+cache emptying and refilling. `SchedulerTest.systemScheduler_cancel` pins the release; on JDK 11,
+the default test JVM, a single future fails it. Revisit when the JDK baseline moves: from 21 one
+future suffices (`completeOnTimeout`, with the task chained by `thenRunAsync`), and from 25
+`ForkJoinPool.commonPool().schedule` returns a cancellable future.
 
-**`delayedExecutor` has two other accepted consequences.** Cancelling the pacer's future does not
-dequeue the JDK's delayed task, which stays queued until its original fire time (896 B each on JDK
-25, 688 B of it the `CancellationException` backtrace; the cache is held weakly and remains
-collectable). The count is one stranded far task per sparse short-lived cycle, so a process that
-churns caches with long expiries keeps about churn rate times remaining delay of them. The delayed
-task also submits to the cache's executor from the JDK's shared delay thread, so with a direct
+**The system scheduler has three accepted consequences.** A cache that is dropped leaves its
+pending timer queued until it fires. The cache is held weakly and remains collectable, but a
+process that churns caches with long expiries keeps about churn rate times remaining delay of
+those timers. The timer submits the task from the JDK's shared delay thread, so with a direct
 executor the maintenance cycle, eviction listener included, runs on that thread and delays every
-other `orTimeout`, `completeOnTimeout` and `delayedExecutor` task in the JVM until it returns.
+other `orTimeout`, `completeOnTimeout` and `delayedExecutor` task in the JVM until it returns. A
+rejection at fire time loses that cycle only: the returned future is complete before the
+submission, so the next re-arm schedules normally, and the rejection is dropped in the timer's
+discarded stage. The `executor(Executor)` javadoc warns that an executor "that discards tasks or
+never runs them may experience non-deterministic behavior."
 
 **`rescheduleCleanUpIfIncomplete` piggybacks an already-scheduled pacer fire, by
 design.** Its immediate resubmission is limited to `executor == ForkJoinPool.commonPool()`,

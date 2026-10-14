@@ -17,6 +17,9 @@ model-unique findings, including their most severe claims. The preferred order i
 `subsystem-safety`, `liveness`, `feature-interaction`, `jcache-conformance`,
 `sibling-divergence`. `build-ci` and `serialization` are the least worth it.
 
+**Leave `/audit-jdk-seam` out of a batch.** It is kept for an occasional manual run, not the
+normal checklist.
+
 **Down-weight, but do not skip:** re-entrancy (a full pass has closed at zero, and callback
 re-entrancy warnings are not wanted, which removes the remedy from most of what it finds);
 simulator periphery (a testing tool — its bugs mislead benchmarks, they do not harm users);

@@ -32,6 +32,7 @@ import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
+import java.lang.ref.WeakReference;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -48,8 +49,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import com.google.common.testing.GcFinalization;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.util.concurrent.Futures;
+import com.google.errorprone.annotations.Var;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -208,6 +213,23 @@ final class SchedulerTest {
     verify(scheduledExecutor).isShutdown();
     verifyNoMoreInteractions(scheduledExecutor);
     verifyNoInteractions(executor);
+  }
+
+  /* --------------- system --------------- */
+
+  @Test
+  @SuppressFBWarnings("DLS_DEAD_LOCAL_STORE_OF_NULL")
+  @SuppressWarnings({"PMD.UnusedAssignment", "UnusedAssignment"})
+  void systemScheduler_cancel() {
+    var executed = new AtomicBoolean();
+    @Var Runnable command = () -> executed.set(true);
+    var future = Scheduler.systemScheduler().schedule(executor, command, 1, TimeUnit.DAYS);
+
+    var signal = new WeakReference<>(command);
+    command = null;
+
+    assertThat(future.cancel(false)).isTrue();
+    GcFinalization.awaitClear(signal);
   }
 
   /* --------------- providers --------------- */

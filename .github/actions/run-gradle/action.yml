@@ -51,7 +51,7 @@ runs:
         echo "version=${toolchainVersion}" >> $GITHUB_OUTPUT
     - name: Set up JDK ${{ steps.gradle_toolchain.outputs.version }}
       id: gradle_jdk
-      uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
       with:
         java-version: ${{ steps.gradle_toolchain.outputs.version }}
         distribution: temurin
@@ -59,13 +59,13 @@ runs:
     - name: Set up JDK 25 (Fray)
       id: fray_jdk
       if: ${{ contains(inputs.arguments, 'frayTest') }}
-      uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
       with:
         java-version: 25
         distribution: corretto # requires jmods
         cache-jdk: true
     - name: Set up JDK
-      uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
       with:
         cache-jdk: true
         java-version: ${{ inputs.java }}
@@ -135,7 +135,7 @@ runs:
           fi
         done
     - name: Restore to toolchain JDK (${{ steps.gradle_toolchain.outputs.version }})
-      uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
       if: always()
       with:
         java-version: ${{ steps.gradle_toolchain.outputs.version }}
