@@ -1,0 +1,9 @@
+[versions]
+caffeine = "3.3.1"
+junit-jupiter = "6.1.3"
+truth = "1.4.5"
+
+[libraries]
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+truth = { module = "com.google.truth:truth", version.ref = "truth" }

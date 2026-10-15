@@ -78,6 +78,12 @@ jobs:
           java: ${{ env.JAVA_VERSION }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           arguments:  build --project-dir examples/resilience-failsafe
+      - name: Virtual threads
+        uses: $/.github/actions/run-gradle
+        with:
+          java: ${{ env.JAVA_VERSION }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          arguments:  build --project-dir examples/virtual-threads
 
   graalvm:
     name: GraalVM Native Image

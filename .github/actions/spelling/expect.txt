@@ -224,6 +224,7 @@ UUF
 UWF
 Varifier
 vaultservice
+virtualthreads
 vmscan
 Watchlist
 wikibench

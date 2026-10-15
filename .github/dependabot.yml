@@ -121,3 +121,14 @@ updates:
         applies-to: version-updates
         patterns:
           - "*"
+  - package-ecosystem: gradle
+    directory: examples/virtual-threads
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      gradle-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
