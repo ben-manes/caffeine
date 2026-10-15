@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.examples.virtualthreads;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -50,6 +52,8 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
  * @author ronitgupta138 (Ronit Gupta)
  */
 public final class VirtualThreadCacheExample<K, V> implements AutoCloseable {
+
+  private static final System.Logger logger = System.getLogger(VirtualThreadCacheExample.class.getName());
 
   private final ExecutorService executor;
   private final AsyncLoadingCache<K, V> cache;
@@ -155,38 +159,38 @@ public final class VirtualThreadCacheExample<K, V> implements AutoCloseable {
 
   /** Application entrypoint demonstrating virtual-thread cache loading. */
   public static void main(String[] args) {
-    System.out.println("Starting Virtual Threads Caffeine example...");
+    logger.log(Level.INFO, "Starting Virtual Threads Caffeine example...");
 
     try (var example = new VirtualThreadCacheExample<String, String>(
         key -> {
-          System.out.printf("[Load] key='%s' | virtual=%b | thread=%s%n",
+          logger.log(Level.INFO, "[Load] key=''{0}'' | virtual={1} | thread={2}",
               key, Thread.currentThread().isVirtual(), Thread.currentThread());
           try {
             Thread.sleep(Duration.ofMillis(100)); // Simulate remote I/O latency
           } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
+            throw new IllegalStateException("Interrupted while loading cache entry", e);
           }
           return "value-for-" + key;
         },
         (key, oldValue) -> {
-          System.out.printf("[Reload] key='%s' (oldValue='%s') | virtual=%b | thread=%s%n",
+          logger.log(Level.INFO, "[Reload] key=''{0}'' (oldValue=''{1}'') | virtual={2} | thread={3}",
               key, oldValue, Thread.currentThread().isVirtual(), Thread.currentThread());
           try {
             Thread.sleep(Duration.ofMillis(100)); // Simulate remote I/O latency
           } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
+            throw new IllegalStateException("Interrupted while loading cache entry", e);
           }
           return "refreshed-" + key;
         },
         Duration.ofSeconds(60))) {
 
       var initialFuture = example.get("user-42");
-      System.out.println("Dispatched load asynchronously, result: " + initialFuture.join());
+      logger.log(Level.INFO, "Dispatched load asynchronously, result: {0}", initialFuture.join());
 
       var refreshFuture = example.refresh("user-42");
-      System.out.println("Dispatched refresh asynchronously, result: " + refreshFuture.join());
+      logger.log(Level.INFO, "Dispatched refresh asynchronously, result: {0}", refreshFuture.join());
     }
   }
 }
