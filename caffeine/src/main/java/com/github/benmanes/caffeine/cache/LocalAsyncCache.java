@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.calculateHashMapCapacity;
+import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static com.github.benmanes.caffeine.cache.Caffeine.toUnchecked;
 import static com.github.benmanes.caffeine.cache.LocalCache.castNonNull;
@@ -351,7 +352,6 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return toUnchecked(failure);
     }
 
-    @SuppressWarnings("ImmutableMapCopyOf")
     private @Nullable Throwable handleResponse(
         @Nullable Map<? extends K, ? extends V> result, @Nullable Throwable error) {
       if (result == null) {
@@ -362,7 +362,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       Map<K, V> snapshot;
       try {
-        snapshot = Map.copyOf(result);
+        snapshot = snapshotOf(result);
       } catch (Throwable t) {
         failProxies(t);
         return t;
@@ -370,6 +370,17 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       var failure = fillProxies(snapshot);
       return addNewEntries(snapshot, failure);
+    }
+
+    /** Returns a copy of the computed result, rejecting a null or duplicate mapping. */
+    private static <K, V> Map<K, V> snapshotOf(Map<? extends K, ? extends V> result) {
+      var snapshot = new LinkedHashMap<K, V>(calculateHashMapCapacity(result.size()));
+      for (var entry : result.entrySet()) {
+        K key = requireNonNull(entry.getKey());
+        V value = requireNonNull(entry.getValue());
+        requireArgument(snapshot.put(key, value) == null, "duplicate key: %s", key);
+      }
+      return snapshot;
     }
 
     /** Removes and exceptionally completes every requested proxy. */

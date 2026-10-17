@@ -59,6 +59,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -539,6 +540,56 @@ final class AsyncCacheTest {
     for (var key : context.absentKeys()) {
       assertThat(cache).doesNotContainKey(key);
     }
+  }
+
+  @CacheSpec
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  void getAllFunction_absent_duplicateMapping(AsyncCache<Int, Int> cache, CacheContext context) {
+    // An ambiguous result, e.g. from an identity map, is rejected rather than picking a mapping
+    var duplicates = new IdentityHashMap<Int, Int>();
+    duplicates.put(new Int(context.absentKey()), context.absentValue());
+    duplicates.put(new Int(context.absentKey()), context.absentValue().negate());
+    assertThat(cache.getAll(context.absentKeys(), keys -> duplicates))
+        .failsWith(CompletionException.class)
+        .hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+    int count = context.absentKeys().size();
+    assertThat(context).stats().hits(0).misses(count).success(0).failures(1);
+    assertThat(cache).hasSize(context.initialSize());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      refreshAfterWrite = Expire.DISABLED, expiry = CacheExpiry.DISABLED, stats = Stats.DISABLED)
+  void getAllFunction_absent_collisions(AsyncCache<Object, Int> cache, CacheContext context) {
+    // Keys that share a hash code must not degrade the batch to a quadratic number of comparisons
+    var comparisons = new AtomicInteger();
+    final class Key implements Comparable<Key> {
+      final int id;
+
+      Key(int id) {
+        this.id = id;
+      }
+      @Override public int compareTo(Key key) {
+        return Integer.compare(id, key.id);
+      }
+      @Override public boolean equals(@Nullable Object o) {
+        comparisons.incrementAndGet();
+        return (o instanceof Key) && (id == ((Key) o).id);
+      }
+      @Override public int hashCode() {
+        return 0; // to put keys in one bucket
+      }
+    }
+
+    int count = 2_000;
+    var mappings = new HashMap<Key, Int>();
+    for (int i = 0; i < count; i++) {
+      mappings.put(new Key(i), Int.valueOf(i));
+    }
+    assertThat(cache.getAll(mappings.keySet(), keys -> mappings).join()).hasSize(count);
+    assertThat(comparisons.get()).isLessThan((count * count) / 4);
   }
 
   @ParameterizedTest

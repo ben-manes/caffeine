@@ -173,7 +173,10 @@ Crosby, Wallach. USENIX Security 2003.
 causing O(n) degeneration per operation.
 
 **Relevance:** Caffeine delegates to `ConcurrentHashMap` which uses tree bins
-(red-black trees) for collision resistance in JDK 8+. The frequency sketch has no such
+(red-black trees) for collision resistance in JDK 8+. The asynchronous `getAll` snapshots the
+loader's result into a `LinkedHashMap` for the same reason: `Map.copyOf` probes linearly, and
+32,768 keys sharing a hash code took 2.5s through it against 0.15s through the tree-binned copy
+(pinned by `AsyncCacheTest.getAllFunction_absent_collisions`). The frequency sketch has no such
 resilience: `spread` and `rehash` re-mix the key's `hashCode()` to distribute keys across
 blocks, but they are functions of it, so keys with equal hash codes share all four counters
 and read as one key. The admission filter admits 1 in 128 rejected candidates whose frequency

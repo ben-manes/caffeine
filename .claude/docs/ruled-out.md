@@ -542,9 +542,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   reaches each one. The equals-based dedup in `refreshAll` is not incidental either: dropping it
   costs a second load for a key repeated in the input, on the default and direct executors alike.
   `invalidateAll(Iterable)` returns void, has no such limit, and does reach both keys. A bulk
-  loader's result is a `Map` too: the asynchronous `getAll` snapshots it with `Map.copyOf`, which
-  rejects an `IdentityHashMap` holding equal-but-distinct keys under either key strength, so that
-  load fails loudly while the synchronous path, which iterates without a snapshot, stores both.
+  loader's result is a `Map` too: the asynchronous `getAll` snapshots it, rejecting as
+  `Map.copyOf` would an `IdentityHashMap` holding equal-but-distinct keys under either key
+  strength, so that load fails loudly while the synchronous path, which iterates without a
+  snapshot, stores both.
   Loaded entries are stored as returned, as Guava's `getAll` stores them: a requested hit the
   loader also returns comes back with its pre-load value while the loaded one replaces it (or is
   evicted as oversized), and under `weakKeys()` a rebuilt key is a distinct entry, so an
