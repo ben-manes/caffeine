@@ -1221,19 +1221,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     setMainProtectedMaximum(mainProtectedMaximum() + quota);
     setWindowMaximum(windowMaximum() - quota);
 
-    for (int i = 0; i < QUEUE_TRANSFER_THRESHOLD; i++) {
-      Node<K, V> candidate = accessOrderWindowDeque().peekFirst();
-      if (candidate == null) {
-        break;
-      }
-
+    @Var int remaining = QUEUE_TRANSFER_THRESHOLD;
+    @Var Node<K, V> candidate = accessOrderWindowDeque().peekFirst();
+    while ((candidate != null) && (remaining > 0)) {
+      Node<K, V> next = candidate.getNextInAccessOrder();
       long weight = candidate.getPolicyWeight();
-      if (quota < weight) {
-        break;
+      if (weight != 0) {
+        if (quota < weight) {
+          break;
+        }
+        quota -= weight;
+        transfer(candidate, weight, WINDOW, PROBATION);
+        remaining--;
       }
-
-      quota -= weight;
-      transfer(candidate, weight, WINDOW, PROBATION);
+      candidate = next;
     }
 
     setMainProtectedMaximum(mainProtectedMaximum() - quota);

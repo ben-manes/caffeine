@@ -6,16 +6,18 @@ relevant section before changing a mechanism; use [ruled-out](ruled-out.md) for 
 ## Eviction
 
 **Weight=0 is a pinning feature.** Entries with weight=0 are skipped during eviction
-(`evictFromWindow`, `evictFromMain`, `evictEntry`). This is an intentional user-facing
-API (inherited from ConcurrentLinkedHashMap where weight was >=1, Guava's Cache where >= 0).
-Used internally for in-flight async futures.
+(`evictFromWindow`, `evictFromMain`, `evictEntry`) and by the window shrink (`decreaseWindow`).
+This is an intentional user-facing API (inherited from ConcurrentLinkedHashMap where weight was
+>=1, Guava's Cache where >= 0). Used internally for in-flight async futures, which is why the
+shrink skips them too: in probation, a completion's quiet reorder is a promotion, so a load moved
+there would reach protected at full weight without facing admission.
 
-*The re-scan cost is accepted.* `evictFromWindow` restarts at the deque head each cycle and
-never relocates a zero-weight node, and `evictFromMain` skips its victim inline, so cold
-pinned entries at the LRU end are re-traversed whenever the region is over budget — O(pinned)
-per cycle in the worst case. A dedicated zero-weight queue to hold them out of the scan was
-explored and rejected: it made the eviction paths messier for little value. Don't propose it
-again without a measurement showing the scan actually costs something.
+*The re-scan cost is accepted.* `evictFromWindow` and `decreaseWindow` restart at the deque head
+each cycle and never relocate a zero-weight node, and `evictFromMain` skips its victim inline, so
+cold pinned entries at the LRU end are re-traversed whenever a region is over budget or the window
+is shrinking — O(pinned) per cycle in the worst case. A dedicated zero-weight queue to hold them
+out of the scan was explored and rejected: it made the eviction paths messier for little value.
+Don't propose it again without a measurement showing the scan actually costs something.
 
 **Region transfers are budgeted per maintenance cycle and re-armed.** `evictFromWindow` and
 `demoteFromMainProtected` move at most `QUEUE_TRANSFER_THRESHOLD` entries per cycle and set

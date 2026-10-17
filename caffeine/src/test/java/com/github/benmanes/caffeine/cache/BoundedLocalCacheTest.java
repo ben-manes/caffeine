@@ -3753,6 +3753,35 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.ASYNC,
+      population = Population.EMPTY, maximumSize = Maximum.FULL,
+      weigher = CacheWeigher.VALUE, keys = ReferenceType.STRONG)
+  void adapt_decreaseWindow_inFlightFacesAdmission(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    // An in-flight load weighs zero, so it fits any shrink remainder. Moved to probation, its
+    // completion would promote it to protected at full weight without facing the admission filter
+    var localCache = asBoundedLocalCache(cache);
+    localCache.setWindowMaximum(10);
+    localCache.setMainProtectedMaximum(
+        (long) (PERCENT_MAIN_PROTECTED * (localCache.maximum() - localCache.windowMaximum())));
+    var future = new CompletableFuture<Int>();
+    cache.put(context.absentKey(), future);
+    for (int i = 0; i < localCache.maximum(); i++) {
+      cache.put(Int.valueOf(i), CompletableFuture.completedFuture(Int.valueOf(1)));
+      assertThat(cache.getIfPresent(Int.valueOf(i))).isNotNull();
+    }
+    cache.synchronous().cleanUp();
+
+    localCache.climber().carryOver(-5);
+    localCache.decreaseWindow();
+    future.complete(Int.valueOf(20));
+    cache.synchronous().cleanUp();
+
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(cache).hasSize(localCache.maximum());
+  }
+
+  @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED)
   void adapt_increaseWindow_transferCapsAtThreshold(BoundedLocalCache<Int, Int> cache) {
