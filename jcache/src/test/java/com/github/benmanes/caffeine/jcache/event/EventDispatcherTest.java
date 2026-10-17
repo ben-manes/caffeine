@@ -51,6 +51,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -405,6 +406,47 @@ final class EventDispatcherTest {
           .containsExactly(null, 2, 3, 5, 6).inOrder();
       assertThat(listener.queue.stream().map(CacheEntryEvent::getEventType))
           .containsExactly(CREATED, UPDATED, UPDATED, REMOVED, EXPIRED).inOrder();
+    }
+  }
+
+  @Test
+  void ordered_predecessorCompletesDuringAppend() {
+    var publisher = Thread.currentThread();
+    var tasks = new ConcurrentLinkedQueue<Runnable>();
+    var listener = new LingeringCacheListener();
+    var dispatcher = new EventDispatcher<Integer, Integer>(tasks::add);
+    try (Cache<Integer, Integer> cache = Mockito.mock()) {
+      dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
+          () -> listener, /* filterFactory= */ null,
+          /* isOldValueRequired= */ false, /* isSynchronous= */ false));
+      var dispatchQueue = Iterables.getOnlyElement(dispatcher.dispatchQueues.values());
+
+      for (int i = 0; i < 10_000; i++) {
+        var started = new AtomicBoolean();
+        var appended = new AtomicBoolean();
+        listener.started = started;
+        dispatcher.publishCreated(cache, KEY_1, VALUE_1);
+
+        // Runs ahead of the cleanup, which is left for the publisher if it helps the predecessor
+        var ahead = requireNonNull(dispatchQueue.get(KEY_1)).thenRun(() -> {
+          while ((Thread.currentThread() != publisher) && !appended.get()) {
+            Thread.onSpinWait();
+          }
+        });
+        var created = tasks.remove();
+        var completer = CompletableFuture.runAsync(created, executorService);
+        while (!started.get()) {
+          Thread.onSpinWait();
+        }
+        dispatcher.publishRemovedQuietly(cache, KEY_1, VALUE_1);
+        appended.set(true);
+        completer.join();
+        ahead.join();
+
+        assertThat(dispatchQueue).containsKey(KEY_1);
+        tasks.remove().run();
+        assertThat(dispatchQueue).isEmpty();
+      }
     }
   }
 
@@ -1302,6 +1344,27 @@ final class EventDispatcherTest {
     @Override public int hashCode() {
       return Objects.hash(listenerFactory, filterFactory, oldValueRequired, synchronous);
     }
+  }
+
+  /**
+   * A listener that signals the publisher from within the created event and then lingers for a
+   * random interval, so that its completion lands at varying points of the next event's append.
+   */
+  private static final class LingeringCacheListener implements
+      CacheEntryCreatedListener<Integer, Integer>, CacheEntryRemovedListener<Integer, Integer> {
+    volatile AtomicBoolean started = new AtomicBoolean();
+
+    @Override
+    public void onCreated(Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {
+      started.set(true);
+      long now = System.nanoTime();
+      long end = ThreadLocalRandom.current().nextLong(now, now + 4_000);
+      while (System.nanoTime() < end) {
+        Thread.onSpinWait();
+      }
+    }
+    @Override
+    public void onRemoved(Iterable<CacheEntryEvent<? extends Integer, ? extends Integer>> events) {}
   }
 
   private static final class ConsumingCacheListener implements

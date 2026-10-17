@@ -352,10 +352,8 @@ public final class EventDispatcher<K, V> {
       var listener = registration.getCacheEntryListener();
       var future = dispatchQueue.compute(key, (k, queue) -> {
         var predecessor = gated(queue);
-        var ready = (predecessor == null)
-            ? CompletableFuture.completedFuture(null)
-            : predecessor.handle((result, error) -> null);
-        return ready.thenApplyAsync(ignored -> listener.dispatch(e), executor);
+        var ready = (predecessor == null) ? CompletableFuture.completedFuture(null) : predecessor;
+        return ready.handleAsync((result, error) -> listener.dispatch(e), executor);
       });
       future.whenComplete((result, error) -> {
         // optimistic check to avoid locking if not a match

@@ -635,7 +635,13 @@ because idle-key cleanup empties the slot. Pin:
 The queue needs no extra lock: append is an atomic map compute, cleanup is conditional
 `remove(key, future)`, and its preceding identity get is only a fast path. A successor installed
 before cleanup survives; cleanup before a successor permits a new chain only after the old one
-completed. Await/ignore pending synchronous futures on relevant exits and clear in finally.
+completed. The append attaches only an asynchronous stage to its predecessor. A synchronous stage
+on a predecessor that completes during the attach runs the predecessor's remaining dependents on
+the publishing thread, inside the compute, where its cleanup unlinks the slot being written: the
+successor lands in a detached node and the key's next event runs beside it. An asynchronous stage
+hands itself to the executor before that step. Pin:
+`EventDispatcherTest.ordered_predecessorCompletesDuringAppend`. Await/ignore pending synchronous
+futures on relevant exits and clear in finally.
 Bulk operations must drain already-published events even when the loop fails. putAll copying
 now happens before any commit, covered by
 `EventDispatcherTest.putAll_copierFails_abortsBeforeAnyCommit`; the earlier mid-loop copier test

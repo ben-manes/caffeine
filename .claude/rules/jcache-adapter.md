@@ -105,8 +105,10 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   the pending list in place too, and releases only one grown past `MAX_RETAINED_PENDING`.
 - Queue append uses atomic `compute`; cleanup uses conditional `remove(key, future)`. The
   preceding identity `get` is only a fast path. These protect a successor's slot and ordering;
-  do not add locking. Await or ignore synchronous futures on relevant operation exits, including
-  bulk failures. See [dispatch and commit](../docs/jsr107-conformance.md#dispatch-and-commit).
+  do not add locking. The append attaches only an async stage to its predecessor: a sync stage
+  can run the predecessor's cleanup inside the append, which loses the slot being written. Await
+  or ignore synchronous futures on relevant operation exits, including bulk failures. See
+  [dispatch and commit](../docs/jsr107-conformance.md#dispatch-and-commit).
 - Public operations use `requireOperable()`; `close()` refuses the same way after its idempotent
   return, and `destroyCache` clears before closing so a refused clear destroys nothing. While the
   publishing thread is marked, refuse callback re-entry, including reads (lazy expiry may compute).
