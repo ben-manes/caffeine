@@ -134,6 +134,29 @@ final class AsyncCacheFrayTest {
   }
 
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void completion_concurrentSameInstancePut() throws InterruptedException {
+    AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .weigher((Integer k, Integer v) -> v)
+        .executor(Runnable::run)
+        .maximumWeight(50)
+        .buildAsync();
+    var future = new CompletableFuture<Integer>();
+    cache.put(1, future);
+
+    var threadA = new Thread(() -> future.complete(5));
+    var threadB = new Thread(() -> cache.put(1, future));
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+    cache.synchronous().cleanUp();
+
+    assertThat(cache.synchronous().policy().eviction().orElseThrow().weightOf(1)).hasValue(5);
+    assertThat(cache).isValid();
+  }
+
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
   void bulkLoad_concurrentSingleGet() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()
         .executor(Runnable::run)

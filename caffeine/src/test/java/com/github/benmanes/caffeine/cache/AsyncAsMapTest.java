@@ -80,10 +80,12 @@ import java.util.Set;
 import java.util.Spliterators;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
@@ -393,6 +395,14 @@ final class AsyncAsMapTest {
     }
     assertThat(cache).hasSize(context.initialSize());
     assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.TEN)
+  void put_sameInstance_completesDuringWrite(AsyncCache<Int, Int> cache, CacheContext context) {
+    checkCompletesDuringWrite(cache, context, future ->
+        assertThat(cache.asMap().put(context.absentKey(), future)).isSameInstanceAs(future));
   }
 
   @ParameterizedTest
@@ -907,6 +917,15 @@ final class AsyncAsMapTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.TEN)
+  void replace_sameInstance_completesDuringWrite(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    checkCompletesDuringWrite(cache, context, future ->
+        assertThat(cache.asMap().replace(context.absentKey(), future)).isSameInstanceAs(future));
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   void replace_sameValueDifferentFuture(AsyncCache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
@@ -1045,6 +1064,55 @@ final class AsyncAsMapTest {
     }
     assertThat(cache).hasSize(context.initialSize());
     assertThat(context).removalNotifications().isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.TEN)
+  void replaceConditionally_sameInstance_completesDuringWrite(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    checkCompletesDuringWrite(cache, context, future ->
+        assertThat(cache.asMap().replace(context.absentKey(), future, future)).isTrue());
+  }
+
+  /**
+   * Writes the future over itself while a computation installs it, so that the write weighs the
+   * in-flight future and then waits for the entry, which the computation fills after completing
+   * the future. The write registers no completion, so it must not leave the in-flight weight.
+   */
+  private static void checkCompletesDuringWrite(AsyncCache<Int, Int> cache,
+      CacheContext context, Consumer<CompletableFuture<Int>> write) {
+    var future = new CompletableFuture<Int>();
+    var computing = new AtomicBoolean();
+    var writer = new AtomicReference<@Nullable Thread>();
+    var writing = CompletableFuture.runAsync(() -> {
+      await().untilTrue(computing);
+      writer.set(Thread.currentThread());
+      write.accept(future);
+    }, executor);
+
+    var result = cache.asMap().computeIfAbsent(context.absentKey(), key -> {
+      computing.set(true);
+      await().until(() -> isBlockedOnBin(writer.get()));
+      future.complete(context.absentValue());
+      return future;
+    });
+    assertThat(result).isSameInstanceAs(future);
+    assertThat(writing).succeedsWithNull();
+
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+    assertThat(cache.synchronous().policy().eviction().orElseThrow()
+        .weightOf(context.absentKey())).hasValue(10);
+  }
+
+  /** Returns whether the thread is waiting to lock a hash bin of a {@link ConcurrentHashMap}. */
+  private static boolean isBlockedOnBin(@Nullable Thread thread) {
+    if ((thread == null) || (thread.getState() != BLOCKED)) {
+      return false;
+    }
+    var stackTrace = thread.getStackTrace();
+    return (stackTrace.length > 0)
+        && stackTrace[0].getClassName().equals(ConcurrentHashMap.class.getName());
   }
 
   @ParameterizedTest

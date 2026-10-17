@@ -65,6 +65,7 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
@@ -1574,6 +1575,45 @@ final class AsyncCacheTest {
     verify(context.expiry(), never()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
     assertThat(context).stats().hits(1).misses(0).success(2).failures(0);
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.TEN)
+  void put_sameInstance_completesDuringWrite(AsyncCache<Int, Int> cache, CacheContext context) {
+    // The put weighs the in-flight future, then waits for the entry that the load installs with
+    // the completed future, so it registers no completion and must not leave the in-flight weight
+    var future = new CompletableFuture<Int>();
+    var computing = new AtomicBoolean();
+    var writer = new AtomicReference<@Nullable Thread>();
+    var put = CompletableFuture.runAsync(() -> {
+      await().untilTrue(computing);
+      writer.set(Thread.currentThread());
+      cache.put(context.absentKey(), future);
+    }, ConcurrentTestHarness.executor);
+
+    var result = cache.get(context.absentKey(), (key, executor) -> {
+      computing.set(true);
+      await().until(() -> isBlockedOnBin(writer.get()));
+      future.complete(context.absentValue());
+      return future;
+    });
+    assertThat(result).succeedsWith(context.absentValue());
+    assertThat(put).succeedsWithNull();
+
+    assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
+    assertThat(cache.synchronous().policy().eviction().orElseThrow()
+        .weightOf(context.absentKey())).hasValue(10);
+  }
+
+  /** Returns whether the thread is waiting to lock a hash bin of a {@link ConcurrentHashMap}. */
+  private static boolean isBlockedOnBin(@Nullable Thread thread) {
+    if ((thread == null) || (thread.getState() != BLOCKED)) {
+      return false;
+    }
+    var stackTrace = thread.getStackTrace();
+    return (stackTrace.length > 0)
+        && stackTrace[0].getClassName().equals(ConcurrentHashMap.class.getName());
   }
 
   @ParameterizedTest

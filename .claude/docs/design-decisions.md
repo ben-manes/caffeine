@@ -2164,6 +2164,16 @@ sentinel, so the user's `Expiry` sees one creation rather than a creation and an
 The load is still counted once per handler. Pinned by
 `AsyncCacheTest.put_reregisteredInstance_completionRegisteredTwice`.
 
+**A skipped registration re-finalizes a completion that the write raced.** `put` and both
+`replace`s weigh the value before locking the entry, and an in-flight future weighs 0, so a
+completion finalized in between (by the insertion's handler, or by a `get` that installed the
+completed future) is overwritten by the in-flight weight. A consecutive same-instance write
+registers no handler, so nothing would follow to correct it, and the completed entry would stay
+at weight 0 outside the bound. When such a write found the future in flight and it is ready
+afterwards, `handleRewrite` repeats the quiet `replace`, in `put` and the `asMap()` view's `put`
+and `replace`s. Pinned by `AsyncCacheTest.put_sameInstance_completesDuringWrite`, its
+`AsyncAsMapTest` twins, and `AsyncCacheFrayTest.completion_concurrentSameInstancePut`.
+
 **Failure cleanup is scoped to the future, not to each insertion.** A deferred finalizer that
 fails its weigher or expiry removes `(key, future)` conditionally. If the same completed future
 was removed and reinserted meanwhile, that cleanup can remove it again: reinsertion does not

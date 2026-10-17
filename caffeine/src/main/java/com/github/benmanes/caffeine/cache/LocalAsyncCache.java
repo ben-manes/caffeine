@@ -223,6 +223,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     CompletableFuture<V> prior = cache().put(key, castedFuture);
     if (prior != castedFuture) {
       handleCompletion(key, valueFuture, startTime, deferred, /* computed= */ false);
+    } else if (deferred) {
+      handleRewrite(key, castedFuture);
     }
   }
 
@@ -283,6 +285,28 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         }
       }
     });
+  }
+
+  /**
+   * Finalizes a future that was written over itself if it completed during the write. The write
+   * weighs the value before it locks the entry, so it may have overwritten the weight that the
+   * insertion's callback finalized and a future still in-flight is left to that callback.
+   *
+   * @param key the key that the future was written with
+   * @param valueFuture the future that replaced itself
+   */
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  default void handleRewrite(K key, CompletableFuture<V> valueFuture) {
+    if (!Async.isReady(valueFuture)) {
+      return;
+    }
+    try {
+      cache().replace(key, valueFuture, valueFuture,
+          /* shouldDiscardRefresh= */ false, /* quietly= */ true);
+    } catch (Throwable t) {
+      logger.log(Level.WARNING, "Exception thrown during asynchronous load", t);
+      cache().remove(key, valueFuture);
+    }
   }
 
   /** A function executed asynchronously after a bulk load completes. */
@@ -463,6 +487,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       if (prior != value) {
         long startTime = asyncCache.cache().statsTicker().read();
         asyncCache.handleCompletion(key, value, startTime, deferred, /* computed= */ false);
+      } else if (deferred) {
+        asyncCache.handleRewrite(key, value);
       }
       return prior;
     }
@@ -476,6 +502,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       if ((prior != null) && (prior != value)) {
         long startTime = asyncCache.cache().statsTicker().read();
         asyncCache.handleCompletion(key, value, startTime, deferred, /* computed= */ false);
+      } else if ((prior != null) && deferred) {
+        asyncCache.handleRewrite(key, value);
       }
       return prior;
     }
@@ -486,6 +514,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       if (replaced && (newValue != oldValue)) {
         long startTime = asyncCache.cache().statsTicker().read();
         asyncCache.handleCompletion(key, newValue, startTime, deferred, /* computed= */ false);
+      } else if (replaced && deferred) {
+        asyncCache.handleRewrite(key, newValue);
       }
       return replaced;
     }
