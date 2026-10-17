@@ -6376,13 +6376,17 @@ final class BoundedLocalCacheTest {
       expiry = CacheExpiry.CREATE, expiryTime = Expire.ONE_MINUTE)
   void expireVariableEntries_boundedPerCycle(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // Each half of the population is due in its own bucket, which the wheel flushes whole
     for (int i = 0; i < (2 * EXPIRATION_THRESHOLD); i++) {
+      if (i == EXPIRATION_THRESHOLD) {
+        context.ticker().advance(Duration.ofSeconds(5));
+      }
       assertThat(cache.put(Int.valueOf(i), Int.valueOf(i))).isNull();
     }
     cache.cleanUp();
     assertThat(cache.estimatedSize()).isEqualTo(2 * EXPIRATION_THRESHOLD);
 
-    // A large expired backlog is drained in a bounded batch, re-arming to finish the remainder.
+    // A large expired backlog is drained a bucket at a time, re-arming to finish the remainder.
     context.ticker().advance(Duration.ofHours(1));
     cache.expireVariableEntries(cache.expirationTicker().read());
     assertThat(cache.estimatedSize()).isEqualTo(EXPIRATION_THRESHOLD);

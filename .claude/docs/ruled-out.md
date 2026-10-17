@@ -425,9 +425,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   answers for its own instant, where that stamp is not yet visible, as it does for a pending
   mapping, and the entry view reports a present entry with its full duration.
 - Expiration eviction capped at `EXPIRATION_THRESHOLD` (1000) per cycle, re-armed via
-  `PROCESSING_TO_REQUIRED`. The wheel rewinds `nanos` and re-links the remainder, so a
-  `schedule` inside that window measures against a behind clock. The budget counts only
-  evictions, never the cascade, and a cascade cap must not reuse the rewind (it livelocks).
+  `PROCESSING_TO_REQUIRED`. The wheel finishes the bucket in progress, so a cycle can exceed the
+  cap by that bucket's population, and then rewinds `nanos`, so a `schedule` inside that window
+  measures against a behind clock. The budget counts only evictions, never the cascade, and a
+  cascade cap must not reuse the rewind (it livelocks).
 - Collected references drained at `REFERENCE_THRESHOLD` (1000) per queue per cycle, counting
   polls rather than evictions. The cap bounds the lock *hold*, not a waiter's *wait*; the
   lock is not fair, so a backlog still monopolizes it. That residual is not the cap failing.
@@ -489,7 +490,9 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   budget-exhausting cycle, throwing CME on the first cycle that leaves budget unused. Measured on
   the system ticker and common pool, with a mapping function calling `setExpiresAfter` per element
   and 6,000 entries due: 12,294 elements over 2,049 distinct keys (the write buffer's capacity plus
-  one), each six times (the backlog over the 1,000-entry expiration budget), then CME. Both results
+  one), each six times (the backlog over the 1,000-entry expiration budget), then CME. That was
+  measured while the budget stopped within a bucket; buckets are now flushed whole, so the
+  budget-exhausting cycles number at most the buckets holding the backlog. Both results
   fall within the best-effort view the `Policy` snapshot entry under *Views, iteration, and the Map
   contract* accepts, for a computation `Policy` already documents as throwing CME when it
   detectably writes an entry.

@@ -378,20 +378,21 @@ final class TimerWheelTest {
     for (int i = 0; i < count; i++) {
       timerWheel.schedule(new Timer(SPANS[0]));
     }
+    var next = new Timer(2 * SPANS[0]);
+    timerWheel.schedule(next);
 
-    // The limit caps evictions per advance and rewinds so the next advance reprocesses the rest.
+    // The limit is checked between buckets, so the advance flushes the first bucket whole and
+    // rewinds before the next one
     long advanceTo = 13 * SPANS[0];
     assertThat(timerWheel.advance(cache, advanceTo, EXPIRATION_THRESHOLD)).isEqualTo(0);
     assertThat(timerWheel.nanos).isEqualTo(0L);
-    verify(cache, times(EXPIRATION_THRESHOLD)).evictEntry(any(), any(), anyLong());
+    verify(cache, times(count)).evictEntry(any(), any(), anyLong());
+    assertList(timerWheel.wheel[0][2], next);
 
-    assertThat(timerWheel.advance(cache, advanceTo, EXPIRATION_THRESHOLD)).isEqualTo(0);
-    verify(cache, times(2 * EXPIRATION_THRESHOLD)).evictEntry(any(), any(), anyLong());
-
-    // The final advance drains the remainder and fully advances the clock with budget to spare.
+    // The final advance drains the last bucket and fully advances the clock with budget to spare.
     assertThat(timerWheel.advance(cache, advanceTo, EXPIRATION_THRESHOLD)).isGreaterThan(0);
     assertThat(timerWheel.nanos).isEqualTo(advanceTo);
-    verify(cache, times(count)).evictEntry(any(), any(), anyLong());
+    verify(cache, times(count + 1)).evictEntry(any(), any(), anyLong());
     checkTimerWheel(timerWheel, advanceTo);
   }
 
@@ -402,7 +403,7 @@ final class TimerWheelTest {
     when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
 
     // Spread the backlog across three finest-wheel buckets so a capped advance threads the budget
-    // across buckets, exhausts it exactly at a bucket boundary (next == sentinel), and rewinds
+    // across buckets, spends it exactly at the end of the second, and rewinds
     timerWheel.nanos = 0L;
     int first = (3 * EXPIRATION_THRESHOLD) / 10;
     int second = EXPIRATION_THRESHOLD - first;

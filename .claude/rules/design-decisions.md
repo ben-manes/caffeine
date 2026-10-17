@@ -21,8 +21,10 @@ For adjudication, also read your module's section of [ruled-out](../docs/ruled-o
   at most `REFERENCE_THRESHOLD` (1000) per queue. Preserve `PROCESSING_TO_REQUIRED` re-arms.
   These caps limit eviction/reference work per lock hold, not a waiter's latency on the
   non-fair lock.
-- The wheel's expiration budget counts evictions, not cascades. Rewinding after a cascade cap
-  would repeatedly reprocess the moved nodes and can livelock.
+- The wheel's expiration budget counts evictions, not cascades, and is checked only between
+  buckets: a cycle flushes the bucket in progress whole before it rewinds. Checking within a
+  bucket re-walked the rescheduled survivors once per 1,000 evictions. Rewinding after a cascade
+  cap would repeatedly reprocess the moved nodes and can livelock.
 - With a custom executor and no `Scheduler`, an idle cache can remain over maximum by the
   bounded write-buffer debt. A scheduler requests prompt expiration; size-only caches have
   no pacer. Do not add another immediate re-arm or move submission into `PerformCleanupTask`.

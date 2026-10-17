@@ -686,7 +686,8 @@ reorder a writer's `setValue` below its timestamp stores.
 **Expiration eviction is capped at `EXPIRATION_THRESHOLD` (1000) entries per maintenance
 cycle.** `expireAfterAccessEntries` (shared across its window/probation/protected deques),
 `expireAfterWriteEntries`, and the variable `TimerWheel.advance` each evict at most this
-many entries, then set `PROCESSING_TO_REQUIRED` so `rescheduleCleanUpIfIncomplete` re-arms
+many entries (the wheel after finishing the bucket in progress), then set
+`PROCESSING_TO_REQUIRED` so `rescheduleCleanUpIfIncomplete` re-arms
 and the backlog drains across subsequent cycles — mirroring `drainWriteBuffer`'s cap and the
 climber's `QUEUE_TRANSFER_THRESHOLD`. The cap is high enough that normal traffic never
 reaches it; it only bounds the abnormal spike where a cache with no `Scheduler` goes idle,
@@ -694,10 +695,19 @@ lets a large population expire logically, then returns to traffic — one mainte
 would otherwise evict the whole backlog under `evictionLock`, stalling any writer that
 overflows the write buffer and assists (post "Assist maintenance directly when the write buffer is full"). The work isn't reduced, only
 sliced, and since eviction runs async by default the slicing keeps a single cycle from
-blocking a thread too long. The **timer wheel** rewinds `nanos` to `previousTimeNanos` when
-its budget is exhausted and restores the unprocessed bucket remainder, so the next advance
-reprocesses the backlog. Empty buckets rescan cheaply, but a large advance can cause
-rescheduled survivors to be revisited after a rewind. The eviction check keeps non-expired
+blocking a thread too long. The **timer wheel** checks the budget only between buckets: a
+cycle flushes the bucket it is in whole, so it can exceed the cap by that bucket's population,
+then rewinds `nanos` to `previousTimeNanos` and the next advance repeats the sweep. The repeat
+re-walks the survivors that the sweep rescheduled (wrap aliases and nodes cascaded into finer
+wheels), at most once per bucket holding a backlog. A budget checked within a bucket re-walked
+them once per 1,000 evictions instead: 2M entries with 1–3 h lifetimes after a 2 h idle took
+1,008 cycles, 185M node visits and 13.2 s, against 20 cycles, 2.05M visits and 0.16 s by
+bucket, whose largest cycle evicted 697k entries in 57 ms. Two alternatives were measured and
+rejected: a sweep position held across advances was linear with a strict cap but added state to
+the wheel, and moving `nanos` to the stopping bucket's start instead of rewinding stranded
+entries, as successive stops carried the clock past coarse buckets that were never swept. Pinned
+by `TimerWheelTest.advance_boundedPerCycle` and
+`BoundedLocalCacheTest.expireVariableEntries_boundedPerCycle`. The eviction check keeps non-expired
 nodes from being evicted early. A capped cycle can briefly leave expired entries counting
 toward `weightedSize`, so a same-cycle
 `evictEntries` could pick a live victim over an expired one; negligible — frequency-based
@@ -754,8 +764,9 @@ capping it bounds a lock-hold no worse than one already-accepted post-cap evicti
 (the equivalent threshold is ~50–100K), for the cost of new concurrently-mutated state in
 the wheel. **Critically, a cascade cap must never reuse the eviction rewind:** the rewound
 re-advance re-scans the finer levels the cascaded nodes moved to and re-cascades them,
-starving the eviction drain (or livelocking). Evictions can rewind only because an evicted
-node is gone, so the re-traversal skips it. Don't cap cascades via the rewind.
+starving the eviction drain (or livelocking). Evictions can rewind because an evicted node is
+gone and each cycle finishes at least one bucket holding a backlog, so the re-traversals are
+bounded by the buckets swept. Don't cap cascades via the rewind.
 
 *If ever revisited (needs a repro — a coarse bucket with ~10^6 live entries pinning
 `evictionLock` past the eviction cap while a writer-assist blocks):* a safe cascade cap needs
@@ -1564,9 +1575,13 @@ listener under continuous eviction a forwarding wrapper measured 232.9 against 1
 insert, against about 8 ns without one. A `drainStatus == REQUIRED` backlog re-arms the
 pacer only when `!pacer.isScheduled()`; if a fire is already pending (the next expiration
 event), the backlog rides that fire rather than stacking a second schedule. An *expiration*
-backlog stays prompt regardless — a >`EXPIRATION_THRESHOLD` backlog leaves an
-already-expired deque/wheel head, so `getExpirationDelay` returns `≤ 0` and
-`expireEntries` already scheduled the pacer at `TOLERANCE` (~1s). Size eviction is
+backlog in a deque stays prompt: its head is already expired, so `getExpirationDelay` returns
+`≤ 0` and `expireEntries` already scheduled the pacer at `TOLERANCE` (~1s). A wheel backlog
+does not, because the wheel measures its delay from its own clock and a spent budget rewinds
+that clock, so each budget-exhausting cycle's fire waits the distance from it to the next
+bucket. With `systemScheduler()` and a 2-thread pool, 1,000 entries due in each of five buckets
+drained one bucket per ~10s; a single bucket's burst drains in one cycle, since buckets are
+flushed whole. Size eviction is
 uncapped (drains fully in one cycle), so it never backlogs. A region transfer
 (`evictFromWindow`, `demoteFromMainProtected`) is capped at `QUEUE_TRANSFER_THRESHOLD` and
 re-arms after `expireEntries` armed the pacer, so a large window resize rides the pending fire
@@ -2308,8 +2323,10 @@ compute this must use that offset-by-one:
   missed flush would only re-file an alias. It is honored anyway so the derivation "current bucket ⇒
   only aliases" isn't load-bearing, and so the contract is assertable.
 
-Partial-drain remainders are **not** affected — `expireVariableEntries` re-arms via
-`PROCESSING_TO_REQUIRED`, so the backlog never depends on this delay. Pinned by
+On the common pool a partial drain does not depend on this delay: `expireVariableEntries` re-arms
+via `PROCESSING_TO_REQUIRED` and the cleanup is resubmitted at once. With a `Scheduler` and
+another executor the re-arm rides the pacer fire that this delay scheduled, measured from the
+rewound clock (see *Pacer*). Pinned by
 `TimerWheelTest.getExpirationDelay_occupiedCurrentBucket` and by `getExpirationDelay_fuzzy`, which
 asserts **exact equality** against an oracle scanning every bucket of every wheel. That fuzzy
 assertion was previously vacuous — it guarded the assert with its own condition and compared an

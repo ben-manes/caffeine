@@ -86,13 +86,13 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
   }
 
   /**
-   * Advances the timer and evicts entries that have expired, up to the {@code limit} number of
-   * evictions, and returns the unused budget. When the limit is reached the timer is rewound so
-   * that the next advance processes the remaining backlog.
+   * Advances the timer and evicts entries that have expired, flushing whole buckets until the
+   * {@code limit} number of evictions is reached, and returns the unused budget. When the limit is
+   * reached the timer is rewound so that the next advance processes the remaining buckets.
    *
    * @param cache the instance that the entries belong to
    * @param currentTimeNanos the current time, in nanoseconds
-   * @param limit the maximum number of entries to evict
+   * @param limit the number of evictions after which no further bucket is flushed
    * @return the unused portion of the eviction budget; zero if the limit was reached
    */
   @CanIgnoreReturnValue
@@ -139,12 +139,15 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
   }
 
   /**
-   * Expires entries or reschedules into the proper bucket if still active.
+   * Expires entries or reschedules into the proper bucket if still active. A bucket is flushed
+   * whole, so the limit is checked only between buckets.
    *
    * @param cache the instance that the entries belong to
    * @param index the timing wheel being operated on
    * @param previousTicks the previous number of ticks
    * @param delta the number of additional ticks
+   * @param limit the number of evictions after which no further bucket is flushed
+   * @return the unused portion of the eviction budget; zero if the limit was reached
    */
   @SuppressWarnings("Varifier")
   int expire(BoundedLocalCache<K, V> cache, int index,
@@ -167,10 +170,7 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
             if ((node.getVariableTime() - nanos) > 0) {
               schedule(node);
             } else if (cache.evictEntry(node, RemovalCause.EXPIRED, nanos)) {
-              if (--limit == 0) {
-                // Leave the unprocessed remainder for the next advance to process
-                return 0;
-              }
+              limit--;
             } else {
               schedule(node);
             }
@@ -181,6 +181,10 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
         }
       } finally {
         transfer(pending, sentinel);
+      }
+      if (limit <= 0) {
+        // Leave the remaining buckets for the next advance to process
+        return 0;
       }
     }
     return limit;
