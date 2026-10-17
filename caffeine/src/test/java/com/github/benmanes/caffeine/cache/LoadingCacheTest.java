@@ -1018,6 +1018,23 @@ final class LoadingCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, loader = Loader.ASYNC_INCOMPLETE,
+      mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expiryTime = Expire.ONE_MINUTE, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, removalListener = Listener.CONSUMING)
+  void refresh_expired_coalesces(LoadingCache<Int, @Nullable Int> cache, CacheContext context) {
+    context.ticker().advance(Duration.ofMinutes(10));
+    var future1 = cache.refresh(context.firstKey());
+    var future2 = cache.refresh(context.firstKey());
+
+    future1.complete(null);
+    future2.complete(null);
+    assertThat(future2).isSameInstanceAs(future1);
+  }
+
+  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
       maximumSize = Maximum.ONE, weigher = CacheWeigher.DISABLED,
       removalListener = Listener.CONSUMING)

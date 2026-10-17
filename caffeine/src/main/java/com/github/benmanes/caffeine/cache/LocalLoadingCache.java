@@ -173,6 +173,9 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
       var future = register();
       if (reloading != null) {
         reloading.whenComplete(this::complete);
+        if (oldValue == null) {
+          evictIfPending();
+        }
       }
       @SuppressWarnings("unchecked")
       var castedFuture = (CompletableFuture<V>) future;
@@ -198,6 +201,22 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
           throw toUnchecked(e);
         }
       });
+    }
+
+    /**
+     * Removes the expired or collected entry that this refresh loads anew, so that a later refresh
+     * coalesces with the load rather than replacing it as a stale reload of the dead value.
+     */
+    @SuppressWarnings("CheckReturnValue")
+    private void evictIfPending() {
+      if (!cache.isPendingEviction(key)) {
+        return;
+      }
+      var hints = new LocalCache.RemapHints();
+      cache.compute(key, (K k, @Nullable V currentValue) -> {
+        hints.preserveEntry();
+        return currentValue;
+      }, cache.expiry(), /* recordLoad= */ false, hints);
     }
 
     /** Applies the refresh result and records the load's outcome. */

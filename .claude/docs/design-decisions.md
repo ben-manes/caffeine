@@ -1965,12 +1965,16 @@ siblings dedup via the `refreshes` map) but not the broad reading (any load, inc
 differs accordingly: cancelling the future from async `refresh(absentKey)` cancels the *shared*
 in-cache load (all `get` waiters get `CancellationException`, `handleCompletion` removes the entry),
 while cancelling the sync refresh future only unregisters the isolated reload and leaves a
-concurrent `get`'s own load untouched. An expired entry that maintenance has not yet removed
-takes the same absent route in both caches: if maintenance removes it before the load completes,
-that removal discards the sync cache's registration, so the loaded value is notified as `EXPLICIT`
-while `refresh` still returns it, whereas the async view replaced the expired entry with its
-in-flight load when the refresh began and installs the value. Don't try to make the sync cache
-dedup a refresh against a `get`; pinned by `RefreshAfterWriteTest.refresh_absent_sideLoad_*`.
+concurrent `get`'s own load untouched. An expired or collected entry that maintenance has not yet
+removed takes the same absent route in both caches, and both remove it when the refresh begins:
+the async view replaces it with its in-flight load, and the sync cache reaps it with a no-op
+`compute` that keeps the new registration, so the loaded value installs in both. Without the
+reap, `isPendingEviction` stayed true for the lingering entry, so every later sync refresh
+replaced the in-flight load as if it were a stale reload of the dead value (200 calls, 200
+loads), and a maintenance reap that won the race discarded the registration and notified the
+loaded value as `EXPLICIT`. Pinned by `LoadingCacheTest.refresh_expired_coalesces`. Don't try
+to make the sync cache dedup a refresh against a `get`; pinned by
+`RefreshAfterWriteTest.refresh_absent_sideLoad_*`.
 
 **Sync `getAll` discards an unloaded key's refresh only on the sequential path — by design,
 and it reflects a real consistency difference, not a bug.** For a key that fails to load
