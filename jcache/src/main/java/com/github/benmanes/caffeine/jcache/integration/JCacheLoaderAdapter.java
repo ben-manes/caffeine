@@ -174,11 +174,11 @@ public final class JCacheLoaderAdapter<K, V>
       if (expireTime == Long.MIN_VALUE) {
         expireTime = oldValue.getExpireTimeMillis();
       }
+      dispatcher.publishUpdatedQuietly(cache, key, oldValue.get(), copy);
       if (expireTime == 0L) {
         dispatcher.publishExpiredQuietly(cache, key, copy);
         return null;
       }
-      dispatcher.publishUpdatedQuietly(cache, key, oldValue.get(), copy);
       return new Expirable<>(copy, expireTime);
     } catch (CacheLoaderException e) {
       throw e;

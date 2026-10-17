@@ -29,7 +29,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
@@ -46,6 +48,7 @@ import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
+import javax.cache.event.EventType;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
@@ -570,17 +573,20 @@ final class CacheLoaderTest {
   }
 
   @Test
-  void reload_zeroExpiry_publishesExpired() {
-    // A reload whose update expiry is ZERO expires the reloaded value in place of updating it.
+  void reload_zeroExpiry_publishesUpdatedThenExpired() {
+    // A reload whose update expiry is ZERO updates the entry and immediately expires the reloaded
+    // value, like a put, so that the replaced value is also reported to the listeners.
     ExpiryPolicy expiry = Mockito.mock();
     when(expiry.getExpiryForCreation()).thenReturn(Duration.ETERNAL);
     when(expiry.getExpiryForUpdate()).thenReturn(Duration.ZERO);
     CacheLoader<Integer, Integer> loader = Mockito.mock();
     when(loader.load(1)).thenReturn(-1, -2);
 
-    var expired = new AtomicInteger();
-    CacheEntryExpiredListener<Integer, Integer> expiredListener =
-        events -> events.forEach(event -> expired.incrementAndGet());
+    var published = new ArrayList<List<Object>>();
+    CacheEntryUpdatedListener<Integer, Integer> updatedListener = events -> events.forEach(event ->
+        published.add(List.of(event.getEventType(), event.getOldValue(), event.getValue())));
+    CacheEntryExpiredListener<Integer, Integer> expiredListener = events -> events.forEach(event ->
+        published.add(List.of(event.getEventType(), event.getOldValue(), event.getValue())));
 
     try (var fixture = JCacheFixture.builder()
         .loading(config -> {
@@ -590,17 +596,21 @@ final class CacheLoaderTest {
           config.setExecutorFactory(MoreExecutors::directExecutor);
           config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
           config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              () -> updatedListener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ true, /* isSynchronous= */ true));
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
               () -> expiredListener, /* filterFactory= */ null,
-              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+              /* isOldValueRequired= */ true, /* isSynchronous= */ true));
         }).build();
         var cache = fixture.jcacheLoading()) {
       assertThat(cache.get(1)).isEqualTo(-1);
       fixture.ticker().advance(java.time.Duration.ofMinutes(2));
 
-      // Trigger the refresh; the ZERO update expiry publishes EXPIRED and drops the entry.
+      // Trigger the refresh; the ZERO update expiry publishes UPDATED, EXPIRED and drops the entry.
       assertThat(cache.get(1)).isEqualTo(-1);
       verify(loader, Mockito.times(2)).load(1);
-      assertThat(expired.get()).isEqualTo(1);
+      assertThat(published).containsExactly(
+          List.of(EventType.UPDATED, -1, -2), List.of(EventType.EXPIRED, -2, -2)).inOrder();
       assertThat(cache.containsKey(1)).isFalse();
     }
   }

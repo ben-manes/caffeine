@@ -136,7 +136,12 @@ Measured cells: Ehcache 3.12.0 splits by path (`put`, `invoke` and `loadAll(repl
 publish UPDATED then EXPIRED; `getAndPut`, `putAll`, both `replace` forms and `getAndReplace`
 publish REMOVED for the old value); cache2k 2.6.1 publishes EXPIRED for the old value and counts no
 put; Infinispan 16.2.3 publishes REMOVED and calls `writer.delete`. Hazelcast 5.7.0 hung on the
-scenario, so its row keeps the recorded reading.
+scenario, so its row keeps the recorded reading. `put` and `loadAll(keys, true)` over a present key
+publish the same events as each other in every provider: the RI 1.1.1 publishes UPDATED with no
+EXPIRED, Coherence CE 26.04 and Ehcache 3 UPDATED then EXPIRED for the new value, cache2k EXPIRED
+for the old value and Infinispan REMOVED for it. Caffeine's refresh reload, which has no spec
+counterpart, publishes UPDATED then EXPIRED as `loadAll(keys, true)` does. Pin:
+`CacheLoaderTest.reload_zeroExpiry_publishesUpdatedThenExpired`.
 
 cache2k maps a zero update expiry to `ExpiryTimeValues.NOW` (`ExpiryPolicyAdapter.durationToTicks`),
 and core's `EntryAction.checkKeepOrRemove` removes an entry expiring `NOW`.
@@ -661,9 +666,10 @@ the accepted executor-failure boundary, but require a current throwing path befo
 mechanism remains reproducible.
 
 Native size/weight eviction publishes quiet REMOVED; native EXPIRED publishes quiet EXPIRED.
-Refresh reload publishes quiet UPDATED, EXPIRED for zero update expiry, or REMOVED on a miss.
-The last two remove the entry but count neither an eviction nor a removal: core removes it as
-an explicit removal, outside `JCacheEvictionListener`, and statistics are best-effort.
+Refresh reload publishes quiet UPDATED, followed by EXPIRED for zero update expiry as a put does,
+or REMOVED on a miss. The latter two remove the entry but count neither an eviction nor a removal:
+core removes it as an explicit removal, outside `JCacheEvictionListener`, and statistics are
+best-effort.
 Quiet means no synchronous caller await: it informs resource-tracking listeners without blocking
 the evicting/refresh thread. Lazy expiry mostly arrives this way on the system ticker: the native
 mirror hides an expired entry from reads, and a read in the sub-millisecond gap between the
