@@ -106,13 +106,14 @@ enum SystemScheduler implements Scheduler {
 
     var timer = new CompletableFuture<@Nullable Void>();
     var future = new CompletableFuture<@Nullable Void>();
-    timer.orTimeout(delay, unit).whenComplete((result, error) -> {
+    timer.whenComplete((result, error) -> {
       if (error != null) {
         future.complete(null);
         executor.execute(command);
       }
     });
     future.whenComplete((result, error) -> timer.complete(null));
+    timer.orTimeout(delay, unit);
     return future;
   }
 }

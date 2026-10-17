@@ -1527,7 +1527,13 @@ an unguarded *user* scheduler (that, not the ordering, would be the bug).
 
 **`SystemScheduler` returns a future separate from its timer, so that a cancel removes the JDK's
 delayed task.** The timer is `orTimeout` on an internal future, and its timeout completes the
-returned future and submits the task. Any completion of the returned future, a cancel included,
+returned future and submits the task. The submission is attached before the timer is armed.
+Attached after, a timer that fired first ran it on the scheduling thread, on most of a JVM's first
+calls with a 1 ns delay and on about one warm call in 1,200; `SchedulerTest.scheduler_exception`
+fails when it makes such a call. JDK 11 to 24 keep a narrower window, as their `orTimeout`
+registers its canceller after arming and a timeout during that registration can run the
+submission (about one call in a million at 1 ns; 25 registers first). The pacer's minimum delay
+of `TOLERANCE` puts that out of reach. Any completion of the returned future, a cancel included,
 completes the timer normally, the one completion on which `orTimeout`'s canceller removes the
 delayed task on every JDK: on 11, and on 17 before 17.0.14, it ignores an exceptional completion
 such as a cancel (JDK-8303742). `delayedExecutor` keeps no handle at all, so with it each
