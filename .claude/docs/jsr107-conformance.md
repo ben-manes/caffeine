@@ -555,7 +555,11 @@ writer's residual collection only on a partial failure, when it identifies entri
 The RI's residual-on-success interpretation made both `putAll` and `removeAll` a no-op for a
 non-clearing writer and was rejected for both. Pins:
 `CacheWriterTest.removeAll_nonClearingWriter_stillEmptiesCache` and
-`putAll_nonClearingWriter_stillStores`.
+`putAll_nonClearingWriter_stillStores`. The batch handed to `writeAll` is an `ArrayDeque`, so a
+writer that removes each entry as it writes it, as the TCK's recording writer does, runs in
+linear time. The RI's `ArrayList` made one 400,000-entry `putAll` take 7.8s against 0.17s, and a
+`LinkedHashSet` would hash the entries, whose `key ^ value` hash collides for a map such as
+`i -> i` (100,000 entries built and drained in 38s against 1.8ms).
 
 A partial batch failure reconciles the same way whatever `Exception` the writer throws, including
 a checked exception thrown undeclared by another JVM language. A writer `Error` after a partial

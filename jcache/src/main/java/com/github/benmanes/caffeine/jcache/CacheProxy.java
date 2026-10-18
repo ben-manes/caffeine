@@ -23,6 +23,7 @@ import static java.util.stream.Collectors.toUnmodifiableList;
 
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -468,9 +469,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     @Var CacheWriterException error = null;
     @Var Set<? extends K> failedKeys = Set.of();
     if (configuration.isWriteThrough() && !copies.isEmpty()) {
-      var entries = new ArrayList<Cache.Entry<? extends K, ? extends V>>(copies.size());
+      var entries = new ArrayDeque<Cache.Entry<? extends K, ? extends V>>(copies.size());
       for (var copy : copies) {
-        entries.add(new EntryProxy<>(copy.key, copy.value));
+        entries.addLast(new EntryProxy<>(copy.key, copy.value));
       }
       try {
         writer.writeAll(entries);

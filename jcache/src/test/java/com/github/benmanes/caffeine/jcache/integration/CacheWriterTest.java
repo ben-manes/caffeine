@@ -77,6 +77,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.jcache.EntryProxy;
@@ -149,8 +150,7 @@ final class CacheWriterTest {
     try (var fixture = jcacheFixture(writer)) {
       fixture.jcache().putAll(ENTRIES);
 
-      var entries = toCacheEntries(ENTRIES);
-      verify(writer).writeAll(entries);
+      verifyWriteAll(writer, ENTRIES);
       verifyNoMoreInteractions(writer);
     }
   }
@@ -487,8 +487,7 @@ final class CacheWriterTest {
     try (var fixture = jcacheFixture(writer)) {
       fixture.jcache().putAll(ENTRIES);
 
-      var entries = toCacheEntries(ENTRIES);
-      verify(writer).writeAll(entries);
+      verifyWriteAll(writer, ENTRIES);
 
       fixture.jcache().removeAll(ENTRIES.keySet());
       verify(writer).deleteAll(ENTRIES.keySet());
@@ -502,8 +501,7 @@ final class CacheWriterTest {
     try (var fixture = jcacheFixture(writer)) {
       fixture.jcache().putAll(ENTRIES);
 
-      var entries = toCacheEntries(ENTRIES);
-      verify(writer).writeAll(entries);
+      verifyWriteAll(writer, ENTRIES);
 
       fixture.jcache().removeAll(Set.of());
       verifyNoMoreInteractions(writer);
@@ -898,8 +896,7 @@ final class CacheWriterTest {
     try (var fixture = jcacheFixture(writer)) {
       fixture.jcache().putAll(ENTRIES);
 
-      var entries = toCacheEntries(ENTRIES);
-      verify(writer).writeAll(entries);
+      verifyWriteAll(writer, ENTRIES);
 
       fixture.jcache().clear();
       verifyNoMoreInteractions(writer);
@@ -941,6 +938,14 @@ final class CacheWriterTest {
     return map.entrySet().stream()
         .map(entry -> new EntryProxy<>(entry.getKey(), entry.getValue()))
         .collect(toImmutableList());
+  }
+
+  /** Verifies that the writer was given exactly the map's entries, in iteration order. */
+  private static void verifyWriteAll(CloseableCacheWriter writer, Map<Integer, Integer> map) {
+    ArgumentCaptor<Collection<Cache.Entry<? extends Integer, ? extends Integer>>> captor =
+        ArgumentCaptor.captor();
+    verify(writer).writeAll(captor.capture());
+    assertThat(captor.getValue()).containsExactlyElementsIn(toCacheEntries(map)).inOrder();
   }
 
   private interface CloseableCacheWriter extends CacheWriter<Integer, Integer>, Closeable {}
