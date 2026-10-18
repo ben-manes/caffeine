@@ -196,8 +196,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
    * Similarly, recording the touch for expiration to extend its lifetime may be ignored for an
    * entry if the last update was within a short time window. This is done to avoid overwhelming the
    * write buffer and to avoid false sharing on reads due to modifying the access time. The
-   * expiration scan compensates by moving a stale-positioned head to the back of the queue when its
-   * timestamp is fresher than the tail, so subsequent passes can resume from the next-oldest entry.
+   * write-order scan compensates by moving a stale-positioned head to the back of the queue when
+   * its timestamp is fresher than the tail, so subsequent passes can resume from the next-oldest
+   * entry. The access-order scan does not, because those queues are also the eviction order, so a
+   * lost reorder defers reaping the entries behind its head until that head is read again or
+   * expires.
    *
    * [1] BP-Wrapper: A Framework Making Any Replacement Algorithms (Almost) Lock Contention Free
    * https://web.njit.edu/~dingxn/papers/BP-Wrapper.pdf
@@ -928,8 +931,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     for (var node = head; (node != null) && (remaining > 0);) {
       var next = (node == last) ? null : node.getNextInAccessOrder();
       if ((now - node.getAccessTime()) < duration) {
-        boolean stalePosition = ((last.getAccessTime() - node.getAccessTime()) < 0);
-        if (stalePosition || isComputingAsync(node.getValue())) {
+        if (isComputingAsync(node.getValue())) {
           accessOrderDeque.moveToBack(node);
           node = next;
           continue;

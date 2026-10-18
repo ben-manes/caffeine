@@ -441,14 +441,28 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   request, with a `Scheduler` arming 3569s out). Bounded by the previous deadline, so it never
   extends an entry's life; see [TimerWheel](design-decisions.md#timerwheel).
 - A dropped read-buffer reorder leaving a live `expireAfterAccess` head in front of expired entries.
-  The scan moves a live head to the back only when its access time is newer than the tail's, so
-  when the tail was read later, the entries behind a head whose reorder was lost wait for that
-  head's next recorded read or its own expiry. Measured with twelve threads keeping their
-  read-buffer stripes full, the delay exceeded a second; without that contention it stayed under
-  25 ms. The timer wheel sweeps by bucket and has no such stop; see
+  The access-order scan moves only an in-flight head, so the entries behind a head whose reorder
+  was lost wait for that head's next recorded read or its own expiry. A read pattern that loses the
+  same reorders on every pass (a bulk or burst read of more than a stripe's 16 entries per thread
+  between drains, repeated within the duration) keeps those heads stamped and unmoved, so without
+  a maximum size the retention grows at the insert rate: 60,440 held against 6,100 readable after
+  40 s, for a client polling 48 sessions every 2.5 s alongside a login every 0.5 ms. A maximum size,
+  the usual runaway threshold for sessions, bounds it. The timer wheel sweeps by bucket and has no
+  such stop, so variable expiration is the answer when stricter reaping matters; see
   [TimerWheel](design-decisions.md#timerwheel). The write-order deque has the same face: a write
   time kept by the tolerance plus a weight change's `UpdateTask` reorder can leave an expired node
   behind a live head until that head expires, under the tolerance.
+- Moving a live access-order head that is fresher than the tail, as the write-order scan does. The
+  access-order deques are also the eviction order, and transfers into a region's tail and the
+  tolerance leave them out of access-time order, so the comparison relinked live entries with
+  nothing expired. On a Zipf(0.9) read-through of 30,000 keys over 3,000 entries the hit rate was
+  60.3% with it and 66.1% without on 2 CPUs (3.7 pp lower on 14), most of it in protected, and an
+  adversarial order walked 425-1,785 us per lookup. It released a lost reorder only when nothing
+  fresher had reached the tail, so it never released the repeated pattern above. Two repairs for
+  that pattern were also rejected: a per-entry marker on a lost offer (a timestamp bit, CAS, and a
+  new buffer result), and moving a head stamped since its deque's previous scan, which also moves
+  a head whose recorded reorder is still pending, so the LRU would follow drain timing, and which
+  needs a clock read per key in `getAllPresent`.
 - `Pacer.calculateSchedule`'s 0L sentinel collision.
 - `Pacer.schedule`'s reschedule arm must call `cancel()`, not `future.cancel(...)`: the
   immediate-scheduler recursion guard is `future == null && nextFireTime != 0L` and only

@@ -529,8 +529,8 @@ final class BoundedLocalCacheTest {
     for (var node : probation) {
       node.setAccessTime(now);
     }
-    // A read whose buffer record was dropped leaves a fresh timestamp at a stale position, which
-    // is the condition the scan's reorder branch exists to repair.
+    // A fresh timestamp keeps the successor live, so the re-entrant cycle transfers it rather than
+    // expiring it
     var head = requireNonNull(window.peekFirst());
     requireNonNull(head.getNextInAccessOrder()).setAccessTime(now);
 
@@ -6299,28 +6299,6 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
-  @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE)
-  void expireAfterAccessEntries_stalePosition_wraparound(BoundedLocalCache<Int, Int> cache) {
-    // Access-order sibling of expireAfterWriteEntries_stalePosition_wraparound.
-    var newest = Int.valueOf(1);
-    var oldest = Int.valueOf(2);
-    assertThat(cache.put(newest, newest)).isNull();
-    assertThat(cache.put(oldest, oldest)).isNull();
-    cache.cleanUp();
-
-    long duration = TimeUnit.MINUTES.toNanos(1);
-    long now = Long.MIN_VALUE + duration;
-    var newestNode = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(newest)));
-    var oldestNode = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(oldest)));
-    newestNode.setAccessTime(Long.MIN_VALUE + (duration / 2));
-    oldestNode.setAccessTime(Long.MAX_VALUE - (duration / 2));
-
-    cache.expireAfterAccessEntries(now);
-    assertThat(cache.data.get(cache.nodeFactory.newLookupKey(oldest))).isNull();
-    assertThat(cache.data.get(cache.nodeFactory.newLookupKey(newest))).isNotNull();
-  }
-
-  @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, expireAfterWrite = Expire.ONE_MINUTE)
   void expireAfterWriteEntries_boundedPerCycle(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
@@ -7091,31 +7069,6 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
-  @CacheSpec(population = {Population.EMPTY, Population.FULL},
-      expireAfterAccess = Expire.ONE_MINUTE)
-  void repairsStaleHead_expireAfterAccess(BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    // A dropped read-buffer reorder by bumping the head's time forward without moving its deque
-    // position. The expiration scan must detect that the head is fresher than the tail and move it
-    // to the back so the trailing (genuinely expired) entries can be evicted.
-    assertThat(cache.put(context.absentKey(), context.absentValue())).isNull();
-    var node = cache.accessOrderWindowDeque().getLast();
-    assertThat(node.getKey()).isEqualTo(context.absentKey());
-
-    cache.accessOrderWindowDeque().moveToFront(node);
-    context.ticker().advance(Duration.ofSeconds(50));
-    node.setAccessTime(context.ticker().read());
-
-    context.ticker().advance(Duration.ofSeconds(40));
-    cache.cleanUp();
-
-    assertThat(cache).hasSize(1);
-    assertThat(cache).containsKey(context.absentKey());
-    assertThat(cache.accessOrderWindowDeque().peekLast()).isSameInstanceAs(node);
-    assertThat(context).notifications().withCause(EXPIRED)
-        .contains(context.original()).exclusively();
-  }
-
-  @ParameterizedTest
   @CacheSpec(population = {Population.EMPTY, Population.FULL}, expireAfterWrite = Expire.ONE_MINUTE)
   void repairsStaleHead_expireAfterWrite(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.put(context.absentKey(), context.absentValue())).isNull();
@@ -7135,6 +7088,48 @@ final class BoundedLocalCacheTest {
 
     assertThat(context).notifications().withCause(EXPIRED)
         .contains(context.original()).exclusively();
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, implementation = Implementation.Caffeine,
+      compute = Compute.SYNC, keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      maximumSize = Maximum.TEN, weigher = CacheWeigher.DISABLED,
+      executor = CacheExecutor.DIRECT, expiry = CacheExpiry.DISABLED,
+      expireAfterAccess = Expire.ONE_MINUTE, expireAfterWrite = Expire.DISABLED,
+      refreshAfterWrite = Expire.DISABLED)
+  void expireAfterAccessEntries_demotedTail_keepsProbationOrder(
+      BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    // A protected entry demoted to probation's tail keeps its older access time, so the region is
+    // not in access-time order, and a scan that expires nothing must leave the eviction order
+    // alone. The order reaches the API only through coldest(), which merges it by frequency.
+    for (int i = 1; i <= 8; i++) {
+      context.ticker().advance(Duration.ofSeconds(1));
+      assertThat(cache.put(Int.valueOf(i), Int.valueOf(i))).isNull();
+    }
+    context.ticker().advance(Duration.ofSeconds(2));
+    for (int i = 1; i <= 7; i++) {
+      assertThat(cache.getIfPresent(Int.valueOf(i), /* recordStats= */ false)).isNotNull();
+    }
+    cache.cleanUp();
+
+    Int demoted = Int.valueOf(1);
+    Int promoted = Int.valueOf(8);
+    Int graduate = Int.valueOf(9);
+    context.ticker().advance(Duration.ofSeconds(20));
+    assertThat(cache.put(graduate, graduate)).isNull();
+    context.ticker().advance(Duration.ofSeconds(1));
+    assertThat(cache.put(Int.valueOf(10), Int.valueOf(10))).isNull();
+    context.ticker().advance(Duration.ofSeconds(9));
+    assertThat(cache.getIfPresent(promoted, /* recordStats= */ false)).isNotNull();
+    cache.cleanUp();
+    assertThat(Iterables.transform(cache.accessOrderProbationDeque(), Node::getKey))
+        .containsExactly(graduate, demoted).inOrder();
+
+    context.ticker().advance(Duration.ofSeconds(5));
+    cache.cleanUp();
+    assertThat(Iterables.transform(cache.accessOrderProbationDeque(), Node::getKey))
+        .containsExactly(graduate, demoted).inOrder();
   }
 
   /* --------------- Refresh --------------- */

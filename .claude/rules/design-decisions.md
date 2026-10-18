@@ -101,6 +101,11 @@ Details: [eviction](../docs/design-decisions.md#eviction),
   its head each iteration. `advance` defers on the explicit `advancing` flag, even when
   `pending` is empty. Deque scans instead resume from their head and re-check their captured
   tail after callbacks; access-order checks need both membership and queue type.
+- The access-order scan moves only an in-flight head, while the write-order scan also moves a
+  head fresher than the tail. The access-order deques are the eviction order, which transfers and
+  the tolerance keep out of access-time order, so don't mirror write order there. A lost read
+  reorder defers reaping behind its head, without limit under a repeated over-stripe read and no
+  maximum; variable expiration has no such stop.
 - `getExpirationDelay` finds the next bucket flush, including cascades. The current bucket
   flushes at offset 1; retain both the main-scan clamp and `peekAhead`'s current-bucket check.
 - `Pacer.schedule` calls `cancel()`, not merely `future.cancel(...)`, before rescheduling.
