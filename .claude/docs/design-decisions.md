@@ -1198,6 +1198,8 @@ wiring is the application's, under the executor rule in
 **The same doctrine covers a two-map deadlock, not just blocking, including when it wedges an
 innocent thread.** A loader that touches the cache can take the `refreshes` bin monitor and then a
 `data` bin monitor, while any write takes `data` and then `refreshes` through `discardRefresh`.
+That loader is an automatic refresh's or the async view's reload; a manual synchronous refresh
+calls its loader after registering, outside the bin.
 Opposite orders, and `findDeadlockedThreads()` reports it on both implementations. A read closes
 the cycle as well as a write. Reading a stale key registers its refresh, which takes a second
 `refreshes` bin, so two reloads reading keys in each other's bins deadlock on `refreshes` alone, and
@@ -1657,8 +1659,18 @@ ownership check.
 
 **A manual synchronous-cache refresh uses one `LocalLoadingCache.RefreshOperation` per call.**
 It carries the registration and completion state, while the loader's original future remains
-the token and return value. Registration runs inside `refreshes.compute`; completion is attached
-after it returns, and coalescing onto an existing refresh attaches no additional handler.
+the token and return value. Registration publishes a `PendingRefresh` placeholder from
+`refreshes.compute`, and the loader is called after it returns. The loader's future then replaces
+the placeholder by identity, so a write that discarded the placeholder meanwhile leaves the load
+unowned. A refresh that coalesces onto a placeholder waits for the loader to return, which is as
+long as it previously waited on the bin, and returns the loader's future, or a failed future if
+the loader threw. On the placeholder's own thread, which is a loader refreshing its own key, it throws
+`IllegalStateException` rather than wait on itself, as CHM's `Recursive update` did.
+`Policy.refreshes()` omits placeholders. Completion is attached after the swap, and coalescing onto
+an existing refresh attaches no additional handler. Pinned by
+`LoadingCacheTest.refresh_absent_coalesces*`, `refresh_recursive`, `refreshes_whileRegistering`,
+and `refresh_nullFuture_withdrawsRegistration`, whose failed registration would otherwise suppress
+automatic refresh through `refreshIfNeeded`'s `containsKey` gate.
 The async view's absent-key branch registers with `putIfAbsent` rather than a compute and owes
 the same rule: it attaches its by-key release only when it won the registration. Attaching that
 release to whichever future it returns puts a `refreshes.remove` on a token this caller never
@@ -1747,35 +1759,33 @@ bounded by one load and is a delay rather than a loss: automatic refresh is
 suppressed for that key while the orphan is in flight (`refreshIfNeeded` gates on
 the same `containsKey`), and a `refresh(k)` issued after the write coalesces onto
 the superseded token and is discarded. Don't drop the prescreen to close it, and
-don't add a registration-side re-check: closing it there would fix only
-`refreshIfNeeded` and leave the manual `LocalLoadingCache` and
-`LocalAsyncLoadingCache` registrations, which carry no write-time marker to test,
-while implying all three were closed.
+don't add a registration-side re-check: it would fix only `refreshIfNeeded`, whose
+residue is a delay, and the manual registrations close the window without a
+write-time marker, as below.
 
-**A manual refresh that started absent can commit across the same window, and that is
-accepted.** `LocalLoadingCache.RefreshOperation` has no node and no write time, so its only
-ownership test is `currentValue == oldValue`, which is `null == null` when the key was absent
-at registration. A `put` followed by an `invalidate` inside the reservation window therefore
-leaves the token registered and lets the completion install its loaded value over both.
-Measured on the bounded cache with a loader parked inside the registration, 5/5 per arm: put
-then invalidate installs the load, put alone leaves the written value (so the guard works
-wherever it can tell the two apart), and a present-start refresh is discarded. A present start
-whose racing writes end on the instance it read (`put(k, 6); put(k, 5)` after reading 5) installs
-over them, since the identity test cannot tell that from no write. The escape needs the loader to
-run inside `refreshes.compute`, which means a direct executor, a saturated pool with
-`CallerRunsPolicy`, or an `AsyncCacheLoader` returning a completed future; on
-`ForkJoinPool.commonPool()` the registration publishes first and the refresh is discarded 0/5.
-The resulting history is still a legal linearization (put, invalidate, then the refresh's
-install), and no public contract covers it: `Cache.invalidate` is undefined only for an entry
-being loaded and otherwise not present, which the put makes false. The asynchronous cache does
-not share the shape, since its absent case installs an in-flight future through
-`computeIfAbsent` on `data` and registers with `putIfAbsent`.
+**A manual refresh registers before it calls its loader, so a write that races the load
+discards it.** `LocalLoadingCache.RefreshOperation` has no node and no write time, so its only
+ownership test is `currentValue == oldValue`. That cannot tell writes from no write when the key
+was absent at registration (`null == null` after a `put` then an `invalidate`) or when they end on
+the instance it read (`put(k, 6); put(k, 5)` after reading 5). So the registration must be visible
+to every write that follows the loader's read of its source. A loader called inside the
+registration's reservation was hidden from the prescreen, and its load installed over those writes
+on the bounded cache: 2,864 of 2,880 cells for each shape, the rest being unbounded cells, whose
+unconditional `remove` waited the load out. Fray found both on its first iteration. A pool
+executor does not avoid it, since the task can read the source before the registration publishes.
+A write inside the remaining window, between reading `oldValue` and publishing the placeholder,
+precedes the loader's call, so at worst it discards a load that was current. Pinned by
+`LoadingCacheTest.refresh_absent_writtenWhileRegistering`, its `present` twin, and
+`RefreshAfterWriteFrayTest.explicitRefresh_absent_concurrentPutAndInvalidate` with its `present`
+twin. The asynchronous cache does not share the shape: its absent case installs an in-flight
+future through `computeIfAbsent` on `data`, and its present case compares futures that every
+write replaces.
 
-**The unbounded cache keeps the unconditional `remove`, so a write there waits out an inline
-refresh load on the same key** (measured: a 2004 ms `put` against a 2 s load). Accepted.
-`UnboundedLocalCache` is a light `ConcurrentHashMap` wrapper, and CHM's `put` is pessimistic
-anyway, so there is no optimization proper to apply there. The bounded cache takes the
-complexity because it already coordinates a great deal of metadata for speed.
+**The unbounded cache keeps the unconditional `remove`.** It has no automatic refresh, and a
+manual refresh holds a `refreshes` bin only to register, so the `remove` waits for that compute
+rather than for a load. `UnboundedLocalCache` is a light `ConcurrentHashMap` wrapper, and CHM's
+`put` is pessimistic anyway, so there is no optimization proper to apply there. The bounded cache
+takes the complexity because it already coordinates a great deal of metadata for speed.
 
 **A cleared reference is equal only to itself.** `InternalReference`'s `equals` compares referents,
 so two distinct references that have both been cleared used to compare equal (`null == null`) and
@@ -1972,7 +1982,10 @@ the async view replaces it with its in-flight load, and the sync cache reaps it 
 reap, `isPendingEviction` stayed true for the lingering entry, so every later sync refresh
 replaced the in-flight load as if it were a stale reload of the dead value (200 calls, 200
 loads), and a maintenance reap that won the race discarded the registration and notified the
-loaded value as `EXPLICIT`. Pinned by `LoadingCacheTest.refresh_expired_coalesces`. Don't try
+loaded value as `EXPLICIT`. Pinned by `LoadingCacheTest.refresh_expired_coalesces`. The sync
+reap runs after the loader's future replaces the placeholder: before it, a same-thread removal
+listener that refreshes the reaped key would coalesce onto its own placeholder. Pinned by
+`refresh_expired_listenerCoalesces`, with a direct executor. Don't try
 to make the sync cache dedup a refresh against a `get`; pinned by
 `RefreshAfterWriteTest.refresh_absent_sideLoad_*`.
 

@@ -145,10 +145,15 @@ Details: [expiration](../docs/design-decisions.md#expiration),
   purges still discard. Read the exit table before editing these paths.
 - All refresh registrations use `referenceKey(key)`, never a node-owned weak reference that
   retirement clears. Keep the bounded cache's `containsKey` prescreen: its reservation race
-  can defer one load but cannot commit a stale value through the ABA guards.
+  can defer one automatic load but cannot commit a stale value through the ABA guards. A
+  manual synchronous refresh calls its loader only after its registration is published, so
+  the writes the race misses precede the load.
 - The token and public result are the loader's original future. Reusing one pending future
   across generations or overriding future equality is outside the supported model; wrapping
-  per generation changes identity and cancellation semantics.
+  per generation changes identity and cancellation semantics. A manual synchronous refresh
+  holds its registration with a `PendingRefresh` placeholder until the loader returns:
+  coalescing callers wait for the loader's future, a loader refreshing its own key throws, and
+  `Policy.refreshes()` omits placeholders.
 - Async load and automatic-refresh completions are quiet bookkeeping updates. Manual refresh
   stays loud. Keep quiet replacement and remap behavior aligned, including immaterial updates.
 

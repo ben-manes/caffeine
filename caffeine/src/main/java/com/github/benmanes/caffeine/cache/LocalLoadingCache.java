@@ -149,6 +149,14 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     return hasMethodOverride(CacheLoader.class, cacheLoader, "loadAll", Set.class);
   }
 
+  /**
+   * A manual refresh's registration until its loader returns, completed with the loader's future
+   * so that a refresh which coalesced with it returns that future.
+   */
+  final class PendingRefresh extends CompletableFuture<CompletableFuture<?>> {
+    final Thread owner = Thread.currentThread();
+  }
+
   /** A manual refresh operation. */
   final class RefreshOperation<K, V> {
     private final AsyncCacheLoader<? super K, V> cacheLoader;
@@ -157,6 +165,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     private final K key;
 
     private @Nullable CompletableFuture<? extends V> reloading;
+    private @Nullable PendingRefresh registration;
     private @Nullable V oldValue;
     private long startTime;
 
@@ -170,37 +179,67 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     /** Returns an existing refresh or starts one and registers its completion. */
     @SuppressWarnings("FutureReturnValueIgnored")
     CompletableFuture<V> execute() {
-      var future = register();
-      if (reloading != null) {
-        reloading.whenComplete(this::complete);
-        if (oldValue == null) {
-          evictIfPending();
-        }
+      var registered = register();
+      var pending = registration;
+      if (pending == null) {
+        return coalesce(registered);
+      }
+
+      try {
+        startTime = cache.statsTicker().read();
+        var refreshFuture = (oldValue == null)
+            ? cacheLoader.asyncLoad(key, cache.executor())
+            : cacheLoader.asyncReload(key, oldValue, cache.executor());
+        reloading = requireNonNull(refreshFuture, "Null future");
+      } catch (Throwable t) {
+        cache.refreshes().remove(keyReference, pending);
+        pending.complete(CompletableFuture.failedFuture(t));
+        throw toUnchecked(t);
+      }
+
+      // Fails if the registration was discarded or replaced meanwhile, leaving this load unowned
+      cache.refreshes().replace(keyReference, pending, reloading);
+      pending.complete(reloading);
+      reloading.whenComplete(this::complete);
+      if (oldValue == null) {
+        evictIfPending();
       }
       @SuppressWarnings("unchecked")
-      var castedFuture = (CompletableFuture<V>) future;
-      return requireNonNull(castedFuture);
+      var castedFuture = (CompletableFuture<V>) reloading;
+      return castedFuture;
     }
 
-    /** Coalesces an in-flight refresh or loads the entry's next value. */
-    private @Nullable CompletableFuture<?> register() {
-      return cache.refreshes().compute(keyReference, (k, existing) -> {
+    /**
+     * Returns the in-flight refresh to coalesce with, or registers this one. The registration is
+     * published before the loader is called so that a write racing the load discards its value.
+     */
+    private CompletableFuture<?> register() {
+      return requireNonNull(cache.refreshes().compute(keyReference, (k, existing) -> {
         if ((existing != null) && !Async.isReady(existing) && !cache.isPendingEviction(key)) {
           return existing;
         }
+        oldValue = cache.getIfPresentQuietly(key);
+        registration = new PendingRefresh();
+        return registration;
+      }));
+    }
 
-        try {
-          startTime = cache.statsTicker().read();
-          oldValue = cache.getIfPresentQuietly(key);
-          var refreshFuture = (oldValue == null)
-              ? cacheLoader.asyncLoad(key, cache.executor())
-              : cacheLoader.asyncReload(key, oldValue, cache.executor());
-          reloading = requireNonNull(refreshFuture, "Null future");
-          return refreshFuture;
-        } catch (Exception e) {
-          throw toUnchecked(e);
+    /**
+     * Returns the coalesced refresh's future, waiting for a registered refresh's loader to return
+     * it. A loader that refreshes its own key would wait on itself, so that recursion is rejected.
+     */
+    private CompletableFuture<V> coalesce(CompletableFuture<?> registered) {
+      @Var CompletableFuture<?> future = registered;
+      if (registered instanceof PendingRefresh) {
+        var pending = (PendingRefresh) registered;
+        if (pending.owner == Thread.currentThread()) {
+          throw new IllegalStateException("Recursive refresh");
         }
-      });
+        future = pending.join();
+      }
+      @SuppressWarnings("unchecked")
+      var castedFuture = (CompletableFuture<V>) future;
+      return castedFuture;
     }
 
     /**

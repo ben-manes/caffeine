@@ -624,20 +624,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   releasing the registration. Releasing only the completing token also keeps successors that
   loaded the replaced value, which later refreshes then join; see
   [refresh internals](design-decisions.md#refresh-internals).
-- A manual `refresh(k)` that started while the key was absent committing across a racing
-  `put` then `invalidate`. Its only ownership test is `currentValue == oldValue`, vacuous at
-  `null == null`, and the prescreen cannot see the registration reservation. Reproduced 5/5
-  with the loader running inside `refreshes.compute`, discarded 0/5 on a pool executor, and
-  the history is still a legal linearization; see [refresh internals](design-decisions.md#refresh-internals).
-  The same holds for a present start whose racing writes end on the instance it read, which
-  the identity test cannot tell from no write.
-- `UnboundedLocalCache.discardRefresh` removing unconditionally, so a write waits out an
-  inline refresh load on the same key (measured 2004 ms). It is a light `ConcurrentHashMap`
-  wrapper and CHM's `put` is pessimistic regardless, so the bounded cache's prescreen is not
-  a repair to port. A write to any key in the same `refreshes` bin also waits, so during k
-  inline reloads about k/16 of writes stall in a 16-bin table; with the default executor the bin
-  is held only for the submission (76 us measured). The prescreen would also bring the bounded
-  cache's reservation-window escape, which the unconditional `remove` waits out.
+- `UnboundedLocalCache.discardRefresh` removing unconditionally. It is a light
+  `ConcurrentHashMap` wrapper and CHM's `put` is pessimistic regardless, so the bounded cache's
+  prescreen is not a repair to port, and a manual refresh, its only kind, holds a `refreshes` bin
+  only to register; see [refresh internals](design-decisions.md#refresh-internals).
 - Removing the bounded `discardRefresh`'s `containsKey` prescreen as redundant work. `remove`
   reaches CHM's `replaceNode`, which returns without locking only when the target bin is empty,
   so an absent key that collides into an occupied bin still takes the bin monitor and walks the

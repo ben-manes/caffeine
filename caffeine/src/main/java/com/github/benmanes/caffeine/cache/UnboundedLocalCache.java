@@ -1276,7 +1276,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       }
       @SuppressWarnings("unchecked")
       var castedRefreshes = (Map<K, CompletableFuture<V>>) (Object) refreshes;
-      return Collections.unmodifiableMap(new HashMap<>(castedRefreshes));
+      var inFlight = new HashMap<>(castedRefreshes);
+      inFlight.values().removeIf(LocalLoadingCache.PendingRefresh.class::isInstance);
+      return Collections.unmodifiableMap(inFlight);
     }
     @Override public Optional<Eviction<K, V>> eviction() {
       return Optional.empty();

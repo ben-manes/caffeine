@@ -39,11 +39,17 @@ import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.TERMINATED;
+import static java.lang.Thread.State.WAITING;
 import static java.util.Map.entry;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Timeout.ThreadMode.SEPARATE_THREAD;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
@@ -65,10 +71,12 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
@@ -954,6 +962,156 @@ final class LoadingCacheTest {
     assertThat(context).stats().success(1).failures(0);
   }
 
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC, executor = CacheExecutor.THREADED)
+  void refresh_absent_writtenWhileRegistering(CacheContext context) throws InterruptedException {
+    // The executor's task reads the source before the loader returns its future, and the writes
+    // that follow must still discard the load
+    Int key = context.absentKey();
+    var writer = new AtomicReference<Thread>();
+    var cache = new AtomicReference<LoadingCache<Int, Int>>();
+    cache.set(context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int k) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(Int k, Executor executor) {
+        var future = CompletableFuture.supplyAsync(context::absentValue, executor);
+        future.join();
+        var thread = new Thread(() -> {
+          cache.get().put(k, context.absentValue());
+          cache.get().invalidate(k);
+        });
+        writer.set(thread);
+        thread.start();
+        await().until(() -> (thread.getState() == TERMINATED) || (thread.getState() == BLOCKED));
+        return future;
+      }
+    }));
+
+    assertThat(cache.get().refresh(key)).succeedsWith(context.absentValue());
+    requireNonNull(writer.get()).join();
+    assertThat(cache.get()).doesNotContainKey(key);
+    assertThat(cache.get().policy().refreshes()).isEmpty();
+  }
+
+  @CheckNoEvictions
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC, executor = CacheExecutor.THREADED)
+  void refresh_present_writtenWhileRegistering(CacheContext context) throws InterruptedException {
+    // The writes that follow the executor's read end on the value that it reloads, which the
+    // identity check alone cannot tell from no write
+    Int key = context.absentKey();
+    Int original = context.absentValue();
+    Int replacement = CacheContext.intern(original.negate());
+    Int refreshed = CacheContext.intern(original.add(1));
+    var writer = new AtomicReference<Thread>();
+    var cache = new AtomicReference<LoadingCache<Int, Int>>();
+    cache.set(context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int k) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncReload(Int k, Int oldValue, Executor executor) {
+        var future = CompletableFuture.supplyAsync(() -> refreshed, executor);
+        future.join();
+        var thread = new Thread(() -> {
+          cache.get().put(k, replacement);
+          cache.get().put(k, original);
+        });
+        writer.set(thread);
+        thread.start();
+        await().until(() -> (thread.getState() == TERMINATED) || (thread.getState() == BLOCKED));
+        return future;
+      }
+    }));
+
+    cache.get().put(key, original);
+    assertThat(cache.get().refresh(key)).succeedsWith(refreshed);
+    requireNonNull(writer.get()).join();
+    assertThat(cache.get().getIfPresent(key)).isSameInstanceAs(original);
+    assertThat(cache.get().policy().refreshes()).isEmpty();
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC)
+  void refresh_absent_coalescesWhileRegistering(CacheContext context) {
+    // A refresh that arrives while another's loader is starting waits for and returns its future
+    Int key = context.absentKey();
+    var loads = new AtomicInteger();
+    var coalesced = new AtomicReference<@Nullable CompletableFuture<Int>>();
+    var cache = new AtomicReference<LoadingCache<Int, Int>>();
+    cache.set(context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int k) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(Int k, Executor executor) {
+        if (loads.incrementAndGet() == 1) {
+          var thread = new Thread(() -> coalesced.set(cache.get().refresh(k)));
+          thread.start();
+          await().until(() -> isJoining(thread));
+        }
+        return new CompletableFuture<>();
+      }
+    }));
+
+    var future = cache.get().refresh(key);
+    await().untilAsserted(() -> assertThat(coalesced.get()).isSameInstanceAs(future));
+    assertThat(loads.get()).isEqualTo(1);
+    future.complete(context.absentValue());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC)
+  void refresh_absent_coalescesFailedRegistration(CacheContext context) {
+    // A refresh that waits for another's loader receives the loader's failure
+    Int key = context.absentKey();
+    var error = new IllegalStateException();
+    var waiter = new AtomicReference<Thread>();
+    var coalesced = new AtomicReference<@Nullable CompletableFuture<Int>>();
+    var cache = new AtomicReference<LoadingCache<Int, Int>>();
+    cache.set(context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int k) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(Int k, Executor executor) {
+        var thread = new Thread(() -> coalesced.set(cache.get().refresh(k)));
+        waiter.set(thread);
+        thread.start();
+        await().until(() -> isJoining(thread));
+        throw error;
+      }
+    }));
+
+    var thrown = assertThrows(IllegalStateException.class, () -> cache.get().refresh(key));
+    assertThat(thrown).isSameInstanceAs(error);
+    await().until(() -> requireNonNull(waiter.get()).getState() == TERMINATED);
+    assertThat(coalesced.get())
+        .failsWith(CompletionException.class).hasCauseThat().isSameInstanceAs(error);
+  }
+
+  @Timeout(value = 5, threadMode = SEPARATE_THREAD)
+  @ParameterizedTest
+  @CheckNoEvictions @CheckNoStats
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC)
+  void refresh_recursive(CacheContext context) {
+    var cache = new AtomicReference<LoadingCache<Int, Int>>();
+    cache.set(context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
+        return cache.get().refresh(key);
+      }
+    }));
+    assertThrows(IllegalStateException.class, () -> cache.get().refresh(context.absentKey()));
+    assertThat(cache.get().policy().refreshes()).isExhaustivelyEmpty();
+  }
+
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
       mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
@@ -1032,6 +1190,29 @@ final class LoadingCacheTest {
     future1.complete(null);
     future2.complete(null);
     assertThat(future2).isSameInstanceAs(future1);
+  }
+
+  @Timeout(value = 5, threadMode = SEPARATE_THREAD)
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, loader = Loader.ASYNC_INCOMPLETE,
+      executor = CacheExecutor.DIRECT, mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expiryTime = Expire.ONE_MINUTE, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, removalListener = Listener.MOCKITO)
+  void refresh_expired_listenerCoalesces(
+      LoadingCache<Int, @Nullable Int> cache, CacheContext context) {
+    // A same-thread removal listener that refreshes the reaped key joins the refresh that reaped it
+    var reentrant = new AtomicReference<@Nullable CompletableFuture<@Nullable Int>>();
+    doAnswer(invocation -> {
+      reentrant.set(cache.refresh(context.firstKey()));
+      return null;
+    }).when(context.removalListener()).onRemoval(eq(context.firstKey()), any(), eq(EXPIRED));
+
+    context.ticker().advance(Duration.ofMinutes(10));
+    var future = cache.refresh(context.firstKey());
+    assertThat(reentrant.get()).isSameInstanceAs(future);
+    future.complete(null);
   }
 
   @ParameterizedTest
@@ -1173,6 +1354,31 @@ final class LoadingCacheTest {
     });
     cache.put(context.absentKey(), context.absentValue());
     assertThrows(NullPointerException.class, () -> cache.refresh(context.absentKey()));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE)
+  void refresh_nullFuture_withdrawsRegistration(CacheContext context) {
+    // The failed refresh leaves no registration to suppress the next automatic refresh
+    Int key = context.absentKey();
+    var reloads = new AtomicInteger();
+    var reload = new CompletableFuture<Int>();
+    var cache = context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int k) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncReload(Int k, Int oldValue, Executor executor) {
+        return (reloads.incrementAndGet() == 1) ? nullFuture() : reload;
+      }
+    });
+    cache.put(key, context.absentValue());
+    assertThrows(NullPointerException.class, () -> cache.refresh(key));
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    assertThat(cache.get(key)).isEqualTo(context.absentValue());
+    assertThat(reloads.get()).isEqualTo(2);
+    reload.complete(context.absentValue());
   }
 
   @CheckNoEvictions
@@ -1637,6 +1843,30 @@ final class LoadingCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC)
+  void refreshes_whileRegistering(CacheContext context) {
+    // A refresh is listed once its loader has returned the future that the snapshot exposes
+    Int key = context.absentKey();
+    var cache = new AtomicReference<LoadingCache<Int, Int>>();
+    var registering = new AtomicReference<@Nullable Map<Int, CompletableFuture<Int>>>();
+    cache.set(context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int k) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(Int k, Executor executor) {
+        registering.set(cache.get().policy().refreshes());
+        return new CompletableFuture<>();
+      }
+    }));
+
+    var future = cache.get().refresh(key);
+    assertThat(registering.get()).isExhaustivelyEmpty();
+    assertThat(cache.get().policy().refreshes()).containsExactly(key, future);
+    future.complete(context.absentValue());
+  }
+
+  @ParameterizedTest
   @SuppressWarnings("CollectionUndefinedEquality")
   @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.ASYNC_INCOMPLETE)
   void refreshes_nullLookup(LoadingCache<Int, Int> cache, CacheContext context) {
@@ -1648,6 +1878,13 @@ final class LoadingCacheTest {
     for (var future : cache.policy().refreshes().values()) {
       future.cancel(true);
     }
+  }
+
+  /** Returns whether the thread is waiting in a future's {@code join}. */
+  private static boolean isJoining(Thread thread) {
+    return (thread.getState() == WAITING) && Arrays.stream(thread.getStackTrace()).anyMatch(frame ->
+        frame.getClassName().equals(CompletableFuture.class.getName())
+            && frame.getMethodName().equals("join"));
   }
 
   @FunctionalInterface

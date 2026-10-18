@@ -87,18 +87,20 @@ The two `build` overloads bridge different contracts:
   executor thread, not the caller.
   Present-key refresh matches: the adapter must call `reload` on the caller to obtain its
   future, even when that reload performs asynchronous work.
-  Slow reloads serialize colliding refresh registrations, and every discard of a refresh
-  registered in the same bin (a completion, a write of that key, maintenance evicting it), under
-  the accepted CHM-bin rule; see synchronization.md's caller-runs bullet.
+  Under `refreshAfterWrite`, slow reloads serialize colliding refresh registrations, and every
+  discard of a refresh registered in the same bin (a completion, a write of that key, maintenance
+  evicting it), under the accepted CHM-bin rule; see synchronization.md's caller-runs bullet. A
+  manual `refresh` calls `reload` after registering, outside the bin.
   A reload waiting for another thread's cache operation is still a prohibited cache dependency,
   even when its own body makes no cache call; Guava's different lock granularity does not
   establish an independent-progress guarantee for the facade. That includes Guava's default
   `reload`, which calls `load`: under `refreshAfterWrite` a `load` that reads other keys can
   deadlock readers inside the refresh map. It also makes `invalidateAll()` and `asMap().clear()`
-  wait for every in-flight `reload` they meet, since `clear()` purges the refresh map first and
-  `ConcurrentHashMap.clear` takes each bin's monitor; under steady refresh traffic the wait chains
-  over several reloads, where Guava returns at once. The purge must come first because it is how
-  `clear()` discards an absent key's pending refresh (see design-decisions, *Refresh Internals*).
+  wait for every automatic `reload` in flight that they meet, since `clear()` purges the refresh
+  map first and `ConcurrentHashMap.clear` takes each bin's monitor; under steady refresh traffic
+  the wait chains over several reloads, where Guava returns at once. The purge must come first
+  because it is how `clear()` discards an absent key's pending refresh (see design-decisions,
+  *Refresh Internals*).
   `CacheLoader.asyncReloading` avoids both.
 - **Failed synchronous loads are retried by waiters.** Guava shares one
   `LoadingValueReference` failure. Core `computeIfAbsent` serializes waiters at the bin lock,

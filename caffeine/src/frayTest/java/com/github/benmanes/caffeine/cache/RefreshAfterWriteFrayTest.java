@@ -95,6 +95,65 @@ final class RefreshAfterWriteFrayTest {
     assertThat(cache).isValid();
   }
 
+  /** Explicit refresh(k) of an absent key racing writes that follow its source to a removal. */
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void explicitRefresh_absent_concurrentPutAndInvalidate() throws InterruptedException {
+    var source = new AtomicInteger(10);
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .maximumSize(10)
+        .build(key -> source.get());
+
+    var threadA = new Thread(() -> cache.refresh(1));
+    var threadB = new Thread(() -> {
+      source.set(999);
+      cache.put(1, 999);
+      source.set(0);
+      cache.invalidate(1);
+    });
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+    cache.cleanUp();
+
+    var value = cache.getIfPresent(1);
+    assertWithMessage("Key 1 should be absent or 0, but was %s", value)
+        .that(value).isAnyOf(null, 0);
+    assertThat(cache.policy().refreshes()).isEmpty();
+    assertThat(cache).isValid();
+  }
+
+  /** Explicit refresh(k) racing writes that follow its source back to the value it reloads. */
+  @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
+  void explicitRefresh_present_concurrentWritesRestoringValue() throws InterruptedException {
+    var source = new AtomicInteger(5);
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .maximumSize(10)
+        .build(key -> source.get());
+    cache.get(1);
+
+    var threadA = new Thread(() -> cache.refresh(1));
+    var threadB = new Thread(() -> {
+      source.set(6);
+      cache.put(1, 6);
+      source.set(5);
+      cache.put(1, 5);
+    });
+
+    threadA.start();
+    threadB.start();
+    threadA.join();
+    threadB.join();
+    cache.cleanUp();
+
+    assertThat(cache.getIfPresent(1)).isEqualTo(5);
+    assertThat(cache.policy().refreshes()).isEmpty();
+    assertThat(cache).isValid();
+  }
+
   /**
    * Explicit {@code refresh(k)} on an async cache racing a put — exercises the
    * {@code LocalAsyncLoadingCache} reload-completion path, which holds the token across the value

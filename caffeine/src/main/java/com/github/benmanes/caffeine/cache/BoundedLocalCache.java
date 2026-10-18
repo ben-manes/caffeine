@@ -4443,7 +4443,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           var key = ((InternalReference<K>) entry.getKey()).get();
           @SuppressWarnings("unchecked")
           var future = (CompletableFuture<V>) entry.getValue();
-          if (key != null) {
+          if ((key != null) && !(future instanceof LocalLoadingCache.PendingRefresh)) {
             inFlight.put(key, future);
           }
         }
@@ -4451,7 +4451,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
       @SuppressWarnings("unchecked")
       var castedRefreshes = (Map<K, CompletableFuture<V>>) (Object) refreshes;
-      return Collections.unmodifiableMap(new HashMap<>(castedRefreshes));
+      var inFlight = new HashMap<>(castedRefreshes);
+      inFlight.values().removeIf(LocalLoadingCache.PendingRefresh.class::isInstance);
+      return Collections.unmodifiableMap(inFlight);
     }
     @Override public Optional<Eviction<K, V>> eviction() {
       if (!cache.evicts()) {
