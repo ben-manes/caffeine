@@ -1478,14 +1478,35 @@ the same reference in the same slot, with any task status. A small set of rotate
 does not prevent it either. The fix is in the class and not in `scheduleDrainBuffers`, because the
 pacer also submits the same object through `Scheduler.forScheduledExecutorService`.
 
-The pool now allocates one `RunnableExecuteAction` for each submission. `drainStatus` coalesces the
-submissions that cache operations trigger, and the pacer holds at most one delayed submission. The
-two paths can overlap, so one cache can have two submissions in flight. On JDK 25.0.1,
+The pool now allocates one `RunnableExecuteAction` for each submission. On JDK 25.0.1,
 `GetPutBenchmark` and a `weakKeys()` copy ran with 3 forks and `-prof gc`. Every throughput change
 was within the 99.9% confidence interval. Allocation increased by at most 0.06 B/op, and by 0.4
 B/op for `weakKeys()` read/write. The 2016 result, that the adapter halved `weakKeys()` read
 throughput, did not reproduce. Each bounded cache is 8 bytes smaller, because its task no longer
 has the `ForkJoinTask` status field.
+
+**The executor can hold several copies of the maintenance task, and a copy defers to a thread
+already waiting for the eviction lock.** `drainStatus` does not bound the submissions. The writers'
+inline assist ends its maintenance at `IDLE` while the submitted task may still be pending, which is
+how the cache recovers from a submission the executor lost (a discarding policy, or a pool bug such
+as JDK-8078490), so each later assist lets the next write submit another copy. That needs writes to
+outrun the executor by a full write buffer (`128 * ceilingPowerOfTwo(NCPU)`) before it runs the
+task: a sustained burst, or a pool that is slow to start it. A copy that finds a thread waiting for
+`evictionLock` returns, because that thread performs the maintenance. The exception is a copy whose
+own thread holds the lock: a same-thread executor runs the task inside the submission, where
+returning would hand the maintenance to a waiter and leave the status at `PROCESSING_TO_IDLE`, so no
+write schedules a drain until that waiter runs. The check is not atomic with the enqueue, so copies
+that start together can each pass it; on 4 CPUs at most one waited. Every waiter except `clear()`
+runs maintenance and none abandons the lock (`lock()` is uninterruptible and the assist's timed wait
+retries), which is what makes `hasQueuedThreads()`, a monitoring method, safe to act on here.
+`clear()` requests a follow-up when it finds a submission outstanding. Before the check every copy
+parked on the lock: on 4 CPUs all three common-pool workers waited there, an unrelated pool task's
+p99 was 0.3 ms against 0.04 ms with the check (1.2-2.6 ms against 0.05 ms on 14 CPUs with 16
+writers), and an eviction blocked on a 2 s load held all three workers for 1.8 s in 3 of 20 rounds.
+Don't keep the status pending across the assist to stop the copies: one lost submission would then
+end asynchronous maintenance for good, which
+`BoundedLocalCacheTest.afterWrite_drainFullWriteBuffer_discarded` pins. Pinned by
+`cleanupTask_run_lockAwaited`, `cleanupTask_run_sameThread` and `clear_submitted_reschedules`.
 
 The task extends `WeakReference` rather than holding one, which saves an object per cache (16
 bytes with compressed oops). Its `clear()` and `enqueue()` do nothing, so only the garbage

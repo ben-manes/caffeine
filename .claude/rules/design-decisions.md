@@ -28,6 +28,11 @@ For adjudication, also read your module's section of [ruled-out](../docs/ruled-o
 - With a custom executor and no `Scheduler`, an idle cache can remain over maximum by the
   bounded write-buffer debt. A scheduler requests prompt expiration; size-only caches have
   no pacer. Do not add another immediate re-arm or move submission into `PerformCleanupTask`.
+- The inline assist's reset to `IDLE` recovers a lost submission, so copies of the maintenance
+  task can queue. A copy that finds a thread waiting for `evictionLock` returns, since every
+  waiter but `clear()` runs maintenance; `clear()` requests a follow-up instead. A copy whose own
+  thread holds the lock (a same-thread executor) still runs. Don't keep the status pending across
+  the assist to stop the copies.
 - The sketch's shrink retrack and reset's zero clamp are a pair. Keep the table grow-only;
   retained-table reset cost after a large shrink is accepted.
 - Both write-buffer consumers (`drainWriteBuffer` and `clear`) use `relaxedPoll` so a stalled

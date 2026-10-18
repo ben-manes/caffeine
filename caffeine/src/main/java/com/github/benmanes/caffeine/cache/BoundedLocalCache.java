@@ -1752,6 +1752,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     }
   }
 
+  /** Returns whether a thread waits for the eviction lock and this thread does not hold it. */
+  boolean isEvictionLockAwaited() {
+    return !evictionLock.isHeldByCurrentThread() && evictionLock.hasQueuedThreads();
+  }
+
   @Override
   public void cleanUp() {
     try {
@@ -2248,6 +2253,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           break;
         }
         removeNode(node, now);
+      }
+
+      // A submitted task that ran while this thread waited for the lock deferred to it
+      if (drainStatusOpaque() >= PROCESSING_TO_IDLE) {
+        setDrainStatusRelease(REQUIRED);
       }
     } finally {
       evictionLock.unlock();
@@ -4347,7 +4357,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
     @Override
     public void run() {
       BoundedLocalCache<?, ?> cache = get();
-      if (cache != null) {
+      // A thread waiting for the lock performs the maintenance, so a copy need not queue behind it
+      if ((cache != null) && !cache.isEvictionLockAwaited()) {
         try {
           cache.performCleanUp(/* ignored */ null);
         } catch (Throwable t) {

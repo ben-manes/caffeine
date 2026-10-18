@@ -365,10 +365,11 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   was closed Won't Fix). Maintenance, notifications, async loads and the application's default
   futures then share that worker, so a loader that joins its own `supplyAsync` inside `compute`
   waits for a task queued behind maintenance, which holds `evictionLock` and waits for the loader's
-  bin. Blocking async loads also run one at a time. Not ours to control: a loader that blocks a
-  pooled thread is the application's problem, and one that must wait belongs on a virtual thread
-  or a dedicated executor. The default executor stays the common pool until virtual threads are
-  preemptive (#1898).
+  bin. A larger pool keeps a free worker, since a copy of the maintenance task that finds a thread
+  already waiting for the lock returns rather than park. Blocking async loads also run one at a
+  time. Not ours to control: a loader that blocks a pooled thread is the application's problem, and
+  one that must wait belongs on a virtual thread or a dedicated executor. The default executor stays
+  the common pool until virtual threads are preemptive (#1898).
 
 **Buffers and queues**
 

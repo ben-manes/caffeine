@@ -77,6 +77,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.TERMINATED;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
@@ -108,6 +109,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InaccessibleObjectException;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -311,6 +313,21 @@ final class BoundedLocalCacheTest {
 
     // A write that raced the clear can leave the drain status required with no scheduled follow-up.
     cache.drainStatus = REQUIRED;
+    cache.clear();
+
+    assertThat(requireNonNull(cache.pacer()).isScheduled()).isTrue();
+    verify(context.scheduler()).schedule(any(), any(), anyLong(), any());
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO)
+  void clear_submitted_reschedules(BoundedLocalCache<Int, Int> cache, CacheContext context) {
+    reset(context.scheduler());
+    when(context.scheduler().schedule(any(), any(), anyLong(), any()))
+        .thenReturn(new CompletableFuture<>());
+
+    // A submitted task that ran while the clear waited for the lock deferred to it
+    cache.drainStatus = PROCESSING_TO_IDLE;
     cache.clear();
 
     assertThat(requireNonNull(cache.pacer()).isScheduled()).isTrue();
@@ -782,6 +799,62 @@ final class BoundedLocalCacheTest {
         .withLevel(ERROR)
         .exclusively())
         .hasSize(1);
+  }
+
+  @Test
+  @SuppressWarnings("CheckReturnValue")
+  void cleanupTask_run_lockAwaited() throws InterruptedException {
+    // A thread already waiting for the eviction lock performs the maintenance, so a copy of the
+    // task that the executor runs in the meantime returns rather than park a second thread
+    var tasks = new ArrayDeque<Runnable>();
+    Cache<Int, Int> cache = Caffeine.newBuilder().maximumSize(10).executor(tasks::add).build();
+    var localCache = asBoundedLocalCache(cache);
+    assertThat(cache.asMap().put(Int.valueOf(1), Int.valueOf(1))).isNull();
+    var task = requireNonNull(tasks.peekFirst());
+
+    var locked = new CountDownLatch(1);
+    var release = new CountDownLatch(1);
+    var holder = new Thread(() -> cache.policy().eviction().orElseThrow().coldest(stream -> {
+      locked.countDown();
+      Uninterruptibles.awaitUninterruptibly(release);
+      return stream.count();
+    }));
+    var waiter = new Thread(task);
+    var copy = new Thread(task);
+    try {
+      holder.start();
+      locked.await();
+      waiter.start();
+      await().until(() -> localCache.evictionLock.hasQueuedThread(waiter));
+      copy.start();
+      await().until(() -> copy.getState() == TERMINATED);
+      assertThat(localCache.evictionLock.hasQueuedThread(waiter)).isTrue();
+    } finally {
+      release.countDown();
+      holder.join();
+      waiter.join();
+      copy.join();
+    }
+  }
+
+  @Test
+  void cleanupTask_run_sameThread() throws InterruptedException {
+    // A same-thread executor runs the task while its thread holds the lock, so the maintenance is
+    // performed rather than left to a thread waiting for it
+    Cache<Int, Int> cache = Caffeine.newBuilder().maximumSize(10).executor(Runnable::run).build();
+    var localCache = asBoundedLocalCache(cache);
+    var waiter = new Thread(cache::cleanUp);
+    localCache.evictionLock.lock();
+    try {
+      waiter.start();
+      await().until(() -> localCache.evictionLock.hasQueuedThread(waiter));
+      assertThat(cache.asMap().put(Int.valueOf(1), Int.valueOf(1))).isNull();
+      assertThat(localCache.drainStatus).isEqualTo(IDLE);
+      assertThat(localCache.writeBuffer.isEmpty()).isTrue();
+    } finally {
+      localCache.evictionLock.unlock();
+      waiter.join();
+    }
   }
 
   @Test
