@@ -572,6 +572,47 @@ final class CacheLoaderTest {
     }
   }
 
+  @ParameterizedTest
+  @MethodSource("readOperations")
+  void reload_expired_doesNotLoad(Consumer<Cache<Integer, Integer>> operation, Set<Integer> keys) {
+    // The vendor expiration outlives the JCache deadline, so a read of the expired entry starts a
+    // refresh and then loads the entry as absent; the refresh must not also load and publish it
+    var loads = new AtomicInteger();
+    CacheLoader<Integer, Integer> loader = Mockito.mock();
+    when(loader.load(any())).thenAnswer(invocation -> {
+      loads.incrementAndGet();
+      return -invocation.<Integer>getArgument(0);
+    });
+    when(loader.loadAll(anyIterable())).thenAnswer(invocation -> {
+      Iterable<Integer> loadedKeys = invocation.getArgument(0);
+      loadedKeys.forEach(key -> loads.incrementAndGet());
+      return Maps.toMap(loadedKeys, key -> -key);
+    });
+    var updated = new AtomicInteger();
+    CacheEntryUpdatedListener<Integer, Integer> listener =
+        events -> events.forEach(event -> updated.incrementAndGet());
+    try (var fixture = JCacheFixture.builder()
+        .loading(config -> {
+          config.setReadThrough(true);
+          config.setCacheLoaderFactory(() -> loader);
+          config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(Duration.ONE_MINUTE));
+          config.setExecutorFactory(MoreExecutors::directExecutor);
+          config.setExpireAfterAccess(OptionalLong.of(TimeUnit.MINUTES.toNanos(10)));
+          config.setRefreshAfterWrite(OptionalLong.of(TimeUnit.MINUTES.toNanos(1)));
+          config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
+              () -> listener, /* filterFactory= */ null,
+              /* isOldValueRequired= */ false, /* isSynchronous= */ true));
+        }).build();
+        var cache = fixture.jcacheLoading()) {
+      operation.accept(cache);
+      fixture.ticker().advance(java.time.Duration.ofMinutes(2));
+      operation.accept(cache);
+
+      assertThat(loads.get()).isEqualTo(2 * keys.size());
+      assertThat(updated.get()).isEqualTo(0);
+    }
+  }
+
   @Test
   void reload_zeroExpiry_publishesUpdatedThenExpired() {
     // A reload whose update expiry is ZERO updates the entry and immediately expires the reloaded

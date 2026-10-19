@@ -19,6 +19,10 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
 - Read-through lookup can find a concurrent insertion/replacement after the initial miss and
   skip one JCache access-policy call. Native expiry still applies; this is an accepted race in
   `get` and `getAll`, including expired-wrapper recovery. See the access-expiry reference.
+- A vendor refresh of a wrapper past its JCache deadline returns it unchanged without loading,
+  leaving the reap and its EXPIRED to the read that started it. Do not return null: core removes
+  that as EXPLICIT, which no listener receives. See
+  [dispatch and commit](../docs/jsr107-conformance.md#dispatch-and-commit).
 - Access expiry writes the held wrapper's timestamp, then updates the native timer **only on
   read paths** (`get`, `getAll`, iterator), and writes neither when the millisecond deadline is
   unchanged. A vendor `Expiry` owns the native timer, so with one those paths write only the

@@ -163,6 +163,10 @@ public final class JCacheLoaderAdapter<K, V>
   @SuppressWarnings("CatchingUnchecked")
   public @Nullable Expirable<V> reload(K key, Expirable<V> oldValue) {
     try {
+      if (!oldValue.isEternal()
+          && oldValue.hasExpired(TimeUnit.NANOSECONDS.toMillis(ticker.read()))) {
+        return oldValue;
+      }
       V value = delegate.load(key);
       requireNonNull(cache);
       if (value == null) {

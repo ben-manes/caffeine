@@ -695,7 +695,14 @@ removal cause, even though ordinary explicit clear removals are silent. Closed-c
 separately suppressed by dispatch's closed check. A reload publishes before core decides whether
 it commits, and core reports a reload it discards because the entry changed in flight only to a
 removal listener, which the adapter does not register. That event stands with no mutation, which
-is accepted for a best-effort extension that has no post-commit hook. Native eviction and expiry
+is accepted for a best-effort extension that has no post-commit hook. A reload of a wrapper past
+its JCache deadline returns it unchanged without loading: a vendor expiration that outlives the
+JCache one keeps the entry natively live, so the read that started the refresh reaps it by identity
+with one EXPIRED and loads it itself, and the reload would otherwise load it a second time and
+publish an UPDATED for a value never stored. Returning null instead removes the entry as EXPLICIT,
+which reaches no listener, before the read's identity removal can publish EXPIRED, and publishing
+EXPIRED from the reload doubles it when the read reaps first. Pin:
+`CacheLoaderTest.reload_expired_doesNotLoad`. Native eviction and expiry
 publish the same way, from core's eviction listener inside the eviction's compute on an unmarked
 maintenance thread, so their dispatch is not staged either: a size-evicted entry's REMOVED listener
 can read the mapping back before the removal commits, within microseconds of it, and on a
