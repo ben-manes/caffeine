@@ -45,10 +45,11 @@ final class FrequencySketch {
    * the size of an L1 cache line. This differs from the theoretical ideal where counters are
    * uniformly distributed to minimize collisions. In that configuration, the memory accesses are
    * not predictable and lack spatial locality, which may cause the pipeline to need to wait for
-   * four memory loads. Instead, the items are uniformly distributed to blocks, and each counter is
-   * uniformly selected from a distinct 16-byte segment. While the runtime memory layout may result
-   * in the blocks not being cache-aligned, the L2 spatial prefetcher tries to load aligned pairs of
-   * cache lines, so the typical cost is only one memory access.
+   * four memory loads. Instead, the items are uniformly distributed to blocks by the high bits of
+   * their hash, and each counter is uniformly selected from a distinct 16-byte segment by a byte of
+   * the item's rehash. While the runtime memory layout may result in the blocks not being
+   * cache-aligned, the L2 spatial prefetcher tries to load aligned pairs of cache lines, so the
+   * typical cost is only one memory access.
    *
    * The frequency of all entries is aged periodically using a sampling window based on the maximum
    * number of entries in the cache. This is referred to as the reset operation by TinyLfu and keeps
@@ -68,8 +69,8 @@ final class FrequencySketch {
   static final long ONE_MASK = 0x1111111111111111L;
   static final int MIN_SKETCH_SIZE = 256;
 
+  int blockShift;
   int sampleSize;
-  int blockMask;
   long[] table;
   int size;
 
@@ -101,7 +102,7 @@ final class FrequencySketch {
     }
 
     table = new long[Caffeine.ceilingPowerOfTwo(maximum)];
-    blockMask = (table.length >>> 3) - 1;
+    blockShift = Integer.numberOfLeadingZeros((table.length >>> 3) - 1);
     sampleSize = sample;
     size = 0;
   }
@@ -129,7 +130,7 @@ final class FrequencySketch {
     @Var int frequency = Integer.MAX_VALUE;
     int blockHash = spread(e.hashCode());
     int counterHash = rehash(blockHash);
-    int block = (blockHash & blockMask) << 3;
+    int block = (blockHash >>> blockShift) << 3;
     for (int i = 0; i < 4; i++) {
       int h = counterHash >>> (i << 3);
       int index = (h >>> 1) & 15;
@@ -156,7 +157,7 @@ final class FrequencySketch {
 
     int blockHash = spread(e.hashCode());
     int counterHash = rehash(blockHash);
-    int block = (blockHash & blockMask) << 3;
+    int block = (blockHash >>> blockShift) << 3;
 
     // Loop unrolling improves throughput by 10m ops/s
     int h0 = counterHash;

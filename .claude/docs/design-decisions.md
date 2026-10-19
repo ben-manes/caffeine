@@ -50,6 +50,26 @@ cross-iteration reduction and is what stops the loop auto-vectorizing; dropping 
 but loses the correction, and no argument has justified that. SIMD is the answer once it is
 available. It has produced no user reports and does not show in `GetPutBenchmark`.
 
+**An element's block is chosen by the high bits of its hash.** Its counters are chosen by bytes of
+`rehash`, a multiply and a shift, whose low bits depend only on the hash's low bits. While the block
+was the hash's low bits, the elements of one block shared most of the bits that choose their
+counters. Two of them met in all four rows about twice as often as independent rows would at tables
+of up to 2^13, 3.5 to 14 times as often from 2^14 to 2^17, and 24 to 384 times from 2^18 to 2^22,
+where row 0 reached 16, 8, 4, 2 and then 1 of its 32 counters and row 2 fell to 16, 8 and 4 from
+2^22. Filled with distinct keys, a sketch above 131,072 entries estimated at least 3 for 11 to 24%
+of never-seen keys, against 5%. With the block from the high bits, every row reaches all 32 counters
+through a 2^27 table, and two rows coincide at most 1.13 times as often as independent rows through
+2^23 (1.8 times from 2^24, where a block holds few distinct hashes). Starting `rehash` with
+`Integer.reverseBytes` also restores the reach, and was rejected: it adds an instruction, pairs two
+rows twice as often from 2^22 to 2^24, and leaves the low bits of `rehash(x + k)` unchanged across
+256 consecutive `k`, so it stops serving as a per-call random draw. On 14 trace cells of 200,000 to
+8M entries (3 runs each) the change moved hit rate by −0.66 to +0.82pp, a mean of +0.23. On the
+climber gate it is a placement redraw: 58 of 83 battery cells moved by under 0.1pp, and the large
+movers are basin rows whose odds follow the placement itself (`widepin`'s high basin, 17 of 24 seeds
+before, is 6 under a redraw of the old layout and 5 under the fix). The losses that survive a redraw
+are DS1 at 4M, −0.75 under both placements, and S3 at 65,536, about −0.3 as a basin. Pinned by
+`FrequencySketchTest.increment_spreadsAcrossBlock`.
+
 **A weak-key lookup allocates, and that is accepted.** The weak-key node factories build a
 `LookupKeyReference` per lookup (20.0 ns/op and 24 B/op against 2.6 ns/op and 0 B/op for strong
 keys); it is handed to `ConcurrentHashMap.get`, so escape analysis cannot remove it. Avoiding the

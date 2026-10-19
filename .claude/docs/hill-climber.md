@@ -230,6 +230,12 @@ owns it; a confirmed family lands here and in the gate table.
   whole-trace deficit is mostly **warmup** (it converges to a 77.9% window against an 80%
   optimum, final third −3.7 vs LRU), and the row is **seeded-only** — its unseeded distribution
   is a 50/50 basin coin whose old bar sat at its own mean. Bar: no per-seed drift, seeds 1–8.
+  The basin is the walk's timing, and the sketch's counter placement sets it: after a phase
+  change the loop keys displace the pair keys through admission near-ties that collisions
+  decide, so a placement moves the warm-up sample (0.73 against 0.57 on seed 1), the walk's
+  confirm by a sample, and with it the side of the 60% step the window is on when the next phase
+  begins. A window frozen anywhere from 1% to 80% moves at most 1.3pp across placements; the
+  high basin's odds swing from 17 to 6 of 24 seeds (`climber-gate` SKILL.md, the seed note).
 - **Thin-signal floors** (w50@123038, S1/S2/S3, DS1): frequency-ish traces whose floor window
   earns wh/n in the *same band* as a trapped window (w50: 131–437 hits per 492k sample vs trap
   strays ≤57 per 32k). **No resident-only threshold separates them** — this is measured, not

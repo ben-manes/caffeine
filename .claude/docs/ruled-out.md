@@ -344,7 +344,7 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   0.24 ns/read, once per 1e9 reads. Chunking lowers quality; SIMD is the answer.
 - `FrequencySketch.reset()`'s signed-shift quirk at extreme `maximumSize`, and
   `ensureCapacity` keeping a stale large `sampleSize` after a `setMaximum` shrink.
-- `FrequencySketch` table/blockMask race via the `Policy` API. It is entirely under
+- `FrequencySketch` table/blockShift race via the `Policy` API. It is entirely under
   `evictionLock`: single-writer under one lock cannot race, and escalating it is a false
   positive.
 - Transient negative `weightedSize`, and transient negative `policyWeight` over-shifting the

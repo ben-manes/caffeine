@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
@@ -57,7 +58,7 @@ final class FrequencySketchTest {
     sketch.ensureCapacity(size / 2);
     assertThat(sketch.table).hasLength(size);
     assertThat(sketch.sampleSize).isEqualTo(10 * size / 2);
-    assertThat(sketch.blockMask).isEqualTo((size >> 3) - 1);
+    assertThat(sketch.blockShift).isEqualTo(Integer.numberOfLeadingZeros((size >> 3) - 1));
   }
 
   @Test
@@ -135,7 +136,7 @@ final class FrequencySketchTest {
     sketch.ensureCapacity(2L * size);
     assertThat(sketch.table).hasLength(2 * size);
     assertThat(sketch.sampleSize).isEqualTo(10 * 2 * size);
-    assertThat(sketch.blockMask).isEqualTo(((2 * size) >> 3) - 1);
+    assertThat(sketch.blockShift).isEqualTo(Integer.numberOfLeadingZeros(((2 * size) >> 3) - 1));
   }
 
   @Nested @Isolated
@@ -148,7 +149,8 @@ final class FrequencySketchTest {
       sketch.ensureCapacity(size);
       assertThat(sketch.sampleSize).isEqualTo(Integer.MAX_VALUE);
       assertThat(sketch.table).hasLength(Caffeine.ceilingPowerOfTwo(size));
-      assertThat(sketch.blockMask).isEqualTo((sketch.table.length >> 3) - 1);
+      assertThat(sketch.blockShift)
+          .isEqualTo(Integer.numberOfLeadingZeros((sketch.table.length >> 3) - 1));
     }
   }
 
@@ -209,6 +211,30 @@ final class FrequencySketchTest {
     var sketch = makeSketch(512);
     sketch.increment(0);
     assertThat(sketch.frequency(0)).isEqualTo(1);
+  }
+
+  @Test
+  void increment_spreadsAcrossBlock() {
+    // An element's four counters are selected from the four 16-byte segments of its block, so 64
+    // distinct additions per block leave about e^-2 (14%) of each segment's counters unused
+    for (int maximum = (1 << 14); maximum <= (1 << 22); maximum <<= 2) {
+      var sketch = makeSketch(maximum);
+      for (int i = 0; i < 8 * maximum; i++) {
+        sketch.increment(i);
+      }
+      var unused = new long[4];
+      for (int i = 0; i < sketch.table.length; i++) {
+        for (int j = 0; j < 64; j += 4) {
+          if (((sketch.table[i] >>> j) & 0xfL) == 0) {
+            unused[(i >>> 1) & 3]++;
+          }
+        }
+      }
+      for (int segment = 0; segment < 4; segment++) {
+        assertWithMessage("maximum %s, segment %s", maximum, segment)
+            .that(unused[segment]).isLessThan(sketch.table.length);
+      }
+    }
   }
 
   @Test

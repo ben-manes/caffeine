@@ -246,7 +246,8 @@ public final class LocalCacheSubject extends Subject {
     check("sketch.table").that(sketch.table).isNotNull();
     check("sketch.sampleSize").that(sketch.sampleSize).isAtLeast(10);
     check("sketch.size").that(sketch.size).isLessThan(sketch.sampleSize);
-    check("sketch.blockMask").that(sketch.blockMask).isEqualTo((sketch.table.length >>> 3) - 1);
+    check("sketch.blockShift").that(sketch.blockShift)
+        .isEqualTo(Integer.numberOfLeadingZeros((sketch.table.length >>> 3) - 1));
   }
 
   @SuppressWarnings("MathClampDouble")
