@@ -17,12 +17,15 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.TimeUnit;
+
 import javax.cache.Cache;
 
 import org.jspecify.annotations.Nullable;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 
@@ -35,13 +38,15 @@ import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 public final class JCacheEvictionListener<K, V> implements RemovalListener<K, Expirable<V>> {
   private final JCacheStatisticsMXBean statistics;
   private final EventDispatcher<K, V> dispatcher;
+  private final Ticker ticker;
 
   private @Nullable Cache<K, V> cache;
 
   public JCacheEvictionListener(EventDispatcher<K, V> dispatcher,
-      JCacheStatisticsMXBean statistics) {
+      JCacheStatisticsMXBean statistics, Ticker ticker) {
     this.dispatcher = requireNonNull(dispatcher);
     this.statistics = requireNonNull(statistics);
+    this.ticker = requireNonNull(ticker);
   }
 
   /**
@@ -59,11 +64,17 @@ public final class JCacheEvictionListener<K, V> implements RemovalListener<K, Ex
     requireNonNull(cache);
     requireNonNull(expirable);
     V value = expirable.get();
-    if (cause == RemovalCause.EXPIRED) {
+    if ((cause == RemovalCause.EXPIRED) || hasExpired(expirable)) {
       dispatcher.publishExpiredQuietly(cache, key, value);
     } else {
       dispatcher.publishRemovedQuietly(cache, key, value);
     }
     statistics.recordEvictions(1L);
+  }
+
+  /** Returns whether the entry's JCache deadline has passed, which a vendor expiry can outlive. */
+  private boolean hasExpired(Expirable<V> expirable) {
+    return !expirable.isEternal()
+        && expirable.hasExpired(TimeUnit.NANOSECONDS.toMillis(ticker.read()));
   }
 }

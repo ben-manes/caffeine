@@ -19,6 +19,8 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 
+import java.util.concurrent.TimeUnit;
+
 import javax.cache.Cache;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryExpiredListener;
@@ -43,7 +45,7 @@ final class JCacheEvictionListenerTest {
     var statistics = new JCacheStatisticsMXBean();
     EvictionListener entryListener = Mockito.mock();
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
-    var listener = new JCacheEvictionListener<>(dispatcher, statistics);
+    var listener = new JCacheEvictionListener<>(dispatcher, statistics, () -> 0L);
     dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
         /* listenerFactory= */ () -> entryListener, /* filterFactory= */ null,
         /* isOldValueRequired= */ false, /* isSynchronous= */ false));
@@ -58,6 +60,28 @@ final class JCacheEvictionListenerTest {
     } else {
       verify(entryListener).onRemoved(any());
     }
+    assertThat(statistics.getCacheEvictions()).isEqualTo(1L);
+  }
+
+  @ParameterizedTest
+  @EnumSource(names = {"COLLECTED", "EXPIRED", "SIZE"})
+  void publishIfEvicted_expired(RemovalCause cause) {
+    var statistics = new JCacheStatisticsMXBean();
+    EvictionListener entryListener = Mockito.mock();
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    var listener = new JCacheEvictionListener<>(
+        dispatcher, statistics, () -> TimeUnit.MILLISECONDS.toNanos(10));
+    dispatcher.register(new MutableCacheEntryListenerConfiguration<>(
+        /* listenerFactory= */ () -> entryListener, /* filterFactory= */ null,
+        /* isOldValueRequired= */ false, /* isSynchronous= */ false));
+    try (Cache<Integer, Integer> cache = Mockito.mock()) {
+      listener.setCache(cache);
+    }
+    statistics.enable(true);
+
+    // A vendor expiry can outlive the JCache deadline, so an eviction of an expired entry is one
+    listener.onRemoval(1, new Expirable<>(2, 3), cause);
+    verify(entryListener).onExpired(any());
     assertThat(statistics.getCacheEvictions()).isEqualTo(1L);
   }
 

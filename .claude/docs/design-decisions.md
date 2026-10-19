@@ -711,11 +711,11 @@ many entries (the wheel after finishing the bucket in progress), then set
 and the backlog drains across subsequent cycles — mirroring `drainWriteBuffer`'s cap and the
 climber's `QUEUE_TRANSFER_THRESHOLD`. The cap is high enough that normal traffic never
 reaches it; it only bounds the abnormal spike where a cache with no `Scheduler` goes idle,
-lets a large population expire logically, then returns to traffic — one maintenance cycle
-would otherwise evict the whole backlog under `evictionLock`, stalling any writer that
-overflows the write buffer and assists (post "Assist maintenance directly when the write buffer is full"). The work isn't reduced, only
-sliced, and since eviction runs async by default the slicing keeps a single cycle from
-blocking a thread too long. The **timer wheel** checks the budget only between buckets: a
+lets a large population expire logically, then returns to traffic — one maintenance cycle would
+otherwise evict the whole backlog under `evictionLock`, stalling any writer that overflows the write
+buffer and assists (post "Assist maintenance directly when the write buffer is full"). The deques'
+work isn't reduced, only sliced, and since eviction runs async by default the slicing keeps a single
+cycle from blocking a thread too long. The **timer wheel** checks the budget only between buckets: a
 cycle flushes the bucket it is in whole, so it can exceed the cap by that bucket's population,
 then rewinds `nanos` to `previousTimeNanos` and the next advance repeats the sweep. The repeat
 re-walks the survivors that the sweep rescheduled (wrap aliases and nodes cascaded into finer

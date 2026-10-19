@@ -204,7 +204,7 @@ final class CacheFactory {
 
       @Var JCacheEvictionListener<K, V> evictionListener = null;
       if (evicts || expires) {
-        evictionListener = new JCacheEvictionListener<>(dispatcher, statistics);
+        evictionListener = new JCacheEvictionListener<>(dispatcher, statistics, ticker);
         caffeine.evictionListener(evictionListener);
       }
 

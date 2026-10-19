@@ -712,6 +712,12 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   operation makes the window unbounded and `EntryIterator.hasNext()` reads per element.
 - `AsMapView.KeySet.remove(k)`, `removeAll`, `removeIf` and `retainAll` bypassing the
   block-on-in-flight contract.
+- The synchronous cache's `keySet().removeAll(Set)` skipping a key being loaded, refreshed while
+  absent, or reloaded while expired, when the set is larger than the cache: the walk sees only
+  mappings, so the load stores its value after the purge, while `removeAll(List)` and
+  `invalidateAll(keys)` wait for or discard it. Undefined, as `invalidate` documents for an entry
+  being loaded; `ConcurrentHashMap.keySet().removeAll` takes the same shortcut by table length, and
+  the size-dependent asymmetry is the one accepted for the async view's `entrySet().removeAll`.
 - View bulk-removal infinite-looping with a write-back removal listener.
 - `clear()` / `invalidateAll()` preserving nodes recreated after its snapshot. Identity-checked
   removal targets the captured node and avoids reprocessing listener write-backs (#872).
@@ -768,6 +774,11 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   and recovering it needs a scan or a per-entry node; see
   [CHM constraints](design-decisions.md#concurrenthashmap-constraints).
 - `AsyncRemovalListener` notification on executor rejection.
+- A `removalListener` slower than the eviction rate on an unbounded executor queueing one task per
+  notification, each holding its key and value. Delivery is asynchronous on the executor the user
+  chose: a bounded executor with `CallerRunsPolicy` gives backpressure, and `evictionListener` is
+  the synchronous alternative. Bounding it inside the cache runs listeners under `evictionLock`,
+  which deadlocked an ordinary application; *Performance* keeps the per-notification task.
 - `LocalCache.notifyOnReplace` dropped when both old and new are async futures and the old
   completed exceptionally.
 - A same-instance write over an expired entry notifying `EXPIRED` for the value it reinstalls. The

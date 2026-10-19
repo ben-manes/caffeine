@@ -672,7 +672,9 @@ ran before executor rejection aborted a reap. It predates dependent-stage public
 the accepted executor-failure boundary, but require a current throwing path before claiming that
 mechanism remains reproducible.
 
-Native size/weight eviction publishes quiet REMOVED; native EXPIRED publishes quiet EXPIRED.
+Native size/weight eviction publishes quiet REMOVED, or quiet EXPIRED when the wrapper's JCache
+deadline has passed, since a vendor expiry can outlive it (pin:
+`JCacheExpiryAndMaximumSizeTest.size_expired`); native EXPIRED publishes quiet EXPIRED.
 Refresh reload publishes quiet UPDATED, followed by EXPIRED for zero update expiry as a put does,
 or REMOVED on a miss. The latter two remove the entry but count neither an eviction nor a removal:
 core removes it as an explicit removal, outside `JCacheEvictionListener`, and statistics are
