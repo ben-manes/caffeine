@@ -722,10 +722,17 @@ re-walks the survivors that the sweep rescheduled (wrap aliases and nodes cascad
 wheels), at most once per bucket holding a backlog. A budget checked within a bucket re-walked
 them once per 1,000 evictions instead: 2M entries with 1–3 h lifetimes after a 2 h idle took
 1,008 cycles, 185M node visits and 13.2 s, against 20 cycles, 2.05M visits and 0.16 s by
-bucket, whose largest cycle evicted 697k entries in 57 ms. Two alternatives were measured and
-rejected: a sweep position held across advances was linear with a strict cap but added state to
-the wheel, and moving `nanos` to the stopping bucket's start instead of rewinding stranded
-entries, as successive stops carried the clock past coarse buckets that were never swept. Pinned
+bucket, whose largest cycle evicted 697k entries in 57 ms. The overshoot is also a count of
+synchronous `evictionListener` calls, each made under `evictionLock` (in the JCache adapter, an
+`EXPIRED` publish): 50k entries sharing a deadline make 50,000 in one cycle, about a second with a
+20 µs listener. It is accepted as bounded by the bucket's population; before v3.3 a cycle evicted
+the whole backlog. Three alternatives were measured and rejected: a sweep position held across
+advances was linear with a strict cap but added state to the wheel; moving `nanos` to the stopping
+bucket's start instead of rewinding stranded entries, as successive stops carried the clock past
+coarse buckets that were never swept; and stopping at the budget while the advance has
+rescheduled no survivor held such a cohort to 1,000 per cycle, but a mixed bucket reschedules a
+survivor before it reaches the budget and is flushed whole, leaving the 2M workload's largest
+cycle unchanged. Pinned
 by `TimerWheelTest.advance_boundedPerCycle` and
 `BoundedLocalCacheTest.expireVariableEntries_boundedPerCycle`. The eviction check keeps non-expired
 nodes from being evicted early. A capped cycle can briefly leave expired entries counting
@@ -1715,6 +1722,10 @@ discard a reload no write had superseded; restoring the completed token on that 
 strands it when the commit has already read itself unowned. The pending-eviction replacement costs
 nothing, since a commit's compute evicts the dead node without calling its function. Pinned by
 `LoadingCacheTest.refresh_completedReload_coalesces` and its `AsyncLoadingCacheTest` counterpart.
+The synchronous view never replaces its own thread's placeholder, so a loader refreshing its own
+expired or collected key throws too; replacing it there recursed until the stack overflowed
+(`LoadingCacheTest.refresh_recursive_expired`). The async view's pending-eviction branch removes
+the registration and loads through `get`, inside the data bin like any load.
 The async view's absent-key branch registers with `putIfAbsent` rather than a compute and owes
 the same rule: it attaches its by-key release only when it won the registration. Attaching that
 release to whichever future it returns puts a `refreshes.remove` on a token this caller never

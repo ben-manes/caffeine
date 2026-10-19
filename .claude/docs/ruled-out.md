@@ -434,7 +434,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   `PROCESSING_TO_REQUIRED`. The wheel finishes the bucket in progress, so a cycle can exceed the
   cap by that bucket's population, and then rewinds `nanos`, so a `schedule` inside that window
   measures against a behind clock. The budget counts only evictions, never the cascade, and a
-  cascade cap must not reuse the rewind (it livelocks).
+  cascade cap must not reuse the rewind (it livelocks). The overshoot counts synchronous
+  `evictionListener` calls too, each under `evictionLock`. A strict bound needs a sweep position
+  held across advances, and stopping only while the advance has rescheduled nothing still flushes
+  a mixed bucket whole; see [Expiration](design-decisions.md#expiration).
 - Collected references drained at `REFERENCE_THRESHOLD` (1000) per queue per cycle, counting
   polls rather than evictions. The cap bounds the lock *hold*, not a waiter's *wait*; the
   lock is not fair, so a backlog still monopolizes it. That residual is not the cap failing.

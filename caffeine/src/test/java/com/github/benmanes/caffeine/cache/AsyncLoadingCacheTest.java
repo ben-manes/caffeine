@@ -1085,11 +1085,13 @@ final class AsyncLoadingCacheTest {
     var refresher = new Thread(() -> refreshed.set(cache.synchronous().refresh(1)));
     refresher.setDaemon(true);
     refresher.start();
-    await().until(() -> refresher.getState() == WAITING);
+    await().until(() -> isJoining(refresher));
 
     release.countDown();
     await().until(() -> refreshed.get() != null);
     assertThat(refreshed.get()).succeedsWith(-101);
+    reader.join();
+    assertThat(cache).isValid();
   }
 
   @Test
@@ -1140,6 +1142,7 @@ final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().getIfPresent(1)).isEqualTo(100);
     assertThat(reloads.get()).isEqualTo(1);
     assertThat(cache.synchronous().policy().refreshes()).isEmpty();
+    assertThat(cache).isValid();
   }
 
   @Test
@@ -1181,6 +1184,7 @@ final class AsyncLoadingCacheTest {
     refresher2.start();
     await().until(() -> (refresher1.getState() == TERMINATED)
         && (refresher2.getState() == TERMINATED));
+    assertThat(cache).isValid();
   }
 
   /* --------------- AsyncCacheLoader --------------- */
@@ -1272,6 +1276,13 @@ final class AsyncLoadingCacheTest {
     assertThat(reserialized.asyncLoadAll(Int.setOf(1, 2), Runnable::run))
         .succeedsWith(Int.mapOf(1, 1, 2, 2));
     assertThat(reserialized.asyncLoad(Int.valueOf(1), Runnable::run)).succeedsWith(1);
+  }
+
+  /** Returns whether the thread is waiting in a future's {@code join}. */
+  private static boolean isJoining(Thread thread) {
+    return (thread.getState() == WAITING) && Arrays.stream(thread.getStackTrace()).anyMatch(frame ->
+        frame.getClassName().equals(CompletableFuture.class.getName())
+            && frame.getMethodName().equals("join"));
   }
 
   @FunctionalInterface

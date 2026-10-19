@@ -25,7 +25,9 @@ For adjudication, also read your module's section of [ruled-out](../docs/ruled-o
 - The wheel's expiration budget counts evictions, not cascades, and is checked only between
   buckets: a cycle flushes the bucket in progress whole before it rewinds. Checking within a
   bucket re-walked the rescheduled survivors once per 1,000 evictions. Rewinding after a cascade
-  cap would repeatedly reprocess the moved nodes and can livelock.
+  cap would repeatedly reprocess the moved nodes and can livelock. A flushed bucket makes one
+  synchronous `evictionListener` call per eviction under `evictionLock`; that overshoot is
+  accepted.
 - With a custom executor and no `Scheduler`, an idle cache can remain over maximum by the
   bounded write-buffer debt. A scheduler requests prompt expiration; size-only caches have
   no pacer. Do not add another immediate re-arm or move submission into `PerformCleanupTask`.
@@ -169,7 +171,9 @@ Details: [expiration](../docs/design-decisions.md#expiration),
   loader's future, a loader refreshing its own key throws, and `Policy.refreshes()` omits
   placeholders.
   A refresh coalesces with a completed registration too and replaces one only for an entry
-  pending eviction: a replacement whose loader threw left the completed commit unowned.
+  pending eviction: a replacement whose loader threw left the completed commit unowned. The
+  synchronous view never replaces its own thread's placeholder, or a self-refreshing loader
+  recurses until the stack overflows.
 - Async load and automatic-refresh completions are quiet bookkeeping updates. Manual refresh
   stays loud. Keep quiet replacement and remap behavior aligned, including immaterial updates.
 

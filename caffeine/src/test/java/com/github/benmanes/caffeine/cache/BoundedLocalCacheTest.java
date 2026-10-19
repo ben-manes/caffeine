@@ -621,6 +621,65 @@ final class BoundedLocalCacheTest {
   }
 
   @ParameterizedTest
+  @CacheSpec(compute = Compute.ASYNC, population = Population.EMPTY,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.DISABLED,
+      expireAfterAccess = Expire.ONE_MINUTE, removalListener = Listener.MOCKITO)
+  void expireAfterAccess_promotedDuringScan_inFlight(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    var localCache = asBoundedLocalCache(cache);
+    localCache.setWindowMaximum(context.maximumSize());
+    var inFlight = new CompletableFuture<Int>();
+    for (int i = 0; i < 4; i++) {
+      var key = Int.valueOf(i);
+      cache.put(key, (i == 2) ? inFlight : CompletableFuture.completedFuture(key));
+    }
+    localCache.cleanUp();
+
+    // Stage as promotedDuringScan does, with the held successor an in-flight load
+    var window = localCache.accessOrderWindowDeque();
+    var probation = localCache.accessOrderProbationDeque();
+    var protectedDeque = localCache.accessOrderProtectedDeque();
+    for (int i = 0; i < 4; i++) {
+      var node = requireNonNull(window.peekFirst());
+      assertThat(window.remove(node)).isTrue();
+      localCache.setWindowWeightedSize(localCache.windowWeightedSize() - node.getPolicyWeight());
+      if (i == 0) {
+        assertThat(protectedDeque.offerLast(node)).isTrue();
+        localCache.setMainProtectedWeightedSize(
+            localCache.mainProtectedWeightedSize() + node.getPolicyWeight());
+        node.makeMainProtected();
+      } else {
+        assertThat(probation.offerLast(node)).isTrue();
+        node.makeMainProbation();
+      }
+    }
+
+    context.ticker().advance(Duration.ofMinutes(2));
+    long now = localCache.expirationTicker().read();
+    requireNonNull(protectedDeque.peekFirst()).setAccessTime(now);
+    var head = requireNonNull(probation.peekFirst());
+    var promoted = requireNonNull(head.getNextInAccessOrder());
+    var last = requireNonNull(probation.peekLast());
+    promoted.setAccessTime(now - TimeUnit.SECONDS.toNanos(40));
+    last.setAccessTime(now - TimeUnit.SECONDS.toNanos(30));
+    assertThat(promoted.getValue()).isSameInstanceAs(inFlight);
+
+    // The scan moves a live in-flight entry behind the tail rather than stopping at it, so resuming
+    // on the successor after its promotion would move a protected entry within probation
+    var promotedKey = requireNonNull(promoted.getKey());
+    doAnswer(invocation -> {
+      assertThat(cache.getIfPresent(promotedKey)).isSameInstanceAs(inFlight);
+      localCache.cleanUp();
+      return null;
+    }).doNothing().when(context.removalListener()).onRemoval(any(), any(), any());
+
+    localCache.cleanUp();
+    assertThat(promoted.getQueueType()).isEqualTo(PROTECTED);
+    assertQueuesConsistent(localCache);
+    inFlight.complete(promotedKey);
+  }
+
+  @ParameterizedTest
   @CacheSpec(compute = Compute.SYNC, population = Population.EMPTY,
       maximumSize = Maximum.FULL, weigher = CacheWeigher.VALUE,
       executor = CacheExecutor.DISCARDING, removalListener = Listener.CONSUMING)

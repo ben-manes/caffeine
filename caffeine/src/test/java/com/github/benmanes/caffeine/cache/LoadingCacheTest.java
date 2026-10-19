@@ -1115,6 +1115,31 @@ final class LoadingCacheTest {
     assertThat(cache.get().policy().refreshes()).isExhaustivelyEmpty();
   }
 
+  @Timeout(value = 5, threadMode = SEPARATE_THREAD)
+  @ParameterizedTest
+  @CheckNoStats
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      compute = Compute.SYNC, mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
+      expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
+      expiryTime = Expire.ONE_MINUTE, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  void refresh_recursive_expired(CacheContext context) {
+    var cache = new AtomicReference<LoadingCache<Int, Int>>();
+    cache.set(context.build(new CacheLoader<Int, Int>() {
+      @Override public Int load(Int key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public CompletableFuture<Int> asyncLoad(Int key, Executor executor) {
+        return cache.get().refresh(key);
+      }
+    }));
+    cache.get().put(context.absentKey(), context.absentValue());
+    context.ticker().advance(Duration.ofMinutes(10));
+
+    assertThrows(IllegalStateException.class, () -> cache.get().refresh(context.absentKey()));
+    assertThat(cache.get().policy().refreshes()).isExhaustivelyEmpty();
+  }
+
   @Test
   void refresh_completedReload_coalesces() throws InterruptedException {
     // A reload that completed before its commit ran is returned rather than replaced, so a
@@ -1163,6 +1188,7 @@ final class LoadingCacheTest {
     assertThat(cache.getIfPresent(1)).isEqualTo(100);
     assertThat(reloads.get()).isEqualTo(1);
     assertThat(cache.policy().refreshes()).isEmpty();
+    assertThat(cache).isValid();
   }
 
   @ParameterizedTest

@@ -231,7 +231,9 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
      */
     private CompletableFuture<?> register() {
       return requireNonNull(cache.refreshes().compute(keyReference, (k, existing) -> {
-        if ((existing != null) && !cache.isPendingEviction(key)) {
+        boolean recursive = (existing instanceof PendingRefresh)
+            && (((PendingRefresh) existing).owner == Thread.currentThread());
+        if (recursive || ((existing != null) && !cache.isPendingEviction(key))) {
           return existing;
         }
         oldValue = cache.getIfPresentQuietly(key);

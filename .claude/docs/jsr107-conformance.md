@@ -704,7 +704,11 @@ with one EXPIRED and loads it itself, and the reload would otherwise load it a s
 publish an UPDATED for a value never stored. Returning null instead removes the entry as EXPLICIT,
 which reaches no listener, before the read's identity removal can publish EXPIRED, and publishing
 EXPIRED from the reload doubles it when the read reaps first. Pin:
-`CacheLoaderTest.reload_expired_doesNotLoad`. Native eviction and expiry
+`CacheLoaderTest.reload_expired_doesNotLoad`. The guard also returns the wrapper when the reload
+starts after a deadline that its triggering read saw as live, as an executor running it later
+can. Under Modified or Touched expiry that late reload used to revive the entry with an UPDATED;
+now the entry expires and the next read loads it with EXPIRED and CREATED, one load either way,
+since the deadline had passed before any load began. Native eviction and expiry
 publish the same way, from core's eviction listener inside the eviction's compute on an unmarked
 maintenance thread, so their dispatch is not staged either: a size-evicted entry's REMOVED listener
 can read the mapping back before the removal commits, within microseconds of it, and on a
