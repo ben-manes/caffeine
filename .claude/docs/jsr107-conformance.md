@@ -299,11 +299,14 @@ would start a due vendor refresh, which calls the `CacheLoader` that the spec sa
 `containsKey` never calls, and it would count as an access, which the `ExpiryPolicy` table does
 not give `containsKey`. Pin: `CacheLoaderTest.containsKey_refreshAfterWrite_doesNotCallLoader`.
 
-With a vendor `Expiry` beside a JCache `ExpiryPolicy`, the native timer is not a mirror of the
-policy, so its deadline after an access depends on the operation: a read sets it to the JCache
-access duration, a compute-based access (`invoke` READ, a failed conditional, `putIfAbsent` on a
-present key) leaves the vendor's `expireAfterUpdate`, and `containsKey` leaves it unchanged. Every
-read still checks the wrapper's deadline, so only when eager eviction and its EXPIRED happen varies.
+With a vendor `Expiry` beside a JCache `ExpiryPolicy`, the native timer is the vendor's rather
+than a mirror of the policy, so an access leaves its deadline to the vendor: a read to
+`expireAfterRead`, a compute-based access (`invoke` READ, a failed conditional, `putIfAbsent` on a
+present key) to `expireAfterUpdate`, and `containsKey` unchanged. Every read also checks the
+wrapper's deadline, so the shorter lifetime wins, and a JCache-expired entry stays resident until
+the vendor deadline or size eviction, as under an eager vendor `after-write`. A read that set the
+native deadline to the JCache access duration served a value past a shorter vendor lifetime. Pin:
+`JCacheExpiryTest.configured_accessedPolicy_readKeepsVendorLifetime`.
 
 Do not expose `RemapHints` as a public no-op escape. Treating an unchanged value as no write
 would change `asMap().compute` for all users and leave write-deque reorder paired with a stale

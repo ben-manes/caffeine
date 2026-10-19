@@ -355,6 +355,10 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
 - `DENSITY_EPSILON` attenuating proportional steering at extreme weight maxima. Production
   consumers use the verdict's sign; `steeringError()` contains no epsilon. Floating-point
   rounding can tie sufficiently close densities, but no harmful reachable tie was established.
+- The reactive tier's window standing still once its step decays below one entry, so a gradual
+  shift with no 5pp sample-to-sample change is never followed. Accepted: bounded, above LRU on the
+  construct, rare on real traces, and the measured repairs cost more than they recover
+  (`hill-climber.md` §5, *Repairing the reactive law*).
 - Weight=0 entries are a user-facing pinning feature.
 - In-flight async entries are uncounted by any bound (weight 0 plus `ASYNC_EXPIRY`).
 - The eviction-listener same-key mutation "corrupting or silently losing the write".

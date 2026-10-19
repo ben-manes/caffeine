@@ -69,8 +69,11 @@ Constraints that shape everything:
 
 - **Cross-sample ΔHR (the reactive climber, ≤4096):** bold-driver — keep direction while the hit
   rate improves, reverse otherwise, decay the step, re-anneal to a 6.25% step when |ΔHR| ≥ 5pp
-  (`RESTART_THRESHOLD`). Goal-driven, so it can be *confused but never persistently
-  wrong* — the restart keeps it exploring. Weaknesses: churns on flat/phasey curves (corda), and
+  (`RESTART_THRESHOLD`). Goal-driven, so it can be confused, and the restart keeps it exploring
+  only while the hit rate jumps: once the step decays below one entry, after ln(0.0625·max) /
+  −ln(0.98) samples without a 5pp change (205 at 1,000, 275 at 4096; the decay is 0.995 at 512
+  and below), the window stays still until such a change, so a gradual shift is never followed
+  (§5, *Repairing the reactive law*). Weaknesses: churns on flat/phasey curves (corda), and
   cannot cross wide plateaus deliberately (bold-driver flips on any sub-noise negative ΔHR, turning
   a plateau crossing into a random walk).
 - **Within-sample density ratio (the large tier's primary signal):**
@@ -2313,8 +2316,8 @@ rather than tuning.
   −25.89, mixture d025@32768 −25.29, straywall2 −12.24, whisper −10.53, demoflood −3.37. A band
   buys commitment, and commitment without an adjudicator is a direction chosen by early noise
   that nothing can revoke — the same wall v7's travel budget and v9's slam-continue hit from the
-  probe side. The reversal *is* the reactive law's "confused but never persistently wrong"
-  property; a band spends exactly that.
+  probe side. The reversal is what keeps the reactive law from holding a direction that early
+  noise chose; a band spends exactly that.
 - **A band with no window floor is catastrophic, and this is a standing constraint on the tier.**
   `BoundedLocalCache.decreaseWindow` floors the window at one entry; the 2% floor is climber-side
   in `Reading.floor` and belongs to the density tier alone. The reactive tier has never needed
@@ -2325,6 +2328,18 @@ rather than tuning.
 - **Aging the base reference** (decay the peak toward the live rate at 0.2/sample): inert on four
   cells, −0.5 on two, and on arc P8 it collapses to the un-ratcheted band's value exactly
   (42.57 vs 46.90). Third independent kill of reference-aging, after the anchor claim's two.
+- **Re-exploring a decayed step** (2026-10-18). The freeze is constructible: at a maximum of 1,000,
+  visitors split between 900 popular pages and one-shot pages, and a stranger at half the traffic
+  for 240 samples asks for each new page once more within its next 500 requests, holding the window
+  near 80% while the step decays below one entry, then fades out evenly over 40 samples with no 5pp
+  change. The window stays at 782 and the visitors read 28.0%, against 49.3% after a control
+  stranger that asks for each page once (LRU 23.8%). It is rare on real traces: 2 of 11 long
+  reactive-size cells ever freeze (arc P8@2048 on 2.7% of samples, corda + 5×loop + corda @1024 on
+  6.4%), at positions that cost nothing measurable. Restarting the step after 32 samples that move
+  nothing (priced 2026-10-15) gains at most +0.30 and costs recs@4096 −0.55, and only frees the
+  construct's window to 545 (34.0%), since one restart stride near the cap is below the sample
+  noise. A re-exploring audit in this tier runs long, so it needs the floor above. Accepted, with no
+  gate row; one belongs with any change to the reactive tier.
 
 Two results from that study are **not** kills: the magnitude deficit is
 partly a reversal-rule problem rather than purely a signal one, and the trap gallery's value is

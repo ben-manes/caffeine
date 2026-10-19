@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryExpiredListener;
+import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 
@@ -74,6 +75,29 @@ final class JCacheExpiryTest {
       var value = fixture.jcache().get(KEY_1);
       assertThat(value).isEqualTo(VALUE_2);
       verify(expiry).expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong());
+    }
+  }
+
+  @Test
+  void configured_accessedPolicy_readKeepsVendorLifetime() {
+    // The native timer is the vendor's, so a read that moves the JCache access deadline must leave
+    // it to the vendor rather than extend the entry's lifetime to the access duration
+    Expiry<Integer, Integer> expiry = Mockito.mock();
+    when(expiry.expireAfterCreate(anyInt(), anyInt(), anyLong())).thenReturn(ONE_MINUTE);
+    when(expiry.expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong()))
+        .thenAnswer(invocation -> invocation.<Long>getArgument(3));
+    try (var fixture = JCacheFixture.builder()
+        .configure(config -> {
+          config.setExpiryFactory(Optional.of(() -> expiry));
+          config.setExpiryPolicyFactory(AccessedExpiryPolicy.factoryOf(Duration.ONE_HOUR));
+        }).build();
+        var cache = fixture.jcache()) {
+      cache.put(KEY_1, VALUE_1);
+      fixture.advanceHalfExpiry();
+      assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);
+
+      fixture.advancePastExpiry();
+      assertThat(cache.get(KEY_1)).isNull();
     }
   }
 

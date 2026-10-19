@@ -21,7 +21,8 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
   `get` and `getAll`, including expired-wrapper recovery. See the access-expiry reference.
 - Access expiry writes the held wrapper's timestamp, then updates the native timer **only on
   read paths** (`get`, `getAll`, iterator), and writes neither when the millisecond deadline is
-  unchanged. Keep that order: a core read re-derives the native deadline from the wrapper. Reads
+  unchanged. A vendor `Expiry` owns the native timer, so with one those paths write only the
+  wrapper. Keep that order: a core read re-derives the native deadline from the wrapper. Reads
   remain lock-free; the by-key timer update can race a replacement, an accepted discrepancy.
   Inside `compute`, failed conditional operations and `invoke` READ write only the wrapper:
   core's `expireAfterUpdate` refreshes the timer on commit. `setExpiresAfter` there can enter

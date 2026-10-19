@@ -1475,12 +1475,16 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /**
-   * Sets the native access expiration time.
+   * Sets the native access expiration time, unless a configured {@code Expiry} owns the native
+   * timer.
    *
    * @param key the entry's key
    * @param duration the access duration
    */
   protected final void setVariableExpiration(K key, Duration duration) {
+    if (configuration.getExpiryFactory().isPresent()) {
+      return;
+    }
     cache.policy().expireVariably().ifPresent(policy -> {
       if (duration.isZero()) {
         policy.setExpiresAfter(key, 0L, TimeUnit.NANOSECONDS);
