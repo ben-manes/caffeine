@@ -168,6 +168,8 @@ Details: [expiration](../docs/design-decisions.md#expiration),
   refresh's registration is a `PendingRefresh` placeholder: coalescing callers wait for the
   loader's future, a loader refreshing its own key throws, and `Policy.refreshes()` omits
   placeholders.
+  A refresh coalesces with a completed registration too and replaces one only for an entry
+  pending eviction: a replacement whose loader threw left the completed commit unowned.
 - Async load and automatic-refresh completions are quiet bookkeeping updates. Manual refresh
   stays loud. Keep quiet replacement and remap behavior aligned, including immaterial updates.
 

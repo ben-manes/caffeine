@@ -1708,6 +1708,13 @@ an existing refresh attaches no additional handler. Pinned by
 `LoadingCacheTest.refresh_absent_coalesces*`, `refresh_recursive`, `refreshes_whileRegistering`,
 and `refresh_nullFuture_withdrawsRegistration`, whose failed registration would otherwise suppress
 automatic refresh through `refreshIfNeeded`'s `containsKey` gate.
+Both views coalesce with a completed registration too, one whose commit has not run, and replace a
+registration only for an entry pending eviction. Replacing a completed one let a replacement whose
+loader then threw withdraw its placeholder, leaving the completed refresh's commit unowned to
+discard a reload no write had superseded; restoring the completed token on that failure instead
+strands it when the commit has already read itself unowned. The pending-eviction replacement costs
+nothing, since a commit's compute evicts the dead node without calling its function. Pinned by
+`LoadingCacheTest.refresh_completedReload_coalesces` and its `AsyncLoadingCacheTest` counterpart.
 The async view's absent-key branch registers with `putIfAbsent` rather than a compute and owes
 the same rule: it attaches its by-key release only when it won the registration. Attaching that
 release to whichever future it returns puts a `refreshes.remove` on a token this caller never

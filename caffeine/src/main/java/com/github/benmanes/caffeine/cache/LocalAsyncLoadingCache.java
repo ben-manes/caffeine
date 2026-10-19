@@ -202,11 +202,11 @@ abstract class LocalAsyncLoadingCache<K, V>
     /** Attempts to avoid a reload if the entry is absent, or a load or reload is in-flight. */
     @SuppressWarnings("FutureReturnValueIgnored")
     private @Nullable CompletableFuture<V> tryOptimisticRefresh(K key, Object keyReference) {
-      // If a refresh is in-flight, then return it directly. If completed and not yet removed, then
-      // remove to trigger a new reload.
+      // If a refresh is registered, including one that completed but has not committed, then
+      // return it directly. If the entry is pending eviction, then remove it to trigger a new load.
       var lastRefresh = asyncCache.cache().refreshes().get(keyReference);
       if (lastRefresh != null) {
-        if (Async.isReady(lastRefresh) || asyncCache.cache().isPendingEviction(key)) {
+        if (asyncCache.cache().isPendingEviction(key)) {
           asyncCache.cache().refreshes().remove(keyReference, lastRefresh);
         } else {
           return coalesce(lastRefresh);

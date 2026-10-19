@@ -226,12 +226,12 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     }
 
     /**
-     * Returns the in-flight refresh to coalesce with, or registers this one. The registration is
+     * Returns the registered refresh to coalesce with, or registers this one. The registration is
      * published before the loader is called so that a write racing the load discards its value.
      */
     private CompletableFuture<?> register() {
       return requireNonNull(cache.refreshes().compute(keyReference, (k, existing) -> {
-        if ((existing != null) && !Async.isReady(existing) && !cache.isPendingEviction(key)) {
+        if ((existing != null) && !cache.isPendingEviction(key)) {
           return existing;
         }
         oldValue = cache.getIfPresentQuietly(key);

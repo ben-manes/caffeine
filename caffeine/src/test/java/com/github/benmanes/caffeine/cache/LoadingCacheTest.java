@@ -39,6 +39,7 @@ import static com.github.benmanes.caffeine.testing.Nullness.nullValue;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Uninterruptibles.awaitUninterruptibly;
 import static java.lang.Thread.State.BLOCKED;
 import static java.lang.Thread.State.TERMINATED;
 import static java.lang.Thread.State.WAITING;
@@ -65,8 +66,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1110,6 +1113,56 @@ final class LoadingCacheTest {
     }));
     assertThrows(IllegalStateException.class, () -> cache.get().refresh(context.absentKey()));
     assertThat(cache.get().policy().refreshes()).isExhaustivelyEmpty();
+  }
+
+  @Test
+  void refresh_completedReload_coalesces() throws InterruptedException {
+    // A reload that completed before its commit ran is returned rather than replaced, so a
+    // replacement whose loader throws cannot discard it. The completing thread's first ticker
+    // read is the commit's, before it checks ownership, so the ticker holds the commit open.
+    var reload = new CompletableFuture<Integer>();
+    var completer = new AtomicReference<@Nullable Thread>();
+    var inCompletion = new CountDownLatch(1);
+    var release = new CountDownLatch(1);
+    var reloads = new AtomicInteger();
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .executor(Runnable::run)
+        .expireAfterWrite(Duration.ofHours(1))
+        .ticker(() -> {
+          if (Thread.currentThread() == completer.get()) {
+            inCompletion.countDown();
+            awaitUninterruptibly(release);
+          }
+          return 0L;
+        })
+        .build(new CacheLoader<>() {
+          @Override public Integer load(Integer key) {
+            return 0;
+          }
+          @Override public CompletableFuture<Integer> asyncReload(
+              Integer key, Integer oldValue, Executor executor) {
+            if (reloads.incrementAndGet() == 1) {
+              return reload;
+            }
+            throw new RejectedExecutionException();
+          }
+        });
+    cache.put(1, 0);
+    var refresh = cache.refresh(1);
+
+    var thread = new Thread(() -> reload.complete(100));
+    completer.set(thread);
+    thread.start();
+    assertThat(inCompletion.await(5, TimeUnit.SECONDS)).isTrue();
+    try {
+      assertThat(cache.refresh(1)).isSameInstanceAs(refresh);
+    } finally {
+      release.countDown();
+    }
+    thread.join();
+    assertThat(cache.getIfPresent(1)).isEqualTo(100);
+    assertThat(reloads.get()).isEqualTo(1);
+    assertThat(cache.policy().refreshes()).isEmpty();
   }
 
   @ParameterizedTest
