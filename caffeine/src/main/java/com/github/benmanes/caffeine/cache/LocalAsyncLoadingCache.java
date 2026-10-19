@@ -204,13 +204,12 @@ abstract class LocalAsyncLoadingCache<K, V>
     private @Nullable CompletableFuture<V> tryOptimisticRefresh(K key, Object keyReference) {
       // If a refresh is in-flight, then return it directly. If completed and not yet removed, then
       // remove to trigger a new reload.
-      @SuppressWarnings("unchecked")
-      var lastRefresh = (CompletableFuture<V>) asyncCache.cache().refreshes().get(keyReference);
+      var lastRefresh = asyncCache.cache().refreshes().get(keyReference);
       if (lastRefresh != null) {
         if (Async.isReady(lastRefresh) || asyncCache.cache().isPendingEviction(key)) {
           asyncCache.cache().refreshes().remove(keyReference, lastRefresh);
         } else {
-          return lastRefresh;
+          return coalesce(lastRefresh);
         }
       }
 
@@ -223,11 +222,9 @@ abstract class LocalAsyncLoadingCache<K, V>
           asyncCache.cache().remove(key, oldValueFuture);
         }
         var future = asyncCache.get(key, asyncCache.mappingFunction, /* recordStats= */ false);
-        @SuppressWarnings("unchecked")
-        var prior = (CompletableFuture<V>) asyncCache.cache()
-            .refreshes().putIfAbsent(keyReference, future);
+        var prior = asyncCache.cache().refreshes().putIfAbsent(keyReference, future);
         if (prior != null) {
-          return prior;
+          return coalesce(prior);
         }
         future.whenComplete((r, e) -> asyncCache.cache().refreshes().remove(keyReference, future));
         return future;
@@ -243,85 +240,96 @@ abstract class LocalAsyncLoadingCache<K, V>
     /** Begins a refresh if the entry has materialized and no reload is in-flight. */
     @SuppressWarnings("FutureReturnValueIgnored")
     private @Nullable CompletableFuture<V> tryComputeRefresh(K key, Object keyReference) {
-      var startTime = new long[1];
-      var refreshed = new boolean[1];
       @SuppressWarnings({"rawtypes", "unchecked"})
       @Nullable CompletableFuture<V>[] oldValueFuture = new CompletableFuture[1];
-      var future = asyncCache.cache().refreshes().computeIfAbsent(keyReference, k -> {
+      @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+      @Nullable V[] oldValue = (V[]) new Object[1];
+      var pending = new LocalLoadingCache.PendingRefresh();
+      var registered = asyncCache.cache().refreshes().computeIfAbsent(keyReference, k -> {
         oldValueFuture[0] = asyncCache.cache().getIfPresentQuietly(key);
-        V oldValue = Async.getIfReady(oldValueFuture[0]);
-        if (oldValue == null) {
-          return nullRef();
-        }
-
-        refreshed[0] = true;
-        startTime[0] = asyncCache.cache().statsTicker().read();
-        try {
-          var reloadFuture = asyncCache.cacheLoader.asyncReload(
-              key, oldValue, asyncCache.cache().executor());
-          return requireNonNull(reloadFuture, "Null future");
-        } catch (Exception e) {
-          throw toUnchecked(e);
-        }
+        oldValue[0] = Async.getIfReady(oldValueFuture[0]);
+        return (oldValue[0] == null) ? nullRef() : pending;
       });
-
-      if (future == null) {
+      if (registered == null) {
         // Retry the optimistic path
         return null;
+      } else if (registered != pending) {
+        return coalesce(registered);
       }
 
-      @SuppressWarnings("unchecked")
-      var castedFuture = (CompletableFuture<V>) future;
-      if (refreshed[0]) {
-        castedFuture.whenComplete((newValue, error) -> {
-          long loadTime = asyncCache.cache().statsTicker().read() - startTime[0];
-          if (error != null) {
-            if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
-              logger.log(Level.WARNING, "Exception thrown during refresh", error);
-            }
-            asyncCache.cache().refreshes().remove(keyReference, castedFuture);
-            asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
-            return;
-          }
-
-          try {
-            var discard = new boolean[1];
-            var hints = new LocalCache.RemapHints();
-            var value = asyncCache.cache().compute(key, (ignored, currentValue) -> {
-              // Keep the refresh registered until the write clears it to avoid refreshAfterWrite
-              // readers from prematurely scheduling another reload
-              boolean successful =
-                  (asyncCache.cache().refreshes().get(keyReference) == castedFuture);
-              if (successful && (currentValue == oldValueFuture[0])) {
-                return (newValue == null) ? null : castedFuture;
-              }
-              // Otherwise, a write invalidated the refresh so discard it. If a successor refresh
-              // owns the registration, leave it intact so this stale completion's by-key discard
-              // cannot steal the successor's token (its fresh value would then be discarded).
-              hints.preserveTimestamps = true;
-              hints.preserveRefresh = !successful;
-              discard[0] = (newValue != Async.getIfReady((CompletableFuture<?>) currentValue));
-              return currentValue;
-            }, asyncCache.cache().expiry(), /* recordLoad= */ false, hints);
-
-            if (discard[0] && (newValue != null)) {
-              var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
-              asyncCache.cache().notifyRemoval(key, castedFuture, cause);
-            }
-            if (newValue == null) {
-              asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
-            } else {
-              asyncCache.cache().statsCounter().recordLoadSuccess(loadTime);
-            }
-          } catch (Throwable t) {
-            logger.log(Level.WARNING, "Exception thrown during refresh", t);
-            asyncCache.cache().refreshes().remove(keyReference, castedFuture);
-            asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
-            asyncCache.cache().remove(key, castedFuture);
-          }
-        });
+      // The registration is published before the loader is called, so the loader runs outside the
+      // refresh map's bin
+      long startTime = asyncCache.cache().statsTicker().read();
+      CompletableFuture<V> castedFuture;
+      try {
+        var reloadFuture = asyncCache.cacheLoader.asyncReload(
+            key, requireNonNull(oldValue[0]), asyncCache.cache().executor());
+        @SuppressWarnings("unchecked")
+        var reloading = (CompletableFuture<V>) requireNonNull(reloadFuture, "Null future");
+        castedFuture = reloading;
+      } catch (Throwable t) {
+        asyncCache.cache().refreshes().remove(keyReference, pending);
+        pending.complete(CompletableFuture.failedFuture(t));
+        throw toUnchecked(t);
       }
+
+      // Fails if the registration was discarded meanwhile, leaving this reload unowned
+      asyncCache.cache().refreshes().replace(keyReference, pending, castedFuture);
+      pending.complete(castedFuture);
+      castedFuture.whenComplete((newValue, error) -> {
+        long loadTime = asyncCache.cache().statsTicker().read() - startTime;
+        if (error != null) {
+          if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
+            logger.log(Level.WARNING, "Exception thrown during refresh", error);
+          }
+          asyncCache.cache().refreshes().remove(keyReference, castedFuture);
+          asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
+          return;
+        }
+
+        try {
+          var discard = new boolean[1];
+          var hints = new LocalCache.RemapHints();
+          var value = asyncCache.cache().compute(key, (ignored, currentValue) -> {
+            // Keep the refresh registered until the write clears it to avoid refreshAfterWrite
+            // readers from prematurely scheduling another reload
+            boolean successful =
+                (asyncCache.cache().refreshes().get(keyReference) == castedFuture);
+            if (successful && (currentValue == oldValueFuture[0])) {
+              return (newValue == null) ? null : castedFuture;
+            }
+            // Otherwise, a write invalidated the refresh so discard it. If a successor refresh
+            // owns the registration, leave it intact so this stale completion's by-key discard
+            // cannot steal the successor's token (its fresh value would then be discarded).
+            hints.preserveTimestamps = true;
+            hints.preserveRefresh = !successful;
+            discard[0] = (newValue != Async.getIfReady((CompletableFuture<?>) currentValue));
+            return currentValue;
+          }, asyncCache.cache().expiry(), /* recordLoad= */ false, hints);
+
+          if (discard[0] && (newValue != null)) {
+            var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
+            asyncCache.cache().notifyRemoval(key, castedFuture, cause);
+          }
+          if (newValue == null) {
+            asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
+          } else {
+            asyncCache.cache().statsCounter().recordLoadSuccess(loadTime);
+          }
+        } catch (Throwable t) {
+          logger.log(Level.WARNING, "Exception thrown during refresh", t);
+          asyncCache.cache().refreshes().remove(keyReference, castedFuture);
+          asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
+          asyncCache.cache().remove(key, castedFuture);
+        }
+      });
       return castedFuture;
+    }
+
+    /** Returns the registered refresh's future, waiting for a pending registration's loader. */
+    @SuppressWarnings("unchecked")
+    private CompletableFuture<V> coalesce(CompletableFuture<?> registered) {
+      return (CompletableFuture<V>) LocalLoadingCache.PendingRefresh.resolve(registered);
     }
   }
 }

@@ -1215,36 +1215,21 @@ waiting for work on the executor completing the reload deadlocks with the commit
 wiring is the application's, under the executor rule in
 [standing principles](ruled-out.md#standing-principles).
 
-**The same doctrine covers a two-map deadlock, not just blocking, including when it wedges an
-innocent thread.** A loader that touches the cache can take the `refreshes` bin monitor and then a
-`data` bin monitor, while any write takes `data` and then `refreshes` through `discardRefresh`.
-That loader is an automatic refresh's or the async view's reload; a manual synchronous refresh
-calls its loader after registering, outside the bin.
-Opposite orders, and `findDeadlockedThreads()` reports it on both implementations. A read closes
-the cycle as well as a write. Reading a stale key registers its refresh, which takes a second
-`refreshes` bin, so two reloads reading keys in each other's bins deadlock on `refreshes` alone, and
-a nested reload that completes inline commits into a `data` bin. On one thread, a registration that
-lands in the bin the reload holds makes CHM throw `Recursive update`: from the loader's read when
-the bin was empty, failing the outer refresh, or from the caller's `get` or `refresh` when it was
-populated. The counterparty can be maintenance evicting or expiring a key whose refresh is
-registered; it waits holding `evictionLock`, so every later `cleanUp()` and every writer that falls
-back to inline maintenance hangs with it. The reload body holds the monitor only on a caller-runs
-executor or in an `asyncReload`'s synchronous prefix; a `CacheLoader.reload` on the default
-executor runs on a pool thread. It is declined on the same basis: the only path that takes another
-lock while holding a `refreshes` bin is the user's `reload`/`asyncReload`, and
-`CacheLoader.reload`'s javadoc bolds the prohibition ("loading **must not** attempt to update any
-mappings of this cache directly or block waiting for other cache operations to complete").
-Everything else inside `refreshes.computeIfAbsent` is either a lock-free `data` read
-(`getIfPresentQuietly`) or the `asyncReload` call itself, and the completion `handle` that does the
-`data` work is attached **outside** the lambda, deliberately, so the refreshes monitor is not held
-while it runs. Keep it outside.
-
-Two objections are answered rather than ignored. That the victim is an ordinary `put` which did
-nothing wrong is true, and is a property of every lock-order inversion in a shared structure; the
-counterparty of misuse is always innocent. And a silent deadlock is a worse diagnostic than
-`Cache.get`'s documented `IllegalStateException` for recursive updates, which is a fair criticism
-of the *diagnosis* rather than evidence the ordering is wrong. Don't reorder the internal maps to
-make a forbidden loader safe.
+**A refresh's loader holds no `refreshes` bin, so it cannot close a two-map cycle.** A write takes
+`data` and then `refreshes` through `discardRefresh`, while a refresh registration takes `refreshes`
+only to publish its `PendingRefresh`, reading the entry lock-free, and calls the loader after it
+(*Refresh Internals*). Until the automatic and async-view registrations took that form, their loader
+ran inside the bin. A loader that read a stale key then registered a second `refreshes` bin, so two
+such reloads deadlocked, CHM threw `Recursive update` on one thread, and maintenance evicting a key
+with a registered refresh waited holding `evictionLock`, wedging every later writer. That was
+declined as a forbidden loader, since `CacheLoader.reload` bolds that loading "**must not** attempt
+to update any mappings of this cache directly or block waiting for other cache operations to
+complete". The ruling was reversed because the read blocked only on the cache's own registration,
+native Guava completes the same loader (the facade's default `reload` calls `load`), and the move
+costs a placeholder allocation and one `replace` per refresh, where reordering the internal maps,
+the alternative it rejected, was never needed. The completion `handle` that does the `data` work is
+still attached outside the registration, so the `refreshes` monitor is not held while it runs. A
+load still holds its `data` bin, which the doctrine above covers.
 
 **`Expiry` must not call into the cache, and carries no javadoc saying so.** The callback is
 invoked under `synchronized(prior)` in `put` and under the bin lock on the compute paths. A
@@ -1517,16 +1502,19 @@ own thread holds the lock: a same-thread executor runs the task inside the submi
 returning would hand the maintenance to a waiter and leave the status at `PROCESSING_TO_IDLE`, so no
 write schedules a drain until that waiter runs. The check is not atomic with the enqueue, so copies
 that start together can each pass it; on 4 CPUs at most one waited. Every waiter except `clear()`
-runs maintenance and none abandons the lock (`lock()` is uninterruptible and the assist's timed wait
-retries), which is what makes `hasQueuedThreads()`, a monitoring method, safe to act on here.
-`clear()` requests a follow-up when it finds a submission outstanding. Before the check every copy
-parked on the lock: on 4 CPUs all three common-pool workers waited there, an unrelated pool task's
-p99 was 0.3 ms against 0.04 ms with the check (1.2-2.6 ms against 0.05 ms on 14 CPUs with 16
+runs maintenance, so a lock taker validates its arguments before it queues (`setMaximum` rejected a
+negative maximum under the lock, and a copy that deferred to it left the status at
+`PROCESSING_TO_IDLE`), and none abandons the lock (`lock()` is uninterruptible and the assist's
+timed wait retries), which is what makes `hasQueuedThreads()`, a monitoring method, safe to act on
+here. `clear()` requests a follow-up when it finds a submission outstanding. Before the check every
+copy parked on the lock: on 4 CPUs all three common-pool workers waited there, an unrelated pool
+task's p99 was 0.3 ms against 0.04 ms with the check (1.2-2.6 ms against 0.05 ms on 14 CPUs with 16
 writers), and an eviction blocked on a 2 s load held all three workers for 1.8 s in 3 of 20 rounds.
 Don't keep the status pending across the assist to stop the copies: one lost submission would then
 end asynchronous maintenance for good, which
 `BoundedLocalCacheTest.afterWrite_drainFullWriteBuffer_discarded` pins. Pinned by
-`cleanupTask_run_lockAwaited`, `cleanupTask_run_sameThread` and `clear_submitted_reschedules`.
+`cleanupTask_run_lockAwaited`, `cleanupTask_run_sameThread`, `cleanupTask_run_rejectedMaximum` and
+`clear_submitted_reschedules`.
 
 The task extends `WeakReference` rather than holding one, which saves an object per cache (16
 bytes with compressed oops). Its `clear()` and `enqueue()` do nothing, so only the garbage
@@ -1610,15 +1598,15 @@ submission, so the next re-arm schedules normally, and the rejection is dropped 
 discarded stage. The `executor(Executor)` javadoc warns that an executor "that discards tasks or
 never runs them may experience non-deterministic behavior."
 
-**`rescheduleCleanUpIfIncomplete` piggybacks an already-scheduled pacer fire, by
-design.** Its immediate resubmission is limited to `executor == ForkJoinPool.commonPool()`,
-since it cannot tell a transparent wrapper from a caller-runs executor, so a wrapper around the
-common pool (for context propagation, say) takes the custom-executor arms: with a removal
-listener under continuous eviction a forwarding wrapper measured 232.9 against 144.5 ns per
-insert, against about 8 ns without one. A `drainStatus == REQUIRED` backlog re-arms the
-pacer only when `!pacer.isScheduled()`; if a fire is already pending (the next expiration
-event), the backlog rides that fire rather than stacking a second schedule. An *expiration* backlog
-stays prompt because `expireEntries` arms the pacer after the expiration steps: when one of them
+**`rescheduleCleanUpIfIncomplete` piggybacks an already-scheduled pacer fire, by design.** Its
+immediate resubmission is limited to `executor == ForkJoinPool.commonPool()`, since it cannot tell a
+transparent wrapper from a caller-runs executor, so a wrapper around the common pool (for context
+propagation, say) takes the custom-executor arms: with a removal listener under continuous eviction
+a forwarding wrapper measured 232.9 against 144.5 ns per insert, against about 8 ns without one. A
+`drainStatus == REQUIRED` backlog re-arms the pacer only when `!pacer.isScheduled()`; if a fire is
+already pending (the next expiration event), the backlog rides that fire rather than stacking a
+second schedule. A backlog left before the pacer is armed stays prompt, because `expireEntries` arms
+it after the write-buffer drain, the reference drains and the expiration steps: when one of them
 reached its limit (the status is already `PROCESSING_TO_REQUIRED`) it asks for the next run at once,
 which the pacer raises to `TOLERANCE` (~1s), rather than at `getExpirationDelay`. A deque's delay
 would be `≤ 0` anyway, since its head is expired, but the wheel measures its delay from its own
@@ -1627,32 +1615,28 @@ bucket: with `systemScheduler()` and a 2-thread pool, 1,000 entries due in each 
 drained one bucket per ~12s, and in 6s with the limit honored (pin:
 `ExpirationTest.schedule_spentBudget_overdueBucket`). A single bucket's burst drains in one cycle,
 since buckets are flushed whole. Size eviction is uncapped (drains fully in one cycle), so it never
-backlogs. A region transfer
-(`evictFromWindow`, `demoteFromMainProtected`) is capped at `QUEUE_TRANSFER_THRESHOLD` and
-re-arms after `expireEntries` armed the pacer, so a large window resize rides the pending fire
-too, delaying the rebalance rather than overfilling the cache. A *reference* backlog defers
-the same way a write-buffer one does, and the delay costs a late `COLLECTED` notification
-rather than a stale read, while the entry's other half (a weak key's value, or a weak or soft
-value's key, node and table slot) stays reachable until a cycle polls it. A GC schedules no
-maintenance, `cleanUp()` polls at most `REFERENCE_THRESHOLD + 1` references per queue per
-call, and a cache with only reference collection has no pacer even with a `Scheduler`. The
-shape is a *write-buffer* backlog (`drainWriteBuffer`'s `WRITE_BUFFER_MAX` cap, reached only when
-a concurrent writer refills during the drain, or its `relaxedPoll` passing over a slot a
-producer has not published) on a cache whose next expiration is
-distant, that then goes idle: the buffered policy tasks — LRU/weight bookkeeping over
-CHM mappings that are *already committed and visible* — wait for that distant fire or
-any later write / read-stripe / `cleanUp`. If the pass over an unpublished slot instead settles
-`IDLE` (the accepted weak-memory strand) while no other entry is expiring, no fire is pending,
-and only a later operation drains the task. Worst observable is a transient over-
-`maximumSize` on an idle cache, the documented async-eviction contract — plus, under
-*variable* expiry, a deferred **expiration notification**: an entry whose `AddTask` is
-still buffered is not yet in the timer wheel, so it was invisible to the
-`getExpirationDelay` that armed the pending fire, and its removal listener waits for that
-fire (which can exceed the entry's own TTL, since the armed time came from the
+backlogs. A region transfer (`evictFromWindow`, `demoteFromMainProtected`) is capped at
+`QUEUE_TRANSFER_THRESHOLD` and re-arms after `expireEntries` armed the pacer, so a large window
+resize rides the pending fire too, delaying the rebalance rather than overfilling the cache. A
+*reference* backlog waits only where there is no pacer, as on a cache with only reference collection
+even with a `Scheduler`, and the delay costs a late `COLLECTED` notification rather than a stale
+read, while the entry's other half (a weak key's value, or a weak or soft value's key, node and
+table slot) stays reachable until a cycle polls it. A GC schedules no maintenance, and `cleanUp()`
+polls at most `REFERENCE_THRESHOLD + 1` references per queue per call. The shape that still rides
+the fire is a *write-buffer* backlog whose re-arm lands after `expireEntries` armed the pacer (a
+producer publishing into a slot that `relaxedPoll` passed over) on a cache whose next expiration is
+distant, that then goes idle: the buffered policy tasks — LRU/weight bookkeeping over CHM mappings
+that are *already committed and visible* — wait for that distant fire or any later write /
+read-stripe / `cleanUp`. If the pass over an unpublished slot instead settles `IDLE` (the accepted
+weak-memory strand) while no other entry is expiring, no fire is pending, and only a later operation
+drains the task. Worst observable is a transient over-`maximumSize` on an idle cache, the
+documented async-eviction contract — plus, under *variable* expiry, a deferred **expiration
+notification**: an entry whose `AddTask` is still buffered is not yet in the timer wheel, so it was
+invisible to the `getExpirationDelay` that armed the pending fire, and its removal listener waits
+for that fire (which can exceed the entry's own TTL, since the armed time came from the
 policy-visible entries) or the next cache operation. Reads stay correct throughout — lazy
-`hasExpired` gates every read. Best-effort amortized maintenance; don't drop the gate to
-force a ~1s reschedule (it churns the distant fire's cancel+reschedule for a narrow,
-self-healing transient).
+`hasExpired` gates every read. Best-effort amortized maintenance; don't drop the gate to force a ~1s
+reschedule (it churns the distant fire's cancel+reschedule for a narrow, self-healing transient).
 
 **Without a `Scheduler`, maintenance is amortized onto callers, by design.** The immediate
 re-arm in `rescheduleCleanUpIfIncomplete` is restricted to `commonPool` because any other
@@ -1722,6 +1706,20 @@ commit, which then reads itself unowned and discards a reload no write had super
 identity argument does not catch it, because the token removed is the owner's; only the caller is
 wrong. A refresh completion that commits a mutation still discards the current registration by
 key. Pinned by `AsyncLoadingCacheTest.refresh_absent_racingRefresh`.
+
+**Automatic and async-view refreshes register the same way.** `refreshIfNeeded` and the async view's
+present-key `refresh` publish a `PendingRefresh` from `refreshes.computeIfAbsent` and call
+`asyncReload` after it returns, so no reload runs under a `refreshes` bin. While they called it
+inside, an inline reload (a caller-runs executor, a synchronous prefix, or the Guava facade's
+default `reload`, which calls `load`) held its bin for the whole load. Two readers whose loads each
+read a stale key sharing the other's bin deadlocked, where native Guava completes, and a slow reload
+stalled every discard of a refresh registered in its bin, maintenance under `evictionLock` included.
+The async view returned whatever future the registry held, so it now coalesces through
+`PendingRefresh.resolve`, as the manual refresh does. Pinned by
+`BoundedLocalCacheTest.refreshIfNeeded_inlineReload_readsCollidingKey`,
+`CaffeinatedGuavaTest.refreshAfterWrite_loadReadsCollidingKey`,
+`AsyncLoadingCacheTest.refresh_inlineReload_readsCollidingKey` and
+`refresh_coalescesWithAutomaticRefresh`.
 
 **`refreshIfNeeded` is intentionally lock-free.** Reads of `writeTime`, `getKey`,
 `getValue`, `getKeyReference`, `isAlive`, and the CAS of `writeTime` happen

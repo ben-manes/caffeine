@@ -98,6 +98,18 @@ regenerate bit-identically (verified against the 2026-07 study's battery).
   run such a change as an arm, switch it on `caffeine.climber.variant` in the scratch tree and
   confirm the switch reproduces the stock build bit for bit (hit rate and trajectory) first.
   The `reactive` and `noaudit` values recorded before 2026-10-18 are from the old layout.
+  `harness.py` wires `-Dcaffeine.sketch.salt=<int>`, XORed into the sketch's hash, for that redraw;
+  pass it through `CAF_EXTRA`, one sweep per salt. The move to the high-bits layout shifted 58 of
+  the 83 battery cells by under 0.1pp in the mean, but on a near-tie row a placement is a basin draw
+  that skews an arm's measured effect. Over eight salts, `nofreeze` read −6.9 on `widepin` at the
+  default placement against a mean of −2.9 (a gain at 2 of 8), and `nostarve` −3.5 on
+  `slowswap_step` against +0.15 (a gain at 5 of 8); on `phases_d050` the default matched the mean,
+  but single salts read `nofreeze` anywhere from 0 to −14.9. Adjudicate a verdict that rests on a
+  placement-sensitive cell over 8 salts as well as the row's seeds before believing it. As measured
+  2026-10-18 (the layout change moved some seed by 1pp or more, or the salts moved the mean by 1pp
+  or more) those are `norank_rep_r6`, `lowbar`, `widepin`, `phases_d050` at both sizes,
+  `norank_flood_j100`, `parkveil`, `jumpslide`, `slowswap_step`, `shallowmoat`, `balloonflip`, the
+  three `shieldtrap` cells, `crashnoise_a12`, `crestpast` and `demoflood`.
 - **`harness.py` wires in the adversarial-round instrumentation** — `harness.py apply <worktree>`
   (also `verify` and `strip`), distilled from rounds 2–4 so each round stops rebuilding it. NEVER
   commit the result: it prints to stderr and carries variant knobs, and ErrorProne flags the

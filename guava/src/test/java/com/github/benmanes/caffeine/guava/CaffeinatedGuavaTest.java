@@ -28,13 +28,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.jspecify.annotations.NonNull;
@@ -61,6 +65,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.testing.FakeTicker;
 import com.google.common.testing.SerializableTester;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -92,6 +97,51 @@ final class CaffeinatedGuavaTest {
     Constructor<?> constructor = CaffeinatedGuava.class.getDeclaredConstructor();
     constructor.setAccessible(true);
     constructor.newInstance();
+  }
+
+  @Test
+  @SuppressWarnings("CheckReturnValue")
+  void refreshAfterWrite_loadReadsCollidingKey() throws InterruptedException {
+    // Guava's default reload calls load outside any lock, so a load may read other keys. Each load
+    // here reads a stale key that shares the other's refresh bin (keys 1 and 17, and 2 and 18), so
+    // a reload that held its own bin would wait on the other.
+    var ticker = new FakeTicker();
+    var inLoad1 = new CountDownLatch(1);
+    var inLoad2 = new CountDownLatch(1);
+    var armed = new AtomicBoolean();
+    var cacheRef = new AtomicReference<LoadingCache<Integer, Integer>>();
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1)).ticker(ticker::read), new CacheLoader<>() {
+          @Override public Integer load(Integer key) throws InterruptedException {
+            if (armed.get() && (key == 1)) {
+              inLoad1.countDown();
+              inLoad2.await();
+              requireNonNull(cacheRef.get()).getUnchecked(18);
+            } else if (armed.get() && (key == 2)) {
+              inLoad2.countDown();
+              inLoad1.await();
+              requireNonNull(cacheRef.get()).getUnchecked(17);
+            }
+            return -key;
+          }
+        });
+    cacheRef.set(cache);
+    for (int key : new int[] {1, 2, 17, 18}) {
+      cache.getUnchecked(key);
+    }
+    ticker.advance(Duration.ofMinutes(2));
+    armed.set(true);
+
+    var reader1 = new Thread(() -> cache.getUnchecked(1));
+    var reader2 = new Thread(() -> cache.getUnchecked(2));
+    reader1.setDaemon(true);
+    reader2.setDaemon(true);
+    reader1.start();
+    reader2.start();
+    reader1.join(5_000);
+    reader2.join(5_000);
+    assertThat(reader1.isAlive()).isFalse();
+    assertThat(reader2.isAlive()).isFalse();
   }
 
   @Test

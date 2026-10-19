@@ -35,6 +35,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Thread.State.BLOCKED;
+import static java.lang.Thread.State.TERMINATED;
 import static java.lang.Thread.State.WAITING;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
@@ -56,6 +57,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -87,6 +89,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.google.common.testing.FakeTicker;
 import com.google.common.testing.SerializableTester;
 
 /**
@@ -1043,6 +1046,89 @@ final class AsyncLoadingCacheTest {
     assertThat(cache).containsEntry(key, context.absentValue());
     assertThat(context).removalNotifications().withCause(REPLACED)
         .contains(key, value).exclusively();
+  }
+
+  @Test
+  @SuppressWarnings("CheckReturnValue")
+  void refresh_coalescesWithAutomaticRefresh() throws InterruptedException {
+    // An automatic refresh registers before calling its loader, so a refresh that coalesces with
+    // it while the loader runs waits for the loader's future and returns the reloaded value
+    var ticker = new FakeTicker();
+    var inReload = new CountDownLatch(1);
+    var release = new CountDownLatch(1);
+    AsyncLoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .ticker(ticker::read)
+        .buildAsync(new AsyncCacheLoader<>() {
+          @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
+            return CompletableFuture.completedFuture(-key);
+          }
+          @Override public CompletableFuture<Integer> asyncReload(
+              Integer key, Integer oldValue, Executor executor) throws InterruptedException {
+            inReload.countDown();
+            release.await();
+            return CompletableFuture.completedFuture(oldValue - 100);
+          }
+        });
+    assertThat(cache.get(1)).succeedsWith(-1);
+    ticker.advance(Duration.ofMinutes(2));
+
+    @SuppressWarnings("FutureReturnValueIgnored")
+    var reader = new Thread(() -> cache.get(1));
+    reader.setDaemon(true);
+    reader.start();
+    inReload.await();
+
+    var refreshed = new AtomicReference<CompletableFuture<Integer>>();
+    var refresher = new Thread(() -> refreshed.set(cache.synchronous().refresh(1)));
+    refresher.setDaemon(true);
+    refresher.start();
+    await().until(() -> refresher.getState() == WAITING);
+
+    release.countDown();
+    await().until(() -> refreshed.get() != null);
+    assertThat(refreshed.get()).succeedsWith(-101);
+  }
+
+  @Test
+  @SuppressWarnings("CheckReturnValue")
+  void refresh_inlineReload_readsCollidingKey() {
+    // Each reload runs on its caller and reads a stale key that shares the other's refresh bin
+    // (keys 1 and 17, and 2 and 18), so a reload that held its own bin would wait on the other
+    var ticker = new FakeTicker();
+    var inReload1 = new CountDownLatch(1);
+    var inReload2 = new CountDownLatch(1);
+    var armed = new AtomicBoolean();
+    var cacheRef = new AtomicReference<AsyncLoadingCache<Integer, Integer>>();
+    AsyncLoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .buildAsync(key -> {
+          if (armed.get() && (key == 1)) {
+            inReload1.countDown();
+            inReload2.await();
+            requireNonNull(cacheRef.get()).synchronous().get(18);
+          } else if (armed.get() && (key == 2)) {
+            inReload2.countDown();
+            inReload1.await();
+            requireNonNull(cacheRef.get()).synchronous().get(17);
+          }
+          return -key;
+        });
+    cacheRef.set(cache);
+    assertThat(cache.synchronous().getAll(List.of(1, 2, 17, 18))).hasSize(4);
+    ticker.advance(Duration.ofMinutes(2));
+    armed.set(true);
+
+    var refresher1 = new Thread(() -> cache.synchronous().refresh(1));
+    var refresher2 = new Thread(() -> cache.synchronous().refresh(2));
+    refresher1.setDaemon(true);
+    refresher2.setDaemon(true);
+    refresher1.start();
+    refresher2.start();
+    await().until(() -> (refresher1.getState() == TERMINATED)
+        && (refresher2.getState() == TERMINATED));
   }
 
   /* --------------- AsyncCacheLoader --------------- */

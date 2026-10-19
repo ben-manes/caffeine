@@ -22,7 +22,6 @@ import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static com.github.benmanes.caffeine.cache.Caffeine.toNanosSaturated;
 import static com.github.benmanes.caffeine.cache.Caffeine.toUnchecked;
-import static com.github.benmanes.caffeine.cache.LocalCache.castNonNull;
 import static com.github.benmanes.caffeine.cache.LocalCache.nullRef;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
@@ -662,7 +661,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   @GuardedBy("evictionLock")
   @SuppressWarnings({"ConstantValue", "Varifier"})
   void setMaximumSize(long maximum) {
-    requireArgument(maximum >= 0, "maximum must not be negative");
     long max = Math.min(maximum, MAXIMUM_CAPACITY);
     if (max == maximum()) {
       return;
@@ -1350,38 +1348,40 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       @SuppressWarnings({"rawtypes", "unchecked"})
       @Nullable CompletableFuture<? extends @Nullable V>[] refreshFuture = new CompletableFuture[1];
       try {
-        refreshes.computeIfAbsent(keyReference, k -> {
+        // The registration is published before the loader is called, so the loader runs outside
+        // the refresh map's bin
+        var pending = new LocalLoadingCache.PendingRefresh();
+        var registered = refreshes.computeIfAbsent(keyReference, k -> {
           if (!node.isAlive() || (node.getWriteTime() != refreshWriteTime)) {
             return nullRef();
+          } else if (isAsync && !Async.isReady((CompletableFuture<?>) oldValue)) {
+            // no-op if the future's completion state was modified (e.g. obtrude methods)
+            return nullRef();
           }
+          return pending;
+        });
+        if (registered == pending) {
           try {
             startTime[0] = statsTicker().read();
-            if (isAsync) {
-              @SuppressWarnings("unchecked")
-              var future = (CompletableFuture<V>) oldValue;
-              if (Async.isReady(future)) {
-                requireNonNull(cacheLoader);
-                var refresh = cacheLoader.asyncReload(key, future.join(), executor);
-                refreshFuture[0] = requireNonNull(refresh, "Null future");
-              } else {
-                // no-op if the future's completion state was modified (e.g. obtrude methods)
-                return nullRef();
-              }
-            } else {
-              requireNonNull(cacheLoader);
-              var refresh = cacheLoader.asyncReload(key, oldValue, executor);
-              refreshFuture[0] = requireNonNull(refresh, "Null future");
-            }
-            return castNonNull(refreshFuture[0]);
-          } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.log(Level.WARNING, "Exception thrown when submitting refresh task", e);
-            return nullRef();
+            requireNonNull(cacheLoader);
+            @SuppressWarnings("unchecked")
+            V reloading = isAsync ? ((CompletableFuture<V>) oldValue).join() : oldValue;
+            var refresh = cacheLoader.asyncReload(key, reloading, executor);
+            refreshFuture[0] = requireNonNull(refresh, "Null future");
           } catch (Throwable e) {
+            if (e instanceof InterruptedException) {
+              Thread.currentThread().interrupt();
+            }
             logger.log(Level.WARNING, "Exception thrown when submitting refresh task", e);
-            return nullRef();
+            refreshes.remove(keyReference, pending);
+            pending.complete(CompletableFuture.failedFuture(e));
           }
-        });
+          if (refreshFuture[0] != null) {
+            // Fails if the registration was discarded meanwhile, leaving this reload unowned
+            refreshes.replace(keyReference, pending, refreshFuture[0]);
+            pending.complete(refreshFuture[0]);
+          }
+        }
       } finally {
         node.casWriteTime(refreshWriteTime, writeTime);
       }
@@ -4546,6 +4546,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         return cache.maximumAcquire();
       }
       @Override public void setMaximum(long maximum) {
+        requireArgument(maximum >= 0, "maximum must not be negative");
         cache.evictionLock.lock();
         try {
           cache.setMaximumSize(maximum);

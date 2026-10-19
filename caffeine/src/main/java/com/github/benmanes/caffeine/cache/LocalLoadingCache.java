@@ -150,11 +150,27 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   }
 
   /**
-   * A manual refresh's registration until its loader returns, completed with the loader's future
-   * so that a refresh which coalesced with it returns that future.
+   * A refresh's registration until its loader returns, completed with the loader's future so that
+   * a refresh which coalesced with it returns that future.
    */
   final class PendingRefresh extends CompletableFuture<CompletableFuture<?>> {
     final Thread owner = Thread.currentThread();
+
+    /**
+     * Returns the refresh that the registration stands for, waiting for a pending one's loader to
+     * return it. A loader that refreshes its own key would wait on itself, so that recursion is
+     * rejected.
+     */
+    static CompletableFuture<?> resolve(CompletableFuture<?> registered) {
+      if (registered instanceof PendingRefresh) {
+        var pending = (PendingRefresh) registered;
+        if (pending.owner == Thread.currentThread()) {
+          throw new IllegalStateException("Recursive refresh");
+        }
+        return pending.join();
+      }
+      return registered;
+    }
   }
 
   /** A manual refresh operation. */
@@ -224,22 +240,10 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
       }));
     }
 
-    /**
-     * Returns the coalesced refresh's future, waiting for a registered refresh's loader to return
-     * it. A loader that refreshes its own key would wait on itself, so that recursion is rejected.
-     */
+    /** Returns the coalesced refresh's future. */
+    @SuppressWarnings("unchecked")
     private CompletableFuture<V> coalesce(CompletableFuture<?> registered) {
-      @Var CompletableFuture<?> future = registered;
-      if (registered instanceof PendingRefresh) {
-        var pending = (PendingRefresh) registered;
-        if (pending.owner == Thread.currentThread()) {
-          throw new IllegalStateException("Recursive refresh");
-        }
-        future = pending.join();
-      }
-      @SuppressWarnings("unchecked")
-      var castedFuture = (CompletableFuture<V>) future;
-      return castedFuture;
+      return (CompletableFuture<V>) PendingRefresh.resolve(registered);
     }
 
     /**

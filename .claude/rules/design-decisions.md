@@ -30,9 +30,9 @@ For adjudication, also read your module's section of [ruled-out](../docs/ruled-o
   no pacer. Do not add another immediate re-arm or move submission into `PerformCleanupTask`.
 - The inline assist's reset to `IDLE` recovers a lost submission, so copies of the maintenance
   task can queue. A copy that finds a thread waiting for `evictionLock` returns, since every
-  waiter but `clear()` runs maintenance; `clear()` requests a follow-up instead. A copy whose own
-  thread holds the lock (a same-thread executor) still runs. Don't keep the status pending across
-  the assist to stop the copies.
+  waiter but `clear()` runs maintenance; `clear()` requests a follow-up instead, and a lock taker
+  rejects bad arguments before it queues. A copy whose own thread holds the lock (a same-thread
+  executor) still runs. Don't keep the status pending across the assist to stop the copies.
 - The sketch's shrink retrack and reset's zero clamp are a pair. Keep the table grow-only;
   retained-table reset cost after a large shrink is accepted.
 - Both write-buffer consumers (`drainWriteBuffer` and `clear`) use `relaxedPoll` so a stalled
@@ -155,15 +155,16 @@ Details: [expiration](../docs/design-decisions.md#expiration),
   purges still discard. Read the exit table before editing these paths.
 - All refresh registrations use `referenceKey(key)`, never a node-owned weak reference that
   retirement clears. Keep the bounded cache's `containsKey` prescreen: its reservation race
-  can defer one automatic load but cannot commit a stale value through the ABA guards. A
-  manual synchronous refresh calls its loader only after its registration is published, so
-  the writes the race misses precede the load.
+  can defer one automatic load but cannot commit a stale value through the ABA guards. Every
+  refresh but the async view's absent-key load calls its loader only after its registration
+  is published, so the writes the race misses precede the load, and no loader runs under a
+  `refreshes` bin.
 - The token and public result are the loader's original future. Reusing one pending future
   across generations or overriding future equality is outside the supported model; wrapping
-  per generation changes identity and cancellation semantics. A manual synchronous refresh
-  holds its registration with a `PendingRefresh` placeholder until the loader returns:
-  coalescing callers wait for the loader's future, a loader refreshing its own key throws, and
-  `Policy.refreshes()` omits placeholders.
+  per generation changes identity and cancellation semantics. Until its loader returns, a
+  refresh's registration is a `PendingRefresh` placeholder: coalescing callers wait for the
+  loader's future, a loader refreshing its own key throws, and `Policy.refreshes()` omits
+  placeholders.
 - Async load and automatic-refresh completions are quiet bookkeeping updates. Manual refresh
   stays loud. Keep quiet replacement and remap behavior aligned, including immaterial updates.
 

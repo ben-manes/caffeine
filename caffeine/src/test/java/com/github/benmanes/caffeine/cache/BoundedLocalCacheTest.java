@@ -860,6 +860,46 @@ final class BoundedLocalCacheTest {
   }
 
   @Test
+  @SuppressFBWarnings("AFBR_ABNORMAL_FINALLY_BLOCK_RETURN")
+  void cleanupTask_run_rejectedMaximum() throws InterruptedException {
+    // A resize that rejects its argument performs no maintenance, so it must not wait for the lock
+    // where a copy of the task would defer to it and leave the submission marked as running
+    var task = new AtomicReference<Runnable>();
+    var submitted = new CountDownLatch(1);
+    var resume = new CountDownLatch(1);
+    Cache<Int, Int> cache = Caffeine.newBuilder().maximumSize(10).executor(command -> {
+      task.set(command);
+      submitted.countDown();
+      Uninterruptibles.awaitUninterruptibly(resume);
+    }).build();
+    var localCache = asBoundedLocalCache(cache);
+
+    var rejected = new AtomicReference<Throwable>();
+    var writer = new Thread(() -> cache.put(Int.valueOf(1), Int.valueOf(1)));
+    var resizer = new Thread(() -> rejected.set(assertThrows(IllegalArgumentException.class,
+        () -> cache.policy().eviction().orElseThrow().setMaximum(-1))));
+    var copy = new Thread(() -> requireNonNull(task.get()).run());
+    try {
+      writer.start();
+      submitted.await();
+      resizer.start();
+      await().until(() -> localCache.evictionLock.hasQueuedThread(resizer)
+          || (resizer.getState() == TERMINATED));
+      copy.start();
+      await().until(() -> localCache.evictionLock.hasQueuedThread(copy)
+          || (copy.getState() == TERMINATED));
+    } finally {
+      resume.countDown();
+      writer.join();
+      resizer.join();
+      copy.join();
+    }
+    assertThat(rejected.get()).isInstanceOf(IllegalArgumentException.class);
+    assertThat(localCache.drainStatus).isEqualTo(IDLE);
+    assertThat(localCache.writeBuffer.isEmpty()).isTrue();
+  }
+
+  @Test
   @CheckMaxLogLevel(ERROR)
   void cleanup_exception() {
     var expected = new RuntimeException();
@@ -7276,6 +7316,46 @@ final class BoundedLocalCacheTest {
     assertThat(intercepted.get()).isTrue();
     assertThat(loadCount.get()).isEqualTo(0);
     assertThat(cache.policy().refreshes()).isEmpty();
+  }
+
+  @Test
+  @SuppressWarnings("CheckReturnValue")
+  void refreshIfNeeded_inlineReload_readsCollidingKey() {
+    // Each reload runs on its reader and reads a stale key that shares the other's refresh bin
+    // (keys 1 and 17, and 2 and 18), so a reload that held its own bin would wait on the other
+    var ticker = new FakeTicker();
+    var inLoad1 = new CountDownLatch(1);
+    var inLoad2 = new CountDownLatch(1);
+    var armed = new AtomicBoolean();
+    var cacheRef = new AtomicReference<LoadingCache<Integer, Integer>>();
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .build(key -> {
+          if (armed.get() && (key == 1)) {
+            inLoad1.countDown();
+            inLoad2.await();
+            requireNonNull(cacheRef.get()).get(18);
+          } else if (armed.get() && (key == 2)) {
+            inLoad2.countDown();
+            inLoad1.await();
+            requireNonNull(cacheRef.get()).get(17);
+          }
+          return -key;
+        });
+    cacheRef.set(cache);
+    assertThat(cache.getAll(List.of(1, 2, 17, 18))).hasSize(4);
+    ticker.advance(Duration.ofMinutes(2));
+    armed.set(true);
+
+    var reader1 = new Thread(() -> cache.get(1));
+    var reader2 = new Thread(() -> cache.get(2));
+    reader1.setDaemon(true);
+    reader2.setDaemon(true);
+    reader1.start();
+    reader2.start();
+    await().until(() -> (reader1.getState() == TERMINATED) && (reader2.getState() == TERMINATED));
   }
 
   @ParameterizedTest

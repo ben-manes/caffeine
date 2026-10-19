@@ -26,6 +26,7 @@ import sys, os
 
 W = "caffeine/src/main/java/com/github/benmanes/caffeine/cache/WindowClimber.java"
 B = "caffeine/src/main/java/com/github/benmanes/caffeine/cache/BoundedLocalCache.java"
+F = "caffeine/src/main/java/com/github/benmanes/caffeine/cache/FrequencySketch.java"
 P = ("simulator/src/main/java/com/github/benmanes/caffeine/cache/simulator"
      "/policy/sketch/WindowTinyLfuPolicy.java")
 
@@ -595,6 +596,33 @@ EDITS = [
     ("admit-seed", B,
      "  static final double PERCENT_MAIN_PROTECTED = 0.80d;\n",
      "  static final double PERCENT_MAIN_PROTECTED = 0.80d;\n\n" + SEED),
+
+    # -Dcaffeine.sketch.salt=<int> redraws the sketch's counter placement (SKILL.md, the seed note)
+    ("salt-flag", F,
+     "  static final int MIN_SKETCH_SIZE = 256;\n",
+     "  static final int MIN_SKETCH_SIZE = 256;\n"
+     "  // EXPERIMENT HARNESS: -Dcaffeine.sketch.salt=<int> is XORed into the hash, redrawing which\n"
+     "  // keys share counters\n"
+     "  static final int SALT = Integer.decode(java.util.Objects.requireNonNullElse(\n"
+     "      System.getProperty(\"caffeine.sketch.salt\"), \"0\"));\n"),
+
+    ("salt-frequency", F,
+     "    @Var int frequency = Integer.MAX_VALUE;\n"
+     "    int blockHash = spread(e.hashCode());\n",
+     "    @Var int frequency = Integer.MAX_VALUE;\n"
+     "    int blockHash = spread(e.hashCode()) ^ SALT;\n"),
+
+    ("salt-increment", F,
+     "    int blockHash = spread(e.hashCode());\n"
+     "    int counterHash = rehash(blockHash);\n"
+     "    int block = (blockHash >>> blockShift) << 3;\n"
+     "\n"
+     "    // Loop unrolling",
+     "    int blockHash = spread(e.hashCode()) ^ SALT;\n"
+     "    int counterHash = rehash(blockHash);\n"
+     "    int block = (blockHash >>> blockShift) << 3;\n"
+     "\n"
+     "    // Loop unrolling"),
 
     ("startwin-flags", B,
      "  static final double PERCENT_MAIN = 0.99d;\n",

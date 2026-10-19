@@ -85,23 +85,17 @@ The two `build` overloads bridge different contracts:
   load to end (a refresh commit waits on its bin like any write), where Guava returns at once. On
   the default executor, an `InterruptedException` from the load restores the interrupt on the
   executor thread, not the caller.
-  Present-key refresh matches: the adapter must call `reload` on the caller to obtain its
-  future, even when that reload performs asynchronous work.
-  Under `refreshAfterWrite`, slow reloads serialize colliding refresh registrations, and every
-  discard of a refresh registered in the same bin (a completion, a write of that key, maintenance
-  evicting it), under the accepted CHM-bin rule; see synchronization.md's caller-runs bullet. A
-  manual `refresh` calls `reload` after registering, outside the bin.
-  A reload waiting for another thread's cache operation is still a prohibited cache dependency,
-  even when its own body makes no cache call; Guava's different lock granularity does not
-  establish an independent-progress guarantee for the facade. That includes Guava's default
-  `reload`, which calls `load`: under `refreshAfterWrite` a `load` that reads other keys can
-  deadlock readers inside the refresh map. It also makes `invalidateAll()` and `asMap().clear()`
-  wait for every automatic `reload` in flight that they meet, since `clear()` purges the refresh
-  map first and `ConcurrentHashMap.clear` takes each bin's monitor; under steady refresh traffic
-  the wait chains over several reloads, where Guava returns at once. The purge must come first
-  because it is how `clear()` discards an absent key's pending refresh (see design-decisions,
-  *Refresh Internals*).
-  `CacheLoader.asyncReloading` avoids both.
+  Present-key refresh matches: the adapter must call `reload` on the caller to obtain its future,
+  even when that reload performs asynchronous work. Every refresh registers before calling `reload`
+  and holds no cache lock while it runs. While automatic refresh called `reload` inside the refresh
+  map's bin, Guava's default `reload`, which calls `load`, held that bin under `refreshAfterWrite`
+  on any executor: two loads that read stale keys in each other's bins deadlocked where native Guava
+  completes, and a slow reload stalled colliding registrations, every discard of a refresh in its
+  bin (a completion, a write of that key, maintenance evicting it) and `clear()`'s purge. Pin:
+  `CaffeinatedGuavaTest.refreshAfterWrite_loadReadsCollidingKey`. A reload waiting for another
+  thread's cache operation is still a prohibited cache dependency, even when its own body makes no
+  cache call; Guava's different lock granularity does not establish an independent-progress
+  guarantee for the facade.
 - **Failed synchronous loads are retried by waiters.** Guava shares one
   `LoadingValueReference` failure. Core `computeIfAbsent` serializes waiters at the bin lock,
   each retrying the failed load: three waiting callers can make three calls and receive

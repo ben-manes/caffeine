@@ -16,8 +16,8 @@ or standalone (put fast path, Policy API methods).
 
 `discardRefresh` takes a `refreshes` bin under the `data` bin lock, the node monitor, or both
 (the node monitor alone on `put`'s fast path), and under `evictionLock` when maintenance evicts.
-Nothing in the library takes another lock while holding a `refreshes` bin; a user reload that
-re-enters the cache does (see *CacheLoader.asyncReload* below).
+Nothing takes another lock while holding a `refreshes` bin: a registration reads the entry
+lock-free and calls the loader after releasing the bin (see *CacheLoader.asyncReload* below).
 
 **Never hold `synchronized(node)` across a CHM mutating call** (`data.putIfAbsent`/
 `compute`/`computeIfPresent`/`merge`). CHM takes bin-head locks internally not just to
@@ -204,29 +204,18 @@ Lock context depends on path:
 - **Initial load (new node)**: INSIDE CHM bin lock, NOT inside synchronized(node)
 - **Expired/collected existing node**: INSIDE CHM bin lock + synchronized(node)
 
-### CacheLoader.asyncReload — INSIDE the `refreshes` CHM bin lock for automatic and async-view refresh
-Automatic refresh (`refreshIfNeeded`) and the async view's present-key `refresh` invoke the reload
-inside a `refreshes.computeIfAbsent` bin lambda, so the loader dispatch (including the default
-`CompletableFuture.supplyAsync`'s `executor.execute`) runs under the **refreshes** bin lock. A
-manual synchronous `refresh` publishes a placeholder registration and calls `asyncLoad` or
-`asyncReload` after the lock is released (design-decisions, *Refresh Internals*). Two consequences
-of the locked dispatch, both bounded to user misuse:
-- **Caller-runs executor** (`Runnable::run`, a saturated `CallerRunsPolicy` pool, or a
-  synchronous prefix) runs the entire user reload body under that lock — a slow reload stalls
-  other refreshes on the same bin and every discard of a refresh registered there, each waiting
-  while it holds its own lock: a completion releasing its registration (its `data` bin), a write
-  of that key (its bin or node monitor), `clear()`'s up-front purge of the table, or maintenance
-  evicting or expiring it, which waits holding `evictionLock`, so all writers stall once the write
-  buffer fills. The Guava facade's default `reload` is this case on any executor under
-  `refreshAfterWrite`. The table cannot be presized. A placeholder token moved the manual
-  synchronous refresh's loader call out of the registration; the automatic and async-view
-  registrations still make it inside. Deferring the discard past the eviction would still stall
-  the thread running maintenance while separating the discard from the write that requires it.
-- The only closing leg of a `refreshes-bin → data-bin` order (which would invert `discardRefresh`'s
-  `data-bin → refreshes-bin`), or of a `refreshes-bin → refreshes-bin` order across two reloads, is
-  a user loader re-entering the cache, where reading a stale key is enough — the documented
-  callback-re-entrancy hazard, not an in-library cycle. See design-decisions, *ConcurrentHashMap
-  Constraints*.
+### CacheLoader.asyncReload — OUTSIDE the `refreshes` CHM bin lock
+A refresh (automatic `refreshIfNeeded`, the manual synchronous `refresh`, or the async view's
+present-key `refresh`) publishes a `PendingRefresh` placeholder from a `refreshes` bin lambda and
+calls `asyncLoad` or `asyncReload` after the lock is released (design-decisions, *Refresh
+Internals*). A caller-runs executor (`Runnable::run`, a saturated `CallerRunsPolicy` pool) or a
+synchronous prefix, which includes the Guava facade's default `reload` on any executor, therefore
+runs the reload body on the calling thread with no cache lock held. The registration lambdas read
+the entry lock-free, so no path takes a `data` bin while holding a `refreshes` bin, and
+`discardRefresh`'s `data` bin → `refreshes` bin order has no inverse. A refresh that coalesces onto
+a placeholder waits for its loader to return the future, and a loader that refreshes its own key
+throws `IllegalStateException` instead. The async view's absent-key `refresh` loads through `get`,
+inside the `data` bin like any load (*CacheLoader.load* above).
 
 ### RemovalListener.onRemoval — OUTSIDE all locks (normal path)
 Delivered asynchronously via executor. Safe for re-entrant cache operations on

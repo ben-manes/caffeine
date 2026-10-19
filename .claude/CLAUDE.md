@@ -53,7 +53,10 @@ Tests cannot be `@Disabled` or skipped: a test that JUnit reports as skipped fai
 ```
 
 ErrorProne + NullAway run on every build. Prefer fixing warnings over suppressing them; see
-`.claude/rules/errorprone.md` for the few sanctioned suppressions and how to write them.
+`.claude/rules/errorprone.md` for the few sanctioned suppressions and how to write them. Run
+`analyze.sh` before proposing a commit. The default build runs neither PMD nor SpotBugs, and CI
+compiles with lint and `-Werror`, so an ErrorProne warning that the local build only prints fails
+there.
 
 ### Benchmarks & Analysis
 
