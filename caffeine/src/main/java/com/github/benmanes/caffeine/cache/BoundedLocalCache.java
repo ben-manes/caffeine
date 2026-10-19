@@ -1343,10 +1343,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         && !isComputingAsync(oldValue) && !isRefreshing(writeTime)
         && !(refreshes = refreshes()).containsKey(node.getKeyReference())
         && node.isAlive() && node.casWriteTime(writeTime, refreshWriteTime)) {
-      long[] startTime = new long[1];
+      long startTime;
       var keyReference = referenceKey(key);
-      @SuppressWarnings({"rawtypes", "unchecked"})
-      @Nullable CompletableFuture<? extends @Nullable V>[] refreshFuture = new CompletableFuture[1];
+      CompletableFuture<? extends @Nullable V> refreshFuture;
+      @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+      @Nullable V[] reloading = (@Nullable V[]) new Object[1];
       try {
         // The registration is published before the loader is called, so the loader runs outside
         // the refresh map's bin
@@ -1354,55 +1355,50 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         var registered = refreshes.computeIfAbsent(keyReference, k -> {
           if (!node.isAlive() || (node.getWriteTime() != refreshWriteTime)) {
             return nullRef();
-          } else if (isAsync && !Async.isReady((CompletableFuture<?>) oldValue)) {
-            // no-op if the future's completion state was modified (e.g. obtrude methods)
-            return nullRef();
           }
-          return pending;
+          // no-op if the future's completion state was modified (e.g. obtrude methods)
+          @SuppressWarnings("unchecked")
+          V value = isAsync ? Async.getIfReady((CompletableFuture<V>) oldValue) : oldValue;
+          reloading[0] = value;
+          return (value == null) ? nullRef() : pending;
         });
-        if (registered == pending) {
-          try {
-            startTime[0] = statsTicker().read();
-            requireNonNull(cacheLoader);
-            @SuppressWarnings("unchecked")
-            V reloading = isAsync ? ((CompletableFuture<V>) oldValue).join() : oldValue;
-            var refresh = cacheLoader.asyncReload(key, reloading, executor);
-            refreshFuture[0] = requireNonNull(refresh, "Null future");
-          } catch (Throwable e) {
-            if (e instanceof InterruptedException) {
-              Thread.currentThread().interrupt();
-            }
-            logger.log(Level.WARNING, "Exception thrown when submitting refresh task", e);
-            refreshes.remove(keyReference, pending);
-            pending.complete(CompletableFuture.failedFuture(e));
-          }
-          if (refreshFuture[0] != null) {
-            // Fails if the registration was discarded meanwhile, leaving this reload unowned
-            refreshes.replace(keyReference, pending, refreshFuture[0]);
-            pending.complete(refreshFuture[0]);
-          }
+        if (registered != pending) {
+          return null;
         }
+        try {
+          startTime = statsTicker().read();
+          requireNonNull(cacheLoader);
+          var refresh = cacheLoader.asyncReload(key, requireNonNull(reloading[0]), executor);
+          refreshFuture = requireNonNull(refresh, "Null future");
+        } catch (Throwable e) {
+          refreshes.remove(keyReference, pending);
+          pending.complete(CompletableFuture.failedFuture(e));
+          if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+          }
+          logger.log(Level.WARNING, "Exception thrown when submitting refresh task", e);
+          return null;
+        }
+        // Fails if the registration was discarded meanwhile, leaving this reload unowned
+        refreshes.replace(keyReference, pending, refreshFuture);
+        pending.complete(refreshFuture);
       } finally {
         node.casWriteTime(refreshWriteTime, writeTime);
       }
 
-      if (refreshFuture[0] == null) {
-        return null;
-      }
-
-      var refreshed = refreshFuture[0].handle((newValue, error) -> {
-        long loadTime = statsTicker().read() - startTime[0];
+      var refreshed = refreshFuture.handle((newValue, error) -> {
+        long loadTime = statsTicker().read() - startTime;
         if (error != null) {
           if (!(error instanceof CancellationException) && !(error instanceof TimeoutException)) {
             logger.log(Level.WARNING, "Exception thrown during refresh", error);
           }
-          refreshes.remove(keyReference, refreshFuture[0]);
+          refreshes.remove(keyReference, refreshFuture);
           statsCounter().recordLoadFailure(loadTime);
           return null;
         }
 
         @SuppressWarnings("unchecked")
-        V value = (isAsync && (newValue != null)) ? (V) refreshFuture[0] : newValue;
+        V value = (isAsync && (newValue != null)) ? (V) refreshFuture : newValue;
         @Nullable RemovalCause[] cause = new RemovalCause[1];
         var hints = new RemapHints();
         hints.quietly = true;
@@ -1411,7 +1407,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           result = compute(key, (K k, @Nullable V currentValue) -> {
             // Keep the refresh registered until the write clears it to avoid readers from
             // prematurely scheduling another reload
-            boolean owned = (refreshes.get(keyReference) == refreshFuture[0]);
+            boolean owned = (refreshes.get(keyReference) == refreshFuture);
             if (currentValue == null) {
               // If the entry is absent then drop this refresh, unless a successor owns the
               // registration, and maybe notify the listener
@@ -1443,7 +1439,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           }, expiry(), /* recordLoad= */ false, hints);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
-          refreshes.remove(keyReference, refreshFuture[0]);
+          refreshes.remove(keyReference, refreshFuture);
           statsCounter().recordLoadFailure(loadTime);
           return null;
         }

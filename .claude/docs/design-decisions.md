@@ -899,9 +899,11 @@ comment).
 **Value-bearing user callbacks propagate; fire-and-forget callbacks are guarded.**
 `Ticker`, `Weigher`, `Expiry`, and loaders return information the cache needs, with no safe
 default. Stats, scheduling, and listener wrappers can instead return an empty/default result.
-Do not add containment for broken equality, hostile futures, or JVM errors. The precedent is
-to fix the user component (as Quarkus did for its broken future), not add defensive code or a
-must-not-throw note to `Ticker`.
+Do not add containment for broken equality, hostile futures, a logging backend that throws, or
+JVM errors. Logging backends report their own write failures rather than throw them to the caller
+(JUL's `ErrorManager` contract, Logback's appender base, Log4j2's default `ignoreExceptions`), and
+most failure paths log before they clean up. The precedent is to fix the user component (as
+Quarkus did for its broken future), not add defensive code or a must-not-throw note to `Ticker`.
 
 A value-bearing throw can land after a commit. Examples include `AddTask` / `UpdateTask`
 updating policy totals before a ticker read, and refresh/async prologues reading `statsTicker`
@@ -1715,7 +1717,10 @@ default `reload`, which calls `load`) held its bin for the whole load. Two reade
 read a stale key sharing the other's bin deadlocked, where native Guava completes, and a slow reload
 stalled every discard of a refresh registered in its bin, maintenance under `evictionLock` included.
 The async view returned whatever future the registry held, so it now coalesces through
-`PendingRefresh.resolve`, as the manual refresh does. Pinned by
+`PendingRefresh.resolve`, as the manual refresh does. Both read the old value once, inside the
+registration, and pass that read to the loader: a readiness check followed by a later `join`
+hands the loader null when the future is obtruded between them
+(`BoundedLocalCacheTest.refreshIfNeeded_obtrudedAfterRegistration_reloadsReadValue`). Pinned by
 `BoundedLocalCacheTest.refreshIfNeeded_inlineReload_readsCollidingKey`,
 `CaffeinatedGuavaTest.refreshAfterWrite_loadReadsCollidingKey`,
 `AsyncLoadingCacheTest.refresh_inlineReload_readsCollidingKey` and

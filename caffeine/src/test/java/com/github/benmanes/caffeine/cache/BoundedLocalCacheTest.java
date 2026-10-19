@@ -7319,6 +7319,46 @@ final class BoundedLocalCacheTest {
   }
 
   @Test
+  @SuppressFBWarnings("SIC_INNER_SHOULD_BE_STATIC_ANON")
+  void refreshIfNeeded_obtrudedAfterRegistration_reloadsReadValue() {
+    var ticker = new FakeTicker();
+    var oldValues = new ArrayList<@Nullable Integer>();
+    AsyncLoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .refreshAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(ticker::read)
+        .buildAsync(new CacheLoader<>() {
+          @Override public Integer load(Integer key) {
+            return -key;
+          }
+          @Override public Integer reload(Integer key, Integer oldValue) {
+            oldValues.add(oldValue);
+            return -key;
+          }
+        });
+    CompletableFuture<@Nullable Integer> future = CompletableFuture.completedFuture(1);
+    cache.put(1, future);
+    var localCache = asBoundedLocalCache(cache);
+
+    // Simulate a concurrent obtrusion of the entry's future between the reader registering its
+    // refresh and calling the loader. The reload must receive the value the registration read.
+    localCache.refreshes = new ConcurrentHashMap<Object, CompletableFuture<?>>() {
+      private static final long serialVersionUID = 1L;
+      @Override public CompletableFuture<?> computeIfAbsent(Object key,
+          Function<? super Object, ? extends CompletableFuture<?>> mappingFunction) {
+        var registered = super.computeIfAbsent(key, mappingFunction);
+        future.obtrudeValue(null);
+        return registered;
+      }
+    };
+
+    ticker.advance(Duration.ofMinutes(2));
+    assertThat(cache.synchronous().getIfPresent(1)).isEqualTo(-1);
+    assertThat(oldValues).containsExactly(1);
+    assertThat(localCache.refreshes).isEmpty();
+  }
+
+  @Test
   @SuppressWarnings("CheckReturnValue")
   void refreshIfNeeded_inlineReload_readsCollidingKey() {
     // Each reload runs on its reader and reads a stale key that shares the other's refresh bin
