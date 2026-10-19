@@ -886,7 +886,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     Pacer pacer = pacer();
     if (pacer != null) {
-      long delay = getExpirationDelay(now);
+      // A cycle that reached a limit runs again as soon as the pacer allows
+      long delay = (drainStatusOpaque() == PROCESSING_TO_REQUIRED) ? 0L : getExpirationDelay(now);
       if (delay == Long.MAX_VALUE) {
         pacer.cancel();
       } else {

@@ -803,6 +803,7 @@ final class BoundedLocalCacheTest {
 
   @Test
   @SuppressWarnings("CheckReturnValue")
+  @SuppressFBWarnings("AFBR_ABNORMAL_FINALLY_BLOCK_RETURN")
   void cleanupTask_run_lockAwaited() throws InterruptedException {
     // A thread already waiting for the eviction lock performs the maintenance, so a copy of the
     // task that the executor runs in the meantime returns rather than park a second thread
@@ -838,6 +839,7 @@ final class BoundedLocalCacheTest {
   }
 
   @Test
+  @SuppressFBWarnings("AFBR_ABNORMAL_FINALLY_BLOCK_RETURN")
   void cleanupTask_run_sameThread() throws InterruptedException {
     // A same-thread executor runs the task while its thread holds the lock, so the maintenance is
     // performed rather than left to a thread waiting for it

@@ -1617,15 +1617,17 @@ common pool (for context propagation, say) takes the custom-executor arms: with 
 listener under continuous eviction a forwarding wrapper measured 232.9 against 144.5 ns per
 insert, against about 8 ns without one. A `drainStatus == REQUIRED` backlog re-arms the
 pacer only when `!pacer.isScheduled()`; if a fire is already pending (the next expiration
-event), the backlog rides that fire rather than stacking a second schedule. An *expiration*
-backlog in a deque stays prompt: its head is already expired, so `getExpirationDelay` returns
-`≤ 0` and `expireEntries` already scheduled the pacer at `TOLERANCE` (~1s). A wheel backlog
-does not, because the wheel measures its delay from its own clock and a spent budget rewinds
-that clock, so each budget-exhausting cycle's fire waits the distance from it to the next
-bucket. With `systemScheduler()` and a 2-thread pool, 1,000 entries due in each of five buckets
-drained one bucket per ~10s; a single bucket's burst drains in one cycle, since buckets are
-flushed whole. Size eviction is
-uncapped (drains fully in one cycle), so it never backlogs. A region transfer
+event), the backlog rides that fire rather than stacking a second schedule. An *expiration* backlog
+stays prompt because `expireEntries` arms the pacer after the expiration steps: when one of them
+reached its limit (the status is already `PROCESSING_TO_REQUIRED`) it asks for the next run at once,
+which the pacer raises to `TOLERANCE` (~1s), rather than at `getExpirationDelay`. A deque's delay
+would be `≤ 0` anyway, since its head is expired, but the wheel measures its delay from its own
+clock and a spent budget rewinds that clock, so the fire waited the distance from it to the next
+bucket: with `systemScheduler()` and a 2-thread pool, 1,000 entries due in each of five buckets
+drained one bucket per ~12s, and in 6s with the limit honored (pin:
+`ExpirationTest.schedule_spentBudget_overdueBucket`). A single bucket's burst drains in one cycle,
+since buckets are flushed whole. Size eviction is uncapped (drains fully in one cycle), so it never
+backlogs. A region transfer
 (`evictFromWindow`, `demoteFromMainProtected`) is capped at `QUEUE_TRANSFER_THRESHOLD` and
 re-arms after `expireEntries` armed the pacer, so a large window resize rides the pending fire
 too, delaying the rebalance rather than overfilling the cache. A *reference* backlog defers
@@ -2383,8 +2385,8 @@ compute this must use that offset-by-one:
 
 On the common pool a partial drain does not depend on this delay: `expireVariableEntries` re-arms
 via `PROCESSING_TO_REQUIRED` and the cleanup is resubmitted at once. With a `Scheduler` and
-another executor the re-arm rides the pacer fire that this delay scheduled, measured from the
-rewound clock (see *Pacer*). Pinned by
+another executor `expireEntries` asks the pacer for the next run at once instead of this delay,
+which is measured from the rewound clock (see *Pacer*). Pinned by
 `TimerWheelTest.getExpirationDelay_occupiedCurrentBucket` and by `getExpirationDelay_fuzzy`, which
 asserts **exact equality** against an oracle scanning every bucket of every wheel. That fuzzy
 assertion was previously vacuous — it guarded the assert with its own condition and compared an
