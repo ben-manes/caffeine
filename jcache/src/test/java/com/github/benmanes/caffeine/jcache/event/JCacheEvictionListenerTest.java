@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache.event;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.util.concurrent.TimeUnit;
 
@@ -31,6 +32,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 
@@ -82,6 +84,24 @@ final class JCacheEvictionListenerTest {
     // A vendor expiry can outlive the JCache deadline, so an eviction of an expired entry is one
     listener.onRemoval(1, new Expirable<>(2, 3), cause);
     verify(entryListener).onExpired(any());
+    assertThat(statistics.getCacheEvictions()).isEqualTo(1L);
+  }
+
+  @ParameterizedTest
+  @EnumSource(names = {"COLLECTED", "EXPIRED", "SIZE"})
+  void publishIfEvicted_noListener(RemovalCause cause) {
+    var statistics = new JCacheStatisticsMXBean();
+    var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
+    Ticker ticker = Mockito.mock();
+    var listener = new JCacheEvictionListener<>(dispatcher, statistics, ticker);
+    try (Cache<Integer, Integer> cache = Mockito.mock()) {
+      listener.setCache(cache);
+    }
+    statistics.enable(true);
+
+    // With no listener to publish to, an eviction does not read the ticker to date the deadline
+    listener.onRemoval(1, new Expirable<>(2, 3), cause);
+    verifyNoInteractions(ticker);
     assertThat(statistics.getCacheEvictions()).isEqualTo(1L);
   }
 

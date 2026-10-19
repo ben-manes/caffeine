@@ -63,11 +63,13 @@ public final class JCacheEvictionListener<K, V> implements RemovalListener<K, Ex
     requireNonNull(key);
     requireNonNull(cache);
     requireNonNull(expirable);
-    V value = expirable.get();
-    if ((cause == RemovalCause.EXPIRED) || hasExpired(expirable)) {
-      dispatcher.publishExpiredQuietly(cache, key, value);
-    } else {
-      dispatcher.publishRemovedQuietly(cache, key, value);
+    if (!dispatcher.registrations().isEmpty()) {
+      V value = expirable.get();
+      if ((cause == RemovalCause.EXPIRED) || hasExpired(expirable)) {
+        dispatcher.publishExpiredQuietly(cache, key, value);
+      } else {
+        dispatcher.publishRemovedQuietly(cache, key, value);
+      }
     }
     statistics.recordEvictions(1L);
   }
