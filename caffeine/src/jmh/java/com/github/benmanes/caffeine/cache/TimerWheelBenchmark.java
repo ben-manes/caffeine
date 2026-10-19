@@ -90,7 +90,7 @@ public class TimerWheelBenchmark {
 
   @Benchmark
   public long getExpirationDelay() {
-    return timerWheel.getExpirationDelay();
+    return timerWheel.getExpirationDelay(timerWheel.nanos);
   }
 
   @Benchmark

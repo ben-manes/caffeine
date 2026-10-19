@@ -434,7 +434,7 @@ final class TimerWheelTest {
     var timerWheel = new TimerWheel<Int, Int>();
 
     timerWheel.nanos = clock;
-    assertThat(timerWheel.getExpirationDelay()).isEqualTo(Long.MAX_VALUE);
+    assertThat(timerWheel.getExpirationDelay(clock)).isEqualTo(Long.MAX_VALUE);
   }
 
   @ParameterizedTest @MethodSource("clock")
@@ -444,7 +444,7 @@ final class TimerWheelTest {
     timerWheel.nanos = clock;
     long delay = Duration.ofSeconds(1).toNanos();
     timerWheel.schedule(new Timer(clock + delay));
-    long result = timerWheel.getExpirationDelay();
+    long result = timerWheel.getExpirationDelay(clock);
     assertThat(result).isGreaterThan(0L);
     assertThat(result).isAtMost(SPANS[0]);
   }
@@ -456,7 +456,7 @@ final class TimerWheelTest {
     timerWheel.nanos = clock;
     long delay = Duration.ofDays(14).toNanos();
     timerWheel.schedule(new Timer(clock + delay));
-    long result = timerWheel.getExpirationDelay();
+    long result = timerWheel.getExpirationDelay(clock);
     assertThat(result).isGreaterThan(0L);
     assertThat(result).isAtMost(delay);
   }
@@ -467,7 +467,7 @@ final class TimerWheelTest {
     timerWheel.nanos = 0L;
     timerWheel.schedule(new Timer(SPANS[0] * 2));
 
-    long result = timerWheel.getExpirationDelay();
+    long result = timerWheel.getExpirationDelay(0L);
     assertThat(result).isGreaterThan(0L);
     assertThat(result).isLessThan(Long.MAX_VALUE);
   }
@@ -478,7 +478,7 @@ final class TimerWheelTest {
     timerWheel.nanos = 0L;
     timerWheel.schedule(new Timer(SPANS[0]));
 
-    assertThat(timerWheel.getExpirationDelay()).isLessThan(SPANS[1]);
+    assertThat(timerWheel.getExpirationDelay(0L)).isLessThan(SPANS[1]);
   }
 
   @Test
@@ -499,7 +499,7 @@ final class TimerWheelTest {
     // a timer a full wheel[1] revolution out wraps onto the current bucket
     timerWheel.schedule(new Timer(clock + offset + SPANS[2] - 1));
 
-    assertThat(timerWheel.getExpirationDelay()).isAtMost(SPANS[1] - offset);
+    assertThat(timerWheel.getExpirationDelay(clock + offset)).isAtMost(SPANS[1] - offset);
   }
 
   @Test
@@ -517,7 +517,7 @@ final class TimerWheelTest {
     timerWheel.schedule(new Timer(clock + 10 * SPANS[0]));
 
     // the occupied current bucket is flushed when wheel[1] next ticks
-    assertThat(timerWheel.getExpirationDelay()).isEqualTo(SPANS[0]);
+    assertThat(timerWheel.getExpirationDelay(clock)).isEqualTo(SPANS[0]);
   }
 
   @ParameterizedTest @MethodSource("clock")
@@ -540,7 +540,7 @@ final class TimerWheelTest {
     timerWheel.schedule(new Timer(t95));
 
     long expectedDelay = (t80 - t45);
-    long delay = timerWheel.getExpirationDelay();
+    long delay = timerWheel.getExpirationDelay(t45);
     assertThat(delay).isLessThan(expectedDelay + SPANS[0]); // cascaded T80 in wheel[1]
   }
 
@@ -557,7 +557,7 @@ final class TimerWheelTest {
     timerWheel.advance(cache, duration, Integer.MAX_VALUE);
 
     assertWithMessage("clock=%s, duration=%s", clock, duration)
-        .that(timerWheel.getExpirationDelay()).isEqualTo(nextFlushDelay(timerWheel));
+        .that(timerWheel.getExpirationDelay(duration)).isEqualTo(nextFlushDelay(timerWheel));
   }
 
   /**

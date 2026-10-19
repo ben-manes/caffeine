@@ -1508,8 +1508,10 @@ runs maintenance, so a lock taker validates its arguments before it queues (`set
 negative maximum under the lock, and a copy that deferred to it left the status at
 `PROCESSING_TO_IDLE`), and none abandons the lock (`lock()` is uninterruptible and the assist's
 timed wait retries), which is what makes `hasQueuedThreads()`, a monitoring method, safe to act on
-here. `clear()` requests a follow-up when it finds a submission outstanding. Before the check every
-copy parked on the lock: on 4 CPUs all three common-pool workers waited there, an unrelated pool
+here. `clear()` requests a follow-up when it finds a submission outstanding. A thread that only
+reads state must not queue on the lock: the Stresser's status printout did, and once a copy deferred
+to it the read-only workload ran no maintenance for the rest of the run. Before the check every copy
+parked on the lock: on 4 CPUs all three common-pool workers waited there, an unrelated pool
 task's p99 was 0.3 ms against 0.04 ms with the check (1.2-2.6 ms against 0.05 ms on 14 CPUs with 16
 writers), and an eviction blocked on a 2 s load held all three workers for 1.8 s in 3 of 20 rounds.
 Don't keep the status pending across the assist to stop the copies: one lost submission would then
@@ -1607,27 +1609,33 @@ propagation, say) takes the custom-executor arms: with a removal listener under 
 a forwarding wrapper measured 232.9 against 144.5 ns per insert, against about 8 ns without one. A
 `drainStatus == REQUIRED` backlog re-arms the pacer only when `!pacer.isScheduled()`; if a fire is
 already pending (the next expiration event), the backlog rides that fire rather than stacking a
-second schedule. A backlog left before the pacer is armed stays prompt, because `expireEntries` arms
-it after the write-buffer drain, the reference drains and the expiration steps: when one of them
-reached its limit (the status is already `PROCESSING_TO_REQUIRED`) it asks for the next run at once,
-which the pacer raises to `TOLERANCE` (~1s), rather than at `getExpirationDelay`. A deque's delay
-would be `≤ 0` anyway, since its head is expired, but the wheel measures its delay from its own
-clock and a spent budget rewinds that clock, so the fire waited the distance from it to the next
-bucket: with `systemScheduler()` and a 2-thread pool, 1,000 entries due in each of five buckets
-drained one bucket per ~12s, and in 6s with the limit honored (pin:
-`ExpirationTest.schedule_spentBudget_overdueBucket`). A single bucket's burst drains in one cycle,
-since buckets are flushed whole. Size eviction is uncapped (drains fully in one cycle), so it never
-backlogs. A region transfer (`evictFromWindow`, `demoteFromMainProtected`) is capped at
-`QUEUE_TRANSFER_THRESHOLD` and re-arms after `expireEntries` armed the pacer, so a large window
-resize rides the pending fire too, delaying the rebalance rather than overfilling the cache. A
-*reference* backlog waits only where there is no pacer, as on a cache with only reference collection
-even with a `Scheduler`, and the delay costs a late `COLLECTED` notification rather than a stale
-read, while the entry's other half (a weak key's value, or a weak or soft value's key, node and
-table slot) stays reachable until a cycle polls it. A GC schedules no maintenance, and `cleanUp()`
-polls at most `REFERENCE_THRESHOLD + 1` references per queue per call. The shape that still rides
-the fire is a *write-buffer* backlog whose re-arm lands after `expireEntries` armed the pacer (a
-producer publishing into a slot that `relaxedPoll` passed over) on a cache whose next expiration is
-distant, that then goes idle: the buffered policy tasks — LRU/weight bookkeeping over CHM mappings
+second schedule. An *expiration* backlog stays prompt through the delay that `expireEntries` arms: a
+deque's head is already expired, so `getExpirationDelay` returns `≤ 0`, which the pacer raises to
+`TOLERANCE` (~1s), and the wheel measures its delay from the current time although a spent budget
+rewinds its clock, so an overdue bucket reads as due too. Measured from the rewound clock, the fire
+waited the distance from it to the next bucket: with `systemScheduler()` and a 2-thread pool, 1,000
+entries due in each of five buckets drained one bucket per ~12s, and in 6s measured from the current
+time (pin: `ExpirationTest.schedule_spentBudget_overdueBucket`). Do not signal a reached limit
+through the drain status. Asking for the next run at once whenever the status was already
+`PROCESSING_TO_REQUIRED` also fired for every write that landed during the cycle, which cancelled
+the distant fire and pulled it forward to `TOLERANCE` about once a second under steady writes, and a
+`ScheduledThreadPoolExecutor` without remove-on-cancel keeps each cancelled fire queued until its
+original time. Skipping the arm on that status instead leaves the pacer's own fire with nothing
+armed, since `rescheduleCleanUpIfIncomplete` runs inside that task and reads its still-running
+future as scheduled (pin: `ExpirationTest.schedule_writeDuringCycle_nextExpiration`). A single
+bucket's burst drains in one cycle, since buckets are flushed whole. Size eviction is uncapped
+(drains fully in one cycle), so it never backlogs. A region transfer (`evictFromWindow`,
+`demoteFromMainProtected`) is capped at `QUEUE_TRANSFER_THRESHOLD` and re-arms after `expireEntries`
+armed the pacer, so a large window resize rides the pending fire too, delaying the rebalance rather
+than overfilling the cache. A *reference* backlog defers the same way a write-buffer one does, and
+the delay costs a late `COLLECTED` notification rather than a stale read, while the entry's other
+half (a weak key's value, or a weak or soft value's key, node and table slot) stays reachable until
+a cycle polls it. A GC schedules no maintenance, `cleanUp()` polls at most `REFERENCE_THRESHOLD + 1`
+references per queue per call, and a cache with only reference collection has no pacer even with a
+`Scheduler`. The shape is a *write-buffer* backlog (`drainWriteBuffer`'s `WRITE_BUFFER_MAX` cap,
+reached only when a concurrent writer refills during the drain, or its `relaxedPoll` passing over a
+slot a producer has not published) on a cache whose next expiration is distant, that then goes idle:
+the buffered policy tasks — LRU/weight bookkeeping over CHM mappings
 that are *already committed and visible* — wait for that distant fire or any later write /
 read-stripe / `cleanUp`. If the pass over an unpublished slot instead settles `IDLE` (the accepted
 weak-memory strand) while no other entry is expiring, no fire is pending, and only a later operation
@@ -2388,8 +2396,8 @@ compute this must use that offset-by-one:
 
 On the common pool a partial drain does not depend on this delay: `expireVariableEntries` re-arms
 via `PROCESSING_TO_REQUIRED` and the cleanup is resubmitted at once. With a `Scheduler` and
-another executor `expireEntries` asks the pacer for the next run at once instead of this delay,
-which is measured from the rewound clock (see *Pacer*). Pinned by
+another executor the re-arm rides the pacer fire that this delay scheduled, so the delay is measured
+from the current time, not from the clock that a spent budget rewound (see *Pacer*). Pinned by
 `TimerWheelTest.getExpirationDelay_occupiedCurrentBucket` and by `getExpirationDelay_fuzzy`, which
 asserts **exact equality** against an oracle scanning every bucket of every wheel. That fuzzy
 assertion was previously vacuous — it guarded the assert with its own condition and compared an

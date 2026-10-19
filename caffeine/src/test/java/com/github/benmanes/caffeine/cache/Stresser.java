@@ -138,22 +138,14 @@ public final class Stresser implements Runnable {
 
   @SuppressWarnings("resource")
   private void status() {
+    // Unlocked: a maintenance task that finds a thread waiting for the lock leaves the work to it
     var evictionLock = local.evictionLock;
-    int pendingWrites;
-    int drainStatus;
-
-    evictionLock.lock();
-    try {
-      pendingWrites = local.writeBuffer.size();
-      drainStatus = local.drainStatusAcquire();
-    } finally {
-      evictionLock.unlock();
-    }
+    int drainStatus = local.drainStatusAcquire();
 
     var elapsedTime = LocalTime.ofSecondOfDay(stopwatch.elapsed(SECONDS));
     System.out.printf(US, "---------- %s ----------%n", elapsedTime);
     System.out.printf(US, "Pending reads: %,d; writes: %,d%n",
-        local.readBuffer.size(), pendingWrites);
+        local.readBuffer.size(), local.writeBuffer.size());
     System.out.printf(US, "Drain status = %s (%s)%n", STATUS[drainStatus], drainStatus);
     System.out.printf(US, "Evictions = %,d%n", cache.stats().evictionCount());
     System.out.printf(US, "Size = %,d (max: %,d)%n",

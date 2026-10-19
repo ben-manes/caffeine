@@ -231,7 +231,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
   static final int ADMIT_HASHDOS_THRESHOLD = 6;
   /** The maximum number of entries that can be transferred between queues. */
   static final int QUEUE_TRANSFER_THRESHOLD = 1_000;
-  /** The maximum number of entries that can be expired per maintenance cycle. */
+  /** The number of expirations per policy after which a maintenance cycle defers the rest. */
   static final int EXPIRATION_THRESHOLD = 1_000;
   /** The maximum number of collected references that can be drained per maintenance cycle. */
   static final int REFERENCE_THRESHOLD = 1_000;
@@ -884,8 +884,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
 
     Pacer pacer = pacer();
     if (pacer != null) {
-      // A cycle that reached a limit runs again as soon as the pacer allows
-      long delay = (drainStatusOpaque() == PROCESSING_TO_REQUIRED) ? 0L : getExpirationDelay(now);
+      long delay = getExpirationDelay(now);
       if (delay == Long.MAX_VALUE) {
         pacer.cancel();
       } else {
@@ -1031,7 +1030,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       }
     }
     if (expiresVariable()) {
-      delay = Math.min(delay, timerWheel().getExpirationDelay());
+      delay = Math.min(delay, timerWheel().getExpirationDelay(now));
     }
     return delay;
   }

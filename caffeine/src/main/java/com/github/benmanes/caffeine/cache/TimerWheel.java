@@ -282,9 +282,13 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
     }
   }
 
-  /** Returns the duration until the next bucket expires, or {@link Long#MAX_VALUE} if none. */
+  /**
+   * Returns the duration until the next bucket expires, or {@link Long#MAX_VALUE} if none.
+   *
+   * @param currentTimeNanos the current time, in nanoseconds
+   */
   @SuppressWarnings({"IntLongMath", "Varifier"})
-  public long getExpirationDelay() {
+  public long getExpirationDelay(long currentTimeNanos) {
     for (int i = 0; i < SHIFT.length; i++) {
       Node<K, V>[] timerWheel = wheel[i];
       long ticks = (nanos >>> SHIFT[i]);
@@ -308,7 +312,8 @@ final class TimerWheel<K, V> implements Iterable<Node<K, V>> {
           delay = Math.min(delay, nextDelay);
         }
 
-        return delay;
+        // the timer lags the current time after an advance stops at its limit
+        return delay - Math.max(0, currentTimeNanos - nanos);
       }
     }
     return Long.MAX_VALUE;

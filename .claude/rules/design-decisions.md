@@ -17,8 +17,9 @@ For adjudication, also read your module's section of [ruled-out](../docs/ruled-o
 - Policy weight uses a signed 62-bit payload returned as a `long`, packed between `policyWeight`
   and `metadata`. Truncation leaves a permanent region-size residue; a sign guard cannot detect
   every wrap.
-- Expiration evicts at most `EXPIRATION_THRESHOLD` (1000) per cycle. Reference draining polls
-  at most `REFERENCE_THRESHOLD` (1000) per queue. Preserve `PROCESSING_TO_REQUIRED` re-arms.
+- Each expiration policy defers its backlog after `EXPIRATION_THRESHOLD` (1000) evictions per
+  cycle, the wheel at the end of the bucket in progress. Reference draining polls at most
+  `REFERENCE_THRESHOLD` (1000) per queue. Preserve `PROCESSING_TO_REQUIRED` re-arms.
   These caps limit eviction/reference work per lock hold, not a waiter's latency on the
   non-fair lock.
 - The wheel's expiration budget counts evictions, not cascades, and is checked only between
@@ -31,8 +32,9 @@ For adjudication, also read your module's section of [ruled-out](../docs/ruled-o
 - The inline assist's reset to `IDLE` recovers a lost submission, so copies of the maintenance
   task can queue. A copy that finds a thread waiting for `evictionLock` returns, since every
   waiter but `clear()` runs maintenance; `clear()` requests a follow-up instead, and a lock taker
-  rejects bad arguments before it queues. A copy whose own thread holds the lock (a same-thread
-  executor) still runs. Don't keep the status pending across the assist to stop the copies.
+  rejects bad arguments before it queues. A thread that only reads state, test tooling included,
+  must not queue on the lock. A copy whose own thread holds the lock (a same-thread executor)
+  still runs. Don't keep the status pending across the assist to stop the copies.
 - The sketch's shrink retrack and reset's zero clamp are a pair. Keep the table grow-only;
   retained-table reset cost after a large shrink is accepted.
 - Both write-buffer consumers (`drainWriteBuffer` and `clear`) use `relaxedPoll` so a stalled
@@ -111,8 +113,9 @@ Details: [eviction](../docs/design-decisions.md#eviction),
   the tolerance keep out of access-time order, so don't mirror write order there. A lost read
   reorder defers reaping behind its head, without limit under a repeated over-stripe read and no
   maximum; variable expiration has no such stop.
-- `getExpirationDelay` finds the next bucket flush, including cascades. The current bucket
-  flushes at offset 1; retain both the main-scan clamp and `peekAhead`'s current-bucket check.
+- `getExpirationDelay` finds the next bucket flush, including cascades, measured from the current
+  time rather than the clock that a spent budget rewinds. The current bucket flushes at offset 1;
+  retain both the main-scan clamp and `peekAhead`'s current-bucket check.
 - `Pacer.schedule` calls `cancel()`, not merely `future.cancel(...)`, before rescheduling.
   Preserve the `future == null && nextFireTime != 0L` recursion guard and the 0L-to-1L bump.
   User schedulers are guarded against throws/null; built-ins satisfy that contract directly.

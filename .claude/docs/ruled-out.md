@@ -53,8 +53,9 @@ These dispose of whole families. Check them first.
   default common pool disabled JVM-wide (`java.util.concurrent.ForkJoinPool.common.parallelism=0`
   or a common-pool thread factory returning null). Removal notifications are never delivered, and
   each queued one retains its entry. Maintenance still runs inline when the write buffer fills and
-  on `cleanUp()`, which expires at most `EXPIRATION_THRESHOLD` entries per call and hands the rest
-  to the dead pool. At parallelism 0 async loads keep running: `CompletableFuture` replaces an
+  on `cleanUp()`, which expires up to `EXPIRATION_THRESHOLD` entries per policy per call, the wheel
+  finishing its bucket in progress, and hands the rest to the dead pool. At parallelism 0 async
+  loads keep running: `CompletableFuture` replaces an
   explicit `commonPool()` with a thread per task through JDK 24, and from 25 raises the pool's
   parallelism to 2 when it initializes, which also restores maintenance and notifications if no
   backlog has built up. A null factory stops async loads too. The library does not detect either

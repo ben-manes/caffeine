@@ -483,6 +483,40 @@ final class ExpirationTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO,
+      executor = CacheExecutor.DIRECT, removalListener = Listener.MOCKITO,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE }, expiry = CacheExpiry.DISABLED,
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      maximumSize = Maximum.DISABLED, keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  void schedule_writeDuringCycle_nextExpiration(Cache<Int, Int> cache, CacheContext context) {
+    // The listener's write stands in for a concurrent write landing while the cycle runs
+    doAnswer(invocation -> {
+      cache.put(context.absentKey(), context.absentValue());
+      return null;
+    }).when(context.removalListener()).onRemoval(any(), any(), any());
+    when(context.scheduler().schedule(any(), any(), anyLong(), any()))
+        .then(invocation -> new CompletableFuture<>());
+
+    cache.put(Int.valueOf(1), Int.valueOf(1));
+    context.ticker().advance(Duration.ofSeconds(50));
+    cache.put(Int.valueOf(2), Int.valueOf(2));
+
+    var task = ArgumentCaptor.forClass(Runnable.class);
+    verify(context.scheduler()).schedule(any(), task.capture(), anyLong(), any());
+
+    // The fire expires the first entry and no step reaches its limit, so the next fire waits for
+    // the second entry rather than coming at once
+    context.ticker().advance(Duration.ofSeconds(11));
+    task.getValue().run();
+
+    long expected = TimeUnit.SECONDS.toNanos(49);
+    var delay = ArgumentCaptor.forClass(long.class);
+    verify(context.scheduler(), times(2)).schedule(any(), any(), delay.capture(), any());
+    assertThat(delay.getValue()).isIn(Range.closed(expected - TOLERANCE, expected + TOLERANCE));
+  }
+
+  @ParameterizedTest
+  @CacheSpec(population = Population.EMPTY, scheduler = CacheScheduler.MOCKITO,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
