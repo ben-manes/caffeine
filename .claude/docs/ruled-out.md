@@ -665,6 +665,13 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
   a recursive refresh is returned its own thread's placeholder. The identity form allocates a
   placeholder on every coalescing call (32 bytes), against the field's retaining one owner `Thread`
   until the reload completes.
+- A refresh of an expired or collected entry joining another thread's in-flight placeholder,
+  including a reload whose entry expired during its prefix, instead of replacing it with a fresh
+  load. The joiner shares the refresh it joined, whose commit discards a reload of a dead entry as
+  it does when the entry expires after the join. Replacing it made the outcome depend on which
+  side of the expiry the join landed and loaded once per refresher. Pinned by
+  `LoadingCacheTest.refresh_expiredDuringReload_joinsReload` and
+  `refresh_expired_coalescesWhileLoading`.
 - `put()`'s insert path missing `discardRefresh`.
 - `doComputeIfAbsent`'s first-load path not calling `discardRefresh` when the mapping
   function throws.

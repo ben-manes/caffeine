@@ -305,6 +305,10 @@ final class EvictionFrayTest {
 - **`FakeTicker`** (Guava) — `advance(Duration)` for time control
 - **Validation annotations**: `@CheckNoEvictions`, `@CheckMaxLogLevel(WARN)`,
   `@CheckNoStats`
+- **`LoggingEvents.logEvents()`** reads slf4j-test's events for the calling thread only, so a
+  log written on an executor or helper thread matches nothing. Run the logging operation on the
+  test thread (`AsyncCacheTest.put_sameInstance_completesDuringWrite_weigherFails` moves the
+  load to a helper for this reason), or read `TestLoggerFactory.getAllLoggingEvents()`
 
 ## Coverage (JaCoCo)
 

@@ -172,8 +172,8 @@ Details: [expiration](../docs/design-decisions.md#expiration),
   placeholders.
   A refresh coalesces with a completed registration too and replaces one only for an entry
   pending eviction: a replacement whose loader threw left the completed commit unowned. The
-  synchronous view never replaces its own thread's placeholder, or a self-refreshing loader
-  recurses until the stack overflows.
+  synchronous view never replaces a placeholder: joining it rejects a self-refreshing loader,
+  and a refresh of a dead entry during a load or reload shares that refresh's outcome.
 - Async load and automatic-refresh completions are quiet bookkeeping updates. Manual refresh
   stays loud. Keep quiet replacement and remap behavior aligned, including immaterial updates.
 

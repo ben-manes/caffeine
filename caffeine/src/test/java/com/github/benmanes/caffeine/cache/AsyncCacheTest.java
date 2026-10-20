@@ -89,8 +89,8 @@ import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.CacheSpec.Compute;
-import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.CacheSpec.ExecutorFailure;
+import com.github.benmanes.caffeine.cache.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Loader;
@@ -562,7 +562,7 @@ final class AsyncCacheTest {
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       refreshAfterWrite = Expire.DISABLED, expiry = CacheExpiry.DISABLED, stats = Stats.DISABLED)
-  void getAllFunction_absent_collisions(AsyncCache<Object, Int> cache, CacheContext context) {
+  void getAllFunction_absent_collisions(AsyncCache<Object, Int> cache) {
     // Keys that share a hash code must not degrade the batch to a quadratic number of comparisons
     var comparisons = new AtomicInteger();
     final class Key implements Comparable<Key> {
@@ -1655,6 +1655,43 @@ final class AsyncCacheTest {
     assertThat(cache).containsEntry(context.absentKey(), context.absentValue());
     assertThat(cache.synchronous().policy().eviction().orElseThrow()
         .weightOf(context.absentKey())).hasValue(10);
+  }
+
+  @ParameterizedTest
+  @CheckMaxLogLevel(WARN)
+  @CacheSpec(population = Population.EMPTY,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.MOCKITO)
+  void put_sameInstance_completesDuringWrite_weigherFails(
+      AsyncCache<Int, Int> cache, CacheContext context) {
+    // The load's insertion weighs the completed value, and the put's re-finalization of the
+    // completion it raced weighs it again; a weigher that throws there removes the mapping. The
+    // put runs on this thread, where its log is captured, and the load on another
+    var error = new IllegalStateException();
+    when(context.weigher().weigh(any(), any())).thenReturn(10).thenThrow(error);
+    var future = new CompletableFuture<Int>();
+    var computing = new AtomicBoolean();
+    var writer = Thread.currentThread();
+    var loaded = new AtomicReference<@Nullable CompletableFuture<Int>>();
+    var load = CompletableFuture.runAsync(() -> loaded.set(
+        cache.get(context.absentKey(), (key, executor) -> {
+          computing.set(true);
+          await().until(() -> isBlockedOnBin(writer));
+          future.complete(context.absentValue());
+          return future;
+        })), ConcurrentTestHarness.executor);
+
+    await().untilTrue(computing);
+    cache.put(context.absentKey(), future);
+    assertThat(load).succeedsWithNull();
+    assertThat(loaded.get()).succeedsWith(context.absentValue());
+
+    assertThat(cache).doesNotContainKey(context.absentKey());
+    assertThat(logEvents()
+        .withMessage("Exception thrown during asynchronous load")
+        .withThrowable(error)
+        .withLevel(WARN)
+        .exclusively())
+        .hasSize(1);
   }
 
   /** Returns whether the thread is waiting to lock a hash bin of a {@link ConcurrentHashMap}. */

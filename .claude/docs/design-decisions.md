@@ -1725,10 +1725,16 @@ discard a reload no write had superseded; restoring the completed token on that 
 strands it when the commit has already read itself unowned. The pending-eviction replacement costs
 nothing, since a commit's compute evicts the dead node without calling its function. Pinned by
 `LoadingCacheTest.refresh_completedReload_coalesces` and its `AsyncLoadingCacheTest` counterpart.
-The synchronous view never replaces its own thread's placeholder, so a loader refreshing its own
-expired or collected key throws too; replacing it there recursed until the stack overflowed
-(`LoadingCacheTest.refresh_recursive_expired`). The async view's pending-eviction branch removes
-the registration and loads through `get`, inside the data bin like any load.
+The synchronous view never replaces a placeholder, whoever registered it: a refresh that arrives
+while a loader runs joins it, even for an entry pending eviction, and takes the linearization
+point of the refresh it joined. So a loader refreshing its own expired or collected key throws
+too, where replacing its placeholder recursed until the stack overflowed
+(`LoadingCacheTest.refresh_recursive_expired`); refreshes of a dead entry that arrive during its
+load share that load rather than each loading (`refresh_expired_coalescesWhileLoading`); and a
+joined reload whose entry expired during its prefix is discarded at commit, as it is when the
+entry expires after the join (`refresh_expiredDuringReload_joinsReload`). The async view's
+pending-eviction branch removes the registration and loads through `get`, inside the data bin
+like any load.
 The async view's absent-key branch registers with `putIfAbsent` rather than a compute and owes
 the same rule: it attaches its by-key release only when it won the registration. Attaching that
 release to whichever future it returns puts a `refreshes.remove` on a token this caller never

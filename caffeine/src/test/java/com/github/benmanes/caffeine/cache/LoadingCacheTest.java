@@ -74,6 +74,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
@@ -1292,6 +1293,108 @@ final class LoadingCacheTest {
     var future = cache.refresh(context.firstKey());
     assertThat(reentrant.get()).isSameInstanceAs(future);
     future.complete(null);
+  }
+
+  @Test
+  void refresh_expired_coalescesWhileLoading() throws InterruptedException {
+    // A refresh of an unreaped dead entry joins one whose loader is still running, rather than
+    // replacing that registration with a load of its own
+    var nanos = new AtomicLong();
+    var inLoad = new CountDownLatch(1);
+    var release = new CountDownLatch(1);
+    var loads = new AtomicInteger();
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(nanos::get)
+        .build(new CacheLoader<>() {
+          @Override public Integer load(Integer key) {
+            throw new UnsupportedOperationException();
+          }
+          @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor)
+              throws InterruptedException {
+            loads.incrementAndGet();
+            inLoad.countDown();
+            release.await();
+            return CompletableFuture.completedFuture(-key);
+          }
+        });
+    cache.put(1, 1);
+    nanos.addAndGet(Duration.ofMinutes(2).toNanos());
+
+    var loading = new AtomicReference<@Nullable CompletableFuture<Integer>>();
+    var loader = new Thread(() -> loading.set(cache.refresh(1)));
+    loader.start();
+    assertThat(inLoad.await(5, TimeUnit.SECONDS)).isTrue();
+
+    var joined = new AtomicReference<@Nullable CompletableFuture<Integer>>();
+    var joiner = new Thread(() -> joined.set(cache.refresh(1)));
+    joiner.start();
+    try {
+      await().until(() -> isJoining(joiner) || (loads.get() > 1));
+    } finally {
+      release.countDown();
+    }
+    loader.join();
+    joiner.join();
+    assertThat(loads.get()).isEqualTo(1);
+    assertThat(joined.get()).isSameInstanceAs(loading.get());
+    assertThat(cache.getIfPresent(1)).isEqualTo(-1);
+    assertThat(cache).isValid();
+  }
+
+  @Test
+  void refresh_expiredDuringReload_joinsReload() throws InterruptedException {
+    // A refresh that arrives after the entry expired during another's reload joins that reload,
+    // which the commit discards as it would had the entry expired after the join
+    var nanos = new AtomicLong();
+    var inReload = new CountDownLatch(1);
+    var release = new CountDownLatch(1);
+    var reloads = new AtomicInteger();
+    var loads = new AtomicInteger();
+    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofMinutes(1))
+        .executor(Runnable::run)
+        .ticker(nanos::get)
+        .build(new CacheLoader<>() {
+          @Override public Integer load(Integer key) {
+            throw new UnsupportedOperationException();
+          }
+          @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
+            loads.incrementAndGet();
+            return CompletableFuture.completedFuture(-key);
+          }
+          @Override public CompletableFuture<Integer> asyncReload(
+              Integer key, Integer oldValue, Executor executor) throws InterruptedException {
+            reloads.incrementAndGet();
+            inReload.countDown();
+            release.await();
+            return CompletableFuture.completedFuture(100);
+          }
+        });
+    cache.put(1, 1);
+
+    var reloading = new AtomicReference<@Nullable CompletableFuture<Integer>>();
+    var reloader = new Thread(() -> reloading.set(cache.refresh(1)));
+    reloader.start();
+    assertThat(inReload.await(5, TimeUnit.SECONDS)).isTrue();
+    nanos.addAndGet(Duration.ofMinutes(2).toNanos());
+
+    var joined = new AtomicReference<@Nullable CompletableFuture<Integer>>();
+    var joiner = new Thread(() -> joined.set(cache.refresh(1)));
+    joiner.start();
+    try {
+      await().until(() -> isJoining(joiner) || (loads.get() > 0));
+    } finally {
+      release.countDown();
+    }
+    reloader.join();
+    joiner.join();
+    assertThat(joined.get()).isSameInstanceAs(reloading.get());
+    assertThat(reloads.get()).isEqualTo(1);
+    assertThat(loads.get()).isEqualTo(0);
+    assertThat(cache.getIfPresent(1)).isNull();
+    assertThat(cache).isValid();
   }
 
   @ParameterizedTest
