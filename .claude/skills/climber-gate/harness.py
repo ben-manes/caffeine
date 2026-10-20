@@ -601,28 +601,18 @@ EDITS = [
     ("salt-flag", F,
      "  static final int MIN_SKETCH_SIZE = 256;\n",
      "  static final int MIN_SKETCH_SIZE = 256;\n"
-     "  // EXPERIMENT HARNESS: -Dcaffeine.sketch.salt=<int> is XORed into the hash, redrawing which\n"
-     "  // keys share counters\n"
-     "  static final int SALT = Integer.decode(java.util.Objects.requireNonNullElse(\n"
-     "      System.getProperty(\"caffeine.sketch.salt\"), \"0\"));\n"),
+     "  // EXPERIMENT HARNESS: -Dcaffeine.sketch.salt=<int> is XORed into the hash before it is\n"
+     "  // spread, redrawing which keys share a block\n"
+     "  static final int SALT = Long.decode(java.util.Objects.requireNonNullElse(\n"
+     "      System.getProperty(\"caffeine.sketch.salt\"), \"0\")).intValue();\n"),
 
-    ("salt-frequency", F,
-     "    @Var int frequency = Integer.MAX_VALUE;\n"
-     "    int blockHash = spread(e.hashCode());\n",
-     "    @Var int frequency = Integer.MAX_VALUE;\n"
-     "    int blockHash = spread(e.hashCode()) ^ SALT;\n"),
-
-    ("salt-increment", F,
-     "    int blockHash = spread(e.hashCode());\n"
-     "    int counterHash = rehash(blockHash);\n"
-     "    int block = (blockHash >>> blockShift) << 3;\n"
-     "\n"
-     "    // Loop unrolling",
-     "    int blockHash = spread(e.hashCode()) ^ SALT;\n"
-     "    int counterHash = rehash(blockHash);\n"
-     "    int block = (blockHash >>> blockShift) << 3;\n"
-     "\n"
-     "    // Loop unrolling"),
+    # Before the spread: XORed after it, the salt relabels blocks and keeps every key's block-mates
+    ("salt-spread", F,
+     "  static int spread(@Var int x) {\n"
+     "    x ^= x >>> 17;\n",
+     "  static int spread(@Var int x) {\n"
+     "    x ^= SALT;\n"
+     "    x ^= x >>> 17;\n"),
 
     ("startwin-flags", B,
      "  static final double PERCENT_MAIN = 0.99d;\n",
@@ -748,8 +738,8 @@ def check_edits():
     whose replacements are equal — or where one contains the other — make the second invisible:
     apply skips it as already wired, verify passes, and the instrumentation is silently partial
     while still printing plausible numbers. A sibling harness hit exactly that (two edits inserting
-    the same counter line at different anchors) and lost every protected-region hit. Today's 36
-    edits are clean; this keeps a future one from reintroducing it.
+    the same counter line at different anchors) and lost every protected-region hit. This check
+    keeps a new edit from reintroducing it.
     """
     bad = []
     for i, (n1, r1, _, p1) in enumerate(EDITS):

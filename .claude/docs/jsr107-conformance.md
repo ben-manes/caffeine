@@ -651,7 +651,9 @@ completed. The append attaches only an asynchronous stage to its predecessor. A 
 on a predecessor that completes during the attach runs the predecessor's remaining dependents on
 the publishing thread, inside the compute, where its cleanup unlinks the slot being written: the
 successor lands in a detached node and the key's next event runs beside it. An asynchronous stage
-hands itself to the executor before that step. Pin:
+hands itself to the executor before that step. A caller-runs executor runs it inline as well, so a
+cleanup can still unlink the slot inside the append, but only after the dispatch it follows has
+run, which keeps the key's events in order. Pin:
 `EventDispatcherTest.ordered_predecessorCompletesDuringAppend`. Await/ignore pending synchronous
 futures on relevant exits and clear in finally.
 Bulk operations must drain already-published events even when the loop fails. putAll copying

@@ -1705,11 +1705,14 @@ ownership check.
 It carries the registration and completion state, while the loader's original future remains
 the token and return value. Registration publishes a `PendingRefresh` placeholder from
 `refreshes.compute`, and the loader is called after it returns. The loader's future then replaces
-the placeholder by identity, so a write that discarded the placeholder meanwhile leaves the load
-unowned. A refresh that coalesces onto a placeholder waits for the loader to return, which is as
-long as it previously waited on the bin, and returns the loader's future, or a failed future if
-the loader threw. On the placeholder's own thread, which is a loader refreshing its own key, it throws
-`IllegalStateException` rather than wait on itself, as CHM's `Recursive update` did.
+the placeholder by identity, so a write that discarded it or a refresh that replaced it meanwhile
+leaves the load unowned. `PendingRefresh.publish` and `withdraw` carry that hand-off for all three
+refresh paths (this one, the async view's reload and `refreshIfNeeded`), so one pin covers each
+withdraw's failed future. A refresh that coalesces onto a placeholder waits for the loader to
+return, which is as long as it previously waited on the bin, and returns the loader's future, or a
+failed future if the loader threw. On the placeholder's own thread, which is a loader refreshing
+its own key, it throws `IllegalStateException` rather than wait on itself, as CHM's
+`Recursive update` did.
 `Policy.refreshes()` omits placeholders. Completion is attached after the swap, and coalescing onto
 an existing refresh attaches no additional handler. Pinned by
 `LoadingCacheTest.refresh_absent_coalesces*`, `refresh_recursive`, `refreshes_whileRegistering`,
@@ -1747,7 +1750,7 @@ The async view returned whatever future the registry held, so it now coalesces t
 registration, and pass that read to the loader: a readiness check followed by a later `join`
 hands the loader null when the future is obtruded between them
 (`BoundedLocalCacheTest.refreshIfNeeded_obtrudedAfterRegistration_reloadsReadValue`). Pinned by
-`BoundedLocalCacheTest.refreshIfNeeded_inlineReload_readsCollidingKey`,
+`RefreshAfterWriteTest.refreshIfNeeded_inlineReload_readsCollidingKey`,
 `CaffeinatedGuavaTest.refreshAfterWrite_loadReadsCollidingKey`,
 `AsyncLoadingCacheTest.refresh_inlineReload_readsCollidingKey` and
 `refresh_coalescesWithAutomaticRefresh`.

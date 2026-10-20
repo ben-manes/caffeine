@@ -242,7 +242,7 @@ abstract class LocalAsyncLoadingCache<K, V>
     private @Nullable CompletableFuture<V> tryComputeRefresh(K key, Object keyReference) {
       @SuppressWarnings({"rawtypes", "unchecked"})
       @Nullable CompletableFuture<V>[] oldValueFuture = new CompletableFuture[1];
-      @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+      @SuppressWarnings({"unchecked", "Varifier"})
       @Nullable V[] oldValue = (V[]) new Object[1];
       var pending = new LocalLoadingCache.PendingRefresh();
       var registered = asyncCache.cache().refreshes().computeIfAbsent(keyReference, k -> {
@@ -268,14 +268,11 @@ abstract class LocalAsyncLoadingCache<K, V>
         var reloading = (CompletableFuture<V>) requireNonNull(reloadFuture, "Null future");
         castedFuture = reloading;
       } catch (Throwable t) {
-        asyncCache.cache().refreshes().remove(keyReference, pending);
-        pending.complete(CompletableFuture.failedFuture(t));
+        pending.withdraw(asyncCache.cache().refreshes(), keyReference, t);
         throw toUnchecked(t);
       }
 
-      // Fails if the registration was discarded meanwhile, leaving this reload unowned
-      asyncCache.cache().refreshes().replace(keyReference, pending, castedFuture);
-      pending.complete(castedFuture);
+      pending.publish(asyncCache.cache().refreshes(), keyReference, castedFuture);
       castedFuture.whenComplete((newValue, error) -> {
         long loadTime = asyncCache.cache().statsTicker().read() - startTime;
         if (error != null) {

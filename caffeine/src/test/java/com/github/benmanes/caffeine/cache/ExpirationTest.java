@@ -62,7 +62,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.jspecify.annotations.Nullable;
@@ -457,27 +456,28 @@ final class ExpirationTest {
       maximumSize = Maximum.DISABLED, keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   @SuppressWarnings("CheckReturnValue")
   void schedule_spentBudget_overdueBucket(Cache<Int, Int> cache, CacheContext context) {
-    var task = new AtomicReference<Runnable>();
-    var delay = new AtomicLong();
-    when(context.scheduler().schedule(any(), any(), anyLong(), any())).then(invocation -> {
-      task.set(invocation.getArgument(1));
-      delay.set(invocation.getArgument(2));
-      return new CompletableFuture<>();
-    });
+    when(context.scheduler().schedule(any(), any(), anyLong(), any()))
+        .then(invocation -> new CompletableFuture<>());
     var policy = cache.policy().expireVariably().orElseThrow();
     for (int i = 0; i <= BoundedLocalCache.EXPIRATION_THRESHOLD; i++) {
       policy.put(Int.valueOf(i), Int.valueOf(i), 1, TimeUnit.MINUTES);
     }
     policy.put(context.absentKey(), context.absentValue(), 1, TimeUnit.HOURS);
 
+    var task1 = ArgumentCaptor.forClass(Runnable.class);
+    verify(context.scheduler()).schedule(any(), task1.capture(), anyLong(), any());
+
     // The fire flushes the minute's bucket whole, which spends the budget, so the hour's entry is
     // overdue when the next fire is scheduled and must not wait for its bucket's original time
     context.ticker().advance(Duration.ofHours(2));
-    task.get().run();
+    task1.getValue().run();
 
-    assertThat(delay.get()).isAtMost(TOLERANCE);
-    context.ticker().advance(Duration.ofNanos(delay.get()));
-    task.get().run();
+    var task2 = ArgumentCaptor.forClass(Runnable.class);
+    var delay2 = ArgumentCaptor.forClass(long.class);
+    verify(context.scheduler(), times(2)).schedule(any(), task2.capture(), delay2.capture(), any());
+    assertThat(delay2.getValue()).isAtMost(TOLERANCE);
+    context.ticker().advance(Duration.ofNanos(delay2.getValue()));
+    task2.getValue().run();
     assertThat(cache).isEmpty();
   }
 

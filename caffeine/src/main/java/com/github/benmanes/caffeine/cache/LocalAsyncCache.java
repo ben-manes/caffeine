@@ -1009,7 +1009,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     public @Nullable V replace(K key, V value) {
       requireNonNull(value);
 
-      @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+      @SuppressWarnings({"unchecked", "Varifier"})
       @Nullable V[] oldValue = (V[]) new Object[1];
       remapWhenSettled(key, (current, oldValueFuture) -> {
         oldValue[0] = current;
@@ -1146,7 +1146,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         boolean recordLoad) {
       requireNonNull(remappingFunction);
 
-      @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+      @SuppressWarnings({"unchecked", "Varifier"})
       @Nullable V[] newValue = (@Nullable V[]) new Object[1];
       for (;;) {
         Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));
@@ -1187,7 +1187,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       // Keep in sync with BoundedVarExpiration.computeAsync(key, remappingFunction, expiry)
       requireNonNull(remappingFunction);
 
-      @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+      @SuppressWarnings({"unchecked", "Varifier"})
       @Nullable V[] newValue = (@Nullable V[]) new Object[1];
       for (;;) {
         Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));

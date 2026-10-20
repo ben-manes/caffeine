@@ -1345,7 +1345,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
       long startTime;
       var keyReference = referenceKey(key);
       CompletableFuture<? extends @Nullable V> refreshFuture;
-      @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+      @SuppressWarnings({"unchecked", "Varifier"})
       @Nullable V[] reloading = (@Nullable V[]) new Object[1];
       try {
         // The registration is published before the loader is called, so the loader runs outside
@@ -1370,17 +1370,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
           var refresh = cacheLoader.asyncReload(key, requireNonNull(reloading[0]), executor);
           refreshFuture = requireNonNull(refresh, "Null future");
         } catch (Throwable e) {
-          refreshes.remove(keyReference, pending);
-          pending.complete(CompletableFuture.failedFuture(e));
+          pending.withdraw(refreshes, keyReference, e);
           if (e instanceof InterruptedException) {
             Thread.currentThread().interrupt();
           }
           logger.log(Level.WARNING, "Exception thrown when submitting refresh task", e);
           return null;
         }
-        // Fails if the registration was discarded meanwhile, leaving this reload unowned
-        refreshes.replace(keyReference, pending, refreshFuture);
-        pending.complete(refreshFuture);
+        pending.publish(refreshes, keyReference, refreshFuture);
       } finally {
         node.casWriteTime(refreshWriteTime, writeTime);
       }
@@ -4827,7 +4824,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         @SuppressWarnings("unchecked")
         var delegate = (LocalCache<K, CompletableFuture<V>>) cache;
 
-        @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+        @SuppressWarnings({"unchecked", "Varifier"})
         @Nullable V[] newValue = (@Nullable V[]) new Object[1];
         for (;;) {
           Async.getWhenSuccessful(delegate.getIfPresentQuietly(key));

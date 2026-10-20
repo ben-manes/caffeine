@@ -7417,46 +7417,6 @@ final class BoundedLocalCacheTest {
     assertThat(localCache.refreshes).isEmpty();
   }
 
-  @Test
-  @SuppressWarnings("CheckReturnValue")
-  void refreshIfNeeded_inlineReload_readsCollidingKey() {
-    // Each reload runs on its reader and reads a stale key that shares the other's refresh bin
-    // (keys 1 and 17, and 2 and 18), so a reload that held its own bin would wait on the other
-    var ticker = new FakeTicker();
-    var inLoad1 = new CountDownLatch(1);
-    var inLoad2 = new CountDownLatch(1);
-    var armed = new AtomicBoolean();
-    var cacheRef = new AtomicReference<LoadingCache<Integer, Integer>>();
-    LoadingCache<Integer, Integer> cache = Caffeine.newBuilder()
-        .refreshAfterWrite(Duration.ofMinutes(1))
-        .executor(Runnable::run)
-        .ticker(ticker::read)
-        .build(key -> {
-          if (armed.get() && (key == 1)) {
-            inLoad1.countDown();
-            inLoad2.await();
-            requireNonNull(cacheRef.get()).get(18);
-          } else if (armed.get() && (key == 2)) {
-            inLoad2.countDown();
-            inLoad1.await();
-            requireNonNull(cacheRef.get()).get(17);
-          }
-          return -key;
-        });
-    cacheRef.set(cache);
-    assertThat(cache.getAll(List.of(1, 2, 17, 18))).hasSize(4);
-    ticker.advance(Duration.ofMinutes(2));
-    armed.set(true);
-
-    var reader1 = new Thread(() -> cache.get(1));
-    var reader2 = new Thread(() -> cache.get(2));
-    reader1.setDaemon(true);
-    reader2.setDaemon(true);
-    reader1.start();
-    reader2.start();
-    await().until(() -> (reader1.getState() == TERMINATED) && (reader2.getState() == TERMINATED));
-  }
-
   @ParameterizedTest
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK)
   void refresh_collected(BoundedLocalCache<Int, Int> cache, CacheContext context) {

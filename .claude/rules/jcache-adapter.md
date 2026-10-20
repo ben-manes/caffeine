@@ -113,7 +113,9 @@ adjudicating a finding; it records the accepted differences, boundaries, and tes
 - Queue append uses atomic `compute`; cleanup uses conditional `remove(key, future)`. The
   preceding identity `get` is only a fast path. These protect a successor's slot and ordering;
   do not add locking. The append attaches only an async stage to its predecessor: a sync stage
-  can run the predecessor's cleanup inside the append, which loses the slot being written. Await
+  can run the predecessor's cleanup inside the append, which loses the slot being written. A
+  caller-runs executor runs the async stage inline too, so a cleanup can still unlink the slot
+  there, but only after the dispatch it follows has run, which keeps the key's order. Await
   or ignore synchronous futures on relevant operation exits, including bulk failures. See
   [dispatch and commit](../docs/jsr107-conformance.md#dispatch-and-commit).
 - Public operations use `requireOperable()`; `close()` refuses the same way after its idempotent

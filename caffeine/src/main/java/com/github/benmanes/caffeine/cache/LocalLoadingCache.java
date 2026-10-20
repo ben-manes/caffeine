@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
@@ -157,6 +158,24 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
     final Thread owner = Thread.currentThread();
 
     /**
+     * Replaces the registration with the loader's future and releases the refreshes that coalesced
+     * with it. A registration that was discarded or replaced meanwhile is left alone, so the load
+     * is unowned.
+     */
+    void publish(ConcurrentMap<Object, CompletableFuture<?>> refreshes,
+        Object keyReference, CompletableFuture<?> future) {
+      refreshes.replace(keyReference, this, future);
+      complete(future);
+    }
+
+    /** Withdraws the registration after its loader threw, failing the refreshes that coalesced. */
+    void withdraw(ConcurrentMap<Object, CompletableFuture<?>> refreshes,
+        Object keyReference, Throwable error) {
+      refreshes.remove(keyReference, this);
+      complete(CompletableFuture.failedFuture(error));
+    }
+
+    /**
      * Returns the refresh that the registration stands for, waiting for a pending one's loader to
      * return it. A loader that refreshes its own key would wait on itself, so that recursion is
      * rejected.
@@ -208,14 +227,11 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
             : cacheLoader.asyncReload(key, oldValue, cache.executor());
         reloading = requireNonNull(refreshFuture, "Null future");
       } catch (Throwable t) {
-        cache.refreshes().remove(keyReference, pending);
-        pending.complete(CompletableFuture.failedFuture(t));
+        pending.withdraw(cache.refreshes(), keyReference, t);
         throw toUnchecked(t);
       }
 
-      // Fails if the registration was discarded or replaced meanwhile, leaving this load unowned
-      cache.refreshes().replace(keyReference, pending, reloading);
-      pending.complete(reloading);
+      pending.publish(cache.refreshes(), keyReference, reloading);
       reloading.whenComplete(this::complete);
       if (oldValue == null) {
         evictIfPending();

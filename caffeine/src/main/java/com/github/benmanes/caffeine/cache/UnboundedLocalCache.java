@@ -297,7 +297,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+    @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable V[] oldValue = (V[]) new Object[1];
     V nv = data.computeIfPresent(key, (K k, V value) -> {
       BiFunction<? super K, ? super V, ? extends @Nullable V> function = statsAware(
@@ -357,7 +357,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       BiFunction<? super K, ? super @Nullable V, ? extends @Nullable V> remappingFunction,
       @Nullable RemapHints hints, boolean computeIfAbsent) {
     // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+    @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable V[] oldValue = (@Nullable V[]) new Object[1];
     V nv = data.compute(key, (K k, @Nullable V value) -> {
       if ((value == null) && !computeIfAbsent) {
@@ -448,7 +448,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   public @Nullable V put(K key, V value) {
     requireNonNull(value);
 
-    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+    @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable V[] oldValue = (@Nullable V[]) new Object[1];
     data.compute(key, (K k, @Nullable V v) -> {
       discardRefresh(k);
@@ -492,7 +492,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @SuppressWarnings("unchecked")
     var castKey = (K) key;
-    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+    @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable V[] oldValue = (V[]) new Object[1];
     data.compute(castKey, (k, v) -> {
       discardRefresh(k);
@@ -516,7 +516,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @SuppressWarnings("unchecked")
     var castKey = (K) key;
-    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+    @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable V[] oldValue = (V[]) new Object[1];
 
     data.computeIfPresent(castKey, (k, v) -> {
@@ -539,7 +539,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   public @Nullable V replace(K key, V value) {
     requireNonNull(value);
 
-    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+    @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable V[] oldValue = (@Nullable V[]) new Object[1];
     data.computeIfPresent(key, (k, v) -> {
       discardRefresh(k);
@@ -557,7 +557,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     requireNonNull(oldValue);
     requireNonNull(newValue);
 
-    @SuppressWarnings({"rawtypes", "unchecked", "Varifier"})
+    @SuppressWarnings({"unchecked", "Varifier"})
     @Nullable V[] prev = (V[]) new Object[1];
     data.computeIfPresent(key, (k, v) -> {
       if (Objects.equals(oldValue, v)) {

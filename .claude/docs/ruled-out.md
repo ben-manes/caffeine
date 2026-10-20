@@ -659,6 +659,12 @@ labelled inconclusive rather than turning absence of a signal into a dead-code c
 - A same-instance refresh leaking the completed future in `refreshes`.
 - A user-initiated `LocalLoadingCache.refresh` lacking the `getWriteTime() == writeTime` ABA
   guard.
+- `RefreshOperation.registration` replaced by comparing `register()`'s result with a placeholder
+  allocated before the compute, as the async view and `refreshIfNeeded` do. The field tells a
+  refresh's own registration from one it joins, which the placeholder's owner thread cannot, since
+  a recursive refresh is returned its own thread's placeholder. The identity form allocates a
+  placeholder on every coalescing call (32 bytes), against the field's retaining one owner `Thread`
+  until the reload completes.
 - `put()`'s insert path missing `discardRefresh`.
 - `doComputeIfAbsent`'s first-load path not calling `discardRefresh` when the mapping
   function throws.
@@ -952,6 +958,11 @@ Read `jsr107-conformance.md`'s topic sections with this section.
 - `JCacheLoaderAdapter.expireTimeMillis` and `CacheProxy.getWriteExpireTimeMillis` falling back
   to `Long.MAX_VALUE` (eternal) when `getExpiryForCreation` throws, and to `Long.MIN_VALUE`
   (unchanged) when `getExpiryForUpdate` throws.
+- The deadline test `!isEternal() && hasExpired(now)` written out at each site (`CacheProxy`, the
+  loader adapter's `reload`, the eviction listener) rather than shared. The guard skips the clock
+  read for an eternal entry, so it cannot fold into `Expirable.hasExpired(long)`, whose caller has
+  already read the clock; a shared form needs a public `Expirable` overload taking the ticker, and
+  `Expirable` reaches users through `unwrap`.
 - The provider's `WeakHashMap` ClassLoader retention. Proven, and not fixable: the value
   chain reaches its own key, and weak values would collect a live manager. JSR-107 provides
   `CachingProvider.close(ClassLoader)` for exactly this. Documentation only.

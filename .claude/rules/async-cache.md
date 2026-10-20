@@ -42,7 +42,8 @@ paths:
   `replace` rechecks the entry's sentinel. `AsyncExpiry` cannot distinguish completion from a
   genuine update. Do not defer every creation there: the synchronous `asMap()` compute family
   installs completed futures without completion handlers.
-- `handleCompletion` and `AsyncBulkCompleter.fillProxies` use `replace(..., quietly=true)`.
+- `handleCompletion`, `AsyncBulkCompleter.fillProxies` and `handleRewrite` (a write of the same
+  future that completed while the write ran) use `replace(..., quietly=true)`.
   `UpdateTask` updates weight/expiry without incrementing the sketch or climber hit counters.
   Loud completion double-counted admission frequency and added a synthetic window hit per miss,
   degrading measured hit rate (w50 -38.6pp; stress@512 -12.7pp). User replacements remain loud.
