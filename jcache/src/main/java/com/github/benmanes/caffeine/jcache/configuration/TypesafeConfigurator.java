@@ -322,8 +322,9 @@ public final class TypesafeConfigurator {
         if (listener.hasPath("filter")) {
           filterFactory = factoryCreator().factoryOf(listener.getString("filter"));
         }
-        boolean oldValueRequired = listener.getBoolean("old-value-required");
-        boolean synchronous = listener.getBoolean("synchronous");
+        boolean oldValueRequired = listener.hasPath("old-value-required")
+            && listener.getBoolean("old-value-required");
+        boolean synchronous = listener.hasPath("synchronous") && listener.getBoolean("synchronous");
         configuration.addCacheEntryListenerConfiguration(
             new MutableCacheEntryListenerConfiguration<>(
                 listenerFactory, filterFactory, oldValueRequired, synchronous));
