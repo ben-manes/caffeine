@@ -278,6 +278,24 @@ final class TypesafeConfigurationTest {
   }
 
   @Test
+  void from_listenerWithoutFlags() {
+    // the flags default to false, as shown in reference.conf, rather than being required
+    var config = ConfigFactory.parseString("caffeine.jcache {"
+        + " listeners.minimal.class = " + TestCacheEntryListener.class.getName()
+        + ", minimal-listener.listeners = [caffeine.jcache.listeners.minimal] }")
+        .withFallback(ConfigFactory.load());
+
+    var cacheConfig = TypesafeConfigurator.from(config, "minimal-listener").orElseThrow();
+    var listener = requireNonNull(Iterables.getOnlyElement(
+        cacheConfig.getCacheEntryListenerConfigurations()));
+    assertThat(listener.getCacheEntryListenerFactory().create())
+        .isInstanceOf(TestCacheEntryListener.class);
+    assertThat(listener.getCacheEntryEventFilterFactory()).isNull();
+    assertThat(listener.isOldValueRequired()).isFalse();
+    assertThat(listener.isSynchronous()).isFalse();
+  }
+
+  @Test
   void from_negativeDuration_throwsConfigException() {
     // new Duration(...) throws IllegalArgumentException for a negative amount, which must
     // surface as a ConfigException like other malformed settings rather than an unadapted IAE
