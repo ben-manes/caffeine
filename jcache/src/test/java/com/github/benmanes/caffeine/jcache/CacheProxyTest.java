@@ -2727,7 +2727,7 @@ final class CacheProxyTest {
       assertThrows(EntryProcessorException.class, () ->
           cache.invoke(KEY_1, (entry, args) -> {
             entry.setValue(VALUE_1);
-            return null;
+            return nullRef();
           }));
       verifyNoInteractions(writer);
       assertThat(cache.containsKey(KEY_1)).isFalse();
@@ -2760,7 +2760,7 @@ final class CacheProxyTest {
       assertThrows(EntryProcessorException.class, () ->
           cache.invoke(KEY_1, (entry, args) -> {
             entry.setValue(VALUE_2);
-            return null;
+            return nullRef();
           }));
       verify(writer, never()).write(any());
     }
