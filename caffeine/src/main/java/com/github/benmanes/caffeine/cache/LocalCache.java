@@ -257,13 +257,6 @@ interface LocalCache<K, V extends @Nullable Object> extends ConcurrentMap<K, V> 
     return value;
   }
 
-  /** Returns {@code null} to isolate workarounds due to JSpecify's lack of poly-null support. */
-  @SuppressWarnings({"DataFlowIssue", "NullableProblems",
-      "NullAway", "TypeParameterUnusedInFormals"})
-  static <T> @NonNull T nullRef() {
-    return null;
-  }
-
   /**
    * Mutable hints for a remapping. The function may set them when returning the same value
    * instance to signal a no-op (skip writes to the entry's metadata or leave an in-flight refresh

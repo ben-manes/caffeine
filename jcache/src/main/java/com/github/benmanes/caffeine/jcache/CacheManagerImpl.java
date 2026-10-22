@@ -154,7 +154,6 @@ public final class CacheManagerImpl implements CacheManager {
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public <K, V> @Nullable CacheProxy<K, V> getCache(String cacheName) {
     requireNonNull(cacheName);
     var classLoader = Thread.currentThread().getContextClassLoader();

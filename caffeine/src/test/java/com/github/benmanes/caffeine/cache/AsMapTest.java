@@ -1257,7 +1257,6 @@ final class AsMapTest {
   }
 
   @ParameterizedTest
-  @SuppressWarnings("NullAway")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void computeIfAbsent_nullValue(Map<Int, Int> map, CacheContext context) {
     assertThat(map.computeIfAbsent(context.absentKey(), key -> null)).isNull();
