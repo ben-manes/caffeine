@@ -1544,7 +1544,6 @@ final class ExpirationTest {
   }
 
   @ParameterizedTest
-  @SuppressWarnings("NullAway")
   @CacheSpec(population = Population.FULL, maximumSize = Maximum.FULL,
       expiryTime = Expire.ONE_MINUTE, mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
       expiry = {CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS},
@@ -1635,7 +1634,6 @@ final class ExpirationTest {
   }
 
   @ParameterizedTest
-  @SuppressWarnings("NullAway")
   @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.MOCKITO },
@@ -1776,7 +1774,7 @@ final class ExpirationTest {
       assertThat(f).isSameInstanceAs(f3);
       return f4;
     })).isSameInstanceAs(f4);
-    f4.complete(nullRef());
+    f4.complete(null);
 
     if (context.expiryType() == CacheExpiry.MOCKITO) {
       verifyNoInteractions(context.expiry());
@@ -1966,7 +1964,7 @@ final class ExpirationTest {
       assertThat(f).isSameInstanceAs(f3);
       return f4;
     })).isSameInstanceAs(f4);
-    f4.complete(nullRef());
+    f4.complete(null);
 
     if (context.expiryType() == CacheExpiry.MOCKITO) {
       verifyNoInteractions(context.expiry());

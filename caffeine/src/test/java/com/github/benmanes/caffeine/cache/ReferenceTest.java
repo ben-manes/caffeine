@@ -1037,7 +1037,6 @@ final class ReferenceTest {
 
   @ParameterizedTest
   @CheckMaxLogLevel(WARN)
-  @SuppressWarnings("NullAway")
   @CacheSpec(population = Population.FULL, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,

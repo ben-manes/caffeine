@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.LocalCache.castNonNull;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
 import static java.lang.invoke.ConstantBootstraps.fieldVarHandle;
@@ -278,7 +277,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
           ? statsAware(mappingFunction, recordLoad).apply(k)
           : mappingFunction.apply(k);
       discardRefresh(k);
-      return castNonNull(computed);
+      return computed;
     });
     if (!missed[0] && recordStats) {
       statsCounter.recordHits(1);

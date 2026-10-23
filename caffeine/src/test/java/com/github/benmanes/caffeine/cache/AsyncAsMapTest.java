@@ -1319,7 +1319,6 @@ final class AsyncAsMapTest {
   }
 
   @ParameterizedTest
-  @SuppressWarnings("NullAway")
   @CacheSpec(removalListener = { Listener.DISABLED, Listener.REJECTING })
   void computeIfAbsent_nullValue(AsyncCache<Int, Int> cache, CacheContext context) {
     assertThat(cache.asMap().computeIfAbsent(context.absentKey(), key -> null)).isNull();
@@ -1381,7 +1380,6 @@ final class AsyncAsMapTest {
   }
 
   @ParameterizedTest
-  @SuppressWarnings("NullAway")
   @CacheSpec(stats = Stats.ENABLED)
   void computeIfAbsent_present_null(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<@Nullable Int>();
@@ -1393,7 +1391,6 @@ final class AsyncAsMapTest {
 
   @ParameterizedTest
   @CheckMaxLogLevel(WARN)
-  @SuppressWarnings("NullAway")
   @CacheSpec(stats = Stats.ENABLED)
   void computeIfAbsent_present_failed(AsyncCache<Int, Int> cache, CacheContext context) {
     var future = new CompletableFuture<Int>();

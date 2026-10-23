@@ -22,7 +22,6 @@ import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static com.github.benmanes.caffeine.cache.Caffeine.toNanosSaturated;
 import static com.github.benmanes.caffeine.cache.Caffeine.toUnchecked;
-import static com.github.benmanes.caffeine.cache.LocalCache.nullRef;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
 import static com.github.benmanes.caffeine.cache.Node.PROBATION;
@@ -1353,13 +1352,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
         var pending = new LocalLoadingCache.PendingRefresh();
         var registered = refreshes.computeIfAbsent(keyReference, k -> {
           if (!node.isAlive() || (node.getWriteTime() != refreshWriteTime)) {
-            return nullRef();
+            return null;
           }
           // no-op if the future's completion state was modified (e.g. obtrude methods)
           @SuppressWarnings("unchecked")
           V value = isAsync ? Async.getIfReady((CompletableFuture<V>) oldValue) : oldValue;
           reloading[0] = value;
-          return (value == null) ? nullRef() : pending;
+          return (value == null) ? null : pending;
         });
         if (registered != pending) {
           return null;

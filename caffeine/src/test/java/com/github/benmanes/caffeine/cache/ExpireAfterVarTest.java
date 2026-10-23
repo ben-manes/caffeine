@@ -980,7 +980,6 @@ final class ExpireAfterVarTest {
   }
 
   @ParameterizedTest
-  @SuppressWarnings("NullAway")
   @CacheSpec(population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   void computeIfAbsent_nullValue(Map<Int, Int> map, CacheContext context) {
     map.computeIfAbsent(context.absentKey(), key -> null);
