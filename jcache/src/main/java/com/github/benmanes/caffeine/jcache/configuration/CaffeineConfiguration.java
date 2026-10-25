@@ -192,7 +192,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   /** Returns a writer created by the configured factory or null if not set. */
-  public @Nullable CacheWriter<K , V> getCacheWriter() {
+  public @Nullable CacheWriter<K, V> getCacheWriter() {
     var factory = delegate.getCacheWriterFactory();
     if (factory != null) {
       @SuppressWarnings("unchecked")

@@ -234,8 +234,8 @@ final class BoundedLocalCacheTest {
       return null;
     };
     doAnswer(fillWriteBuffer)
-      .when(context.removalListener())
-      .onRemoval(any(), any(), any());
+        .when(context.removalListener())
+        .onRemoval(any(), any(), any());
 
     cache.clear();
     assertThat(populated[0]).isTrue();
@@ -259,8 +259,8 @@ final class BoundedLocalCacheTest {
       return null;
     };
     doAnswer(fillWriteBuffer)
-      .when(context.removalListener())
-      .onRemoval(any(), any(), any());
+        .when(context.removalListener())
+        .onRemoval(any(), any(), any());
 
     cache.clear();
     assertThat(populated[0]).isTrue();
@@ -294,8 +294,8 @@ final class BoundedLocalCacheTest {
       return null;
     };
     doAnswer(fillWriteBuffer)
-      .when(context.removalListener())
-      .onRemoval(any(), any(), any());
+        .when(context.removalListener())
+        .onRemoval(any(), any(), any());
 
     cache.clear();
     assertThat(populated[0]).isTrue();
@@ -2060,13 +2060,15 @@ final class BoundedLocalCacheTest {
       expiryTime = Expire.ONE_MINUTE, population = Population.FULL)
   void nodeToCacheEntry_expiration(BoundedLocalCache<Int, Int> cache, CacheContext context) {
     for (var node : cache.data.values()) {
-      var entry = requireNonNull(cache.nodeToCacheEntry(node, v -> v, (int) node.getPolicyWeight()));
+      var entry = requireNonNull(
+          cache.nodeToCacheEntry(node, v -> v, (int) node.getPolicyWeight()));
       assertThat(entry.expiresAfter()).isEqualTo(Duration.ofMinutes(1));
     }
 
     context.ticker().advance(Duration.ofSeconds(30));
     for (var node : cache.data.values()) {
-      var entry = requireNonNull(cache.nodeToCacheEntry(node, v -> v, (int) node.getPolicyWeight()));
+      var entry = requireNonNull(
+          cache.nodeToCacheEntry(node, v -> v, (int) node.getPolicyWeight()));
       assertThat(entry.expiresAfter()).isEqualTo(Duration.ofSeconds(30));
     }
 
@@ -5456,7 +5458,7 @@ final class BoundedLocalCacheTest {
     // Enable the throw for the re-create after expiration
     throwOnCreate.set(true);
 
-    // compute on the entry whose expiry throws — exception must propagate
+    // compute on the entry whose expiry throws must propagate the exception
     assertThrows(IllegalStateException.class, () ->
         cache.asMap().compute(Int.valueOf(1), (k, v) -> Int.valueOf(10)));
 
@@ -5687,7 +5689,7 @@ final class BoundedLocalCacheTest {
     cache.put(Int.valueOf(1), Int.valueOf(7));
     ticker.advance(Duration.ofMinutes(2));
 
-    // compute on expired entry — mapping function throws
+    // compute on the expired entry whose mapping function throws
     assertThrows(IllegalStateException.class, () ->
         cache.asMap().compute(Int.valueOf(1), (k, v) -> {
           throw new IllegalStateException("compute failure");
@@ -5853,8 +5855,8 @@ final class BoundedLocalCacheTest {
     var throwOnCreate = new AtomicBoolean();
     var cache = Caffeine.newBuilder()
         .expireAfter(Expiry.creating((Int key, Int value) -> {
-            checkState(!throwOnCreate.get(), "expiry create failure");
-            return Duration.ofMinutes(5);
+          checkState(!throwOnCreate.get(), "expiry create failure");
+          return Duration.ofMinutes(5);
         }))
         .executor(Runnable::run)
         .recordStats()
@@ -5863,8 +5865,8 @@ final class BoundedLocalCacheTest {
     var future = new CompletableFuture<Int>();
     cache.put(Int.valueOf(1), future);
 
-    // Enable the expiry failure before completion — AsyncExpiry.expireAfterUpdate delegates
-    // to the user's expireAfterCreate when the entry transitions from computing to ready
+    // Enable the expiry failure before completion; AsyncExpiry.expireAfterUpdate delegates to the
+    // user's expireAfterCreate when the entry transitions from computing to ready
     throwOnCreate.set(true);
     future.complete(Int.valueOf(42));
 
@@ -6096,11 +6098,11 @@ final class BoundedLocalCacheTest {
     Int original = requireNonNull(node.getValue());
 
     // No expiration policy is configured, so the locked hasExpired check inside data.compute
-    // returns false and the lambda takes the `return n` branch; the existing-entry-found path that
-    // mirrors the optimistic fast path. Advancing past refreshAfterWrite makes the entry refresh
-    // eligible; with a DIRECT executor and Loader.IDENTITY the reload completes inline so afterRead
-    // returns the refreshed value (the key itself, distinct from the populated negation). The bug
-    // discarded that return; the fix uses it.
+    // returns false and the lambda returns the existing node, the path that mirrors the optimistic
+    // fast path. Advancing past refreshAfterWrite makes the entry eligible for refresh. With a
+    // DIRECT executor and Loader.IDENTITY the reload completes inline, so afterRead returns the
+    // refreshed value (the key itself, distinct from the populated negation), and that value must
+    // be the result.
     context.ticker().advance(Duration.ofMinutes(2));
 
     var result = cache.doComputeIfAbsent(context.firstKey(), node.getKeyReference(),
@@ -6770,8 +6772,8 @@ final class BoundedLocalCacheTest {
     long initialVariableTime = node.getVariableTime();
 
     // Expiry.creating(...) and Expiry.writing(...) both return the existing currentDuration on
-    // read, so the recomputed expirationTime equals the stored variableTime — no CAS, even after
-    // time advances.
+    // read, so the recomputed expirationTime equals the stored variableTime and no CAS occurs, even
+    // after time advances
     context.ticker().advance(Duration.ofSeconds(10));
     assertThat(cache.get(Int.valueOf(1))).isEqualTo(Int.valueOf(1));
     assertThat(node.getVariableTime()).isEqualTo(initialVariableTime);
@@ -6807,8 +6809,7 @@ final class BoundedLocalCacheTest {
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(Int.valueOf(1))));
     long initialVariableTime = node.getVariableTime();
 
-    // Expiry returns a sub-second duration, which bypasses the tolerance — every read fires
-    // the CAS to faithfully track short expirations.
+    // A sub-second expiry bypasses the tolerance, so every read issues the CAS to track it
     requireNonNull(context.expiry());
     when(context.expiry().expireAfterRead(any(), any(), anyLong(), anyLong()))
         .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
@@ -6932,9 +6933,9 @@ final class BoundedLocalCacheTest {
         localCache.nodeFactory.newLookupKey(context.absentKey())));
     long realWriteTime = node.getWriteTime();
 
-    // Replacing the completed future with an in-flight one within the tolerance window must
-    // bump writeTime to the async sentinel — comparing the *candidate* new writeTime against
-    // the stored writeTime (rather than wall-clock now) is what surfaces the transition.
+    // Replacing the completed future with an in-flight one within the tolerance window must bump
+    // writeTime to the async sentinel. The transition is detected by comparing the candidate
+    // writeTime, not the current time, with the stored one.
     var inFlight = new CompletableFuture<Int>();
     cache.put(context.absentKey(), inFlight);
     long expected = toWriteTime(context.ticker().read() + ASYNC_EXPIRY);
@@ -7938,9 +7939,9 @@ final class BoundedLocalCacheTest {
       compute = Compute.SYNC)
   void remap_preserveTimestamps_withoutPreserveRefresh_discardsPendingRefresh(
       BoundedLocalCache<Int, Int> cache, CacheContext context) {
-    // The complement of the above: refresh-rejection callers (the existing refreshIfNeeded paths)
-    // set only preserveTimestamps and want the rejected refresh cleaned up — discardRefresh must
-    // still fire when preserveRefresh is left at its default false.
+    // The complement of the above: refresh-rejection callers (the refreshIfNeeded paths) set only
+    // preserveTimestamps, so discardRefresh must still clean up the rejected refresh when
+    // preserveRefresh keeps its default of false
     var key = context.firstKey();
     var node = requireNonNull(cache.data.get(cache.nodeFactory.newLookupKey(key)));
     var keyRef = node.getKeyReference();
@@ -8211,7 +8212,6 @@ final class BoundedLocalCacheTest {
       endReloading.set(true);
       await().untilAsserted(() -> assertThat(refresh.getNumberOfDependents()).isEqualTo(0));
 
-      // Assert new value
       await().untilAsserted(() ->
           assertThat(asyncCache.get(context.absentKey())).succeedsWith(refresh.get()));
     }
@@ -8270,9 +8270,7 @@ final class BoundedLocalCacheTest {
   /** Returns a ticker that throws while {@code broken} is set, to fail a refresh completion. */
   private static Ticker brokenTicker(FakeTicker ticker, AtomicBoolean broken) {
     return () -> {
-      if (broken.get()) {
-        throw new IllegalStateException("ticker");
-      }
+      checkState(!broken.get(), "ticker");
       return ticker.read();
     };
   }
@@ -8310,7 +8308,7 @@ final class BoundedLocalCacheTest {
       mustExpireWithAnyOf = {AFTER_ACCESS, AFTER_WRITE, VARIABLE},
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expiry = CacheExpiry.CREATE,  expiryTime = Expire.ONE_MINUTE)
+      expiry = CacheExpiry.CREATE, expiryTime = Expire.ONE_MINUTE)
   void brokenEquality_expiration(
       BoundedLocalCache<Object, Int> cache, CacheContext context) {
     var key = new MutableInt(context.absentKey().intValue());
@@ -8800,7 +8798,7 @@ final class BoundedLocalCacheTest {
     long writeTime = node.getWriteTime();
     assertThat(node.casWriteTime(writeTime, markRefreshing(writeTime))).isTrue();
 
-    // ageOf should mask the tag bit — age should be 2ns, not 1ns or 3ns
+    // ageOf masks the tag bit, so the age is 2ns rather than 1ns or 3ns
     assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS)).hasValue(2);
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.NANOSECONDS)).hasValue(2);
 

@@ -1187,8 +1187,9 @@ final class AsyncCacheTest {
     var keys = new ArrayList<>(context.original().keySet());
     Collections.shuffle(keys);
 
-    var result = cache.getAll(keys, (keysToLoad, executor) ->
-        { throw new AssertionError(); }).join();
+    var result = cache.getAll(keys, (keysToLoad, executor) -> {
+      throw new AssertionError();
+    }).join();
     assertThat(result).containsExactlyKeys(keys).inOrder();
   }
 

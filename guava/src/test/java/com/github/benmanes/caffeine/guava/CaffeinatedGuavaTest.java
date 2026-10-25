@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -328,24 +329,24 @@ final class CaffeinatedGuavaTest {
     var extra1 = new Key("x");
     var extra2 = new Key("x");
     var cache = CaffeinatedGuava.build(Caffeine.newBuilder().weakKeys(),
-        new CacheLoader<Key, Integer>() {
-          @Override public Integer load(Key key) {
+        new CacheLoader<Key, MutableInt>() {
+          @Override public MutableInt load(Key key) {
             throw new IllegalStateException();
           }
-          @Override public Map<Key, Integer> loadAll(Iterable<? extends Key> keys) {
-            var loaded = new IdentityHashMap<Key, Integer>();
+          @Override public Map<Key, MutableInt> loadAll(Iterable<? extends Key> keys) {
+            var loaded = new IdentityHashMap<Key, MutableInt>();
             for (var key : keys) {
-              loaded.put(key, key.name.length());
+              loaded.put(key, new MutableInt(key.name.length()));
             }
-            loaded.put(extra1, 1);
-            loaded.put(extra2, 2);
+            loaded.put(extra1, new MutableInt(1));
+            loaded.put(extra2, new MutableInt(2));
             return loaded;
           }
         });
     var key = new Key("ab");
-    assertThat(cache.getAll(ImmutableList.of(key))).containsExactly(key, 2);
-    assertThat(cache.getIfPresent(extra1)).isEqualTo(1);
-    assertThat(cache.getIfPresent(extra2)).isEqualTo(2);
+    assertThat(cache.getAll(ImmutableList.of(key))).containsExactly(key, new MutableInt(2));
+    assertThat(cache.getIfPresent(extra1)).isEqualTo(new MutableInt(1));
+    assertThat(cache.getIfPresent(extra2)).isEqualTo(new MutableInt(2));
   }
 
   @Test

@@ -73,9 +73,9 @@ public final class LinkedPolicy implements Policy {
   public static Set<Policy> policies(Config config,
       Set<Characteristic> characteristics, EvictionPolicy policy) {
     var settings = new BasicSettings(config);
-    return settings.admission().stream().map(admission ->
-      new LinkedPolicy(config, characteristics, admission, policy)
-    ).collect(toUnmodifiableSet());
+    return settings.admission().stream()
+        .map(admission -> new LinkedPolicy(config, characteristics, admission, policy))
+        .collect(toUnmodifiableSet());
   }
 
   @Override

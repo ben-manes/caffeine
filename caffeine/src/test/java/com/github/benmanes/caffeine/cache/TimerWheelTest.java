@@ -150,7 +150,7 @@ final class TimerWheelTest {
     timerWheel.nanos = 0L;
     timerWheel.schedule(new Timer(10 * SPANS[0]));
 
-    // Advance by less than the timer's duration — nothing should be evicted
+    // Advancing by less than the timer's duration evicts nothing
     timerWheel.advance(cache, SPANS[0], Integer.MAX_VALUE);
     verifyNoInteractions(cache);
   }
@@ -590,7 +590,7 @@ final class TimerWheelTest {
     var params = new ArrayList<Arguments>();
     for (long clock : CLOCKS) {
       params.add(arguments(clock, TimeUnit.SECONDS.toNanos(10), 0));
-      params.add(arguments(clock, TimeUnit.MINUTES.toNanos(3),  2));
+      params.add(arguments(clock, TimeUnit.MINUTES.toNanos(3), 2));
       params.add(arguments(clock, TimeUnit.MINUTES.toNanos(10), 3));
     }
     return params;

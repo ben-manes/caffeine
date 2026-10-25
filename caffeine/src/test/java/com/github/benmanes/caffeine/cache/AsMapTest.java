@@ -740,9 +740,9 @@ final class AsMapTest {
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   void removeConditionally_byEquality(Map<Int, Int> map, CacheContext context) {
     // Strong values match the expected value of remove(k, v) by Objects.equals, not identity (the
-    // *_byIdentity tests cover the weak/soft side). Int interning makes the populated value
-    // identity-shared, so a distinct-but-equal `new Int(...)` probe is required; otherwise ==
-    // short-circuits and a regression to identity matching passes every existing test unnoticed.
+    // *_byIdentity tests cover the weak and soft side). Int interning makes the populated value
+    // identity-shared, so the probe must be a distinct but equal new Int(...); otherwise ==
+    // short-circuits and a regression to identity matching passes every other test.
     var key = context.firstKey();
     var value = requireNonNull(context.original().get(key));
 
@@ -753,8 +753,8 @@ final class AsMapTest {
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, values = ReferenceType.STRONG)
   void removeConditionally_brokenCachedEquality(Map<Int, Object> map, CacheContext context) {
-    // The expected value is the equals receiver (CHM/bounded/async alignment); the cached value's
-    // equals is never invoked — here it throws to catch a reversed receiver
+    // The expected value is the equals receiver, as in ConcurrentHashMap and the bounded and async
+    // caches; the cached value's equals throws here to catch a reversed receiver
     map.put(context.absentKey(), new ThrowingEquality());
     assertThat(map.remove(context.absentKey(), Int.valueOf(0))).isFalse();
     assertThat(map).containsKey(context.absentKey());
@@ -1085,9 +1085,9 @@ final class AsMapTest {
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   void replaceConditionally_byEquality(Map<Int, Int> map, CacheContext context) {
     // Strong values match the expected old value of replace(k, old, new) by Objects.equals, not
-    // identity (the *_byIdentity tests cover the weak/soft side). Int interning makes the populated
-    // value identity-shared, so a distinct-but-equal `new Int(...)` probe is required; otherwise ==
-    // short-circuits and a regression to identity matching passes every existing test unnoticed.
+    // identity (the *_byIdentity tests cover the weak and soft side). Int interning makes the
+    // populated value identity-shared, so the probe must be a distinct but equal new Int(...);
+    // otherwise == short-circuits and a regression to identity matching passes every other test.
     var key = context.firstKey();
     var value = requireNonNull(context.original().get(key));
 
@@ -2220,7 +2220,8 @@ final class AsMapTest {
   @CacheSpec(population = Population.FULL,
       removalListener = { Listener.DISABLED, Listener.REJECTING })
   void keySet_containsAll_absent(Map<Int, Int> map, CacheContext context) {
-    assertThat(map.keySet().containsAll(List.of(context.firstKey(), context.absentKey()))).isFalse();
+    var keys = List.of(context.firstKey(), context.absentKey());
+    assertThat(map.keySet().containsAll(keys)).isFalse();
   }
 
   @CheckNoStats
@@ -3761,7 +3762,8 @@ final class AsMapTest {
   @CacheSpec(population = Population.FULL,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   void entrySet_removeAll_byCollection(Map<Int, Int> map, CacheContext context) {
-    var entries = Mockito.spy(Sets.union(context.original().entrySet(), context.absent().entrySet()));
+    var entries = Mockito.spy(
+        Sets.union(context.original().entrySet(), context.absent().entrySet()));
     when(entries.size()).thenReturn(3);
 
     assertThat(map.entrySet().removeAll(entries)).isTrue();
@@ -3776,7 +3778,8 @@ final class AsMapTest {
   @CacheSpec(population = Population.FULL,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   void entrySet_removeAll_bySet(Map<Int, Int> map, CacheContext context) {
-    var entries = Mockito.spy(Sets.union(context.original().entrySet(), context.absent().entrySet()));
+    var entries = Mockito.spy(
+        Sets.union(context.original().entrySet(), context.absent().entrySet()));
 
     assertThat(map.entrySet().removeAll(entries)).isTrue();
     assertThat(map).isExhaustivelyEmpty();
@@ -3938,7 +3941,7 @@ final class AsMapTest {
       await().untilTrue(computing);
       writer.set(Thread.currentThread());
       var entry = Map.entry(context.firstKey(),
-        requireNonNull(context.original().get(context.firstKey())));
+          requireNonNull(context.original().get(context.firstKey())));
       assertThat(map.entrySet().remove(entry)).isFalse();
     }, executor);
 

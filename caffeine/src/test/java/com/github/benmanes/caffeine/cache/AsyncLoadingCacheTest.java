@@ -108,8 +108,8 @@ final class AsyncLoadingCacheTest {
   @CacheSpec(population = Population.EMPTY, loader = Loader.IDENTITY, stats = Stats.ENABLED)
   void getIfPresent_inFlight_recordsMissConsistentlyWithGetAllPresent(
       AsyncLoadingCache<Int, Int> cache) {
-    // An in-flight future is logically absent for a query (getIfReady returns null), so the
-    // synchronous view records a miss — consistent with getAllPresent — rather than a hit.
+    // An in-flight future is absent to a query (getIfReady returns null), so the synchronous view
+    // records a miss rather than a hit, as getAllPresent does
     var future = new CompletableFuture<@Nullable Int>();
     cache.put(Int.valueOf(1), future);
 
@@ -968,8 +968,8 @@ final class AsyncLoadingCacheTest {
   @CacheSpec(compute = Compute.ASYNC,
       removalListener = Listener.CONSUMING, executor = CacheExecutor.THREADED)
   void refresh_current_replaced_null(CacheContext context) {
-    // A refresh that resolves to null after a concurrent write replaced the entry must not
-    // fire a notification — the discard path with newValue == null is silently swallowed.
+    // A refresh that resolves to null after a concurrent write replaced the entry must not notify,
+    // as the discard path drops a null newValue
     var started = new AtomicBoolean();
     var refreshFuture = new CompletableFuture<Int>();
     var cache = context.buildAsync(new AsyncCacheLoader<Int, Int>() {
@@ -1001,9 +1001,8 @@ final class AsyncLoadingCacheTest {
   @ParameterizedTest
   @CacheSpec(population = Population.FULL, loader = Loader.ASYNC_INCOMPLETE)
   void refresh_preservedBy_noopMutation(AsyncLoadingCache<Int, Int> cache, CacheContext context) {
-    // A query-style no-op routed through the synchronous view — putIfAbsent on a present key, or a
-    // conditional replace/remove whose expected value does not match — must leave an in-flight
-    // refresh intact
+    // A no-op through the synchronous view (putIfAbsent on a present key, or a conditional replace
+    // or remove whose expected value does not match) must leave an in-flight refresh intact
     var key = context.firstKey();
     var value = requireNonNull(context.original().get(key));
 

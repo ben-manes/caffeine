@@ -358,7 +358,7 @@ final class AsyncCacheFrayTest {
     assertThat(cache).isValid();
   }
 
-  /** Async weighted variant — tests AsyncWeigher weight=0 for in-flight combined with eviction. */
+  /** A weighted variant: in-flight futures weigh zero (AsyncWeigher) while eviction runs. */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
   void weighted_eviction_convergence() throws InterruptedException {
     AsyncCache<Integer, Integer> cache = Caffeine.newBuilder()

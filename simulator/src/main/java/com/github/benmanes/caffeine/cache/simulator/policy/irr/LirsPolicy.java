@@ -99,7 +99,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     policyStats.recordOperation();
     if (node == null) {
       node = new Node(key);
-      data.put(key,node);
+      data.put(key, node);
       onNonResidentHir(node);
     } else if (node.status == Status.LIR) {
       onLir(node);
@@ -251,7 +251,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     // Bound the number of non-resident entries. While not described in the paper, the author's
     // reference implementation provides a similar parameter to avoid uncontrolled growth.
     @Var Node node = headNR.prevNR;
-    while (sizeNR >  maximumNonResidentSize) {
+    while (sizeNR > maximumNonResidentSize) {
       policyStats.recordOperation();
 
       Node removed = requireNonNull(node);
@@ -302,7 +302,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     checkState(resident == residentSize);
     checkState(sizeHot <= maximumHotSize);
     checkState(residentSize <= maximumSize);
-    checkState(sizeNR <=  maximumNonResidentSize);
+    checkState(sizeNR <= maximumNonResidentSize);
     checkState(data.size() <= ((long) maximumSize + maximumNonResidentSize));
     checkState(sizeS == data.values().stream().filter(node -> node.isInS).count());
     checkState(sizeQ == data.values().stream().filter(node -> node.isInQ).count());

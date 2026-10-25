@@ -124,7 +124,7 @@ final class FactoryGenerator {
     return ordered.stream().map(encoding::get).collect(joining());
   }
 
-  /** Orders the present features by the matrix dimension order, regardless of the set's own order. */
+  /** Orders the features by the matrix dimension order, regardless of the set's own order. */
   private ImmutableList<Feature> canonical(ImmutableSet<Feature> features) {
     return canonicalOrder.stream().filter(features::contains).collect(toImmutableList());
   }
@@ -194,7 +194,7 @@ final class FactoryGenerator {
         Arrays.stream(features).map(Optional::of)).collect(toImmutableSet());
   }
 
-  /** Flattens the present features of a configuration; the order is imposed later by canonical(). */
+  /** Flattens the features of a configuration; the order is imposed later by canonical(). */
   private static ImmutableSet<Feature> toFeatures(Collection<Optional<Feature>> combination) {
     return combination.stream().flatMap(Optional::stream).collect(toImmutableEnumSet());
   }

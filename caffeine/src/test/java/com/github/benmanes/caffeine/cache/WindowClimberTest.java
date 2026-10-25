@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.WindowClimber.RESTART_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.RETEST_SETTLE;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.VETO_RETURN_BUDGET;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Anchor.VETO_STREAK;
@@ -29,6 +28,7 @@ import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACK
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_BACKOFF_MAX;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_COMMITMENT_DEEP;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Ladder.PROBE_CRASH_ESCALATION;
+import static com.github.benmanes.caffeine.cache.WindowClimber.RESTART_THRESHOLD;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Rates.DEVIATION_SEED;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Reading.DENSITY_EPSILON;
 import static com.github.benmanes.caffeine.cache.WindowClimber.Reading.MAX_STEP_FRACTION;

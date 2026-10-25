@@ -222,9 +222,9 @@ final class TypesafeConfigurationTest {
 
   @Test
   void configSource_file_notAbsolute_throwsConfigException() {
-    // a non-absolute file: URI makes `new File(uri)` throw IllegalArgumentException, which must
+    // A non-absolute file: URI makes new File(uri) throw IllegalArgumentException, which must
     // surface as a ConfigException (like the jar: branch's MalformedURLException) rather than
-    // escaping uncaught from getCache/createCache far from its actual cause
+    // escape uncaught from getCache or createCache, far from its cause
     var classloader = requireNonNull(Thread.currentThread().getContextClassLoader());
     var error = assertThrows(ConfigException.BadPath.class, () ->
         configSource().get(URI.create("file:relative.conf"), classloader));
@@ -548,19 +548,6 @@ final class TypesafeConfigurationTest {
     assertThat(config.getWeigherFactory().orElseThrow().create()).isInstanceOf(TestWeigher.class);
   }
 
-  /** A classloader that records the names it is asked to load, delegating resolution to its parent. */
-  private static final class RecordingClassLoader extends ClassLoader {
-    final List<String> loaded = new ArrayList<>();
-
-    RecordingClassLoader(ClassLoader parent) {
-      super(parent);
-    }
-    @Override protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-      loaded.add(name);
-      return super.loadClass(name, resolve);
-    }
-  }
-
   @Test
   void from_malformedSetting() {
     // A parser-typed failure would escape createCache/getCache uncaught, so it is reported as the
@@ -591,5 +578,19 @@ final class TypesafeConfigurationTest {
 
     var error = assertThrows(CacheException.class, () -> TypesafeConfigurator.cacheNames(config));
     assertThat(error).hasCauseThat().isInstanceOf(ConfigException.class);
+  }
+
+  /** Records the names it is asked to load and delegates resolution to its parent. */
+  private static final class RecordingClassLoader extends ClassLoader {
+    final List<String> loaded = new ArrayList<>();
+
+    RecordingClassLoader(ClassLoader parent) {
+      super(parent);
+    }
+    @Override protected Class<?> loadClass(String name, boolean resolve)
+        throws ClassNotFoundException {
+      loaded.add(name);
+      return super.loadClass(name, resolve);
+    }
   }
 }

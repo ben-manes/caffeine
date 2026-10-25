@@ -63,7 +63,7 @@ public record CombinedCsvReport(ImmutableMap<Long, Path> inputFiles,
     writeReport(tabulate());
   }
 
-  /** Returns the policy order and metric values, validating the inputs before writing the report. */
+  /** Returns the policy order and metric values. */
   private Table tabulate() {
     var results = new TreeMap<Label, String>();
     var columns = new LinkedHashSet<String>();

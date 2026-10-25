@@ -200,7 +200,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
     policyStats.recordEviction();
     for (;;) {
       policyStats.recordOperation();
-      if (sizeT1 >= Math.max(1,  p)) {
+      if (sizeT1 >= Math.max(1, p)) {
         Node candidate = requireNonNull(headT1.next);
         if (!candidate.marked) {
           candidate.remove();

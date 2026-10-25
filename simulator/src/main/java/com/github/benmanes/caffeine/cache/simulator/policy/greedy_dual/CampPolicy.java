@@ -148,7 +148,7 @@ public final class CampPolicy implements Policy {
     sentinel.appendToTail(node);
   }
 
-  /** Removes the entry from its LRU queue, advancing the queue's heap priority if it was the head. */
+  /** Removes the entry from its LRU queue, advancing the heap priority if it was the head. */
   private void unlink(Node node) {
     var sentinel = requireNonNull(node.sentinel);
     boolean wasHead = (sentinel.next == node);

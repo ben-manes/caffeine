@@ -29,9 +29,25 @@ map-contract), which are cheap to run but have gone several passes without a cor
 **A report row is a claim, not a confirmed defect.** An earlier sweep reported 186 claims,
 26 after source review, and 7 after standing rulings; even high-rated claims were rejected.
 Those historical counts do not establish a rejection target or release confidence. Check the
-contract and matching module rulings first. Use a focused reproduction for a behavior repair;
-a source/contract proof can settle a documentation correction or no-code disposition. Preserve
-the trigger, controls, counterarguments, and evidence limits.
+contract and matching module rulings first. A ruling closes a row by its mechanism; where its
+reason is an observation (a trial count, a measured rate, an untested bound), re-run it at
+[the refutation bar](finding-taxonomy.md#a-refutation-must-be-able-to-detect-the-defect) before
+closing on it, since every model that rediscovers the mechanism meets the same observation. Use a
+focused reproduction for a behavior repair; a source/contract proof can settle a documentation
+correction or no-code disposition. Preserve the trigger, controls, counterarguments, and evidence
+limits.
+
+**Re-run the recorded observations once per full round.** Grep `ruled-out.md`, both
+design-decisions files and the module rule files for counts, rates and bounds, and re-run each at
+the refutation bar, as `/audit-jdk-seam` Step 4 does for JDK premises. A premise that fails
+reopens its ruling. An external scan that did this overturned five recorded premises in one pass.
+
+**Review a batch of repairs before pushing it.** A repair is new code in an area just shown to
+hide defects: six of the seventeen real defects in that scan's report came from our own recent
+changes, four of them hardening fixes. Run the built-in `/code-review max` over the range. Over the
+seventeen repairs that followed the scan it found five regressions in four commits that targeted
+tests and maintainer review had passed, because its verifiers reproduced candidates against the
+builds before and after.
 
 **Use `general-purpose`, not `auditor`, for verification, triage, and consolidation passes**
 over existing reports. The auditor carries a mandatory-report-write gate (`SubagentStop`) that

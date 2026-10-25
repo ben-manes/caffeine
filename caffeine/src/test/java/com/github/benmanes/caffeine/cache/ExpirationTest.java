@@ -309,10 +309,9 @@ final class ExpirationTest {
       startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void expire_inFlight_nonBlocking_atHead_multiple(
       AsyncCache<Int, Int> cache, CacheContext context) {
-    // Multiple stacked in-flight futures form a contiguous prefix at the deque head. The scan must
-    // iterate past all of them via successive moveToBack calls; this catches regressions where,
-    // example, the loop boundary or `next` capture is rewritten in a way that drops
-    // for second-and-later in-flight entries.
+    // Multiple in-flight futures form a contiguous prefix at the deque head, and the scan must move
+    // past all of them with successive moveToBack calls. This catches a rewrite of the loop
+    // boundary or of the next capture that skips the second and later in-flight entries.
     var stuck = new HashMap<Int, CompletableFuture<Int>>();
     var completed = new HashMap<Int, Int>();
     @Var int i = 0;
@@ -2670,11 +2669,11 @@ final class ExpirationTest {
   @CheckNoStats
   @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-    expiryTime = Expire.ONE_MINUTE, mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
-    expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
-    expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
-    expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-    startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
+      expiryTime = Expire.ONE_MINUTE, mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX})
   void getIfPresentQuietly_expired(Cache<Int, Int> cache, CacheContext context) {
     assertThat(cache.policy().getIfPresentQuietly(context.firstKey())).isNotNull();
     context.ticker().advance(Duration.ofMinutes(10));

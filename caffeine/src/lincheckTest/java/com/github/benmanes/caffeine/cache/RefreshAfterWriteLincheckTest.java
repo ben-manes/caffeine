@@ -45,11 +45,11 @@ final class RefreshAfterWriteLincheckTest {
    * swap.
    * <p>
    * Model checking reliably reproduces the completion-side regression (the discarded reload and the
-   * remove-then-refresh stampede). It does not, however, reach the rarer entry-path straggler — a
-   * reader descheduled across an <em>entire</em> concurrent refresh completion before its own
-   * {@code computeIfAbsent} re-validates the soft-lock — even at 10k invocations, because that
-   * interleaving exceeds the bounded context-switch search. The {@code RefreshAfterWriteFrayTest}
-   * sibling (randomized scheduling) is the reliable guard for that case.
+   * remove-then-refresh stampede). It does not reach the rarer entry-path straggler, a reader
+   * descheduled across an entire concurrent refresh completion before its own
+   * {@code computeIfAbsent} re-validates the soft-lock, even at 10k invocations, because that
+   * interleaving exceeds the bounded context-switch search. {@code RefreshAfterWriteFrayTest}, with
+   * randomized scheduling, guards that case.
    */
   @Test
   @SuppressWarnings("CheckReturnValue")

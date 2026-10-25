@@ -630,7 +630,7 @@ final class ReferenceTest {
   @CacheSpec(population = Population.FULL, keys = ReferenceType.WEAK,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DISABLED,
-      stats = Stats.ENABLED,  removalListener = Listener.CONSUMING)
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   void put_async(AsyncCache<Int, Int> cache, CacheContext context) {
     var collected = getExpectedAfterGc(context, context.original());
     Int key = context.absentKey();

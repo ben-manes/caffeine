@@ -115,8 +115,8 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
           policyStats.recordMiss();
         }
         case IN ->
-          // do nothing
-          policyStats.recordHit();
+            // do nothing
+            policyStats.recordHit();
       }
     } else {
       node = new Node(key);

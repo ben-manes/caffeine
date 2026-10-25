@@ -83,9 +83,9 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
     var settings = new BasicSettings(config);
-    return settings.admission().stream().map(admission ->
-      new SegmentedLruPolicy(admission, config)
-    ).collect(toUnmodifiableSet());
+    return settings.admission().stream()
+        .map(admission -> new SegmentedLruPolicy(admission, config))
+        .collect(toUnmodifiableSet());
   }
 
   @Override

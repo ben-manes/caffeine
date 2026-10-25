@@ -553,7 +553,7 @@ final class EvictionTest {
   void replace_weigherFails_present_async(AsyncCache<Int, Int> cache, CacheContext context) {
     when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
     var future = new CompletableFuture<Int>();
-    cache.asMap().replace(context.firstKey(),  future);
+    cache.asMap().replace(context.firstKey(), future);
     future.complete(context.absentValue());
     assertThat(context).stats().failures(1);
     assertThat(cache).doesNotContainKey(context.absentKey());
@@ -634,9 +634,9 @@ final class EvictionTest {
       Cache<Int, Int> cache, CacheContext context, Eviction<Int, Int> eviction) {
     when(context.weigher().weigh(any(), any())).thenThrow(IllegalStateException.class);
     assertThrows(IllegalStateException.class, () ->
-      cache.asMap().replace(context.firstKey(),
-          requireNonNull(context.original().get(context.firstKey())),
-          context.absentValue()));
+        cache.asMap().replace(context.firstKey(),
+            requireNonNull(context.original().get(context.firstKey())),
+            context.absentValue()));
     assertThat(cache).containsExactlyEntriesIn(context.original());
     assertThat(eviction.weightOf(context.firstKey())).hasValue(1);
   }

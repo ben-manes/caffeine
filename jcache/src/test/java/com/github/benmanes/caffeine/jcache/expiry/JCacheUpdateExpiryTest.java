@@ -88,10 +88,10 @@ final class JCacheUpdateExpiryTest {
   /**
    * A fixture whose update expiry is {@link javax.cache.expiry.Duration#ZERO} and whose creation
    * expiry is eternal. Per {@link ExpiryPolicy#getExpiryForUpdate()} a zero duration means the
-   * updated entry "is considered immediately expired" — so, unlike a zero creation expiry (where the
-   * entry "will not be added to the Cache"), the write still happens: the entry is stored already
-   * expired, the {@code UPDATED} event is published, and a put is recorded, with the entry dropped
-   * on the next access.
+   * updated entry "is considered immediately expired". Unlike a zero creation expiry, where the
+   * entry "will not be added to the Cache", the write still happens: the entry is stored already
+   * expired, the {@code UPDATED} event is published, a put is recorded, and the next access drops
+   * the entry.
    */
   private static JCacheFixture zeroUpdateFixture(AtomicInteger updatedEvents) {
     return updateListenerFixture(new JCacheExpiryPolicy(
@@ -118,9 +118,8 @@ final class JCacheUpdateExpiryTest {
   /**
    * Every JCache update path must agree under a zero update expiry: per the spec the updated entry
    * is "considered immediately expired", so each stores the entry (already expired), publishes a
-   * single {@code UPDATED} event, and records one put — unlike the zero <em>creation</em> expiry
-   * rule, where the entry is not added at all. The {@code put}-family paths historically skipped the
-   * write here, diverging from the {@code replace}/{@code getAndReplace}/{@code invoke} siblings.
+   * single {@code UPDATED} event, and records one put. A zero creation expiry differs, as the entry
+   * is not added at all.
    */
   @ParameterizedTest
   @MethodSource("updateWriteOps")
@@ -375,7 +374,8 @@ final class JCacheUpdateExpiryTest {
           config.setCacheLoaderFactory(() -> loader);
         })
         .configure(config -> {
-          // a distinct creation vs update expiry so the applied deadline proves the update policy ran
+          // a distinct creation vs update expiry so the applied deadline proves
+          // the update policy ran
           config.setExpiryPolicyFactory(() -> new JCacheExpiryPolicy(Duration.ETERNAL,
               new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION.toMillis()), /* access= */ null));
           config.setExecutorFactory(MoreExecutors::directExecutor);

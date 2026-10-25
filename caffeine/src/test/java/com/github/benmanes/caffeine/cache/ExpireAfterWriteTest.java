@@ -399,7 +399,8 @@ final class ExpireAfterWriteTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, expireAfterWrite = Expire.ONE_MINUTE,
-      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX, StartTime.ONE_MINUTE_BEFORE_ZERO})
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX,
+          StartTime.ONE_MINUTE_BEFORE_ZERO})
   void ageOf_async(AsyncCache<Int, Int> cache,
       CacheContext context, @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
     var future = new CompletableFuture<Int>();
@@ -418,7 +419,8 @@ final class ExpireAfterWriteTest {
   @ParameterizedTest
   @SuppressFBWarnings("AFBR_ABNORMAL_FINALLY_BLOCK_RETURN")
   @CacheSpec(population = Population.EMPTY, expireAfterWrite = Expire.ONE_MINUTE,
-      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX, StartTime.ONE_MINUTE_BEFORE_ZERO})
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX,
+          StartTime.ONE_MINUTE_BEFORE_ZERO})
   void ageOf_async_pendingCompletion(AsyncCache<Int, Int> cache, CacheContext context,
       @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) throws Exception {
     var future = new CompletableFuture<Int>();
@@ -542,7 +544,8 @@ final class ExpireAfterWriteTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.FULL, expireAfterWrite = Expire.ONE_MINUTE)
-  void oldestFunc_closed_primedIterator(@ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
+  void oldestFunc_closed_primedIterator(
+      @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
     var iterator = expireAfterWrite.oldest(stream -> {
       var entries = stream.iterator();
       entries.next();
@@ -698,7 +701,8 @@ final class ExpireAfterWriteTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.FULL, expireAfterWrite = Expire.ONE_MINUTE)
-  void youngestFunc_closed_primedIterator(@ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
+  void youngestFunc_closed_primedIterator(
+      @ExpireAfterWrite FixedExpiration<Int, Int> expireAfterWrite) {
     var iterator = expireAfterWrite.youngest(stream -> {
       var entries = stream.iterator();
       entries.next();

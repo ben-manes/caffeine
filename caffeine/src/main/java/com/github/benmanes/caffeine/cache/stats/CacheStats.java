@@ -36,9 +36,9 @@ import com.google.errorprone.annotations.Immutable;
  *     <li>After successfully loading an entry {@code missCount} and {@code loadSuccessCount} are
  *         incremented, and the total loading time, in nanoseconds, is added to
  *         {@code totalLoadTime}.
- *     <li>When an exception is thrown while loading an entry or if the loaded value is {@code null},
- *         {@code missCount} and {@code loadFailureCount} are incremented, and the total loading
- *         time, in nanoseconds, is added to {@code totalLoadTime}.
+ *     <li>When an exception is thrown while loading an entry or if the loaded value is
+ *         {@code null}, {@code missCount} and {@code loadFailureCount} are incremented, and the
+ *         total loading time, in nanoseconds, is added to {@code totalLoadTime}.
  *   </ul>
  *   <li>Cache lookups that reuse a value loaded by a concurrent lookup increment {@code hitCount}.
  *   <li>When an entry is computed through the {@linkplain Cache#asMap asMap} the
@@ -52,8 +52,8 @@ import com.google.errorprone.annotations.Immutable;
  * <p>
  * Lookups include calls to {@link Cache#getIfPresent(Object)},
  * {@link Cache#getAllPresent(Iterable)}, {@link Cache#get(Object, java.util.function.Function)},
- * {@link Cache#getAll(Iterable, java.util.function.Function)}, {@link LoadingCache#get(Object)}, and
- * {@link LoadingCache#getAll(Iterable)}.
+ * {@link Cache#getAll(Iterable, java.util.function.Function)}, {@link LoadingCache#get(Object)},
+ * and {@link LoadingCache#getAll(Iterable)}.
  * <p>
  * This is a <em>value-based</em> class; use of identity-sensitive operations (including reference
  * equality ({@code ==}), identity hash code, or synchronization) on instances of {@code CacheStats}

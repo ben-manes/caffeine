@@ -343,9 +343,8 @@ public final class CacheContextSubject extends Subject {
     }
 
     /**
-     * Fails if any notification carries an eviction cause. Also asserts that the eviction stats
-     * counters are zero — the listener notifications and the stats counters are two views of the
-     * same logical event and must agree.
+     * Fails if any notification carries an eviction cause or the eviction stats counters are not
+     * zero, since both record the same events and must agree.
      */
     public void hasNoEvictions() {
       awaitUntil((type, listener) -> {

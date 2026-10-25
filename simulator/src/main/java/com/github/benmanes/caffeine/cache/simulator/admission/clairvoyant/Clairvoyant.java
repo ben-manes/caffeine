@@ -38,8 +38,9 @@ public final class Clairvoyant implements KeyOnlyAdmitter {
     this.policyStats = policyStats;
     this.nextAccessTimes = new Long2LongOpenHashMap();
     this.nextAccessTimes.defaultReturnValue(Long.MAX_VALUE);
-    this.cursor = ClairvoyantTraceReader.currentCursor().orElseThrow(() -> new IllegalStateException(
-        "admission.Clairvoyant requires the clairvoyant trace reader to be installed"));
+    this.cursor = ClairvoyantTraceReader.currentCursor()
+        .orElseThrow(() -> new IllegalStateException(
+            "admission.Clairvoyant requires the clairvoyant trace reader to be installed"));
   }
 
   @Override

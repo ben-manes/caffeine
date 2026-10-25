@@ -125,7 +125,8 @@ public final class JCacheFixture implements AutoCloseable {
     return cache.statistics;
   }
 
-  public static EventDispatcher<Integer, Integer> getDispatcher(CacheProxy<Integer, Integer> cache) {
+  public static EventDispatcher<Integer, Integer> getDispatcher(
+      CacheProxy<Integer, Integer> cache) {
     return cache.dispatcher;
   }
 

@@ -83,7 +83,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
     policyStats.recordOperation();
     if (node == null) {
       node = new Node(key);
-      data.put(key,node);
+      data.put(key, node);
       onMiss(node);
     } else if (node.status == Status.FILTER) {
       onFilterHit(node);

@@ -24,8 +24,8 @@ import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
 import com.github.benmanes.caffeine.cache.Rule;
-import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.github.benmanes.caffeine.cache.node.NodeContext.FieldAccess;
+import com.github.benmanes.caffeine.cache.node.NodeContext.Strength;
 import com.palantir.javapoet.MethodSpec;
 import com.palantir.javapoet.TypeName;
 

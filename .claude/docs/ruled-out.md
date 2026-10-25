@@ -15,14 +15,18 @@ adjudicated experiments. This does not change the independent first pass of an a
 A ruling is about a mechanism and a consequence. If you have the same mechanism with a
 *different* consequence, a reachable trigger the entry does not name, or a configuration it
 does not cover, that is a new finding and the entry does not dispose of it. Say which part
-differs.
+differs. An entry whose reason is an observation (a trial count, a measured rate, an untested
+bound) covers only the conditions it was observed under; re-run it at
+[the refutation bar](finding-taxonomy.md#a-refutation-must-be-able-to-detect-the-defect) before it
+disposes of a finding outside them.
 
 Check claimed public wording mismatches against the public text as well as the implementation
 ruling. Acceptance of behavior does not establish that the public text describes it, but silence
 alone is not a contradiction. Preserve explicit decisions not to add qualifications or warnings.
 
 Rulings can be overturned. Address the stated reason when new evidence changes the consequence,
-trigger, or configuration.
+trigger, or configuration. Write a measured reason with its attempts, CPU count and size, so the
+next reader can tell what it covers.
 
 ---
 
@@ -1146,6 +1150,14 @@ lifecycle handling, incomplete READMEs, extreme inputs, and unused configuration
   where it sits. Only the IDE reports those inspections, so no build or CI step shows what the
   change does, and checking it by hand costs more than the token. Take such a change only with an
   IDE result in hand.
+- An automatic Java formatter. Spotless 8.10.4 with the Eclipse JDT formatter (4.41) and Google's
+  classic Eclipse profile changed 510 of 723 files: the profile targets Google's patched Eclipse,
+  and stock JDT ignores its annotation and generic-wrapping keys. A profile tuned to the tree still
+  changed 237, mostly layouts JDT cannot express (`@Override` on the signature line, a break after
+  a lambda arrow, compact nested classes), and the result read no better than the hand formatting.
+  JDT 4.41's comment formatting also corrupts `{@snippet :` bodies, rewrites `// @start region=`
+  markers, and splits `/* name= */` parameter comments. google-java-format stays limited to
+  JavaPoet's output; [java-style.md](../rules/java-style.md) records the house layout instead.
 
 ---
 

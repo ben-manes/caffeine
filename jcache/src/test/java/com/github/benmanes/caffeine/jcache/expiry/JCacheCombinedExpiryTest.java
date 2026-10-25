@@ -505,7 +505,8 @@ final class JCacheCombinedExpiryTest {
           config.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(
               new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION.toMillis())));
           config.setExpireAfterWrite(OptionalLong.of(Long.MAX_VALUE));
-          // the default executor is async, so awaitSynchronous is load-bearing (unlike directExecutor)
+          // the default executor is async, so awaitSynchronous is load-bearing
+          // (unlike directExecutor)
           config.addCacheEntryListenerConfiguration(new MutableCacheEntryListenerConfiguration<>(
               /* listenerFactory= */ () -> listener, /* filterFactory= */ null,
               /* isOldValueRequired= */ false, /* isSynchronous= */ true));

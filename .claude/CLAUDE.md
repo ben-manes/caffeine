@@ -71,7 +71,8 @@ with paired stress measurements, correctness review, and a reviewable patch as t
 
 ## Style
 
-Google Java Style. Contributors must sign a CLA.
+Google Java Style, with the house conventions in [rules/java-style.md](rules/java-style.md).
+Contributors must sign a CLA.
 
 ## Guidelines
 
@@ -218,4 +219,4 @@ They compose: `/audit-regret` finds a family and promotes it to a `/climber-gate
 holds it against every later change, and `/climber-minimize` asks periodically whether the rule
 added to fix it is still paying for itself. Read `hill-climber.md` §3 and §5 before starting any of them.
 
-**Review vs Audit**: `/review-change` is for pre-commit code review — reads design docs and filters known-intentional patterns. `/audit-*` skills independently search a specific lens; `/audit-redundancy` proves safe simplifications without requiring a defect or measured speedup. Use review for routine changes, audit when you need fresh-eyes analysis. `/audit-temporal-walk` is a third category (heavyweight, rare-run history-mining) — see its `SKILL.md` for invocation.
+**Review vs Audit**: `/review-change` is for pre-commit code review — reads design docs and filters known-intentional patterns. `/audit-*` skills independently search a specific lens; `/audit-redundancy` proves safe simplifications without requiring a defect or measured speedup. Use review for routine changes, audit when you need fresh-eyes analysis. Before pushing a batch of repairs, run the built-in `/code-review max` over the range ([audit-rounds](docs/audit-rounds.md)); unlike `/review-change`, its verifiers reproduce candidates against the builds before and after. `/audit-temporal-walk` is a third category (heavyweight, rare-run history-mining) — see its `SKILL.md` for invocation.

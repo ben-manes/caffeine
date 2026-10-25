@@ -1710,7 +1710,8 @@ final class ExpireAfterVarTest {
       expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       refreshAfterWrite = Expire.ONE_MINUTE,
-      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX, StartTime.ONE_MINUTE_BEFORE_ZERO})
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX,
+          StartTime.ONE_MINUTE_BEFORE_ZERO})
   void getExpiresAfter_async(AsyncCache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) {
     var future = new CompletableFuture<Int>();
@@ -1730,7 +1731,8 @@ final class ExpireAfterVarTest {
   @SuppressFBWarnings("AFBR_ABNORMAL_FINALLY_BLOCK_RETURN")
   @CacheSpec(population = Population.EMPTY, expiryTime = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
-      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX, StartTime.ONE_MINUTE_BEFORE_ZERO})
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX,
+          StartTime.ONE_MINUTE_BEFORE_ZERO})
   void getExpiresAfter_async_pendingCompletion(AsyncCache<Int, Int> cache,
       CacheContext context, VarExpiration<Int, Int> expireAfterVar) throws Exception {
     var future = new CompletableFuture<Int>();
@@ -3302,7 +3304,7 @@ final class ExpireAfterVarTest {
 
   @FunctionalInterface
   private interface SerializableBiFunction
-    extends BiFunction<Integer, Integer, Duration>, Serializable {}
+      extends BiFunction<Integer, Integer, Duration>, Serializable {}
 
   private static final class ExpirationException extends RuntimeException {
     private static final long serialVersionUID = 1L;

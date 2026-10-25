@@ -2137,11 +2137,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef
             accessOrderWindowDeque().moveToFront(node);
           }
         } else if (node.inMainProbation()) {
-            if (node.getPolicyWeight() <= maximum()) {
-              onAccess(node, access);
-            } else {
-              evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
-            }
+          if (node.getPolicyWeight() <= maximum()) {
+            onAccess(node, access);
+          } else {
+            evictEntry(node, RemovalCause.SIZE, expirationTicker().read());
+          }
         } else {
           setMainProtectedWeightedSize(mainProtectedWeightedSize() + weightDifference);
           if (node.getPolicyWeight() <= maximum()) {

@@ -258,7 +258,7 @@ jobs:
       - name: Download Tests Results
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       - name: Decompress
-        run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
+        run: find . -type f -name '*.tar.gz' -exec tar -zxf {} --one-top-level \;
       - name: Prepare Jacoco Reports
         uses: $/.github/actions/run-gradle
         with:
@@ -357,7 +357,7 @@ jobs:
       - name: Download Tests
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       - name: Decompress
-        run: find . -type f -name '*.tar.gz' -exec sh -c 'tar -zxf {} --one-top-level' \;
+        run: find . -type f -name '*.tar.gz' -exec tar -zxf {} --one-top-level \;
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@7622c5bf3d112a72ab4fa3951c2aa5723d8ab92d # v2.25.0
         continue-on-error: true

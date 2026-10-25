@@ -101,9 +101,11 @@ confidence suspicions to match expectation. Fight this explicitly.
 A design decision documented in `.claude/rules/design-decisions.md` or
 `.claude/docs/ruled-out.md` is a mechanical fact (the code is this way on purpose, and
 here is the property that makes it so). A prior audit conclusion is a belief about the
-code. Use the former; refuse the latter. `ruled-out.md` deliberately carries no audit
-provenance and names no report — there is nothing in it to defer to, only reasons to
-clear.
+code. Use the former; refuse the latter. A decision whose reason is an observation rather
+than a property of the code (a trial count, a measured rate, a bound nobody has tested) holds
+only within the conditions it was observed under; Phase 1.5 says when to re-run it.
+`ruled-out.md` deliberately carries no audit provenance and names no report — there is
+nothing in it to defer to, only reasons to clear.
 
 ## Methodology
 
@@ -228,7 +230,8 @@ taking it on trust.
 **A `ruled-out.md` entry is a mechanism plus a consequence, and it disposes of a finding
 only when you match both.** Say explicitly which you have:
 
-- Same mechanism, same consequence: ruled out. One line, move on.
+- Same mechanism, same consequence: ruled out. One line, move on, unless the entry's reason is
+  an observation (below).
 - Same mechanism, **different consequence** — a reachable trigger the entry does not name,
   a configuration it does not cover, a second call site the reason does not reach: this is
   live, and the entry is the thing you must argue past. Name the part that differs. Two
@@ -236,6 +239,17 @@ only when you match both.** Say explicitly which you have:
   about the eviction listener and the finding used the removal listener, one because a
   decline reason covered `evictFromMain` but not `evictFromWindow`.
 - Different mechanism that merely resembles the entry: not ruled out. Do not cite it.
+
+**An entry whose reason is an observation disposes of a finding only where it was observed.**
+A trial count, a measured rate or an untested bound is the part of a ruling most likely to be
+wrong, and every later audit that matches the mechanism inherits it. Check the observation
+against `finding-taxonomy.md`, *A refutation must be able to detect the defect*. If it states no
+attempts, ran only at the host's CPU count, or used a smaller size than your trigger needs,
+re-run it at that bar under Phase 3.5 before applying it. A premise that fails is a finding,
+labelled **stale premise**, even when the entry's conclusion was reasonable when written. One
+external scan overturned five recorded premises this way in a single pass, among them a refresh
+race accepted at 0/5 that reproduced 1 to 13 times in 20,000 attempts, and a bound of two in-flight
+maintenance submissions, written without a test, that reached 39 copies per 10,000 puts.
 
 **Before arguing past an entry, confirm you are arguing past the right file.** The
 "same mechanism, different consequence" move is legitimate, and it is also how a re-derivation
@@ -299,7 +313,10 @@ Agent(subagent_type=general-purpose, model="opus"):
    Challenge the witnesses too: do their configurations and comparison arms reach
    the intended paths, and can the assertions observe the claimed difference?
    Check whether the oracle is independent of the implementation and whether the
-   conclusions match the logs and the matrix actually exercised.
+   conclusions match the logs and the matrix actually exercised. For a witness that did
+   not reproduce, and for a Phase 1.5 row closed by a ruling's observation, ask whether
+   it could have: attempts against the claimed rate, a two-CPU run, the size, a positive
+   control.
 
    Output a prioritized list of at most ten specific challenges, each in about
    100 words — areas to re-examine, scenarios to test, and gaps to fill. Keep
@@ -337,10 +354,15 @@ For each such finding, before writing the report:
    the generated node classes). Before using a prebuilt artifact, verify that the class under test
    matches the source being audited, for example with `javap`; timestamps or checks of another
    class are insufficient. Run it. A witness that does not reproduce is the finding's
-   answer. Take the sub-agent's measured numbers as the result; do not restate your prediction
+   answer only if it could have: it meets `finding-taxonomy.md`, *A refutation must be able to
+   detect the defect* (attempts sized to the rate, a two-CPU run, the size the claim concerns, a
+   positive control). Otherwise report "not reproduced at <conditions>" and keep the finding
+   open. Take the sub-agent's measured numbers as the result; do not restate your prediction
    as though it were the measurement.
 2. **Use the default ticker and executor as controls**: `Ticker.systemTicker()` and the common
-   pool. If a supported non-default configuration is required, reproduce and price that
+   pool. The pool's size follows the CPU count, so run the default executor at
+   `-XX:ActiveProcessorCount=2` as well as on the host; with one worker it is a different
+   configuration. If a supported non-default configuration is required, reproduce and price that
    configuration and state its scope; absence on defaults alone is not disproof. Attribute timing
    or scheduling effects introduced by the harness instead of generalizing them to other user
    configurations. Retain the standing exclusions for contract-violating user components.
@@ -364,7 +386,8 @@ it measured. If you could not build a witness, say that instead and rate the fin
 `high`.
 
 This applies to a finding you have labelled "ruled out" too, when you are arguing past the
-entry: the ruling was priced, so your counter-case has to be.
+entry: the ruling was priced, so your counter-case has to be. When the ruling's own price misses
+the bar in step 1, your run at that bar is the counter-case.
 
 ### Escalation Criteria (applies to all phases)
 
@@ -459,7 +482,9 @@ and unread-by-you does not make the write optional.
   documentation proposal, and record relevant prior rulings
 - Any new findings from Phase 3 (evaluator-prompted)
 - For each evaluator challenge: how it was resolved
-- Confirmed invariants that survived all phases (with the mechanism protecting each)
+- Confirmed invariants that survived all phases (with the mechanism protecting each, the
+  property it was checked for, and the conditions of any run behind it; it supports nothing
+  wider)
 - Attack plan predictions vs actual results
 - Residual risk: what was NOT inspected and why
 

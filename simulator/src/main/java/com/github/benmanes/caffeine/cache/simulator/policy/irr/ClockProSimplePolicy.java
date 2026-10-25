@@ -129,21 +129,21 @@ public final class ClockProSimplePolicy implements KeyOnlyPolicy {
       printClock();
     }
     long cold = data.values().stream()
-      .filter(node -> node.status == Status.COLD)
-      .count();
+        .filter(node -> node.status == Status.COLD)
+        .count();
     long hot = data.values().stream()
-      .filter(node -> node.status == Status.HOT)
-      .count();
+        .filter(node -> node.status == Status.HOT)
+        .count();
     long nonResident = data.values().stream()
-      .filter(node -> node.status == Status.NR)
-      .count();
+        .filter(node -> node.status == Status.NR)
+        .count();
 
     checkState(cold == sizeCold,
-      "Cold: expected %s but was %s", sizeCold, cold);
+        "Cold: expected %s but was %s", sizeCold, cold);
     checkState(hot == sizeHot,
-      "Hot: expected %s but was %s", sizeHot, hot);
+        "Hot: expected %s but was %s", sizeHot, hot);
     checkState(nonResident == sizeNonResident,
-      "NonResident: expected %s but was %s", sizeNonResident, nonResident);
+        "NonResident: expected %s but was %s", sizeNonResident, nonResident);
     checkState(data.size() == (cold + hot + nonResident));
     checkState(cold + hot <= maxSize);
     checkState(nonResident <= maxSize);

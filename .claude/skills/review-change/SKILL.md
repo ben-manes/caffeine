@@ -86,7 +86,10 @@ Now review this diff. For each change:
 6. If it touches callback invocation points, are they at the documented positions?
 
 ONLY report issues that are NOT explained by design-decisions.md. If a pattern
-looks wrong but is documented as intentional, skip it.
+looks wrong but is documented as intentional, skip it. A decision whose reason is
+an observation (a trial count, a measured rate, an untested bound) explains an
+issue only within the conditions it was observed under; report one outside them
+and name the premise.
 
 Output findings as a JSON array:
 [{"location": "file:line", "issue": "description", "severity": "critical|high|medium|low", "design_ref": "which invariant is violated"}]

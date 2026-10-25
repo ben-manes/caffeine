@@ -267,9 +267,9 @@ final class ExpirationFrayTest {
 
   /**
    * computeIfAbsent must never return an entry that is already expired. Every value is born expired
-   * (expireAfterCreate = 0), so the only correct result is the freshly computed 999 — returning the
-   * 100 inserted by the other thread means the existing-entry expiry check used a stale clock that
-   * predated the insertion (see doComputeIfAbsent, which must re-read now like remap does).
+   * (expireAfterCreate = 0), so the only correct result is the freshly computed 999. Returning the
+   * other thread's 100 means the existing-entry expiry check used a clock read from before the
+   * insertion (doComputeIfAbsent must re-read the time, as remap does).
    */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
   void computeIfAbsent_concurrentInsert_staleExpiryClock() throws InterruptedException {
@@ -298,7 +298,7 @@ final class ExpirationFrayTest {
     assertThat(cache).isValid();
   }
 
-  /** Weighted + expiration variant — tests weight accounting on expired entry compute. */
+  /** A weighted variant that checks weight accounting when compute replaces an expired entry. */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
   void compute_weighted() throws InterruptedException {
     var ticker = new FakeTicker();

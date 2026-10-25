@@ -143,10 +143,10 @@ final class ClimberInvariants {
         .that(density.auditClock.waitSamples).isAtLeast(AUDIT_WAIT_FIRST);
     assertWithMessage("the audit wait stays within its schedule")
         .that(density.auditClock.waitSamples).isAtMost(AUDIT_WAIT_MAX);
-    // The clock may outrun the ladder only once the ladder is exhausted: `undoProbe` reaches the
-    // doubling branch only at the deepest audit rung, and the two places that lower the rung (an
-    // audit confirm, a resize) reset the wait in the same breath. This is the pulse-train ratchet
-    // as an invariant. That defect drove the wait to 128 while the rung was still climbing.
+    // The clock may outrun the ladder only once the ladder is exhausted: undoProbe reaches the
+    // doubling branch only at the deepest audit rung, and both places that lower the rung (an audit
+    // confirm, a resize) reset the wait at the same time. This pins the pulse-train ratchet, which
+    // drove the wait to 128 while the rung was still climbing.
     assertWithMessage("the audit clock outruns its ladder only at the deepest rung")
         .that((density.auditClock.waitSamples <= PROBE_BACKOFF_MAX)
             || (density.audit.rung == PROBE_BACKOFF_MAX)).isTrue();

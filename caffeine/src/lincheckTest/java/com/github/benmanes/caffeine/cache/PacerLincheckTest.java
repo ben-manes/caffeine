@@ -33,8 +33,9 @@ final class PacerLincheckTest {
   /**
    * The first {@code rescheduleCleanUpIfIncomplete} guard calls {@code isScheduled()} without
    * holding the eviction lock, racing a maintenance cycle that nulls {@code future} via
-   * {@code cancel()}. If {@code isScheduled()} reads the field twice, the model checker can land the
-   * null write between the reads so the second dereference throws a {@link NullPointerException}.
+   * {@code cancel()}. If {@code isScheduled()} reads the field twice, the model checker can land
+   * the null write between the reads so the second dereference throws a
+   * {@link NullPointerException}.
    */
   @Test
   @SuppressWarnings("CheckReturnValue")

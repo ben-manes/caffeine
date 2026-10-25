@@ -153,7 +153,8 @@ final class JavaSerializationCopierTest {
   @ParameterizedTest @MethodSource("copiers")
   void deserializable_badData(JavaSerializationCopier copier) {
     assertThrows(CacheException.class, () ->
-        copier.deserialize(new byte[0], requireNonNull(Thread.currentThread().getContextClassLoader())));
+        copier.deserialize(new byte[0],
+            requireNonNull(Thread.currentThread().getContextClassLoader())));
   }
 
   @Test
@@ -178,8 +179,8 @@ final class JavaSerializationCopierTest {
     };
     var copier = new JavaSerializationCopier(
         javaImmutableClasses(), javaDeepCopyStrategies(), allowJavaLang);
-    assertThat(copier.roundtrip(100, requireNonNull(Thread.currentThread().getContextClassLoader())))
-        .isEqualTo(100);
+    assertThat(copier.roundtrip(100,
+        requireNonNull(Thread.currentThread().getContextClassLoader()))).isEqualTo(100);
   }
 
   @Test

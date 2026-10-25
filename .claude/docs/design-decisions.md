@@ -2,6 +2,8 @@
 
 Intentional behavior and review invariants, with their rationale and evidence. Read the
 relevant section before changing a mechanism; use [ruled-out](ruled-out.md) for adjudications.
+A measurement that rules something out states its attempts, CPU count and size
+([finding-taxonomy](finding-taxonomy.md#a-refutation-must-be-able-to-detect-the-defect)).
 
 ## Eviction
 

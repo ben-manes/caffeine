@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.await;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 import static javax.cache.event.EventType.CREATED;
@@ -625,8 +626,9 @@ final class EventDispatcherTest {
 
   @Test
   void chainSynchronous_readsSnapshotAfterClear() {
-    // The future completes only after chainSynchronous drained `pending`; the deferred thenApply must
-    // read the captured snapshot, not the now-cleared (and possibly repopulated) ThreadLocal list
+    // The future completes only after chainSynchronous drained the pending list, so the deferred
+    // thenApply must read the captured snapshot, not the cleared (and possibly repopulated)
+    // ThreadLocal list
     var dispatcher = new EventDispatcher<Integer, Integer>(Runnable::run);
     var thrown = new CacheEntryListenerException("listener");
     var future = new CompletableFuture<@Nullable CacheEntryListenerException>();
@@ -1044,9 +1046,7 @@ final class EventDispatcherTest {
     var jcacheFixture = syncListenerFixture(listener, config -> {
       config.setMaximumWeight(OptionalLong.of(1_000));
       config.setWeigherFactory(Optional.of(() -> (key, value) -> {
-        if (Objects.equals(value, VALUE_2)) {
-          throw new IllegalStateException("weigher");
-        }
+        checkState(!Objects.equals(value, VALUE_2), "weigher");
         return 1;
       }));
     });
@@ -1072,7 +1072,7 @@ final class EventDispatcherTest {
     // copy throws. The Error must drain the pending list before propagating so that the next
     // same-thread operation does not inherit this operation's listener failure.
     var copierError = new AssertionError("copy failed");
-    var outputArmed = new AtomicBoolean();
+    var armed = new AtomicBoolean();
     var matches = new AtomicInteger();
     var copier = new Copier() {
       @Override public <T> T copy(T object, ClassLoader classLoader) {
@@ -1082,7 +1082,8 @@ final class EventDispatcherTest {
         // endComputation runs), and once as the output copy in LoadingCacheProxy.get (after).
         // Only the third, output copy must fail, so that endComputation has already run and the
         // listener failure is pending when it does.
-        if (outputArmed.get() && Objects.equals(object, KEY_1) && (matches.incrementAndGet() == 3)) {
+        if (armed.get() && Objects.equals(object, KEY_1)
+            && (matches.incrementAndGet() == 3)) {
           throw copierError;
         }
         return object;
@@ -1090,7 +1091,9 @@ final class EventDispatcherTest {
     };
     var listenerFailure = new IllegalStateException("listener");
     CacheEntryCreatedListener<Integer, Integer> listener = events -> {
-      throw listenerFailure;
+      if (armed.get()) {
+        throw listenerFailure;
+      }
     };
     var jcacheFixture = syncListenerFixture(listener, config -> {
       config.setStoreByValue(true);
@@ -1098,7 +1101,7 @@ final class EventDispatcherTest {
     });
     try (var fixture = jcacheFixture.build();
          var cache = fixture.jcacheLoading()) {
-      outputArmed.set(true);
+      armed.set(true);
       var e = assertThrows(AssertionError.class, () -> cache.get(KEY_1));
       // The exact Error propagates, not a wrapped form
       assertThat(e).isSameInstanceAs(copierError);
@@ -1106,10 +1109,10 @@ final class EventDispatcherTest {
       assertThat(e.getSuppressed()).hasLength(1);
       assertThat(e.getSuppressed()[0]).hasCauseThat().isSameInstanceAs(listenerFailure);
 
-      // Disarm copier; the next same-thread operation must succeed without inheriting the old
-      // listener failure — it should not throw a CacheEntryListenerException for KEY_2
-      outputArmed.set(false);
-      assertThrows(CacheEntryListenerException.class, () -> cache.get(KEY_2));
+      // With the copier and listener disarmed, the next load succeeds only if it did not inherit
+      // the drained failure
+      armed.set(false);
+      assertThat(cache.get(KEY_2)).isEqualTo(KEY_2);
     }
   }
 
@@ -1117,7 +1120,7 @@ final class EventDispatcherTest {
   void loadingGetAll_copierError_retainsPrimaryFailure() {
     // Mirror of loadingGet_copierError_retainsPrimaryFailure for the bulk path.
     var copierError = new AssertionError("copy failed");
-    var outputArmed = new AtomicBoolean();
+    var armed = new AtomicBoolean();
     var matches = new AtomicInteger();
     var copier = new Copier() {
       @Override public <T> T copy(T object, ClassLoader classLoader) {
@@ -1127,7 +1130,8 @@ final class EventDispatcherTest {
         // each for the result map's key and value via copyMap (after). Only the fourth,
         // output-value copy must fail, so that the listener failure is already pending when it
         // does.
-        if (outputArmed.get() && Objects.equals(object, KEY_1) && (matches.incrementAndGet() == 4)) {
+        if (armed.get() && Objects.equals(object, KEY_1)
+            && (matches.incrementAndGet() == 4)) {
           throw copierError;
         }
         return object;
@@ -1135,7 +1139,9 @@ final class EventDispatcherTest {
     };
     var listenerFailure = new IllegalStateException("listener");
     CacheEntryCreatedListener<Integer, Integer> listener = events -> {
-      throw listenerFailure;
+      if (armed.get()) {
+        throw listenerFailure;
+      }
     };
     var jcacheFixture = syncListenerFixture(listener, config -> {
       config.setStoreByValue(true);
@@ -1143,15 +1149,16 @@ final class EventDispatcherTest {
     });
     try (var fixture = jcacheFixture.build();
          var cache = fixture.jcacheLoading()) {
-      outputArmed.set(true);
+      armed.set(true);
       var e = assertThrows(AssertionError.class, () -> cache.getAll(Set.of(KEY_1)));
       assertThat(e).isSameInstanceAs(copierError);
       assertThat(e.getSuppressed()).hasLength(1);
       assertThat(e.getSuppressed()[0]).hasCauseThat().isSameInstanceAs(listenerFailure);
 
-      // The pending list is cleared; the next operation receives only its own listener failure
-      outputArmed.set(false);
-      assertThrows(CacheEntryListenerException.class, () -> cache.getAll(Set.of(KEY_2)));
+      // With the copier and listener disarmed, the next load succeeds only if it did not inherit
+      // the drained failure
+      armed.set(false);
+      assertThat(cache.getAll(Set.of(KEY_2))).containsExactly(KEY_2, KEY_2);
     }
   }
 
@@ -1368,7 +1375,7 @@ final class EventDispatcherTest {
   }
 
   private static final class ConsumingCacheListener implements
-      CacheEntryCreatedListener<Integer, Integer>,  CacheEntryUpdatedListener<Integer, Integer>,
+      CacheEntryCreatedListener<Integer, Integer>, CacheEntryUpdatedListener<Integer, Integer>,
       CacheEntryRemovedListener<Integer, Integer>, CacheEntryExpiredListener<Integer, Integer> {
     final Queue<CacheEntryEvent<?, ?>> queue = new ConcurrentLinkedQueue<>();
 

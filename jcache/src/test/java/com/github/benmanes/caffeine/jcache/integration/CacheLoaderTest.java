@@ -268,22 +268,23 @@ final class CacheLoaderTest {
 
   @Test
   void get_loaderThrows_recordsMiss() {
-    // A read-through get whose loader throws still records the miss (the find already failed before
-    // the load ran) -- matching the loading getAll, the RI, and core
+    // A read-through get whose loader throws still records the miss, since the lookup failed before
+    // the load ran, as the loading getAll, the RI, and core do
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
     CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
     when(cacheLoader.load(any())).thenThrow(new IllegalStateException("boom"));
     try (var fixture = jcacheFixture(expiry, cacheLoader)) {
       assertThrows(CacheLoaderException.class, () -> fixture.jcacheLoading().get(1));
-      assertThat(JCacheFixture.getStatistics(fixture.jcacheLoading()).getCacheMisses()).isEqualTo(1L);
+      assertThat(JCacheFixture.getStatistics(fixture.jcacheLoading()).getCacheMisses())
+          .isEqualTo(1L);
     }
   }
 
   @ParameterizedTest @MethodSource("readOperations")
   void readThrough_loaderInterrupted_restoresInterruptStatus(
       Consumer<Cache<Integer, Integer>> operation, Set<Integer> keys) {
-    // An interrupted loader, as another JVM language throws it undeclared, leaves the caller's thread
-    // interrupted, as core's loading cache does when it converts the exception itself
+    // An interrupted loader, as another JVM language throws it undeclared, leaves the caller's
+    // thread interrupted, as core's loading cache does when it converts the exception itself
     ExpiryPolicy expiry = Mockito.mock(answer -> Duration.ETERNAL);
     CacheLoader<Integer, Integer> cacheLoader = Mockito.mock();
     when(cacheLoader.load(any())).thenAnswer(invocation -> { throw new InterruptedException(); });
@@ -658,8 +659,8 @@ final class CacheLoaderTest {
 
   @Test
   void reload_nullUpdateExpiry_keepsExpiration() {
-    // getExpiryForUpdate() returning null (the CreatedExpiryPolicy/AccessedExpiryPolicy default)
-    // means "no change" — a refresh reload must keep the entry's existing expiration rather than
+    // getExpiryForUpdate() returning null (the CreatedExpiryPolicy and AccessedExpiryPolicy
+    // default) means "no change", so a refresh reload must keep the entry's expiration rather than
     // make it eternal. A long native expireAfterWrite keeps the jcache-expired entry present.
     var expiry = new CreatedExpiryPolicy(new Duration(TimeUnit.MINUTES, 2));
     CacheLoader<Integer, Integer> loader = Mockito.mock();

@@ -69,7 +69,8 @@ public final class AddExpireAfterAccess implements Rule<LocalCacheContext> {
 
     context.constructor.addStatement(
         "this.timerWheel = builder.expiresVariable() ? new $T() : null", TIMER_WHEEL);
-    context.classSpec.addField(FieldSpec.builder(TIMER_WHEEL, "timerWheel", Modifier.FINAL).build());
+    context.classSpec.addField(
+        FieldSpec.builder(TIMER_WHEEL, "timerWheel", Modifier.FINAL).build());
     context.classSpec.addMethod(MethodSpec.methodBuilder("timerWheel")
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return timerWheel")

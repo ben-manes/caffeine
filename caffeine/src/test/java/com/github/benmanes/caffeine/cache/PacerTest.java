@@ -346,7 +346,7 @@ final class PacerTest {
     Future<?> newFuture = Mockito.mock();
     var pacer = new Pacer(scheduler);
 
-    // nextFireTime - now == 0, so the `> 0` check falls through and reschedules
+    // nextFireTime - now == 0, so the check for a positive delay falls through and reschedules
     pacer.nextFireTime = NOW;
     pacer.future = future;
 

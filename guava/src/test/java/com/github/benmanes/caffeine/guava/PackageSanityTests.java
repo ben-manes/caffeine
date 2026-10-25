@@ -33,9 +33,9 @@ public final class PackageSanityTests extends AbstractPackageSanityTests {
     setDefault(com.google.common.cache.CacheLoader.class,
         com.google.common.cache.CacheLoader.from(key -> key));
     ignoreClasses(clazz ->
-        clazz.getSimpleName().contains("Test") ||
-        clazz.getSimpleName().contains("Stresser") ||
-        clazz.getSimpleName().contains("Generator") ||
-        clazz.getSimpleName().contains("Benchmark"));
+        clazz.getSimpleName().contains("Test")
+            || clazz.getSimpleName().contains("Stresser")
+            || clazz.getSimpleName().contains("Generator")
+            || clazz.getSimpleName().contains("Benchmark"));
   }
 }

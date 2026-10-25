@@ -122,8 +122,8 @@ public final class GuavaCacheFromContext {
       builder.softValues();
     }
     if (context.removalListenerType() != Listener.DISABLED) {
-      boolean translateZeroExpire = (context.expireAfterAccess() == Expire.IMMEDIATELY) ||
-          (context.expireAfterWrite() == Expire.IMMEDIATELY);
+      boolean translateZeroExpire = (context.expireAfterAccess() == Expire.IMMEDIATELY)
+          || (context.expireAfterWrite() == Expire.IMMEDIATELY);
       builder.removalListener(new GuavaRemovalListener<>(
           translateZeroExpire, context.removalListener()));
     }

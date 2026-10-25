@@ -88,7 +88,7 @@ final class JCacheCreationExpiryTest {
   /**
    * A fixture whose creation expiry is {@link javax.cache.expiry.Duration#ZERO}. Per
    * {@link ExpiryPolicy#getExpiryForCreation()}, a zero duration means the new entry "is considered
-   * to be already expired and will not be added to the Cache" — so no entry is stored, no
+   * to be already expired and will not be added to the Cache", so no entry is stored, no
    * {@code CREATED} event is published, and no put is recorded.
    */
   private static JCacheFixture zeroCreationFixture(AtomicInteger createdEvents) {
@@ -143,9 +143,9 @@ final class JCacheCreationExpiryTest {
   }
 
   /**
-   * No live entry results, so putIfAbsent reports false — matching the RI and put()'s no-put rule.
-   * The absent key is a miss (not a hit): the hit/miss reflects prior-presence, not whether the new
-   * value was stored.
+   * No live entry results, so putIfAbsent reports false, as the RI and put()'s no-put rule do. The
+   * absent key counts as a miss, since a hit or miss reflects whether the key was present, not
+   * whether the new value was stored.
    */
   @Test
   void putIfAbsent_absent_zeroCreationExpiry_recordsMissNotHit() {

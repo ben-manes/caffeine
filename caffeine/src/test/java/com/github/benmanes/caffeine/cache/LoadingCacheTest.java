@@ -588,8 +588,8 @@ final class LoadingCacheTest {
     var future = cache.refresh(key);
     assertThat(cache.policy().refreshes()).containsKey(key);
 
-    // The completion creates the absent entry, but the weigher throws while weighing it; the failure
-    // is swallowed yet the refresh token must not be orphaned in refreshes() (#1970).
+    // The completion creates the absent entry, but the weigher throws while weighing it; the
+    // failure is swallowed yet the refresh token must not be orphaned in refreshes() (#1970).
     future.complete(context.absentValue());
 
     assertThat(cache).doesNotContainKey(key);

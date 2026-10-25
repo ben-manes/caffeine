@@ -548,7 +548,7 @@ final class AsyncAsMapTest {
   @CheckNoStats
   @ParameterizedTest
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-  removalListener = { Listener.DISABLED, Listener.REJECTING })
+      removalListener = { Listener.DISABLED, Listener.REJECTING })
   void putIfAbsent_present(AsyncCache<Int, Int> cache, CacheContext context) {
     for (Int key : context.firstMiddleLastKeys()) {
       var value = requireNonNull(cache.asMap().get(key));
@@ -1417,7 +1417,7 @@ final class AsyncAsMapTest {
     @ParameterizedTest
     @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.DISCARDING)
     void computeIfAbsent_incomplete_null(
-      AsyncCache<Int, @Nullable Int> cache, CacheContext context) {
+        AsyncCache<Int, @Nullable Int> cache, CacheContext context) {
       var computeThread = new AtomicReference<@Nullable Thread>();
       var future1 = new CompletableFuture<@Nullable Int>();
       var future2 = new CompletableFuture<@Nullable Int>();
@@ -1503,10 +1503,12 @@ final class AsyncAsMapTest {
     // As we cannot provide immediate checking without an expensive solution, e.g. ThreadLocal,
     // instead we assert that a stack overflow error will occur to inform the developer (vs
     // a live-lock or deadlock alternative).
-    var mappingFunction = new BiFunction<Int, CompletableFuture<Int>, @Nullable CompletableFuture<Int>>() {
+    var mappingFunction = new BiFunction<
+        Int, CompletableFuture<Int>, @Nullable CompletableFuture<Int>>() {
       boolean recursed;
 
-      @Override public @Nullable CompletableFuture<Int> apply(Int key, CompletableFuture<Int> value) {
+      @Override public @Nullable CompletableFuture<Int> apply(
+          Int key, CompletableFuture<Int> value) {
         if (recursed) {
           throw ExpectedError.STACK_OVERFLOW;
         }
@@ -1525,10 +1527,12 @@ final class AsyncAsMapTest {
     // As we cannot provide immediate checking without an expensive solution, e.g. ThreadLocal,
     // instead we assert that a stack overflow error will occur to inform the developer (vs
     // a live-lock or deadlock alternative).
-    var mappingFunction = new BiFunction<Int, CompletableFuture<Int>, @Nullable CompletableFuture<Int>>() {
+    var mappingFunction = new BiFunction<
+        Int, CompletableFuture<Int>, @Nullable CompletableFuture<Int>>() {
       int recursed;
 
-      @Override public @Nullable CompletableFuture<Int> apply(Int key, CompletableFuture<Int> value) {
+      @Override public @Nullable CompletableFuture<Int> apply(
+          Int key, CompletableFuture<Int> value) {
         if (++recursed == 2) {
           throw ExpectedError.STACK_OVERFLOW;
         }

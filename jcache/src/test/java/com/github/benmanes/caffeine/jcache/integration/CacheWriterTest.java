@@ -196,7 +196,8 @@ final class CacheWriterTest {
       var failure = new CacheWriterException("writeAll");
       doThrow(failure).when(writer).writeAll(any());
 
-      // the writer's own exception propagates unwrapped, not re-wrapped in a fresh CacheWriterException
+      // the writer's own exception propagates unwrapped, not re-wrapped in a fresh
+      // CacheWriterException
       var actual = assertThrows(CacheWriterException.class,
           () -> fixture.jcache().putAll(Map.of(KEY_1, VALUE_1)));
       assertThat(actual).isSameInstanceAs(failure);
@@ -232,8 +233,8 @@ final class CacheWriterTest {
          var fixture = jcacheFixture(writer)) {
       fixture.jcache().putAll(Map.of(KEY_1, VALUE_1, KEY_2, VALUE_2));
 
-      // deleteAll deletes KEY_1 (removing it from the batch) then fails, leaving KEY_2 in the store;
-      // only the deleted entry is removed from the cache
+      // deleteAll deletes KEY_1 (removing it from the batch) then fails, leaving KEY_2 in the
+      // store; only the deleted entry is removed from the cache
       doAnswer(invocation -> {
         Collection<?> keys = invocation.getArgument(0);
         keys.remove(KEY_1);
@@ -528,7 +529,8 @@ final class CacheWriterTest {
       var failure = new CacheWriterException("deleteAll");
       doThrow(failure).when(writer).deleteAll(any());
 
-      // the writer's own exception propagates unwrapped, not re-wrapped in a fresh CacheWriterException
+      // the writer's own exception propagates unwrapped, not re-wrapped in a fresh
+      // CacheWriterException
       var actual = assertThrows(CacheWriterException.class,
           () -> fixture.jcache().removeAll(Set.of(KEY_1)));
       assertThat(actual).isSameInstanceAs(failure);
@@ -562,10 +564,10 @@ final class CacheWriterTest {
   void removeAll_nonClearingWriter_stillEmptiesCache() {
     // A CacheWriter.deleteAll that does not remove the deleted keys from the passed collection (as
     // a naive or mock writer will not) is treated as a full success, so removeAll empties the
-    // cache. This intentionally diverges from the reference implementation, which honors the
-    // residual collection even on success and would leave the entries mapped -- matching it would
-    // make removeAll a no-op for the common non-clearing writer. The residual is honored only on
-    // the throw path (removeAll_fails), where it distinguishes the partially-deleted keys.
+    // cache. This diverges from the reference implementation, which honors the residual collection
+    // even on success and so would leave the entries mapped, making removeAll a no-op for the
+    // common non-clearing writer. The residual is honored only on the throw path (removeAll_fails),
+    // where it distinguishes the partially deleted keys.
     CloseableCacheWriter writer = Mockito.mock();
     try (var fixture = jcacheFixture(writer);
          var cache = fixture.jcache()) {
@@ -711,7 +713,8 @@ final class CacheWriterTest {
 
   static Stream<Arguments> mutationOps() {
     return Streams.concat(createOps(), updateOps(), removalOps(), Stream.of(
-        arguments(named("removeAllEntries", (Consumer<Cache<Integer, Integer>>) Cache::removeAll))));
+        arguments(named("removeAllEntries",
+            (Consumer<Cache<Integer, Integer>>) Cache::removeAll))));
   }
 
   @ParameterizedTest

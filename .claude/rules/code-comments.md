@@ -35,6 +35,13 @@ Avoid `—` / `--` as a dramatic pause; use a comma, parens, or a full stop. Avo
 emphasis. Both are usually a sign the clause is overblown — check whether it should exist at all
 before re-punctuating it.
 
+A one-sentence `//` comment has no trailing period; Javadoc keeps its punctuation. Layout rules for
+comments and Javadoc are in [java-style.md](java-style.md).
+
+Test comments follow the same rules: state the scenario or the invariant the test pins in plain
+prose, without markdown such as backticks or emphasis, and delete a comment that only restates the
+next line.
+
 Excessive docs usually mean the code is too complex or poorly named, not that the docs need
 trimming. Verbosity is not communication; noise hides the content that matters.
 

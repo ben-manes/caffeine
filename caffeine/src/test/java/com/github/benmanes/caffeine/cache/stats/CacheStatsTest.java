@@ -58,8 +58,8 @@ final class CacheStatsTest {
   @SuppressWarnings("EqualsWithItself")
   void populated() {
     var stats = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
-    checkStats(stats, 24, 11, 11.0/24, 13, 13.0/24,
-        17, 19, 19.0/36, 17 + 19, 23, 23.0/(17 + 19), 27, 54);
+    checkStats(stats, 24, 11, (11.0 / 24), 13, (13.0 / 24),
+        17, 19, (19.0 / 36), (17 + 19), 23, (23.0 / (17 + 19)), 27, 54);
 
     assertThat(stats.equals(stats)).isTrue();
     assertThat(stats).isNotEqualTo(CacheStats.empty());

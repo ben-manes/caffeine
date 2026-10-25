@@ -48,30 +48,30 @@ public final class Synthetic {
     long events = settings.synthetic().events();
     return switch (settings.synthetic().distribution().toLowerCase(US)) {
       case "counter" ->
-        counter(settings.synthetic().counter().start(), events);
+          counter(settings.synthetic().counter().start(), events);
       case "repeating" ->
-        repeating(settings.synthetic().repeating().items(), events);
+          repeating(settings.synthetic().repeating().items(), events);
       case "uniform" ->
-        uniform(settings.synthetic().uniform().lowerBound(),
-            settings.synthetic().uniform().upperBound(), events);
+          uniform(settings.synthetic().uniform().lowerBound(),
+              settings.synthetic().uniform().upperBound(), events);
       case "exponential" ->
-        exponential(settings.synthetic().exponential().mean(), events);
+          exponential(settings.synthetic().exponential().mean(), events);
       case "hotspot" -> {
         var hotspot = settings.synthetic().hotspot();
         yield hotspot(hotspot.lowerBound(), hotspot.upperBound(),
             hotspot.hotsetFraction(), hotspot.hotOpnFraction(), events);
       }
       case "zipfian" ->
-        zipfian(settings.synthetic().zipfian().items(),
-            settings.synthetic().zipfian().constant(), events);
+          zipfian(settings.synthetic().zipfian().items(),
+              settings.synthetic().zipfian().constant(), events);
       case "scrambled-zipfian" ->
-        scrambledZipfian(settings.synthetic().zipfian().items(),
-            settings.synthetic().zipfian().constant(), events);
+          scrambledZipfian(settings.synthetic().zipfian().items(),
+              settings.synthetic().zipfian().constant(), events);
       case "skewed-zipfian-latest" ->
-        skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
+          skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
       default ->
-        throw new IllegalStateException("Unknown distribution: "
-            + settings.synthetic().distribution());
+          throw new IllegalStateException("Unknown distribution: "
+              + settings.synthetic().distribution());
     };
   }
 

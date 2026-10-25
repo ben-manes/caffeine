@@ -41,7 +41,7 @@ public final class TinyCacheAdapter implements Frequency {
     // number of (independent sets)
     int nrSets = Math.max(1,
         Math.toIntExact(Math.multiplyExact(sampleFactor, settings.maximumSize()) / 64));
-    tcs = new TinyCacheSketch(nrSets, 64,settings.randomSeed());
+    tcs = new TinyCacheSketch(nrSets, 64, settings.randomSeed());
   }
 
   @Override

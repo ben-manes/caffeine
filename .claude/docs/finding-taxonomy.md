@@ -55,6 +55,37 @@ claimed user configuration, identify those effects and do not attribute them to 
 A mechanism that is real and an impact that is reachable are two separate claims, and the second
 is the one severity encodes.
 
+## A refutation must be able to detect the defect
+
+A run that does not reproduce a claim is evidence only at the power it ran with, and a closure
+written from it becomes a ruling that later audits apply to every rediscovery. Each of the first
+three conditions was missing from a closure that a later reproduction overturned, and the fourth
+is what lets a zero mean anything:
+
+- **Attempts sized to the rate.** Zero hits in N attempts bounds the rate only below
+  1 - 0.05^(1/N) at 95% confidence (about 3/N once N is large), so zero in five still allows 45%.
+  A manual refresh of an absent key racing a `put` and an `invalidate` was accepted as discarded
+  0/5 on a pool executor; at 20,000 aligned attempts on the default executor it installed the
+  stale load 1 to 13 times.
+- **Two CPUs as well as the host's count.** With two CPUs the common pool has one worker, which
+  makes the default executor a different configuration. Rerun with `-XX:ActiveProcessorCount=2`.
+  The access-order scan's reordering cost 3.8 points of hit rate at two CPUs and none at 14, and
+  duplicate maintenance submissions reached 39 per 10,000 puts at two CPUs against 5 at 14.
+- **The size the cost is about.** A quadratic step or a walk over a whole region looks flat in
+  the thousands, so sweep the entries, keys or batch to 10^5 or 10^6. Hash-colliding keys were
+  judged clean after 5,000 puts; an async bulk load of 32,768 of them took 2.5 s, against 0.2 s
+  once its snapshot used a tree-binned map.
+- **A positive control.** The same harness reproduces the effect under a configuration that
+  forces it (an inline executor, a widened window, a planted state), so that zero means absent
+  rather than unobservable.
+
+A run that misses one reports what it ran ("not reproduced in 5 attempts at 14 CPUs") and leaves
+the claim open. A confirmed invariant names the property it was checked for and the conditions of
+any run behind it, and supports nothing wider: three audits passed the JCache dispatcher's
+synchronous chaining stage after checking it for executor rejection only, and that stage could
+lose a key's queue slot inside the append. A ruling or design note whose reason is a measurement
+records its conditions beside the conclusion, so the next reader can tell what it covers.
+
 ## Confidence
 
 | Level | Meaning |

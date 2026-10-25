@@ -27,11 +27,13 @@ import static org.mockito.Mockito.verify;
 import static org.slf4j.event.Level.TRACE;
 import static org.slf4j.event.Level.WARN;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -53,8 +55,6 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.google.common.testing.FakeTicker;
 import com.google.common.testing.NullPointerTester;
-import java.io.IOException;
-import java.util.concurrent.CompletionException;
 
 /**
  * A test for the builder methods.
@@ -985,8 +985,9 @@ final class CaffeineTest {
   @Test
   void toNanosSaturated_positive() {
     assertThat(Caffeine.toNanosSaturated(Duration.ofNanos(100L))).isEqualTo(100L);
-    assertThat(Caffeine.toNanosSaturated(Duration.ofNanos(Long.MAX_VALUE))).isEqualTo(Long.MAX_VALUE);
-    // Just below MAX_DURATION: not saturated — returns actual toNanos
+    assertThat(Caffeine.toNanosSaturated(Duration.ofNanos(Long.MAX_VALUE)))
+        .isEqualTo(Long.MAX_VALUE);
+    // Just below MAX_DURATION: not saturated
     assertThat(Caffeine.toNanosSaturated(Duration.ofSeconds(Long.MAX_VALUE / 1_000_000_000, 0)))
         .isLessThan(Long.MAX_VALUE);
     // Above MAX_DURATION: saturates to Long.MAX_VALUE
@@ -996,7 +997,8 @@ final class CaffeineTest {
   @Test
   void toNanosSaturated_negative() {
     assertThat(Caffeine.toNanosSaturated(Duration.ofNanos(-100L))).isEqualTo(-100L);
-    assertThat(Caffeine.toNanosSaturated(Duration.ofNanos(Long.MIN_VALUE))).isEqualTo(Long.MIN_VALUE);
+    assertThat(Caffeine.toNanosSaturated(Duration.ofNanos(Long.MIN_VALUE)))
+        .isEqualTo(Long.MIN_VALUE);
     // Below MIN_DURATION: saturates to Long.MIN_VALUE
     assertThat(Caffeine.toNanosSaturated(Duration.ofDays(-365L * 500))).isEqualTo(Long.MIN_VALUE);
   }

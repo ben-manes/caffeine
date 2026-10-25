@@ -91,7 +91,7 @@ final class MembershipTest {
   }
 
   static Stream<Object[]> expectedInsertions() {
-    return IntStream.range(0,  25).boxed().map(i -> new Object[] { i, FPP });
+    return IntStream.range(0, 25).boxed().map(i -> new Object[] { i, FPP });
   }
 
   static Object[] filterTypes() {

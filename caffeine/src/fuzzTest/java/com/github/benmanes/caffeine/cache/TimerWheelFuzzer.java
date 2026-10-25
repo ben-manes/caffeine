@@ -136,7 +136,7 @@ final class TimerWheelFuzzer {
     long advance = data.consumeLong(0, maxOffset);
     long newClock = clock + advance;
 
-    // A spent budget stops the sweep at a bucket boundary and rewinds the timer for the next advance
+    // when spent, stop the sweep at a bucket boundary and rewinds the timer for the next advance
     int limit = data.consumeBoolean() ? Integer.MAX_VALUE : data.consumeInt(1, 4);
 
     // The eviction callback validates each entry against the clock that it expired at and updates

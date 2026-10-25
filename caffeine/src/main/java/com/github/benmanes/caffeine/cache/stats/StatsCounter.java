@@ -61,7 +61,8 @@ public interface StatsCounter {
    * Records the failed load of a new entry. This method should be called when a cache request
    * causes an entry to be loaded (such as by {@link Cache#get} or {@link Map#computeIfAbsent}), but
    * an exception is thrown while loading the entry or the loading function returns null. This
-   * method should be called once per load, regardless of the number of concurrent requests sharing it.
+   * method should be called once per load, regardless of the number of concurrent requests
+   * sharing it.
    *
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    *        prior to discovering the value doesn't exist or an exception being thrown

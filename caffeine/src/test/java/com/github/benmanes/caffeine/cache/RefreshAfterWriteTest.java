@@ -325,9 +325,8 @@ final class RefreshAfterWriteTest {
       loader = Loader.ASYNC_INCOMPLETE)
   void refreshIfNeeded_replacedNull(
       LoadingCache<Int, @Nullable Int> cache, CacheContext context) {
-    // A refresh that resolves to null and is preempted by a concurrent put must not fire a
-    // REPLACED notification with a null value — the RemovalListener contract promises a
-    // non-null value for REPLACED.
+    // A refresh that resolves to null and is preempted by a concurrent put must not notify REPLACED
+    // with a null value, since the RemovalListener contract promises a non-null value
     var originalValue = requireNonNull(context.original().get(context.firstKey()));
 
     context.ticker().advance(Duration.ofMinutes(2));
@@ -355,9 +354,9 @@ final class RefreshAfterWriteTest {
       removalListener = Listener.CONSUMING, loader = Loader.ASYNC_INCOMPLETE)
   void refreshIfNeeded_rejected_preservesWriteTime(
       LoadingCache<Int, Int> cache, CacheContext context) {
-    // A refresh that is rejected by a concurrent write must not bump writeTime/accessTime when
-    // its compute falls through — otherwise the entry's expiration shifts by the refresh
-    // duration even though the refresh produced no state change.
+    // A refresh rejected by a concurrent write must not bump writeTime or accessTime when its
+    // compute falls through, or the entry's expiration would shift by the refresh's duration
+    // although the refresh changed nothing
     context.ticker().advance(Duration.ofMinutes(2));
     var value = cache.get(context.firstKey());
     assertThat(value).isNotNull();
@@ -444,9 +443,8 @@ final class RefreshAfterWriteTest {
       removalListener = Listener.CONSUMING, loader = Loader.ASYNC_INCOMPLETE)
   void refresh_rejected_preservesWriteTime(
       LoadingCache<Int, Int> cache, CacheContext context) {
-    // Same invariant as above, but triggered by the explicit refresh(key) API — exercises the
-    // compute paths in LocalLoadingCache.refresh (sync) and LocalAsyncLoadingCache
-    // .tryComputeRefresh (async) depending on the parameterized compute mode.
+    // The same invariant through the explicit refresh(key), which runs the compute in
+    // LocalLoadingCache.refresh (sync) or LocalAsyncLoadingCache.tryComputeRefresh (async)
     var refreshFuture = cache.refresh(context.firstKey());
     assertThat(refreshFuture).isNotDone();
 
@@ -468,8 +466,8 @@ final class RefreshAfterWriteTest {
       removalListener = Listener.CONSUMING, loader = Loader.ASYNC_INCOMPLETE)
   void refresh_sameInstance_updatesWriteTime(
       LoadingCache<Int, Int> cache, CacheContext context) {
-    // A successful refresh that reloads the same value instance still resets the write time — a
-    // same-instance setter no-op, not a metadata no-op — so the entry is not treated as unwritten.
+    // A successful refresh that reloads the same value instance still resets the write time (only
+    // the value setter is a no-op), so the entry is not treated as unwritten
     var originalValue = requireNonNull(context.original().get(context.firstKey()));
     var refreshFuture = cache.refresh(context.firstKey());
     assertThat(refreshFuture).isNotDone();
@@ -801,8 +799,8 @@ final class RefreshAfterWriteTest {
     assertThat(cache.policy().refreshes()).isNotEmpty();
     var future = requireNonNull(cache.policy().refreshes().get(context.firstKey()));
 
-    // Re-put the same value instance — changes writeTime but not the value reference.
-    // notifyOnReplace is a no-op for same-instance replacement.
+    // Re-putting the same instance changes writeTime but not the value reference, and
+    // notifyOnReplace ignores a same-instance replacement
     cache.put(context.firstKey(), originalValue);
     future.complete(context.absentKey().negate());
 
@@ -981,9 +979,8 @@ final class RefreshAfterWriteTest {
       compute = Compute.SYNC, loader = Loader.ASYNC_INCOMPLETE,
       maximumSize = { Maximum.DISABLED, Maximum.FULL })
   void compute_absentThrows_keepsRefresh(LoadingCache<Int, Int> cache, CacheContext context) {
-    // A compute whose user function throws on an absent key created nothing, so an independent
-    // in-flight refresh must survive — on both the bounded and unbounded siblings (the unbounded
-    // remap's blanket catch used to discard on this absent path)
+    // A compute whose function throws on an absent key creates nothing, so an independent in-flight
+    // refresh must survive in both the bounded and unbounded caches
     Int key = context.absentKey();
     var refresh = cache.refresh(key);
     assertThat(cache.policy().refreshes()).containsKey(key);
@@ -1421,7 +1418,7 @@ final class RefreshAfterWriteTest {
 
   @CheckNoEvictions
   @ParameterizedTest
-  @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,  loader = Loader.IDENTITY,
+  @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
   void getAllPresent_immediate(LoadingCache<Int, Int> cache, CacheContext context) {
     context.ticker().advance(Duration.ofSeconds(30));
@@ -2073,7 +2070,8 @@ final class RefreshAfterWriteTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
-      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX, StartTime.ONE_MINUTE_BEFORE_ZERO})
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX,
+          StartTime.ONE_MINUTE_BEFORE_ZERO})
   void ageOf_async(AsyncCache<Int, Int> cache,
       CacheContext context, FixedRefresh<Int, Int> refreshAfterWrite) {
     var future = new CompletableFuture<Int>();
@@ -2092,7 +2090,8 @@ final class RefreshAfterWriteTest {
   @ParameterizedTest
   @SuppressFBWarnings("AFBR_ABNORMAL_FINALLY_BLOCK_RETURN")
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
-      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX, StartTime.ONE_MINUTE_BEFORE_ZERO})
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX,
+          StartTime.ONE_MINUTE_BEFORE_ZERO})
   void ageOf_async_pendingCompletion(AsyncCache<Int, Int> cache, CacheContext context,
       FixedRefresh<Int, Int> refreshAfterWrite) throws Exception {
     var future = new CompletableFuture<Int>();

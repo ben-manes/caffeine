@@ -1324,7 +1324,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public @Nullable Function<Set<? extends K>, Map<K, V>>  bulkMappingFunction() {
+    public @Nullable Function<Set<? extends K>, Map<K, V>> bulkMappingFunction() {
       return bulkMappingFunction;
     }
 

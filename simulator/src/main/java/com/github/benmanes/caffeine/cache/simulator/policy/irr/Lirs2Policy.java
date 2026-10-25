@@ -49,7 +49,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *   grow with unique-keys-seen; the reference keeps every shadow for the policy's lifetime.
  *   <li>The CoRe queue always holds the block's current instance-1 slot. The reference uses
  *   instance-1 for fresh HIR misses but instance-2 (the demoted Rmax2 slot) on demotion from LIR;
- *   the unified convention lets {@link Block#instanceInQ()} just return {@link Block#instanceOne()}.
+ *   the unified convention lets {@link Block#instanceInQ()} just return
+ *   {@link Block#instanceOne()}.
  * </ul>
  * As in Zhong's implementation, a correlated reference — the same key accessed twice in a row — is
  * collapsed; LIRS2's role swap is not idempotent, so the repeat is scored as a hit, not replayed.

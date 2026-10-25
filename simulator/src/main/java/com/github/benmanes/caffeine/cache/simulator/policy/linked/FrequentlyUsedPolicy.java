@@ -64,9 +64,9 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config, EvictionPolicy policy) {
     var settings = new BasicSettings(config);
-    return settings.admission().stream().map(admission ->
-      new FrequentlyUsedPolicy(admission, policy, config)
-    ).collect(toUnmodifiableSet());
+    return settings.admission().stream()
+        .map(admission -> new FrequentlyUsedPolicy(admission, policy, config))
+        .collect(toUnmodifiableSet());
   }
 
   @Override

@@ -33,6 +33,18 @@ For each category, construct concrete inputs and trace the code path:
 7. **Time extremes**: nanoTime near Long.MAX_VALUE (wrap-around?), non-monotonic
    ticker, large time jumps (timer wheel handling?).
 
+8. **Inputs a client chooses**: the keys of a bulk call, the order of its lookups,
+   and the lifetimes an `Expiry` derives from a request. An external scan framed as
+   "a client who only chooses keys, order or lifetimes" found four costs that the
+   categories above had not reached. Push hash-colliding keys through every bulk,
+   snapshot and copy path (`getAll`, `putAll`, the async bulk load, the JCache bulk
+   operations with their writer and loader) and price each at 10^4 to 10^6 keys,
+   since a quadratic step can look flat in the thousands. Choose lookup order
+   against every walk that reads recency (the expiration and eviction scans), and
+   lifetimes that stack live entries ahead of an expiring cohort in the timer
+   wheel. Measure the cost per call against an ordinary-key control rather than
+   tracing it.
+
 For each issue: state input values, trace computation, state whether it causes
 incorrect behavior / OOM / infinite loop / degraded performance / graceful handling.
 

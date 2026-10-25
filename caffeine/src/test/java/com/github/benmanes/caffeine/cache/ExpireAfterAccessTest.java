@@ -510,7 +510,8 @@ final class ExpireAfterAccessTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE,
-      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX, StartTime.ONE_MINUTE_BEFORE_ZERO})
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX,
+          StartTime.ONE_MINUTE_BEFORE_ZERO})
   void ageOf_async(AsyncCache<Int, Int> cache,
       CacheContext context, @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var future = new CompletableFuture<Int>();
@@ -529,7 +530,8 @@ final class ExpireAfterAccessTest {
   @ParameterizedTest
   @SuppressFBWarnings("AFBR_ABNORMAL_FINALLY_BLOCK_RETURN")
   @CacheSpec(population = Population.EMPTY, expireAfterAccess = Expire.ONE_MINUTE,
-      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX, StartTime.ONE_MINUTE_BEFORE_ZERO})
+      startTime = {StartTime.RANDOM, StartTime.ONE_MINUTE_FROM_MAX,
+          StartTime.ONE_MINUTE_BEFORE_ZERO})
   void ageOf_async_pendingCompletion(AsyncCache<Int, Int> cache, CacheContext context,
       @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) throws Exception {
     var future = new CompletableFuture<Int>();
@@ -676,7 +678,8 @@ final class ExpireAfterAccessTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE)
-  void oldestFunc_closed_primedIterator(@ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+  void oldestFunc_closed_primedIterator(
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var iterator = expireAfterAccess.oldest(stream -> {
       var entries = stream.iterator();
       entries.next();
@@ -851,7 +854,8 @@ final class ExpireAfterAccessTest {
 
   @ParameterizedTest
   @CacheSpec(population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE)
-  void youngestFunc_closed_primedIterator(@ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
+  void youngestFunc_closed_primedIterator(
+      @ExpireAfterAccess FixedExpiration<Int, Int> expireAfterAccess) {
     var iterator = expireAfterAccess.youngest(stream -> {
       var entries = stream.iterator();
       entries.next();

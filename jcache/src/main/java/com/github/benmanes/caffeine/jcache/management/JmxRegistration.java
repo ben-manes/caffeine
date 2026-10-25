@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.jcache.management;
 
-import org.jspecify.annotations.Nullable;
-
 import static java.util.Locale.US;
 
 import java.lang.management.ManagementFactory;
@@ -30,6 +28,8 @@ import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * Jmx cache utilities.

@@ -65,7 +65,7 @@ final class RefreshAfterWriteFrayTest {
     assertThat(cache).isValid();
   }
 
-  /** Explicit refresh(k) racing a put — exercises the LoadingCache.refresh compute path. */
+  /** An explicit refresh(k) racing a put, through the LoadingCache.refresh compute path. */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
   void explicitRefresh_concurrentPut() throws InterruptedException {
     var ticker = new FakeTicker();
@@ -155,10 +155,9 @@ final class RefreshAfterWriteFrayTest {
   }
 
   /**
-   * Explicit {@code refresh(k)} on an async cache racing a put — exercises the
-   * {@code LocalAsyncLoadingCache} reload-completion path, which holds the token across the value
-   * swap (rather than removing it up front) so the completion cannot leave a leaked token or stomp
-   * the concurrent write.
+   * An explicit {@code refresh(k)} on an async cache racing a put. The
+   * {@code LocalAsyncLoadingCache} reload completion holds the token across the value swap, rather
+   * than removing it up front, so it can neither leak the token nor overwrite the concurrent write.
    */
   @FrayTest(iterations = 10_000, resetClassLoaderPerIteration = false)
   void asyncExplicitRefresh_concurrentPut() throws InterruptedException {
@@ -243,8 +242,8 @@ final class RefreshAfterWriteFrayTest {
 
     ticker.advance(Duration.ofMinutes(2));
 
-    // Thread A triggers refresh of key 1 (the least frequent entry)
-    // Thread B adds a new key, forcing eviction — key 1 is the likely victim
+    // Thread A triggers a refresh of key 1, the least frequent entry
+    // Thread B adds a new key, forcing an eviction whose likely victim is key 1
     var threadA = new Thread(() -> cache.get(1));
     var threadB = new Thread(() -> cache.put(4, 40));
 

@@ -27,6 +27,8 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.await;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getStatistics;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -320,9 +322,8 @@ final class CacheProxyTest {
 
   @Test
   void loadAll_doesNotRecordHitsOrMisses() throws Exception {
-    // Per JSR-107 1.1.1 §12.4 (p.126): loadAll's stats columns Puts/Removals/
-    // Hits/Misses are all No — the operation must not touch these counters
-    // even for the keep-existing path that internally examines present entries.
+    // JSR-107 1.1.1 §12.4 records no puts, removals, hits, or misses for loadAll, so it must not
+    // touch these counters, even on the keep-existing path that examines present entries
     try (var fixture = JCacheFixture.builder()
         .configure(config -> config.setExecutorFactory(MoreExecutors::directExecutor))
         .build()) {
@@ -348,8 +349,7 @@ final class CacheProxyTest {
 
   @Test
   void iterator_recordsHitPerYield() {
-    // Per JSR-107 1.1.1 §12.4 statistics table (p.126): iterator()'s "Hits"
-    // column is Yes — every yielded entry counts as a hit.
+    // JSR-107 1.1.1 §12.4 counts a hit for every entry that iterator() yields
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.jcache().put(KEY_2, VALUE_2);
@@ -383,9 +383,6 @@ final class CacheProxyTest {
 
   @Test
   void loadAll_cacheLoaderException_unwrapped() {
-    // Covers the inner catch (CacheLoaderException) branch in
-    // CacheProxy.loadAll's runAsync — the wrapped path is exercised by
-    // loadAll_executorRejects_notifiesListener.
     var cle = new CacheLoaderException("test");
     CacheLoader<Integer, Integer> loader = Mockito.mock();
     when(loader.loadAll(anyIterable())).thenThrow(cle);
@@ -403,8 +400,6 @@ final class CacheProxyTest {
 
   @Test
   void loadAll_loading_cacheLoaderException_unwrapped() {
-    // Covers the inner catch (CacheLoaderException) branch in
-    // LoadingCacheProxy.loadAll's runAsync.
     var cle = new CacheLoaderException("test");
     CacheLoader<Integer, Integer> loader = Mockito.mock();
     when(loader.loadAll(anyIterable())).thenThrow(cle);
@@ -514,7 +509,8 @@ final class CacheProxyTest {
   @Test
   void iterator_remove_valueChangedConcurrently_removesByKey() {
     // EntryIterator.remove removes the last-returned key unconditionally (weakly-consistent
-    // iterator, RI/BLC/ULC/CHM parity), even when the value was replaced between next() and remove()
+    // iterator, RI/BLC/ULC/CHM parity), even when the value was replaced between next() and
+    // remove()
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock())) {
       fixture.jcache().put(KEY_1, VALUE_1);
       var iter = fixture.jcache().iterator();
@@ -527,7 +523,8 @@ final class CacheProxyTest {
 
   @Test
   void iterator_next_copierFails_doesNotReturnTheEntry() {
-    // An entry that fails to copy is never returned, so it is neither counted as a hit nor removable
+    // An entry that fails to copy is never returned, so it is neither counted as a hit nor
+    // removable
     var armed = new AtomicBoolean();
     var copier = new Copier() {
       @Override public <T> T copy(T object, ClassLoader classLoader) {
@@ -584,9 +581,9 @@ final class CacheProxyTest {
 
   @Test
   void loadAll_synchronousListenerThrows_routesToOnException() {
-    // A synchronous listener throwing while loadAll publishes CREATED now propagates through
-    // onException (a CacheException — "a problem performing the load") instead of being swallowed;
-    // onCompletion is chained after the listeners rather than firing before them
+    // A synchronous listener that throws while loadAll publishes CREATED is reported to onException
+    // as a CacheException ("a problem performing the load"), and onCompletion runs after the
+    // listeners rather than before them
     CacheEntryCreatedListener<Integer, Integer> throwing =
         events -> { throw new IllegalStateException("boom"); };
     CacheLoader<Integer, Integer> loader = new CacheLoader<>() {
@@ -666,9 +663,7 @@ final class CacheProxyTest {
     var tasks = new ArrayDeque<Runnable>();
     var copier = new Copier() {
       @Override public <T> T copy(T object, ClassLoader classLoader) {
-        if (object.equals(VALUE_2)) {
-          throw new IllegalStateException("copy failed");
-        }
+        checkState(!object.equals(VALUE_2), "copy failed");
         return object;
       }
     };
@@ -1037,7 +1032,8 @@ final class CacheProxyTest {
               .setExpireTimeMillis(fixture.currentTime().toMillis() + 60_000);
         }
       }
-      assertThat(requireNonNull(JCacheFixture.getExpirable(cache, eternalKey)).isEternal()).isTrue();
+      assertThat(requireNonNull(JCacheFixture.getExpirable(cache, eternalKey)).isEternal())
+          .isTrue();
 
       var keys = IntStream.rangeClosed(1, 10).boxed().collect(toImmutableSet());
       assertWithMessage("an eternal entry was expired by a negative clock")
@@ -1081,9 +1077,7 @@ final class CacheProxyTest {
     // store-by-value failure must abort before the batch reaches the system of record.
     var copier = new Copier() {
       @Override public <T> T copy(T object, ClassLoader classLoader) {
-        if (object.equals(VALUE_2)) {
-          throw new IllegalArgumentException("copy failed");
-        }
+        checkArgument(!object.equals(VALUE_2), "copy failed");
         return object;
       }
     };
@@ -2136,7 +2130,8 @@ final class CacheProxyTest {
       assertThat(cache.getAll(Set.of(KEY_1, KEY_2)))
           .containsExactly(KEY_1, new MutableInt(VALUE_1), KEY_2, new MutableInt(VALUE_2));
 
-      // The bulk read-through path copies each loaded value; mutating the loader's instance is isolated.
+      // The bulk read-through path copies each loaded value; mutating the loader's instance is
+      // isolated
       loaded1.setValue(VALUE_3);
       loaded2.setValue(VALUE_3);
       assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
@@ -2332,10 +2327,10 @@ final class CacheProxyTest {
             config.setExecutorFactory(() -> executor);
             config.addCacheEntryListenerConfiguration(listenerConfig);
           }).build()) {
-        // Both publish and getAll must run on the same worker thread so they share the dispatcher's
-        // per-thread `pending` ThreadLocal. publish queues the listener on the executor (separate
-        // thread) where it parks, so the future stays incomplete; getAll(emptySet) is then expected
-        // to block in awaitSynchronous waiting on it.
+        // Both publish and getAll must run on the same worker thread so that they share the
+        // dispatcher's per-thread pending list. publish queues the listener on the executor's
+        // thread, where it parks, so the future stays incomplete and getAll(emptySet) blocks in
+        // awaitSynchronous waiting on it.
         var task = new FutureTask<>(() -> {
           fixture.jcache().dispatcher.publishCreated(fixture.jcache(), KEY_1, VALUE_1);
           assertThat(fixture.jcache().getAll(Set.of())).isEmpty();
@@ -2503,7 +2498,7 @@ final class CacheProxyTest {
 
   @Test
   void invokeAll_perKeyFailure_isolatedNotAborted() {
-    var config =  new MutableConfiguration<Object, Integer>();
+    var config = new MutableConfiguration<Object, Integer>();
     try (var fixture = jcacheFixture(Mockito.mock(), Mockito.mock(), Mockito.mock());
          var cache = fixture.cacheManager().createCache("invokeAll-nonSerializableKey", config)) {
       var goodKey = KEY_1;
@@ -2511,7 +2506,7 @@ final class CacheProxyTest {
       cache.put(goodKey, VALUE_1);
       var results = cache.invokeAll(Set.of(goodKey, badKey), (entry, args) -> entry.getValue());
 
-      // The good key is processed and returned -- one bad key does not abort the batch.
+      // The good key is processed and returned; one bad key does not abort the batch
       assertThat(requireNonNull(results.get(goodKey)).get()).isEqualTo(VALUE_1);
       // The store-by-value copy failure of the bad key is isolated to its own result.
       assertThrows(EntryProcessorException.class, () -> requireNonNull(results.get(badKey)).get());
@@ -2528,7 +2523,10 @@ final class CacheProxyTest {
       fixture.jcache().put(KEY_1, VALUE_1);
 
       assertThrows(NullPointerException.class, () -> fixture.jcache().invokeAll(
-          keys, (entry, args) -> { calls.incrementAndGet(); return entry.getValue(); }));
+          keys, (entry, args) -> {
+            calls.incrementAndGet();
+            return entry.getValue();
+          }));
 
       // Caffeine's stronger behavior: the null element is prevalidated, so no processor call
       // happens for the valid key either, and the map is left unchanged.
@@ -2686,9 +2684,7 @@ final class CacheProxyTest {
     // An absent key is not replaced, so the new value is not copied and cannot fail the operation
     var copier = new Copier() {
       @Override public <T> T copy(T object, ClassLoader classLoader) {
-        if (object.equals(VALUE_1)) {
-          throw new IllegalArgumentException("copy failed");
-        }
+        checkArgument(!object.equals(VALUE_1), "copy failed");
         return object;
       }
     };
@@ -2708,9 +2704,7 @@ final class CacheProxyTest {
   void invoke_created_copierThrows_doesNotWriteThrough() throws IOException {
     var copier = new Copier() {
       @Override public <T> T copy(T object, ClassLoader classLoader) {
-        if (object.equals(VALUE_1)) {
-          throw new IllegalArgumentException("copy failed");
-        }
+        checkArgument(!object.equals(VALUE_1), "copy failed");
         return object;
       }
     };
@@ -2837,8 +2831,14 @@ final class CacheProxyTest {
 
       // postProcess must hand the writer an immutable EntryProxy, not the live EntryProcessorEntry
       // (a MutableEntry) the processor mutated, matching every other write-through site
-      Integer created = cache.invoke(KEY_1, (entry, args) -> { entry.setValue(VALUE_1); return VALUE_1; });
-      Integer updated = cache.invoke(KEY_1, (entry, args) -> { entry.setValue(VALUE_2); return VALUE_2; });
+      Integer created = cache.invoke(KEY_1, (entry, args) -> {
+        entry.setValue(VALUE_1);
+        return VALUE_1;
+      });
+      Integer updated = cache.invoke(KEY_1, (entry, args) -> {
+        entry.setValue(VALUE_2);
+        return VALUE_2;
+      });
       assertThat(created).isEqualTo(VALUE_1);
       assertThat(updated).isEqualTo(VALUE_2);
 
@@ -2854,9 +2854,9 @@ final class CacheProxyTest {
 
   @Test
   void put_nullCreationExpiry_defaultsToEternal() {
-    // A null getExpiryForCreation() is spec-unspecified for a create (no prior duration to keep), so
-    // it defaults to eternal — parity with the read-through loader path — not the born-expired
-    // Long.MIN_VALUE sentinel (which would expire immediately under a negative ticker)
+    // The spec leaves a null getExpiryForCreation() unspecified for a create (there is no prior
+    // duration to keep), so it defaults to eternal, as on the read-through load path, rather than
+    // the born-expired Long.MIN_VALUE sentinel that a negative ticker would expire immediately
     ExpiryPolicy expiry = Mockito.mock();
     when(expiry.getExpiryForCreation()).thenReturn(null);
     try (var fixture = JCacheFixture.builder().configure(config ->

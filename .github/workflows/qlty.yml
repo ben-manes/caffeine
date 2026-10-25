@@ -38,7 +38,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install Qlty
-        uses: qltysh/qlty-action/install@c9b09987143d1e4ac955f4803c7bea742102feb5 # v2.4.0
+        uses: qltysh/qlty-action/install@ebcd284bf32e36a030afe15f1e136c7be08b9506 # v2.5.0
       - name: Setup Qlty
         run: |
           qlty init --skip-plugins -n
@@ -48,21 +48,14 @@ jobs:
           printf '\n[[triage]]\nmatch.rules = ["radarlint-java:java:S100"]\nmatch.file_patterns = ["**/src/test/**"]\nset.ignored = true\n' >> .qlty/qlty.toml
       - name: Run Qlty Check
         continue-on-error: true
-        run: |
-          qlty check --no-fail --no-formatters --sarif . > results.sarif
-          # Remove invalid tool.driver.notifications array which causes sarif validation failures
-          if [ -f results.sarif ]; then
-            tmp=$(mktemp)
-            jq 'del(.runs[].tool.driver.notifications) | del(.runs[].results[].taxa[].name)' \
-              results.sarif > "$tmp" && mv "$tmp" results.sarif
-          fi
+        run: qlty check --no-fail --no-formatters --sarif . > results.sarif
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@558493d6c74bf472d87c84eab196434afc2fa029 # v3.1.0
         with:
           files: results.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: results.sarif
@@ -95,7 +88,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install Qlty
-        uses: qltysh/qlty-action/install@c9b09987143d1e4ac955f4803c7bea742102feb5 # v2.4.0
+        uses: qltysh/qlty-action/install@ebcd284bf32e36a030afe15f1e136c7be08b9506 # v2.5.0
       - name: Setup Qlty
         run: |
           qlty init --skip-plugins -n
@@ -116,7 +109,7 @@ jobs:
         with:
           files: results.sarif
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         if: steps.check_files.outputs.files_exists == 'true'
         with:
           sarif_file: results.sarif

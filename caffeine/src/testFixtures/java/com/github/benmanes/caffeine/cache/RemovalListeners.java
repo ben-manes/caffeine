@@ -65,8 +65,8 @@ public final class RemovalListeners {
     public void onRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
       validate(key, value, cause);
       rejected.incrementAndGet();
-      throw new RejectedExecutionException("Rejected eviction of " +
-          new RemovalNotification<>(key, value, cause));
+      throw new RejectedExecutionException("Rejected eviction of "
+          + new RemovalNotification<>(key, value, cause));
     }
   }
 

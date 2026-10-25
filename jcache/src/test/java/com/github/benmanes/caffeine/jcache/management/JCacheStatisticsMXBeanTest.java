@@ -96,9 +96,9 @@ final class JCacheStatisticsMXBeanTest {
   void record_disabledOrZero_isNoOp() {
     var stats = new JCacheStatisticsMXBean();
 
-    // Disabled (the default): every record* short-circuits on the `enabled` guard. Most call sites
-    // also check a captured `statsEnabled`, but invoke records its puts unconditionally and relies
-    // on this guard.
+    // Disabled (the default): every record* method returns early on the enabled guard. Most call
+    // sites also check a captured statsEnabled, but invoke records its puts unconditionally and
+    // relies on this guard.
     stats.recordPuts(1);
     stats.recordGetTime(1);
     stats.recordPutTime(1);
@@ -106,7 +106,7 @@ final class JCacheStatisticsMXBeanTest {
     assertThat(stats.getCachePuts()).isEqualTo(0L);
     assertThat(stats.getAverageGetTime()).isEqualTo(0F);
 
-    // Enabled but zero: the `count`/`durationNanos != 0` guard still short-circuits the add
+    // Enabled but zero: the guard on a non-zero count or duration still skips the add
     stats.enable(true);
     stats.recordPuts(0);
     stats.recordGetTime(0);

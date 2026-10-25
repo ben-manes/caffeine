@@ -311,8 +311,9 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   }
 
   /** A function executed asynchronously after a bulk load completes. */
-  final class AsyncBulkCompleter<K, V> implements BiFunction<@Nullable Map<? extends K, ? extends V>,
-      @Nullable Throwable, @Nullable Map<? extends K, ? extends V>> {
+  final class AsyncBulkCompleter<K, V>
+      implements BiFunction<@Nullable Map<? extends K, ? extends V>,
+          @Nullable Throwable, @Nullable Map<? extends K, ? extends V>> {
     @SuppressWarnings("ImmutableMemberCollection")
     private final Map<K, CompletableFuture<@Nullable V>> proxies;
     private final LocalCache<K, CompletableFuture<V>> cache;
