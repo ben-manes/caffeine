@@ -5321,7 +5321,7 @@ final class BoundedLocalCacheTest {
   @Test
   void computeIfAbsent_expiredOptimistic_liveUnderLock() {
     var ticker = new FakeTicker();
-    var removed = new ArrayList<Int>();
+    var removed = new ArrayList<@Nullable Int>();
     Cache<Int, Int> cache = Caffeine.newBuilder()
         .removalListener((@Nullable Int key, @Nullable Int value, RemovalCause cause) ->
             removed.add(key))
