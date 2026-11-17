@@ -138,7 +138,7 @@ final class JCacheCreationExpiryTest {
         arguments(named("invoke", (Consumer<Cache<Integer, Integer>>) c -> c.invoke(KEY_1,
             (entry, args) -> {
               entry.setValue(VALUE_2);
-              return nullRef();
+              return null;
             }))));
   }
 
@@ -556,7 +556,7 @@ final class JCacheCreationExpiryTest {
     try (var fixture = jcacheFixture()) {
       var result = fixture.jcache().invoke(KEY_1, (entry, args) -> {
         entry.setValue(VALUE_2);
-        return nullRef();
+        return null;
       });
       assertThat(result).isNull();
 
@@ -575,7 +575,7 @@ final class JCacheCreationExpiryTest {
 
       var result = fixture.jcache().invoke(KEY_1, (entry, args) -> {
         entry.setValue(VALUE_2);
-        return nullRef();
+        return null;
       });
       assertThat(result).isNull();
 
@@ -594,7 +594,7 @@ final class JCacheCreationExpiryTest {
 
       var result = fixture.jcache().invoke(KEY_1, (entry, args) -> {
         entry.setValue(VALUE_2);
-        return nullRef();
+        return null;
       });
       assertThat(result).isNull();
 

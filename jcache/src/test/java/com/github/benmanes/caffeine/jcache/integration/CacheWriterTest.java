@@ -473,7 +473,7 @@ final class CacheWriterTest {
       var result = fixture.jcacheLoading().invoke(KEY_1, (entry, args) -> {
         entry.getValue();
         entry.remove();
-        return nullRef();
+        return null;
       });
       assertThat(result).isNull();
       assertThat(fixture.jcacheLoading().containsKey(KEY_1)).isFalse();
@@ -687,7 +687,7 @@ final class CacheWriterTest {
         arguments(named("invoke", (Consumer<Cache<Integer, Integer>>) c ->
             c.invoke(KEY_1, (entry, args) -> {
               entry.setValue(VALUE_1);
-              return nullRef();
+              return null;
             }))));
   }
 
@@ -772,7 +772,7 @@ final class CacheWriterTest {
         arguments(named("invoke", (Consumer<Cache<Integer, Integer>>) c ->
             c.invoke(KEY_1, (entry, args) -> {
               entry.setValue(VALUE_2);
-              return nullRef();
+              return null;
             }))));
   }
 
@@ -835,7 +835,7 @@ final class CacheWriterTest {
         arguments(named("invoke", (Consumer<Cache<Integer, Integer>>) c ->
             c.invoke(KEY_1, (entry, args) -> {
               entry.remove();
-              return nullRef();
+              return null;
             }))),
         arguments(named("iteratorRemove", (Consumer<Cache<Integer, Integer>>) c -> {
           var iterator = c.iterator();
