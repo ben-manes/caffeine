@@ -55,14 +55,14 @@ public final class CacheValidationInterceptor implements InvocationInterceptor {
     }
   }
 
-  @Override @SuppressWarnings("NullAway")
+  @Override
   public void interceptTestMethod(Invocation<@Nullable Void> invocation,
       ReflectiveInvocationContext<Method> invocationContext,
       ExtensionContext extensionContext) throws Throwable {
     intercept(invocation, invocationContext, extensionContext);
   }
 
-  @Override @SuppressWarnings("NullAway")
+  @Override
   public void interceptTestTemplateMethod(Invocation<@Nullable Void> invocation,
       ReflectiveInvocationContext<Method> invocationContext,
       ExtensionContext extensionContext) throws Throwable {
