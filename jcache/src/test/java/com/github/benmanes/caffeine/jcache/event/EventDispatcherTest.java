@@ -20,7 +20,6 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.await;
-import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
@@ -936,7 +935,7 @@ final class EventDispatcherTest {
       var e = assertThrows(CacheEntryListenerException.class, () ->
           cache.invoke(KEY_1, (entry, arguments) -> {
             entry.setValue(VALUE_1);
-            return nullRef();
+            return null;
           }));
       assertThat(e).hasCauseThat().isSameInstanceAs(failure);
       assertThat(cache.get(KEY_1)).isEqualTo(VALUE_1);

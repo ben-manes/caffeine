@@ -2056,7 +2056,7 @@ final class CacheProxyTest {
       var invokeValue = new MutableInt(VALUE_1);
       cache.invoke(KEY_1, (entry, args) -> {
         entry.setValue(invokeValue);
-        return nullRef();
+        return null;
       });
       invokeValue.setValue(VALUE_2);
       assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
@@ -2093,7 +2093,7 @@ final class CacheProxyTest {
       // The processor sees a copy of the stored value; mutating it without setValue is discarded.
       cache.invoke(KEY_1, (entry, args) -> {
         requireNonNull(entry.getValue()).setValue(VALUE_2);
-        return nullRef();
+        return null;
       });
       assertThat(cache.get(KEY_1)).isEqualTo(new MutableInt(VALUE_1));
     }
@@ -2721,7 +2721,7 @@ final class CacheProxyTest {
       assertThrows(EntryProcessorException.class, () ->
           cache.invoke(KEY_1, (entry, args) -> {
             entry.setValue(VALUE_1);
-            return nullRef();
+            return null;
           }));
       verifyNoInteractions(writer);
       assertThat(cache.containsKey(KEY_1)).isFalse();
@@ -2754,7 +2754,7 @@ final class CacheProxyTest {
       assertThrows(EntryProcessorException.class, () ->
           cache.invoke(KEY_1, (entry, args) -> {
             entry.setValue(VALUE_2);
-            return nullRef();
+            return null;
           }));
       verify(writer, never()).write(any());
     }

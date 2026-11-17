@@ -20,7 +20,6 @@ import static com.github.benmanes.caffeine.jcache.JCacheFixture.KEY_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_1;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.VALUE_2;
 import static com.github.benmanes.caffeine.jcache.JCacheFixture.getExpirable;
-import static com.github.benmanes.caffeine.jcache.JCacheFixture.nullRef;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
@@ -356,7 +355,7 @@ final class JCacheCombinedExpiryTest {
       fixture.jcache().put(KEY_1, VALUE_1);
       fixture.advancePastExpiry();
 
-      var result = fixture.jcache().invoke(KEY_1, (entry, args) -> nullRef());
+      var result = fixture.jcache().invoke(KEY_1, (entry, args) -> null);
       assertThat(result).isNull();
       assertThat(getExpirable(fixture.jcache(), KEY_1)).isNull();
     }
@@ -436,7 +435,7 @@ final class JCacheCombinedExpiryTest {
       long removalsBefore = stats.getCacheRemovals();
       var result = fixture.jcache().invoke(KEY_1, (entry, args) -> {
         entry.remove();
-        return nullRef();
+        return null;
       });
 
       assertThat(result).isNull();
@@ -467,7 +466,7 @@ final class JCacheCombinedExpiryTest {
 
       var result = cache.invoke(KEY_1, (entry, args) -> {
         entry.setValue(VALUE_2);
-        return nullRef();
+        return null;
       });
 
       assertThat(result).isNull();
@@ -553,7 +552,7 @@ final class JCacheCombinedExpiryTest {
   void invoke_expired_creationExpiryError_expiresOnce() {
     assertCreationExpiryErrorExpiresOnce(cache -> cache.invoke(KEY_1, (entry, args) -> {
       entry.setValue(VALUE_2);
-      return nullRef();
+      return null;
     }));
   }
 
